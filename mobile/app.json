@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "ResQDrive Mobile",
+    "slug": "resqdrive-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#121212"
+      }
+    }
+  }
+}

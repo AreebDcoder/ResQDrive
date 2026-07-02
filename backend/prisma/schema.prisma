@@ -1,0 +1,77 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  DRIVER
+  ADMIN
+  MECHANIC
+}
+
+model User {
+  id                String              @id @default(uuid()) @db.Uuid
+  fullName          String              @map("full_name") @db.VarChar(100)
+  email             String              @unique @db.VarChar(150)
+  phoneNumber       String              @unique @map("phone_number") @db.VarChar(20)
+  passwordHash      String              @map("password_hash") @db.VarChar(255)
+  role              UserRole            @default(DRIVER)
+  profilePictureUrl String?             @map("profile_picture_url") @db.Text
+  isVerified        Boolean             @default(false) @map("is_verified")
+  isActive          Boolean             @default(true) @map("is_active")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+
+  driverDetails       DriverDetails?
+  mechanicDetails     MechanicDetails?
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+
+  @@map("users")
+}
+
+model DriverDetails {
+  userId               String  @id @map("user_id") @db.Uuid
+  cnicNumber           String? @map("cnic_number") @db.VarChar(20)
+  drivingLicenseNumber String? @map("driving_license_number") @db.VarChar(30)
+  user                 User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("driver_details")
+}
+
+model MechanicDetails {
+  userId             String  @id @map("user_id") @db.Uuid
+  workshopName       String? @map("workshop_name") @db.VarChar(150)
+  workshopAddress    String? @map("workshop_address") @db.Text
+  specialization     String? @db.VarChar(100)
+  isWorkshopVerified Boolean @default(false) @map("is_workshop_verified")
+  user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("mechanic_details")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  tokenHash String   @map("token_hash") @db.Text
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  token     String   @db.VarChar(255)
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
