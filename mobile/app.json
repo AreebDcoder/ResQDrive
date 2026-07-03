@@ -4,17 +4,34 @@
     "slug": "resqdrive-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
+
     "userInterfaceStyle": "dark",
+
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Allow ResQDrive to use your location to find nearby hospitals and share your location during emergencies."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#121212"
-      }
-    }
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow ResQDrive to use your location to find nearby hospitals."
+        }
+      ]
+    ]
   }
 }

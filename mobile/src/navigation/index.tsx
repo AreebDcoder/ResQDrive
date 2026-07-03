@@ -4,6 +4,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
+import api from '../api/axios';
+
 
 import SplashScreen from '../screens/SplashScreen';
 import LoginScreen from '../screens/LoginScreen';
@@ -12,6 +14,7 @@ import EmailVerificationScreen from '../screens/EmailVerificationScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import HospitalsScreen from '../screens/HospitalsScreen';
 
 const Stack = createStackNavigator();
 
@@ -23,6 +26,9 @@ function DriverHome({ navigation }: any) {
       <Text style={styles.subtitle}>Smart Accident Detection & Alerts Active 🛡️</Text>
       <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('Profile')}>
         <Text style={styles.navBtnText}>Go to Profile</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('Hospitals')}>
+        <Text style={styles.navBtnText}>🏥 Nearest Hospitals</Text>
       </TouchableOpacity>
     </View>
   );
@@ -193,6 +199,7 @@ function AppStack({ role }: { role: string }) {
         options={{ title: getHeaderTitle() }} 
       />
       <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'My Profile' }} />
+      <Stack.Screen name="Hospitals" component={HospitalsScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }

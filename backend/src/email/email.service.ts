@@ -27,6 +27,10 @@ export class EmailService {
 
   async sendVerificationEmail(email: string, fullName: string, token: string): Promise<void> {
     const verificationLink = `http://localhost:3000/auth/verify-email?token=${token}`;
+    console.log('===VERIFICATION LINK===');
+    console.log(verificationLink);
+    console.log('===END===');
+   
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
         <h2 style="color: #d32f2f;">Welcome to ResQDrive, ${fullName}!</h2>
@@ -74,8 +78,8 @@ export class EmailService {
       try {
         await this.transporter.sendMail({ from, to, subject, html });
         this.logger.log(`Email successfully sent to ${to} with subject: "${subject}"`);
-      } catch (error) {
-        this.logger.error(`Failed to send email to ${to}: ${error.message}`);
+      } catch (error: any) {
+  this.logger.error(`Failed to send email to ${to}: ${error.message}`);
         this.logFallback(to, subject, html);
       }
     } else {
