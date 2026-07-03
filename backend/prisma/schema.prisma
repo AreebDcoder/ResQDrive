@@ -47,6 +47,8 @@ model MechanicDetails {
   userId             String  @id @map("user_id") @db.Uuid
   workshopName       String? @map("workshop_name") @db.VarChar(150)
   workshopAddress    String? @map("workshop_address") @db.Text
+  workshopLatitude   Float?  @map("workshop_latitude")
+  workshopLongitude  Float?  @map("workshop_longitude")
   specialization     String? @db.VarChar(100)
   isWorkshopVerified Boolean @default(false) @map("is_workshop_verified")
   user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)

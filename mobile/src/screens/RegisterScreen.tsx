@@ -48,18 +48,19 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
   };
 
   const onSubmit = async (data: RegisterInput) => {
-    setIsLoading(true);
-    setErrorMsg(null);
-    try {
-      await api.post('/auth/register', data);
-      // Navigate to email verification screen with the registered email context
-      navigation.navigate('EmailVerification', { email: data.email });
-    } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Registration failed. Please check details.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  setIsLoading(true);
+  setErrorMsg(null);
+  try {
+    const { confirmPassword, ...registrationData } = data;
+    await api.post('/auth/register', registrationData);
+    // Navigate to email verification screen with the registered email context
+    navigation.navigate('EmailVerification', { email: data.email });
+  } catch (err: any) {
+    setErrorMsg(err.response?.data?.message || 'Registration failed. Please check details.');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <KeyboardAvoidingView

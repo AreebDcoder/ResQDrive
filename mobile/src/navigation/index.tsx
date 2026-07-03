@@ -15,6 +15,7 @@ import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import HospitalsScreen from '../screens/HospitalsScreen';
+import WorkshopsScreen from '../screens/WorkshopsScreen';
 
 const Stack = createStackNavigator();
 
@@ -29,6 +30,9 @@ function DriverHome({ navigation }: any) {
       </TouchableOpacity>
       <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('Hospitals')}>
         <Text style={styles.navBtnText}>🏥 Nearest Hospitals</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('Workshops')}>
+        <Text style={styles.navBtnText}>🔧 Nearby Workshops</Text>
       </TouchableOpacity>
     </View>
   );
@@ -55,9 +59,7 @@ function AdminHome({ navigation }: any) {
     setIsLoading(true);
     setMessage(null);
     try {
-      // Get all mechanics from the admin endpoint
       const response = await api.get('/admin/users?role=MECHANIC');
-      // Filter for those whose workshops are not verified yet
       const unverified = response.data.users.filter(
         (u: any) => u.mechanicDetails && u.mechanicDetails.isWorkshopVerified === false
       );
@@ -79,7 +81,6 @@ function AdminHome({ navigation }: any) {
       await api.patch(`/admin/users/${userId}/verify-workshop`, {
         isWorkshopVerified: true,
       });
-      // Remove approved mechanic from local list state
       setPendingMechanics((prev) => prev.filter((m) => m.id !== userId));
     } catch (err) {
       alert('Failed to approve workshop.');
@@ -200,6 +201,7 @@ function AppStack({ role }: { role: string }) {
       />
       <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'My Profile' }} />
       <Stack.Screen name="Hospitals" component={HospitalsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Workshops" component={WorkshopsScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
