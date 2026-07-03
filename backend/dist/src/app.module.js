@@ -15,6 +15,8 @@ const users_module_1 = require("./users/users.module");
 const admin_module_1 = require("./admin/admin.module");
 const email_module_1 = require("./email/email.module");
 const upload_module_1 = require("./upload/upload.module");
+const vehicles_module_1 = require("./vehicles/vehicles.module");
+const emergency_contacts_module_1 = require("./emergency-contacts/emergency-contacts.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -31,6 +33,8 @@ exports.AppModule = AppModule = __decorate([
             admin_module_1.AdminModule,
             email_module_1.EmailModule,
             upload_module_1.UploadModule,
+            vehicles_module_1.VehiclesModule,
+            emergency_contacts_module_1.EmergencyContactsModule,
         ],
     })
 ], AppModule);

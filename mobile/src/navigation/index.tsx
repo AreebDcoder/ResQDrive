@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Linking } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
 
 import SplashScreen from '../screens/SplashScreen';
@@ -12,19 +12,127 @@ import EmailVerificationScreen from '../screens/EmailVerificationScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import MyVehiclesScreen from '../screens/MyVehiclesScreen';
+import AddEditVehicleScreen from '../screens/AddEditVehicleScreen';
+import VehicleInsuranceScreen from '../screens/VehicleInsuranceScreen';
+import EmergencyContactsScreen from '../screens/EmergencyContactsScreen';
+import AddEditContactScreen from '../screens/AddEditContactScreen';
+import api from '../api/axios';
 
 const Stack = createStackNavigator();
 
 // Simple Placeholder homepages for Driver and Mechanic
 function DriverHome({ navigation }: any) {
+  const dispatch = useDispatch();
+  const vehicles = useSelector((state: RootState) => state.vehicles.list);
+  const contacts = useSelector((state: RootState) => state.contacts.list);
+
+  const activeVehicle = vehicles.find((v) => v.isPrimary);
+  const primaryContact = contacts.find((c) => c.priorityOrder === 1);
+
+  // Background fetch vehicles and contacts on Dashboard mount
+  React.useEffect(() => {
+    const syncData = async () => {
+      try {
+        const vRes = await api.get('/vehicles');
+        dispatch({ type: 'vehicles/fetchVehiclesSuccess', payload: vRes.data });
+        const cRes = await api.get('/emergency-contacts');
+        dispatch({ type: 'contacts/fetchContactsSuccess', payload: cRes.data });
+      } catch (err) {
+        console.log('Failed to background sync dashboard data:', err);
+      }
+    };
+    syncData();
+  }, [dispatch]);
+
+  const handleQuickCall = () => {
+    if (primaryContact) {
+      Linking.openURL(`tel:${primaryContact.phoneNumber}`);
+    }
+  };
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Driver Portal</Text>
-      <Text style={styles.subtitle}>Smart Accident Detection & Alerts Active 🛡️</Text>
-      <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('Profile')}>
-        <Text style={styles.navBtnText}>Go to Profile</Text>
+    <ScrollView style={styles.scrollContainer} contentContainerStyle={{ paddingBottom: 40 }}>
+      {/* Paired Vehicle Widget */}
+      <View style={styles.dashboardCard}>
+        <Text style={styles.cardHeaderTitle}>🚗 Paired Vehicle</Text>
+        {activeVehicle ? (
+          <View style={styles.vehicleDetailsBlock}>
+            <Text style={styles.activeVehicleName}>
+              {activeVehicle.make} {activeVehicle.model} ({activeVehicle.year})
+            </Text>
+            <View style={styles.activePlateBadge}>
+              <Text style={styles.activePlateText}>{activeVehicle.licensePlate.toUpperCase()}</Text>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.vehicleDetailsBlock}>
+            <Text style={styles.noVehicleText}>No active vehicle paired for crash detection.</Text>
+            <TouchableOpacity
+              style={styles.actionBtnSecondary}
+              onPress={() => navigation.navigate('MyVehicles')}
+            >
+              <Text style={styles.actionBtnText}>+ Add Vehicle</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
+      {/* Emergency Contact Quick Access Widget */}
+      <View style={styles.dashboardCard}>
+        <Text style={styles.cardHeaderTitle}>🛡️ Quick-Access Contact</Text>
+        {primaryContact ? (
+          <View style={styles.contactDetailsBlock}>
+            <View>
+              <Text style={styles.contactDisplayName}>{primaryContact.name}</Text>
+              <Text style={styles.contactDisplaySub}>
+                {primaryContact.relationship} • {primaryContact.phoneNumber}
+              </Text>
+            </View>
+            <TouchableOpacity style={styles.callNowBtn} onPress={handleQuickCall}>
+              <Text style={styles.callNowBtnText}>📞 CALL</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.contactDetailsBlock}>
+            <Text style={styles.noVehicleText}>No emergency contacts registered.</Text>
+            <TouchableOpacity
+              style={styles.actionBtnSecondary}
+              onPress={() => navigation.navigate('EmergencyContacts')}
+            >
+              <Text style={styles.actionBtnText}>+ Add Contact</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
+      {/* Navigation Portal Menu */}
+      <Text style={styles.menuTitle}>Control Settings</Text>
+      
+      <TouchableOpacity
+        style={styles.menuItem}
+        onPress={() => navigation.navigate('MyVehicles')}
+      >
+        <Text style={styles.menuItemText}>🚗 My Vehicles</Text>
+        <Text style={styles.menuItemArrow}>›</Text>
       </TouchableOpacity>
-    </View>
+
+      <TouchableOpacity
+        style={styles.menuItem}
+        onPress={() => navigation.navigate('EmergencyContacts')}
+      >
+        <Text style={styles.menuItemText}>📞 Emergency Contacts</Text>
+        <Text style={styles.menuItemArrow}>›</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.menuItem}
+        onPress={() => navigation.navigate('Profile')}
+      >
+        <Text style={styles.menuItemText}>👤 My Profile Details</Text>
+        <Text style={styles.menuItemArrow}>›</Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 }
 
@@ -193,6 +301,11 @@ function AppStack({ role }: { role: string }) {
         options={{ title: getHeaderTitle() }} 
       />
       <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'My Profile' }} />
+      <Stack.Screen name="MyVehicles" component={MyVehiclesScreen} options={{ title: 'My Vehicles' }} />
+      <Stack.Screen name="AddEditVehicle" component={AddEditVehicleScreen} options={{ title: 'Vehicle Details' }} />
+      <Stack.Screen name="VehicleInsurance" component={VehicleInsuranceScreen} options={{ title: 'Insurance Reference' }} />
+      <Stack.Screen name="EmergencyContacts" component={EmergencyContactsScreen} options={{ title: 'Emergency Contacts' }} />
+      <Stack.Screen name="AddEditContact" component={AddEditContactScreen} options={{ title: 'Contact Details' }} />
     </Stack.Navigator>
   );
 }
@@ -216,6 +329,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#121212',
     padding: 24,
+  },
+  scrollContainer: {
+    flex: 1,
+    backgroundColor: '#121212',
+    padding: 16,
   },
   headerBlock: {
     alignItems: 'center',
@@ -319,6 +437,123 @@ const styles = StyleSheet.create({
   navBtnText: {
     color: '#ffffff',
     fontSize: 16,
+    fontWeight: 'bold',
+  },
+  // Dashboard Widget Styles
+  dashboardCard: {
+    backgroundColor: '#1e1e1e',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#2e2e2e',
+  },
+  cardHeaderTitle: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#d32f2f',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  vehicleDetailsBlock: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  activeVehicleName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginBottom: 8,
+  },
+  activePlateBadge: {
+    backgroundColor: '#121212',
+    borderWidth: 1,
+    borderColor: '#d32f2f',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+  },
+  activePlateText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+  noVehicleText: {
+    color: '#888888',
+    fontSize: 14,
+    marginBottom: 12,
+  },
+  actionBtnSecondary: {
+    backgroundColor: '#2e2e2e',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#3e3e3e',
+  },
+  actionBtnText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  contactDetailsBlock: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  contactDisplayName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  contactDisplaySub: {
+    fontSize: 13,
+    color: '#888888',
+    marginTop: 4,
+  },
+  callNowBtn: {
+    backgroundColor: '#d32f2f',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  callNowBtnText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  // Menu Portal Styles
+  menuTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#888888',
+    marginTop: 10,
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  menuItem: {
+    backgroundColor: '#1e1e1e',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#2e2e2e',
+  },
+  menuItemText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  menuItemArrow: {
+    color: '#666666',
+    fontSize: 20,
     fontWeight: 'bold',
   },
 });

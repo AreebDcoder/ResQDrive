@@ -30,6 +30,8 @@ model User {
   mechanicDetails     MechanicDetails?
   refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
+  vehicles            Vehicle[]
+  emergencyContacts   EmergencyContact[]
 
   @@map("users")
 }
@@ -74,4 +76,52 @@ model PasswordResetToken {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("password_reset_tokens")
+}
+
+model Vehicle {
+  id           String            @id @default(uuid()) @db.Uuid
+  userId       String            @map("user_id") @db.Uuid
+  make         String            @db.VarChar(50)
+  model        String            @db.VarChar(50)
+  year         Int
+  color        String?           @db.VarChar(30)
+  licensePlate String            @unique @map("license_plate") @db.VarChar(20)
+  isPrimary    Boolean           @default(false) @map("is_primary")
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  insurance    VehicleInsurance?
+
+  @@map("vehicles")
+}
+
+model VehicleInsurance {
+  id                String    @id @default(uuid()) @db.Uuid
+  vehicleId         String    @unique @map("vehicle_id") @db.Uuid
+  providerName      String?   @map("provider_name") @db.VarChar(100)
+  policyNumber      String?   @map("policy_number") @db.VarChar(50)
+  coverageType      String?   @map("coverage_type") @db.VarChar(50)
+  expiryDate        DateTime? @map("expiry_date") @db.Date
+  emergencyHelpline String?   @map("emergency_helpline") @db.VarChar(20)
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  vehicle           Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@map("vehicle_insurance")
+}
+
+model EmergencyContact {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  name          String   @db.VarChar(100)
+  phoneNumber   String   @map("phone_number") @db.VarChar(20)
+  email         String?  @db.VarChar(150)
+  relationship  String   @db.VarChar(50)
+  priorityOrder Int      @map("priority_order")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, priorityOrder])
+  @@map("emergency_contacts")
 }
