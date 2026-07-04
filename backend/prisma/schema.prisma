@@ -13,23 +13,43 @@ enum UserRole {
   MECHANIC
 }
 
+enum IncidentType {
+  AUTO
+  MANUAL
+}
+
+enum IncidentSeverity {
+  NONE
+  MINOR
+  MODERATE
+  SEVERE
+}
+
+enum IncidentStatus {
+  ACTIVE
+  RESOLVED
+  FALSE_ALARM
+  ARCHIVED
+}
+
 model User {
-  id                String              @id @default(uuid()) @db.Uuid
-  fullName          String              @map("full_name") @db.VarChar(100)
-  email             String              @unique @db.VarChar(150)
-  phoneNumber       String              @unique @map("phone_number") @db.VarChar(20)
-  passwordHash      String              @map("password_hash") @db.VarChar(255)
-  role              UserRole            @default(DRIVER)
-  profilePictureUrl String?             @map("profile_picture_url") @db.Text
-  isVerified        Boolean             @default(false) @map("is_verified")
-  isActive          Boolean             @default(true) @map("is_active")
-  createdAt         DateTime            @default(now()) @map("created_at")
-  updatedAt         DateTime            @updatedAt @map("updated_at")
+  id                String   @id @default(uuid()) @db.Uuid
+  fullName          String   @map("full_name") @db.VarChar(100)
+  email             String   @unique @db.VarChar(150)
+  phoneNumber       String   @unique @map("phone_number") @db.VarChar(20)
+  passwordHash      String   @map("password_hash") @db.VarChar(255)
+  role              UserRole @default(DRIVER)
+  profilePictureUrl String?  @map("profile_picture_url") @db.Text
+  isVerified        Boolean  @default(false) @map("is_verified")
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   driverDetails       DriverDetails?
   mechanicDetails     MechanicDetails?
   refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
+  incidents           Incident[]
 
   @@map("users")
 }
@@ -76,4 +96,29 @@ model PasswordResetToken {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("password_reset_tokens")
+}
+
+model Incident {
+  id                     String           @id @default(uuid()) @db.Uuid
+  userId                 String           @map("user_id") @db.Uuid
+  type                   IncidentType     @default(MANUAL)
+  severity               IncidentSeverity @default(NONE)
+  status                 IncidentStatus   @default(ACTIVE)
+  occurredAt             DateTime         @map("occurred_at")
+  latitude               Float?
+  longitude              Float?
+  address                String?          @db.Text
+  description            String?          @db.Text
+  sensorSnapshot         Json?
+  alertDispatchStatus    Json?            @map("alert_dispatch_status")
+  damageAssessmentResult Json?            @map("damage_assessment_result")
+  isDeleted              Boolean          @default(false) @map("is_deleted")
+  createdAt              DateTime         @default(now()) @map("created_at")
+  updatedAt              DateTime         @updatedAt @map("updated_at")
+  user                   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, occurredAt])
+  @@index([severity])
+  @@index([status])
+  @@map("incidents")
 }
