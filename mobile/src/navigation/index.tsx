@@ -17,6 +17,7 @@ import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import HospitalsScreen from '../screens/HospitalsScreen';
 import WorkshopsScreen from '../screens/WorkshopsScreen';
+import SOSScreen from '../screens/SOSScreen';
 
 const Stack = createStackNavigator();
 
@@ -62,6 +63,9 @@ function DriverHome({ navigation }: any) {
       <TouchableOpacity style={styles.navBtn} onPress={testEmergencyFallback}>
         <Text style={styles.navBtnText}>🧪 Test Emergency Fallback</Text>
       </TouchableOpacity>
+      <TouchableOpacity style={[styles.navBtn, { backgroundColor: '#b71c1c' }]} onPress={() => navigation.navigate('SOS')}>
+  <Text style={styles.navBtnText}>🆘 Emergency SOS</Text>
+</TouchableOpacity>
     </View>
   );
 }
@@ -163,6 +167,7 @@ function AdminHome({ navigation }: any) {
       <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('Profile')}>
         <Text style={styles.navBtnText}>Go to My Profile</Text>
       </TouchableOpacity>
+     
     </View>
   );
 }
@@ -230,6 +235,7 @@ function AppStack({ role }: { role: string }) {
       <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'My Profile' }} />
       <Stack.Screen name="Hospitals" component={HospitalsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Workshops" component={WorkshopsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="SOS" component={SOSScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
