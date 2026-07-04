@@ -77,3 +77,15 @@ model PasswordResetToken {
 
   @@map("password_reset_tokens")
 }
+model EmailQueue {
+  id        String   @id @default(uuid()) @db.Uuid
+  to        String
+  subject   String
+  html      String   @db.Text
+  attempts  Int      @default(0)
+  status    String   @default("PENDING") // PENDING, SENT, FAILED
+  createdAt DateTime @default(now()) @map("created_at")
+  lastTriedAt DateTime? @map("last_tried_at")
+
+  @@map("email_queue")
+}

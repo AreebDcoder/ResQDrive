@@ -5,7 +5,8 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import api from '../api/axios';
-
+import * as Location from 'expo-location';
+import { dispatchEmergencyAlert } from '../utils/emergencyFallback';
 
 import SplashScreen from '../screens/SplashScreen';
 import LoginScreen from '../screens/LoginScreen';
@@ -21,6 +22,30 @@ const Stack = createStackNavigator();
 
 // Simple Placeholder homepages for Driver and Mechanic
 function DriverHome({ navigation }: any) {
+ const testEmergencyFallback = async () => {
+  const { status } = await Location.requestForegroundPermissionsAsync();
+  if (status !== 'granted') {
+    alert('Location permission needed for this test.');
+    return;
+  }
+  const location = await Location.getCurrentPositionAsync({});
+
+  const result = await dispatchEmergencyAlert(
+    [{ name: 'Test Contact', phoneNumber: '+923175718391' }],
+    {
+      userName: 'Abdul Basit',
+      userPhone: '+923321276653',
+      severity: 'Moderate',
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+    },
+    async () => {
+      throw new Error('Simulating online dispatch not implemented yet');
+    },
+  );
+
+  alert(`Fallback test result: ${result.mode}`);
+};
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Driver Portal</Text>
@@ -33,6 +58,9 @@ function DriverHome({ navigation }: any) {
       </TouchableOpacity>
       <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('Workshops')}>
         <Text style={styles.navBtnText}>🔧 Nearby Workshops</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.navBtn} onPress={testEmergencyFallback}>
+        <Text style={styles.navBtnText}>🧪 Test Emergency Fallback</Text>
       </TouchableOpacity>
     </View>
   );
