@@ -26,4 +26,5 @@ Thumbs.db
 .env.*.local
 
 mobile/.expo/
-mobile/web-build/"admin-web/dist/" 
+mobile/web-build/
+admin-web/dist/
