@@ -6,7 +6,6 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import api from '../api/axios';
 
-
 import SplashScreen from '../screens/SplashScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
@@ -16,17 +15,23 @@ import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import HospitalsScreen from '../screens/HospitalsScreen';
 import WorkshopsScreen from '../screens/WorkshopsScreen';
+import IncidentsListScreen from '../screens/IncidentsListScreen';
+import IncidentDetailScreen from '../screens/IncidentDetailScreen';
+import CreateIncidentScreen from '../screens/CreateIncidentScreen';
 
 const Stack = createStackNavigator();
 
-// Simple Placeholder homepages for Driver and Mechanic
 function DriverHome({ navigation }: any) {
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
       <Text style={styles.title}>Driver Portal</Text>
       <Text style={styles.subtitle}>Smart Accident Detection & Alerts Active 🛡️</Text>
+
+      <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('IncidentsList')}>
+        <Text style={styles.navBtnText}>📋 Incident History</Text>
+      </TouchableOpacity>
       <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('Profile')}>
-        <Text style={styles.navBtnText}>Go to Profile</Text>
+        <Text style={styles.navBtnText}>👤 My Profile</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('Hospitals')}>
         <Text style={styles.navBtnText}>🏥 Nearest Hospitals</Text>
@@ -34,7 +39,7 @@ function DriverHome({ navigation }: any) {
       <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('Workshops')}>
         <Text style={styles.navBtnText}>🔧 Nearby Workshops</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -65,7 +70,6 @@ function AdminHome({ navigation }: any) {
       );
       setPendingMechanics(unverified);
     } catch (err: any) {
-      console.log('Failed to fetch pending mechanics:', err);
       setMessage('Failed to load pending approvals list.');
     } finally {
       setIsLoading(false);
@@ -78,9 +82,7 @@ function AdminHome({ navigation }: any) {
 
   const handleApprove = async (userId: string) => {
     try {
-      await api.patch(`/admin/users/${userId}/verify-workshop`, {
-        isWorkshopVerified: true,
-      });
+      await api.patch(`/admin/users/${userId}/verify-workshop`, { isWorkshopVerified: true });
       setPendingMechanics((prev) => prev.filter((m) => m.id !== userId));
     } catch (err) {
       alert('Failed to approve workshop.');
@@ -110,21 +112,13 @@ function AdminHome({ navigation }: any) {
             <View key={mechanic.id} style={styles.approvalCard}>
               <View style={styles.cardRow}>
                 <Text style={styles.mechanicName}>{mechanic.fullName}</Text>
-                <Text style={styles.specializationBadge}>
-                  {mechanic.mechanicDetails?.specialization}
-                </Text>
+                <Text style={styles.specializationBadge}>{mechanic.mechanicDetails?.specialization}</Text>
               </View>
               <Text style={styles.cardInfo}>Email: {mechanic.email}</Text>
               <Text style={styles.cardInfo}>Phone: {mechanic.phoneNumber}</Text>
-              <Text style={styles.cardInfo}>
-                Workshop: <Text style={{ fontWeight: 'bold', color: '#ffffff' }}>{mechanic.mechanicDetails?.workshopName}</Text>
-              </Text>
+              <Text style={styles.cardInfo}>Workshop: <Text style={{ fontWeight: 'bold', color: '#ffffff' }}>{mechanic.mechanicDetails?.workshopName}</Text></Text>
               <Text style={styles.cardInfo}>Address: {mechanic.mechanicDetails?.workshopAddress}</Text>
-
-              <TouchableOpacity
-                style={styles.approveBtn}
-                onPress={() => handleApprove(mechanic.id)}
-              >
+              <TouchableOpacity style={styles.approveBtn} onPress={() => handleApprove(mechanic.id)}>
                 <Text style={styles.approveBtnText}>Approve & Verify Workshop</Text>
               </TouchableOpacity>
             </View>
@@ -161,27 +155,19 @@ function AuthStack() {
 function AppStack({ role }: { role: string }) {
   const getHomeComponent = () => {
     switch (role) {
-      case 'DRIVER':
-        return DriverHome;
-      case 'MECHANIC':
-        return MechanicHome;
-      case 'ADMIN':
-        return AdminHome;
-      default:
-        return DriverHome;
+      case 'DRIVER': return DriverHome;
+      case 'MECHANIC': return MechanicHome;
+      case 'ADMIN': return AdminHome;
+      default: return DriverHome;
     }
   };
 
   const getHeaderTitle = () => {
     switch (role) {
-      case 'DRIVER':
-        return 'ResQDrive';
-      case 'MECHANIC':
-        return 'Workshop Dashboard';
-      case 'ADMIN':
-        return 'Admin Controls';
-      default:
-        return 'ResQDrive';
+      case 'DRIVER': return 'ResQDrive';
+      case 'MECHANIC': return 'Workshop Dashboard';
+      case 'ADMIN': return 'Admin Controls';
+      default: return 'ResQDrive';
     }
   };
 
@@ -194,14 +180,13 @@ function AppStack({ role }: { role: string }) {
         cardStyle: { backgroundColor: '#121212' },
       }}
     >
-      <Stack.Screen 
-        name="Home" 
-        component={getHomeComponent()} 
-        options={{ title: getHeaderTitle() }} 
-      />
+      <Stack.Screen name="Home" component={getHomeComponent()} options={{ title: getHeaderTitle() }} />
       <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'My Profile' }} />
       <Stack.Screen name="Hospitals" component={HospitalsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Workshops" component={WorkshopsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="IncidentsList" component={IncidentsListScreen} options={{ title: 'Incident History' }} />
+      <Stack.Screen name="IncidentDetail" component={IncidentDetailScreen} options={{ title: 'Incident Detail' }} />
+      <Stack.Screen name="CreateIncident" component={CreateIncidentScreen} options={({ route }: any) => ({ title: route.params?.mode === 'edit' ? 'Edit Incident' : 'New Incident' })} />
     </Stack.Navigator>
   );
 }
@@ -221,113 +206,22 @@ export default function Navigation() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#121212',
-    padding: 24,
-  },
-  headerBlock: {
-    alignItems: 'center',
-    marginBottom: 20,
-    marginTop: 10,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#888888',
-    textAlign: 'center',
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#d32f2f',
-    marginBottom: 12,
-  },
-  scrollList: {
-    flex: 1,
-    marginBottom: 20,
-  },
-  approvalCard: {
-    backgroundColor: '#1e1e1e',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: '#2e2e2e',
-  },
-  cardRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  mechanicName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
-  specializationBadge: {
-    backgroundColor: '#3a2222',
-    color: '#ff8a80',
-    fontSize: 11,
-    fontWeight: 'bold',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#d32f2f',
-  },
-  cardInfo: {
-    fontSize: 13,
-    color: '#888888',
-    marginBottom: 4,
-  },
-  approveBtn: {
-    backgroundColor: '#388e3c',
-    paddingVertical: 10,
-    borderRadius: 6,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  approveBtnText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    marginVertical: 40,
-  },
-  emptyText: {
-    color: '#888888',
-    fontSize: 15,
-    textAlign: 'center',
-  },
-  errorText: {
-    color: '#ff8a80',
-    fontSize: 14,
-    textAlign: 'center',
-    marginVertical: 20,
-  },
-  navBtn: {
-    backgroundColor: '#d32f2f',
-    paddingVertical: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  navBtnText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+  container: { flex: 1, backgroundColor: '#121212', padding: 24 },
+  headerBlock: { alignItems: 'center', marginBottom: 20, marginTop: 10 },
+  title: { fontSize: 24, fontWeight: 'bold', color: '#ffffff', textAlign: 'center', marginBottom: 8 },
+  subtitle: { fontSize: 14, color: '#888888', textAlign: 'center', marginBottom: 24 },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#d32f2f', marginBottom: 12 },
+  scrollList: { flex: 1, marginBottom: 20 },
+  approvalCard: { backgroundColor: '#1e1e1e', borderRadius: 8, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: '#2e2e2e' },
+  cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  mechanicName: { fontSize: 16, fontWeight: 'bold', color: '#ffffff' },
+  specializationBadge: { backgroundColor: '#3a2222', color: '#ff8a80', fontSize: 11, fontWeight: 'bold', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, borderWidth: 1, borderColor: '#d32f2f' },
+  cardInfo: { fontSize: 13, color: '#888888', marginBottom: 4 },
+  approveBtn: { backgroundColor: '#388e3c', paddingVertical: 10, borderRadius: 6, alignItems: 'center', marginTop: 12 },
+  approveBtnText: { color: '#ffffff', fontSize: 14, fontWeight: 'bold' },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, marginVertical: 40 },
+  emptyText: { color: '#888888', fontSize: 15, textAlign: 'center' },
+  errorText: { color: '#ff8a80', fontSize: 14, textAlign: 'center', marginVertical: 20 },
+  navBtn: { backgroundColor: '#d32f2f', paddingVertical: 16, borderRadius: 8, alignItems: 'center', marginTop: 10 },
+  navBtnText: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
 });
