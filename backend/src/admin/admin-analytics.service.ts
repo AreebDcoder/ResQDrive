@@ -1,7 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { IncidentSeverity, IncidentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnalyticsQueryDto } from './dto/analytics-query.dto';
+import { AdminIncidentsQueryDto } from './dto/admin-incidents-query.dto';
 
 @Injectable()
 export class AdminAnalyticsService {
@@ -151,5 +152,65 @@ export class AdminAnalyticsService {
         incidentCount: c.count,
         sampleAddresses: Array.from(c.addresses).slice(0, 3),
       }));
+  }
+
+  async listAllIncidents(query: AdminIncidentsQueryDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+    const skip = (page - 1) * limit;
+
+    const where: any = { isDeleted: false };
+    if (query.severity) where.severity = query.severity;
+    if (query.status) where.status = query.status;
+    if (query.dateFrom || query.dateTo) {
+      where.occurredAt = {};
+      if (query.dateFrom) where.occurredAt.gte = new Date(query.dateFrom);
+      if (query.dateTo) where.occurredAt.lte = new Date(query.dateTo);
+    }
+    if (query.search) {
+      where.OR = [
+        { description: { contains: query.search, mode: 'insensitive' } },
+        { address: { contains: query.search, mode: 'insensitive' } },
+        { user: { fullName: { contains: query.search, mode: 'insensitive' } } },
+        { user: { email: { contains: query.search, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [data, total] = await Promise.all([
+      this.prisma.incident.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { occurredAt: 'desc' },
+        include: {
+          user: {
+            select: { id: true, fullName: true, email: true, phoneNumber: true, role: true },
+          },
+        },
+      }),
+      this.prisma.incident.count({ where }),
+    ]);
+
+    return {
+      data,
+      meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  async getIncidentById(id: string) {
+    const incident = await this.prisma.incident.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: { id: true, fullName: true, email: true, phoneNumber: true, role: true },
+        },
+      },
+    });
+
+    if (!incident || incident.isDeleted) {
+      throw new NotFoundException('Incident not found');
+    }
+
+    return incident;
   }
 }

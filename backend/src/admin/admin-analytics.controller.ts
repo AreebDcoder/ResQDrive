@@ -10,6 +10,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { AdminAnalyticsService } from './admin-analytics.service';
 import { AdminPdfService } from './admin-pdf.service';
 import { AnalyticsQueryDto } from './dto/analytics-query.dto';
+import { AdminIncidentsQueryDto } from './dto/admin-incidents-query.dto';
 
 @ApiTags('Admin Analytics & Reports')
 @ApiBearerAuth()
@@ -38,6 +39,19 @@ export class AdminAnalyticsController {
   @ApiOperation({ summary: 'Top incident hotspot locations (for heatmap)' })
   async getHotspots(@Query() query: AnalyticsQueryDto) {
     return this.analyticsService.getHotspots(query);
+  }
+
+  @Get('incidents')
+  @ApiOperation({ summary: 'List all incidents across all users (admin only)' })
+  async listAllIncidents(@Query() query: AdminIncidentsQueryDto) {
+    return this.analyticsService.listAllIncidents(query);
+  }
+
+  @Get('incidents/:id')
+  @ApiOperation({ summary: 'Get a single incident with user info (admin only)' })
+  @ApiResponse({ status: 404, description: 'Incident not found.' })
+  async getIncident(@Param('id') id: string) {
+    return this.analyticsService.getIncidentById(id);
   }
 
   @Get('incidents/:id/pdf')
