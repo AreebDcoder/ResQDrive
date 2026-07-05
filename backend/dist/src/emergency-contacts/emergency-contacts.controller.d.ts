@@ -8,74 +8,74 @@ export declare class EmergencyContactsController {
         id: string;
     }, createContactDto: CreateContactDto): Promise<{
         id: string;
-        name: string;
-        phoneNumber: string;
         email: string | null;
-        relationship: string;
-        priorityOrder: number;
+        phoneNumber: string;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
         userId: string;
+        relationship: string;
+        priorityOrder: number;
     }>;
     findAll(user: {
         id: string;
     }): Promise<{
         id: string;
-        name: string;
-        phoneNumber: string;
         email: string | null;
-        relationship: string;
-        priorityOrder: number;
+        phoneNumber: string;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
         userId: string;
+        relationship: string;
+        priorityOrder: number;
     }[]>;
     getQuickAccess(user: {
         id: string;
     }): Promise<{
         id: string;
-        name: string;
         phoneNumber: string;
+        name: string;
         priorityOrder: number;
     }[]>;
     findOne(user: {
         id: string;
     }, id: string): Promise<{
         id: string;
-        name: string;
-        phoneNumber: string;
         email: string | null;
-        relationship: string;
-        priorityOrder: number;
+        phoneNumber: string;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
         userId: string;
+        relationship: string;
+        priorityOrder: number;
     }>;
     reorder(user: {
         id: string;
     }, reorderDto: ReorderContactsDto): Promise<{
         id: string;
-        name: string;
-        phoneNumber: string;
         email: string | null;
-        relationship: string;
-        priorityOrder: number;
+        phoneNumber: string;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
         userId: string;
+        relationship: string;
+        priorityOrder: number;
     }[]>;
     update(user: {
         id: string;
     }, id: string, updateContactDto: Partial<CreateContactDto>): Promise<{
         id: string;
-        name: string;
-        phoneNumber: string;
         email: string | null;
-        relationship: string;
-        priorityOrder: number;
+        phoneNumber: string;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
         userId: string;
+        relationship: string;
+        priorityOrder: number;
     }>;
     delete(user: {
         id: string;

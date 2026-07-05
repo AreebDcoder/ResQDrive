@@ -17,6 +17,7 @@ const email_module_1 = require("./email/email.module");
 const upload_module_1 = require("./upload/upload.module");
 const vehicles_module_1 = require("./vehicles/vehicles.module");
 const emergency_contacts_module_1 = require("./emergency-contacts/emergency-contacts.module");
+const notifications_module_1 = require("./notifications/notifications.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -35,6 +36,7 @@ exports.AppModule = AppModule = __decorate([
             upload_module_1.UploadModule,
             vehicles_module_1.VehiclesModule,
             emergency_contacts_module_1.EmergencyContactsModule,
+            notifications_module_1.NotificationsModule,
         ],
     })
 ], AppModule);

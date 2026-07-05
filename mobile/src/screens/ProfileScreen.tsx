@@ -16,6 +16,7 @@ import * as SecureStore from 'expo-secure-store';
 import { RootState } from '../store/store';
 import { updateUserProfile, logoutAction } from '../store/slices/authSlice';
 import { updateProfileSchema, changePasswordSchema, UpdateProfileInput, ChangePasswordInput } from '../schemas/validation';
+import { FCMService } from '../services/fcmService';
 import api from '../api/axios';
 
 export default function ProfileScreen() {
@@ -105,6 +106,9 @@ export default function ProfileScreen() {
 
   const handleLogout = async () => {
     try {
+      // De-register push token from backend prior to destroying auth tokens
+      await FCMService.unregisterDeviceWithBackend();
+
       const token = await SecureStore.getItemAsync('refreshToken');
       if (token) {
         await api.post('/auth/logout', { refreshToken: token });

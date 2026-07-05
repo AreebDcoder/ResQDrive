@@ -6,66 +6,66 @@ export declare class EmergencyContactsService {
     constructor(prisma: PrismaService);
     create(userId: string, createContactDto: CreateContactDto): Promise<{
         id: string;
-        name: string;
-        phoneNumber: string;
         email: string | null;
-        relationship: string;
-        priorityOrder: number;
+        phoneNumber: string;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
         userId: string;
+        relationship: string;
+        priorityOrder: number;
     }>;
     findAll(userId: string): Promise<{
         id: string;
-        name: string;
-        phoneNumber: string;
         email: string | null;
-        relationship: string;
-        priorityOrder: number;
+        phoneNumber: string;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
         userId: string;
+        relationship: string;
+        priorityOrder: number;
     }[]>;
     findOne(userId: string, id: string): Promise<{
         id: string;
-        name: string;
-        phoneNumber: string;
         email: string | null;
-        relationship: string;
-        priorityOrder: number;
+        phoneNumber: string;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
         userId: string;
+        relationship: string;
+        priorityOrder: number;
     }>;
     update(userId: string, id: string, updateContactDto: Partial<CreateContactDto>): Promise<{
         id: string;
-        name: string;
-        phoneNumber: string;
         email: string | null;
-        relationship: string;
-        priorityOrder: number;
+        phoneNumber: string;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
         userId: string;
+        relationship: string;
+        priorityOrder: number;
     }>;
     reorder(userId: string, reorderContactsDto: ReorderContactsDto): Promise<{
         id: string;
-        name: string;
-        phoneNumber: string;
         email: string | null;
-        relationship: string;
-        priorityOrder: number;
+        phoneNumber: string;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
         userId: string;
+        relationship: string;
+        priorityOrder: number;
     }[]>;
     delete(userId: string, id: string): Promise<{
         message: string;
     }>;
     getQuickAccess(userId: string): Promise<{
         id: string;
-        name: string;
         phoneNumber: string;
+        name: string;
         priorityOrder: number;
     }[]>;
 }

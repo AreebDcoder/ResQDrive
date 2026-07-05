@@ -32,6 +32,9 @@ model User {
   passwordResetTokens PasswordResetToken[]
   vehicles            Vehicle[]
   emergencyContacts   EmergencyContact[]
+  deviceTokens         DeviceToken[]
+  notificationPreference NotificationPreference?
+  notificationLogs       NotificationLog[]
 
   @@map("users")
 }
@@ -124,4 +127,56 @@ model EmergencyContact {
 
   @@unique([userId, priorityOrder])
   @@map("emergency_contacts")
+}
+
+enum NotificationCategory {
+  driving_mode
+  alert_delivery_confirmation
+  false_alarm_log
+  system_status
+  general
+}
+
+model DeviceToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  fcmToken  String   @map("fcm_token") @db.Text
+  platform  String   @db.VarChar(10)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, fcmToken])
+  @@map("device_tokens")
+}
+
+model NotificationPreference {
+  id                   String   @id @default(uuid()) @db.Uuid
+  userId               String   @unique @map("user_id") @db.Uuid
+  drivingModeEnabled   Boolean  @default(true) @map("driving_mode_enabled")
+  alertDeliveryEnabled Boolean  @default(true) @map("alert_delivery_enabled")
+  falseAlarmLogEnabled Boolean  @default(true) @map("false_alarm_log_enabled")
+  systemStatusEnabled  Boolean  @default(true) @map("system_status_enabled")
+  generalEnabled       Boolean  @default(true) @map("general_enabled")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
+model NotificationLog {
+  id             String               @id @default(uuid()) @db.Uuid
+  userId         String               @map("user_id") @db.Uuid
+  category       NotificationCategory
+  title          String               @db.VarChar(150)
+  body           String               @db.Text
+  isRead         Boolean              @default(false) @map("is_read")
+  deliveryStatus String               @default("sent") @map("delivery_status") @db.VarChar(30)
+  metadata       Json?
+  createdAt      DateTime             @default(now()) @map("created_at")
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_logs")
 }

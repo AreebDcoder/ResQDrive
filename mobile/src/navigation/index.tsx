@@ -17,6 +17,9 @@ import AddEditVehicleScreen from '../screens/AddEditVehicleScreen';
 import VehicleInsuranceScreen from '../screens/VehicleInsuranceScreen';
 import EmergencyContactsScreen from '../screens/EmergencyContactsScreen';
 import AddEditContactScreen from '../screens/AddEditContactScreen';
+import NotificationPreferencesScreen from '../screens/NotificationPreferencesScreen';
+import NotificationHistoryScreen from '../screens/NotificationHistoryScreen';
+import { FCMService } from '../services/fcmService';
 import api from '../api/axios';
 
 const Stack = createStackNavigator();
@@ -43,6 +46,11 @@ function DriverHome({ navigation }: any) {
       }
     };
     syncData();
+
+    // Register FCM token & setup foreground push reception listeners
+    FCMService.registerDeviceWithBackend();
+    const unsubscribe = FCMService.setupFCMListeners();
+    return unsubscribe;
   }, [dispatch]);
 
   const handleQuickCall = () => {
@@ -122,6 +130,22 @@ function DriverHome({ navigation }: any) {
         onPress={() => navigation.navigate('EmergencyContacts')}
       >
         <Text style={styles.menuItemText}>📞 Emergency Contacts</Text>
+        <Text style={styles.menuItemArrow}>›</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.menuItem}
+        onPress={() => navigation.navigate('NotificationHistory')}
+      >
+        <Text style={styles.menuItemText}>🔔 Notification History</Text>
+        <Text style={styles.menuItemArrow}>›</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.menuItem}
+        onPress={() => navigation.navigate('NotificationPreferences')}
+      >
+        <Text style={styles.menuItemText}>⚙️ Notification Preferences</Text>
         <Text style={styles.menuItemArrow}>›</Text>
       </TouchableOpacity>
 
@@ -306,6 +330,8 @@ function AppStack({ role }: { role: string }) {
       <Stack.Screen name="VehicleInsurance" component={VehicleInsuranceScreen} options={{ title: 'Insurance Reference' }} />
       <Stack.Screen name="EmergencyContacts" component={EmergencyContactsScreen} options={{ title: 'Emergency Contacts' }} />
       <Stack.Screen name="AddEditContact" component={AddEditContactScreen} options={{ title: 'Contact Details' }} />
+      <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} options={{ title: 'Preferences' }} />
+      <Stack.Screen name="NotificationHistory" component={NotificationHistoryScreen} options={{ title: 'Notifications' }} />
     </Stack.Navigator>
   );
 }
