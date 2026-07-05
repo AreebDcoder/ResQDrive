@@ -6,6 +6,9 @@ import { UsersModule } from './users/users.module';
 import { AdminModule } from './admin/admin.module';
 import { EmailModule } from './email/email.module';
 import { UploadModule } from './upload/upload.module';
+import { VehiclesModule } from './vehicles/vehicles.module';
+import { EmergencyContactsModule } from './emergency-contacts/emergency-contacts.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -19,6 +22,9 @@ import { UploadModule } from './upload/upload.module';
     AdminModule,
     EmailModule,
     UploadModule,
+    VehiclesModule,
+    EmergencyContactsModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

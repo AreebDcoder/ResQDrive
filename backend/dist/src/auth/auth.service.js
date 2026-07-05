@@ -82,6 +82,11 @@ let AuthService = class AuthService {
                     },
                 });
             }
+            await tx.notificationPreference.create({
+                data: {
+                    userId: user.id,
+                },
+            });
             return user;
         });
         const verificationToken = this.jwtService.sign({ sub: result.id, email: result.email }, {
