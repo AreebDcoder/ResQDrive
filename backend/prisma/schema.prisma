@@ -38,6 +38,29 @@ enum LocationSessionStatus {
   EXPIRED
 }
 
+enum NotificationSessionStatus {
+  ACTIVE
+  ACKNOWLEDGED
+  CANCELLED
+  EXPIRED
+  EXHAUSTED
+}
+
+enum NotificationChannel {
+  PUSH
+  SMS
+  EMAIL
+  PHONE_CALL
+}
+
+enum NotificationAttemptStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+  ACKNOWLEDGED
+}
+
 model User {
   id                String   @id @default(uuid()) @db.Uuid
   fullName          String   @map("full_name") @db.VarChar(100)
@@ -51,12 +74,13 @@ model User {
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
-  driverDetails       DriverDetails?
-  mechanicDetails     MechanicDetails?
-  refreshTokens       RefreshToken[]
-  passwordResetTokens PasswordResetToken[]
-  incidents           Incident[]
-  locationSessions    LocationSession[]
+  driverDetails        DriverDetails?
+  mechanicDetails      MechanicDetails?
+  refreshTokens        RefreshToken[]
+  passwordResetTokens  PasswordResetToken[]
+  incidents            Incident[]
+  locationSessions     LocationSession[]
+  notificationSessions NotificationSession[]
 
   @@map("users")
 }
@@ -106,24 +130,25 @@ model PasswordResetToken {
 }
 
 model Incident {
-  id                     String            @id @default(uuid()) @db.Uuid
-  userId                 String            @map("user_id") @db.Uuid
-  type                   IncidentType      @default(MANUAL)
-  severity               IncidentSeverity  @default(NONE)
-  status                 IncidentStatus    @default(ACTIVE)
-  occurredAt             DateTime          @map("occurred_at")
+  id                     String                @id @default(uuid()) @db.Uuid
+  userId                 String                @map("user_id") @db.Uuid
+  type                   IncidentType          @default(MANUAL)
+  severity               IncidentSeverity      @default(NONE)
+  status                 IncidentStatus        @default(ACTIVE)
+  occurredAt             DateTime              @map("occurred_at")
   latitude               Float?
   longitude              Float?
-  address                String?           @db.Text
-  description            String?           @db.Text
+  address                String?               @db.Text
+  description            String?               @db.Text
   sensorSnapshot         Json?
-  alertDispatchStatus    Json?             @map("alert_dispatch_status")
-  damageAssessmentResult Json?             @map("damage_assessment_result")
-  isDeleted              Boolean           @default(false) @map("is_deleted")
-  createdAt              DateTime          @default(now()) @map("created_at")
-  updatedAt              DateTime          @updatedAt @map("updated_at")
-  user                   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  alertDispatchStatus    Json?                 @map("alert_dispatch_status")
+  damageAssessmentResult Json?                 @map("damage_assessment_result")
+  isDeleted              Boolean               @default(false) @map("is_deleted")
+  createdAt              DateTime              @default(now()) @map("created_at")
+  updatedAt              DateTime              @updatedAt @map("updated_at")
+  user                   User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   locationSessions       LocationSession[]
+  notificationSessions   NotificationSession[]
 
   @@index([userId, occurredAt])
   @@index([severity])
@@ -132,22 +157,70 @@ model Incident {
 }
 
 model LocationSession {
-  id           String                @id @default(uuid()) @db.Uuid
-  userId       String                @map("user_id") @db.Uuid
-  incidentId   String?               @map("incident_id") @db.Uuid
-  shareToken   String                @unique @map("share_token") @db.VarChar(64)
-  status       LocationSessionStatus @default(ACTIVE)
-  startedAt    DateTime              @default(now()) @map("started_at")
-  endedAt      DateTime?             @map("ended_at")
-  lastLat      Float?                @map("last_lat")
-  lastLng      Float?                @map("last_lng")
-  lastUpdateAt DateTime?             @map("last_update_at")
-  createdAt    DateTime              @default(now()) @map("created_at")
-  updatedAt    DateTime              @updatedAt @map("updated_at")
-  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  incident     Incident?             @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+  id                   String                @id @default(uuid()) @db.Uuid
+  userId               String                @map("user_id") @db.Uuid
+  incidentId           String?               @map("incident_id") @db.Uuid
+  shareToken           String                @unique @map("share_token") @db.VarChar(64)
+  status               LocationSessionStatus @default(ACTIVE)
+  startedAt            DateTime              @default(now()) @map("started_at")
+  endedAt              DateTime?             @map("ended_at")
+  lastLat              Float?                @map("last_lat")
+  lastLng              Float?                @map("last_lng")
+  lastUpdateAt         DateTime?             @map("last_update_at")
+  createdAt            DateTime              @default(now()) @map("created_at")
+  updatedAt            DateTime              @updatedAt @map("updated_at")
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  incident             Incident?             @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+  notificationSessions NotificationSession[]
 
   @@index([userId, status])
   @@index([shareToken])
   @@map("location_sessions")
+}
+
+model NotificationSession {
+  id                String                    @id @default(uuid()) @db.Uuid
+  userId            String                    @map("user_id") @db.Uuid
+  incidentId        String?                   @map("incident_id") @db.Uuid
+  locationSessionId String?                   @map("location_session_id") @db.Uuid
+  shareToken        String                    @unique @map("share_token") @db.VarChar(64)
+  status            NotificationSessionStatus @default(ACTIVE)
+  triggeredAt       DateTime                  @default(now()) @map("triggered_at")
+  acknowledgedAt    DateTime?                 @map("acknowledged_at")
+  acknowledgedBy    String?                   @map("acknowledged_by") @db.VarChar(100)
+  currentPriority   Int                       @default(1) @map("current_priority")
+  nextEscalationAt  DateTime?                 @map("next_escalation_at")
+  cancelledAt       DateTime?                 @map("cancelled_at")
+  expiresAt         DateTime                  @map("expires_at")
+  createdAt         DateTime                  @default(now()) @map("created_at")
+  updatedAt         DateTime                  @updatedAt @map("updated_at")
+  user              User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  incident          Incident?                 @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+  locationSession   LocationSession?          @relation(fields: [locationSessionId], references: [id], onDelete: SetNull)
+  attempts          NotificationAttempt[]
+
+  @@index([userId, status])
+  @@index([status, nextEscalationAt])
+  @@index([shareToken])
+  @@map("notification_sessions")
+}
+
+model NotificationAttempt {
+  id             String                    @id @default(uuid()) @db.Uuid
+  sessionId      String                    @map("session_id") @db.Uuid
+  contactName    String                    @map("contact_name") @db.VarChar(100)
+  contactPhone   String                    @map("contact_phone") @db.VarChar(20)
+  contactEmail   String?                   @map("contact_email") @db.VarChar(150)
+  priorityOrder  Int                       @map("priority_order")
+  channel        NotificationChannel
+  status         NotificationAttemptStatus @default(PENDING)
+  dispatchedAt   DateTime?                 @map("dispatched_at")
+  acknowledgedAt DateTime?                 @map("acknowledged_at")
+  errorMessage   String?                   @map("error_message") @db.Text
+  createdAt      DateTime                  @default(now()) @map("created_at")
+  session        NotificationSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, priorityOrder])
+  @@index([status])
+  @@map("notification_attempts")
 }

@@ -10,6 +10,7 @@ import { HospitalsModule } from './hospitals/hospitals.module';
 import { WorkshopsModule } from './workshops/workshops.module';
 import { IncidentsModule } from './incidents/incidents.module';
 import { LocationSharingModule } from './location-sharing/location-sharing.module';
+import { EmergencyNotificationModule } from './emergency-notification/emergency-notification.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { LocationSharingModule } from './location-sharing/location-sharing.modul
     WorkshopsModule,
     IncidentsModule,
     LocationSharingModule,
+    EmergencyNotificationModule,
   ],
 })
 export class AppModule {}
