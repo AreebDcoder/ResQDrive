@@ -10,6 +10,7 @@ import { VehiclesModule } from './vehicles/vehicles.module';
 import { EmergencyContactsModule } from './emergency-contacts/emergency-contacts.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { CrashSoundDetectionModule } from './crash-sound-detection/crash-sound-detection.module';
+import { VoiceCommandsModule } from './voice-commands/voice-commands.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { CrashSoundDetectionModule } from './crash-sound-detection/crash-sound-d
     EmergencyContactsModule,
     NotificationsModule,
     CrashSoundDetectionModule,
+    VoiceCommandsModule,
   ],
 })
 export class AppModule {}

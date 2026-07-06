@@ -19,6 +19,7 @@ const vehicles_module_1 = require("./vehicles/vehicles.module");
 const emergency_contacts_module_1 = require("./emergency-contacts/emergency-contacts.module");
 const notifications_module_1 = require("./notifications/notifications.module");
 const crash_sound_detection_module_1 = require("./crash-sound-detection/crash-sound-detection.module");
+const voice_commands_module_1 = require("./voice-commands/voice-commands.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -39,6 +40,7 @@ exports.AppModule = AppModule = __decorate([
             emergency_contacts_module_1.EmergencyContactsModule,
             notifications_module_1.NotificationsModule,
             crash_sound_detection_module_1.CrashSoundDetectionModule,
+            voice_commands_module_1.VoiceCommandsModule,
         ],
     })
 ], AppModule);
