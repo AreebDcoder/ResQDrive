@@ -22,6 +22,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
   const dispatch = useDispatch();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     control,
@@ -93,16 +94,21 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
             control={control}
             name="password"
             render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput
-                style={[styles.input, errors.password && styles.inputError]}
-                placeholder="Enter your password"
-                placeholderTextColor="#666"
-                secureTextEntry
-                autoCapitalize="none"
-                onBlur={onBlur}
-                onChangeText={onChange}
-                value={value}
-              />
+              <View style={[styles.passwordContainer, errors.password && styles.inputError]}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Enter your password"
+                  placeholderTextColor="#666"
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  value={value}
+                />
+                <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(!showPassword)}>
+                  <Text style={styles.eyeBtnText}>{showPassword ? 'Hide' : 'Show'}</Text>
+                </TouchableOpacity>
+              </View>
             )}
           />
           {errors.password && <Text style={styles.errorHelper}>{errors.password.message}</Text>}
@@ -242,6 +248,32 @@ const styles = StyleSheet.create({
   signupText: {
     color: '#d32f2f',
     fontSize: 14,
+    fontWeight: 'bold',
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1e1e1e',
+    borderRadius: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#2e2e2e',
+    paddingRight: 16,
+  },
+  passwordInput: {
+    flex: 1,
+    color: '#ffffff',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+  },
+  eyeBtn: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  eyeBtnText: {
+    color: '#d32f2f',
+    fontSize: 13,
     fontWeight: 'bold',
   },
 });

@@ -16,6 +16,7 @@ import { getItemAsync, deleteItemAsync } from '../utils/secureStorage';
 import { RootState } from '../store/store';
 import { updateUserProfile, logoutAction } from '../store/slices/authSlice';
 import { updateProfileSchema, changePasswordSchema, UpdateProfileInput, ChangePasswordInput } from '../schemas/validation';
+import { FCMService } from '../services/fcmService';
 import api from '../api/axios';
 
 export default function ProfileScreen() {
@@ -28,6 +29,9 @@ export default function ProfileScreen() {
   const [pwMessage, setPwMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isPwLoading, setIsPwLoading] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
 
   // Profile Form
   const {
@@ -102,7 +106,10 @@ export default function ProfileScreen() {
 
   const handleLogout = async () => {
     try {
-           const token = await getItemAsync('refreshToken');
+      // De-register push token from backend prior to destroying auth tokens
+      await FCMService.unregisterDeviceWithBackend();
+
+      const token = await getItemAsync('refreshToken');
       if (token) {
         await api.post('/auth/logout', { refreshToken: token });
       }
@@ -329,16 +336,24 @@ export default function ProfileScreen() {
               control={pwControl}
               name="currentPassword"
               render={({ field: { onChange, onBlur, value } }) => (
-                <TextInput
-                  style={[styles.input, pwErrors.currentPassword && styles.inputError]}
-                  placeholder="Enter current password"
-                  placeholderTextColor="#666"
-                  secureTextEntry
-                  autoCapitalize="none"
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  value={value}
-                />
+                <View style={[styles.passwordContainer, pwErrors.currentPassword && styles.inputError]}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    placeholder="Enter current password"
+                    placeholderTextColor="#666"
+                    secureTextEntry={!showCurrentPassword}
+                    autoCapitalize="none"
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    value={value}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeBtn}
+                    onPress={() => setShowCurrentPassword(!showCurrentPassword)}
+                  >
+                    <Text style={styles.eyeBtnText}>{showCurrentPassword ? 'Hide' : 'Show'}</Text>
+                  </TouchableOpacity>
+                </View>
               )}
             />
             {pwErrors.currentPassword && <Text style={styles.errorHelper}>{pwErrors.currentPassword.message}</Text>}
@@ -348,16 +363,21 @@ export default function ProfileScreen() {
               control={pwControl}
               name="newPassword"
               render={({ field: { onChange, onBlur, value } }) => (
-                <TextInput
-                  style={[styles.input, pwErrors.newPassword && styles.inputError]}
-                  placeholder="At least 8 chars, 1 num, 1 spec"
-                  placeholderTextColor="#666"
-                  secureTextEntry
-                  autoCapitalize="none"
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  value={value}
-                />
+                <View style={[styles.passwordContainer, pwErrors.newPassword && styles.inputError]}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    placeholder="At least 8 chars, 1 num, 1 spec"
+                    placeholderTextColor="#666"
+                    secureTextEntry={!showNewPassword}
+                    autoCapitalize="none"
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    value={value}
+                  />
+                  <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowNewPassword(!showNewPassword)}>
+                    <Text style={styles.eyeBtnText}>{showNewPassword ? 'Hide' : 'Show'}</Text>
+                  </TouchableOpacity>
+                </View>
               )}
             />
             {pwErrors.newPassword && <Text style={styles.errorHelper}>{pwErrors.newPassword.message}</Text>}
@@ -367,16 +387,24 @@ export default function ProfileScreen() {
               control={pwControl}
               name="confirmNewPassword"
               render={({ field: { onChange, onBlur, value } }) => (
-                <TextInput
-                  style={[styles.input, pwErrors.confirmNewPassword && styles.inputError]}
-                  placeholder="Confirm new password"
-                  placeholderTextColor="#666"
-                  secureTextEntry
-                  autoCapitalize="none"
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  value={value}
-                />
+                <View style={[styles.passwordContainer, pwErrors.confirmNewPassword && styles.inputError]}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    placeholder="Confirm new password"
+                    placeholderTextColor="#666"
+                    secureTextEntry={!showConfirmNewPassword}
+                    autoCapitalize="none"
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    value={value}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeBtn}
+                    onPress={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                  >
+                    <Text style={styles.eyeBtnText}>{showConfirmNewPassword ? 'Hide' : 'Show'}</Text>
+                  </TouchableOpacity>
+                </View>
               )}
             />
             {pwErrors.confirmNewPassword && (
@@ -575,5 +603,30 @@ const styles = StyleSheet.create({
     color: '#a5d6a7',
     fontSize: 14,
     textAlign: 'center',
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#161616',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#262626',
+    paddingRight: 14,
+  },
+  passwordInput: {
+    flex: 1,
+    color: '#ffffff',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+  },
+  eyeBtn: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  eyeBtnText: {
+    color: '#d32f2f',
+    fontSize: 13,
+    fontWeight: 'bold',
   },
 });

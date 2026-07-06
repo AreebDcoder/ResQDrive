@@ -11,6 +11,14 @@ import { WorkshopsModule } from './workshops/workshops.module';
 import { IncidentsModule } from './incidents/incidents.module';
 import { LocationSharingModule } from './location-sharing/location-sharing.module';
 import { EmergencyNotificationModule } from './emergency-notification/emergency-notification.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { EmergencyNumbersModule } from './emergency-numbers/emergency-numbers.module';
+import { AlertDispatchModule } from './alert-dispatch/alert-dispatch.module';
+import { VehiclesModule } from './vehicles/vehicles.module';
+import { EmergencyContactsModule } from './emergency-contacts/emergency-contacts.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { CrashSoundDetectionModule } from './crash-sound-detection/crash-sound-detection.module';
+import { VoiceCommandsModule } from './voice-commands/voice-commands.module';
 
 @Module({
   imports: [
@@ -18,6 +26,7 @@ import { EmergencyNotificationModule } from './emergency-notification/emergency-
       isGlobal: true,
       envFilePath: '.env',
     }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
     UsersModule,
@@ -29,6 +38,13 @@ import { EmergencyNotificationModule } from './emergency-notification/emergency-
     IncidentsModule,
     LocationSharingModule,
     EmergencyNotificationModule,
+    EmergencyNumbersModule,
+    AlertDispatchModule,
+    VehiclesModule,
+    EmergencyContactsModule,
+    NotificationsModule,
+    CrashSoundDetectionModule,
+    VoiceCommandsModule,
   ],
 })
 export class AppModule {}

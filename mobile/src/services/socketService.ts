@@ -22,10 +22,10 @@ export function getSocket(): Socket {
     socket.on('connect', () => {
       console.log('[Socket] Connected:', socket?.id);
     });
-    socket.on('disconnect', (reason) => {
+    socket.on('disconnect', (reason: string) => {
       console.log('[Socket] Disconnected:', reason);
     });
-    socket.on('connect_error', (err) => {
+    socket.on('connect_error', (err: Error) => {
       console.error('[Socket] Connect error:', err.message);
     });
   }

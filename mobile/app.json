@@ -4,9 +4,7 @@
     "slug": "resqdrive-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-
     "userInterfaceStyle": "dark",
-
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -22,8 +20,12 @@
       },
       "permissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
-      ]
+        "ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      "googleServicesFile": "./google-services.json",
+      "package": "com.basit_009.resqdrivemobile"
     },
     "plugins": [
       [
@@ -32,6 +34,11 @@
           "locationAlwaysAndWhenInUsePermission": "Allow ResQDrive to use your location to find nearby hospitals."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "c54004a9-148d-4eff-a7c4-8b697feab609"
+      }
+    }
   }
 }

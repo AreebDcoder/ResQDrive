@@ -62,17 +62,18 @@ enum NotificationAttemptStatus {
 }
 
 model User {
-  id                String   @id @default(uuid()) @db.Uuid
-  fullName          String   @map("full_name") @db.VarChar(100)
-  email             String   @unique @db.VarChar(150)
-  phoneNumber       String   @unique @map("phone_number") @db.VarChar(20)
-  passwordHash      String   @map("password_hash") @db.VarChar(255)
-  role              UserRole @default(DRIVER)
-  profilePictureUrl String?  @map("profile_picture_url") @db.Text
-  isVerified        Boolean  @default(false) @map("is_verified")
-  isActive          Boolean  @default(true) @map("is_active")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  id                String              @id @default(uuid()) @db.Uuid
+  fullName          String              @map("full_name") @db.VarChar(100)
+  email             String              @unique @db.VarChar(150)
+  phoneNumber       String              @unique @map("phone_number") @db.VarChar(20)
+  passwordHash      String              @map("password_hash") @db.VarChar(255)
+  role              UserRole            @default(DRIVER)
+  profilePictureUrl String?             @map("profile_picture_url") @db.Text
+  isVerified        Boolean             @default(false) @map("is_verified")
+  isActive          Boolean             @default(true) @map("is_active")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+  pushToken         String?             @map("push_token")
 
   driverDetails        DriverDetails?
   mechanicDetails      MechanicDetails?
@@ -81,6 +82,13 @@ model User {
   incidents            Incident[]
   locationSessions     LocationSession[]
   notificationSessions NotificationSession[]
+  vehicles            Vehicle[]
+  emergencyContacts   EmergencyContact[]
+  deviceTokens         DeviceToken[]
+  notificationPreference NotificationPreference?
+  notificationLogs       NotificationLog[]
+  crashSoundDetectionLogs CrashSoundDetectionLog[]
+  voiceCommandLogs       VoiceCommandLog[]
 
   @@map("users")
 }
@@ -128,7 +136,6 @@ model PasswordResetToken {
 
   @@map("password_reset_tokens")
 }
-
 model Incident {
   id                     String                @id @default(uuid()) @db.Uuid
   userId                 String                @map("user_id") @db.Uuid
@@ -223,4 +230,178 @@ model NotificationAttempt {
   @@index([sessionId, priorityOrder])
   @@index([status])
   @@map("notification_attempts")
+}
+
+model EmailQueue {
+  id        String   @id @default(uuid()) @db.Uuid
+  to        String
+  subject   String
+  html      String   @db.Text
+  attempts  Int      @default(0)
+  status    String   @default("PENDING") // PENDING, SENT, FAILED
+  createdAt DateTime @default(now()) @map("created_at")
+  lastTriedAt DateTime? @map("last_tried_at")
+
+  @@map("email_queue")
+}
+model EmergencyNumber {
+  id        String   @id @default(uuid()) @db.Uuid
+  region    String
+  name      String
+  number    String
+  isDefault Boolean  @default(true) @map("is_default")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("emergency_numbers")
+}
+model AlertDispatchLog {
+  id            String   @id @default(uuid()) @db.Uuid
+  incidentId    String?  @map("incident_id") @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  payload       Json
+  pushStatus    String   @default("PENDING") @map("push_status")
+  smsStatus     String   @default("PENDING") @map("sms_status")
+  emailStatus   String   @default("PENDING") @map("email_status")
+  attempts      Int      @default(1)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("alert_dispatch_logs")
+}
+
+model Vehicle {
+  id           String            @id @default(uuid()) @db.Uuid
+  userId       String            @map("user_id") @db.Uuid
+  make         String            @db.VarChar(50)
+  model        String            @db.VarChar(50)
+  year         Int
+  color        String?           @db.VarChar(30)
+  licensePlate String            @unique @map("license_plate") @db.VarChar(20)
+  isPrimary    Boolean           @default(false) @map("is_primary")
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  insurance    VehicleInsurance?
+
+  @@map("vehicles")
+}
+
+model VehicleInsurance {
+  id                String    @id @default(uuid()) @db.Uuid
+  vehicleId         String    @unique @map("vehicle_id") @db.Uuid
+  providerName      String?   @map("provider_name") @db.VarChar(100)
+  policyNumber      String?   @map("policy_number") @db.VarChar(50)
+  coverageType      String?   @map("coverage_type") @db.VarChar(50)
+  expiryDate        DateTime? @map("expiry_date") @db.Date
+  emergencyHelpline String?   @map("emergency_helpline") @db.VarChar(20)
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  vehicle           Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@map("vehicle_insurance")
+}
+
+model EmergencyContact {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  name          String   @db.VarChar(100)
+  phoneNumber   String   @map("phone_number") @db.VarChar(20)
+  email         String?  @db.VarChar(150)
+  relationship  String   @db.VarChar(50)
+  priorityOrder Int      @map("priority_order")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, priorityOrder])
+  @@map("emergency_contacts")
+}
+
+enum NotificationCategory {
+  driving_mode
+  alert_delivery_confirmation
+  false_alarm_log
+  system_status
+  general
+}
+
+model DeviceToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  fcmToken  String   @map("fcm_token") @db.Text
+  platform  String   @db.VarChar(10)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, fcmToken])
+  @@map("device_tokens")
+}
+
+model NotificationPreference {
+  id                   String   @id @default(uuid()) @db.Uuid
+  userId               String   @unique @map("user_id") @db.Uuid
+  drivingModeEnabled   Boolean  @default(true) @map("driving_mode_enabled")
+  alertDeliveryEnabled Boolean  @default(true) @map("alert_delivery_enabled")
+  falseAlarmLogEnabled Boolean  @default(true) @map("false_alarm_log_enabled")
+  systemStatusEnabled  Boolean  @default(true) @map("system_status_enabled")
+  generalEnabled       Boolean  @default(true) @map("general_enabled")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
+model NotificationLog {
+  id             String               @id @default(uuid()) @db.Uuid
+  userId         String               @map("user_id") @db.Uuid
+  category       NotificationCategory
+  title          String               @db.VarChar(150)
+  body           String               @db.Text
+  isRead         Boolean              @default(false) @map("is_read")
+  deliveryStatus String               @default("sent") @map("delivery_status") @db.VarChar(30)
+  metadata       Json?
+  createdAt      DateTime             @default(now()) @map("created_at")
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_logs")
+}
+
+model CrashSoundDetectionLog {
+  id                       String    @id @default(uuid()) @db.Uuid
+  userId                   String    @map("user_id") @db.Uuid
+  incidentId               String?   @map("incident_id") @db.Uuid
+  windowTimestamp          DateTime  @map("window_timestamp")
+  topMatchedClass          String?   @map("top_matched_class") @db.VarChar(50)
+  crashConfidence          Float     @map("crash_confidence")
+  thresholdUsed            Float     @map("threshold_used")
+  flaggedAsCrash           Boolean   @map("flagged_as_crash")
+  combinedWithSensorSignal Boolean   @default(false) @map("combined_with_sensor_signal")
+  createdAt                DateTime  @default(now()) @map("created_at")
+  user                     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("crash_sound_detection_logs")
+}
+
+enum VoiceIntent {
+  cancel
+  sos
+  unknown
+}
+
+model VoiceCommandLog {
+  id                String      @id @default(uuid()) @db.Uuid
+  userId            String      @map("user_id") @db.Uuid
+  incidentId        String?     @map("incident_id") @db.Uuid
+  rawTranscript     String      @map("raw_transcript") @db.Text
+  classifiedIntent  VoiceIntent @map("classified_intent")
+  recognitionEngine String      @map("recognition_engine") @db.VarChar(20)
+  actionTaken       Boolean     @default(false) @map("action_taken")
+  createdAt         DateTime    @default(now()) @map("created_at")
+  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("voice_command_logs")
 }

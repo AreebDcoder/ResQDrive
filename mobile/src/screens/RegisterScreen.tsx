@@ -19,6 +19,8 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'DRIVER' | 'MECHANIC'>('DRIVER');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const {
     control,
@@ -48,19 +50,20 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
   };
 
   const onSubmit = async (data: RegisterInput) => {
-  setIsLoading(true);
-  setErrorMsg(null);
-  try {
-    const { confirmPassword, ...registrationData } = data;
-    await api.post('/auth/register', registrationData);
-    // Navigate to email verification screen with the registered email context
-    navigation.navigate('EmailVerification', { email: data.email });
-  } catch (err: any) {
-    setErrorMsg(err.response?.data?.message || 'Registration failed. Please check details.');
-  } finally {
-    setIsLoading(false);
-  }
-};
+    setIsLoading(true);
+    setErrorMsg(null);
+    try {
+      // Strip confirmPassword since the backend DTO forbids non-whitelisted properties
+      const { confirmPassword, ...registerPayload } = data;
+      await api.post('/auth/register', registerPayload);
+      // Navigate to email verification screen with the registered email context
+      navigation.navigate('EmailVerification', { email: data.email });
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Registration failed. Please check details.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -260,16 +263,21 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
             control={control}
             name="password"
             render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput
-                style={[styles.input, errors.password && styles.inputError]}
-                placeholder="At least 8 chars, 1 num, 1 spec"
-                placeholderTextColor="#666"
-                secureTextEntry
-                autoCapitalize="none"
-                onBlur={onBlur}
-                onChangeText={onChange}
-                value={value}
-              />
+              <View style={[styles.passwordContainer, errors.password && styles.inputError]}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="At least 8 chars, 1 num, 1 spec"
+                  placeholderTextColor="#666"
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  value={value}
+                />
+                <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(!showPassword)}>
+                  <Text style={styles.eyeBtnText}>{showPassword ? 'Hide' : 'Show'}</Text>
+                </TouchableOpacity>
+              </View>
             )}
           />
           {errors.password && <Text style={styles.errorHelper}>{errors.password.message}</Text>}
@@ -279,16 +287,24 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
             control={control}
             name="confirmPassword"
             render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput
-                style={[styles.input, errors.confirmPassword && styles.inputError]}
-                placeholder="Confirm your password"
-                placeholderTextColor="#666"
-                secureTextEntry
-                autoCapitalize="none"
-                onBlur={onBlur}
-                onChangeText={onChange}
-                value={value}
-              />
+              <View style={[styles.passwordContainer, errors.confirmPassword && styles.inputError]}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Confirm your password"
+                  placeholderTextColor="#666"
+                  secureTextEntry={!showConfirmPassword}
+                  autoCapitalize="none"
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  value={value}
+                />
+                <TouchableOpacity
+                  style={styles.eyeBtn}
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  <Text style={styles.eyeBtnText}>{showConfirmPassword ? 'Hide' : 'Show'}</Text>
+                </TouchableOpacity>
+              </View>
             )}
           />
           {errors.confirmPassword && <Text style={styles.errorHelper}>{errors.confirmPassword.message}</Text>}
@@ -439,6 +455,32 @@ const styles = StyleSheet.create({
   loginText: {
     color: '#d32f2f',
     fontSize: 14,
+    fontWeight: 'bold',
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1e1e1e',
+    borderRadius: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#2e2e2e',
+    paddingRight: 16,
+  },
+  passwordInput: {
+    flex: 1,
+    color: '#ffffff',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+  },
+  eyeBtn: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  eyeBtnText: {
+    color: '#d32f2f',
+    fontSize: 13,
     fontWeight: 'bold',
   },
 });
