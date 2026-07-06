@@ -9,6 +9,7 @@ import { UploadModule } from './upload/upload.module';
 import { VehiclesModule } from './vehicles/vehicles.module';
 import { EmergencyContactsModule } from './emergency-contacts/emergency-contacts.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { CrashSoundDetectionModule } from './crash-sound-detection/crash-sound-detection.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     VehiclesModule,
     EmergencyContactsModule,
     NotificationsModule,
+    CrashSoundDetectionModule,
   ],
 })
 export class AppModule {}

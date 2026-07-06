@@ -35,6 +35,7 @@ model User {
   deviceTokens         DeviceToken[]
   notificationPreference NotificationPreference?
   notificationLogs       NotificationLog[]
+  crashSoundDetectionLogs CrashSoundDetectionLog[]
 
   @@map("users")
 }
@@ -179,4 +180,20 @@ model NotificationLog {
   user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notification_logs")
+}
+
+model CrashSoundDetectionLog {
+  id                       String    @id @default(uuid()) @db.Uuid
+  userId                   String    @map("user_id") @db.Uuid
+  incidentId               String?   @map("incident_id") @db.Uuid
+  windowTimestamp          DateTime  @map("window_timestamp")
+  topMatchedClass          String?   @map("top_matched_class") @db.VarChar(50)
+  crashConfidence          Float     @map("crash_confidence")
+  thresholdUsed            Float     @map("threshold_used")
+  flaggedAsCrash           Boolean   @map("flagged_as_crash")
+  combinedWithSensorSignal Boolean   @default(false) @map("combined_with_sensor_signal")
+  createdAt                DateTime  @default(now()) @map("created_at")
+  user                     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("crash_sound_detection_logs")
 }

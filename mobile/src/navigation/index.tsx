@@ -19,6 +19,7 @@ import EmergencyContactsScreen from '../screens/EmergencyContactsScreen';
 import AddEditContactScreen from '../screens/AddEditContactScreen';
 import NotificationPreferencesScreen from '../screens/NotificationPreferencesScreen';
 import NotificationHistoryScreen from '../screens/NotificationHistoryScreen';
+import CrashSoundDemoScreen from '../screens/CrashSoundDemoScreen';
 import { FCMService } from '../services/fcmService';
 import api from '../api/axios';
 
@@ -146,6 +147,14 @@ function DriverHome({ navigation }: any) {
         onPress={() => navigation.navigate('NotificationPreferences')}
       >
         <Text style={styles.menuItemText}>⚙️ Notification Preferences</Text>
+        <Text style={styles.menuItemArrow}>›</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.menuItem}
+        onPress={() => navigation.navigate('CrashSoundDemo')}
+      >
+        <Text style={styles.menuItemText}>🎙️ Crash Sound Detection</Text>
         <Text style={styles.menuItemArrow}>›</Text>
       </TouchableOpacity>
 
@@ -332,6 +341,7 @@ function AppStack({ role }: { role: string }) {
       <Stack.Screen name="AddEditContact" component={AddEditContactScreen} options={{ title: 'Contact Details' }} />
       <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} options={{ title: 'Preferences' }} />
       <Stack.Screen name="NotificationHistory" component={NotificationHistoryScreen} options={{ title: 'Notifications' }} />
+      <Stack.Screen name="CrashSoundDemo" component={CrashSoundDemoScreen} options={{ title: 'Sound Detection' }} />
     </Stack.Navigator>
   );
 }
