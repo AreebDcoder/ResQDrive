@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import * as nodemailer from 'nodemailer';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -75,7 +75,9 @@ export class EmailService {
 
   /**
    * Sends an emergency alert email immediately, or queues it for retry
-   * if SMTP is unavailable (e.g. connectivity lost). Part of Module 6.12.
+   * if SMTP is unavailable. Throws if the email was only queued (not
+   * actually delivered), so callers like AlertDispatchService correctly
+   * treat this channel as failed rather than falsely succeeded.
    */
   async sendEmergencyAlertEmail(
     email: string,
@@ -94,33 +96,39 @@ export class EmailService {
       </div>
     `;
 
-    await this.sendMail(email, `🚨 ResQDrive Emergency Alert - ${userName}`, html);
+    const sent = await this.sendMail(email, `🚨 ResQDrive Emergency Alert - ${userName}`, html);
+    if (!sent) {
+      throw new Error('Email was queued, not delivered immediately');
+    }
   }
 
-  private async sendMail(to: string, subject: string, html: string): Promise<void> {
+  /**
+   * Attempts to send an email. Returns true if actually delivered via
+   * SMTP, false if it was queued for retry instead (SMTP unavailable
+   * or the send failed).
+   */
+  private async sendMail(to: string, subject: string, html: string): Promise<boolean> {
     const from = this.configService.get<string>('SMTP_FROM') || 'noreply@resqdrive.com';
 
     if (this.transporter) {
       try {
         await this.transporter.sendMail({ from, to, subject, html });
         this.logger.log(`Email successfully sent to ${to} with subject: "${subject}"`);
+        return true;
       } catch (error: any) {
         this.logger.error(`Failed to send email to ${to}: ${error.message}. Queuing for retry.`);
         await this.queueEmail(to, subject, html);
         this.logFallback(to, subject, html);
+        return false;
       }
     } else {
       this.logger.warn(`No SMTP transporter configured. Queuing email to ${to} for retry.`);
       await this.queueEmail(to, subject, html);
       this.logFallback(to, subject, html);
+      return false;
     }
   }
 
-  /**
-   * Saves a failed email to the database so it can be retried later
-   * once connectivity/SMTP is restored. Core of Module 6.12's
-   * "queues messages locally and dispatches when connectivity is restored".
-   */
   private async queueEmail(to: string, subject: string, html: string): Promise<void> {
     try {
       await this.prisma.emailQueue.create({
@@ -137,15 +145,10 @@ export class EmailService {
     }
   }
 
-  /**
-   * Runs every 2 minutes, attempts to resend any pending queued emails.
-   * This is what makes offline/failed emails "dispatch automatically
-   * when connectivity is restored" per the scope requirement.
-   */
- @Cron('*/2 * * * *')
+  @Cron('*/2 * * * *')
   async retryQueuedEmails(): Promise<void> {
     if (!this.transporter) {
-      return; // No point retrying if SMTP isn't even configured
+      return;
     }
 
     const pending = await this.prisma.emailQueue.findMany({
@@ -153,7 +156,7 @@ export class EmailService {
         status: 'PENDING',
         attempts: { lt: this.MAX_ATTEMPTS },
       },
-      take: 20, // process in small batches
+      take: 20,
     });
 
     if (pending.length === 0) return;

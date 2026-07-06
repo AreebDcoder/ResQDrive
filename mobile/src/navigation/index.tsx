@@ -1,12 +1,14 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Linking } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import api from '../api/axios';
 import * as Location from 'expo-location';
+import * as Notifications from 'expo-notifications';
 import { dispatchEmergencyAlert } from '../utils/emergencyFallback';
+import { registerForPushNotificationsAsync } from '../utils/registerPushToken';
 
 import SplashScreen from '../screens/SplashScreen';
 import LoginScreen from '../screens/LoginScreen';
@@ -23,30 +25,31 @@ const Stack = createStackNavigator();
 
 // Simple Placeholder homepages for Driver and Mechanic
 function DriverHome({ navigation }: any) {
- const testEmergencyFallback = async () => {
-  const { status } = await Location.requestForegroundPermissionsAsync();
-  if (status !== 'granted') {
-    alert('Location permission needed for this test.');
-    return;
-  }
-  const location = await Location.getCurrentPositionAsync({});
+  const testEmergencyFallback = async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      alert('Location permission needed for this test.');
+      return;
+    }
+    const location = await Location.getCurrentPositionAsync({});
 
-  const result = await dispatchEmergencyAlert(
-    [{ name: 'Test Contact', phoneNumber: '+923175718391' }],
-    {
-      userName: 'Abdul Basit',
-      userPhone: '+923321276653',
-      severity: 'Moderate',
-      latitude: location.coords.latitude,
-      longitude: location.coords.longitude,
-    },
-    async () => {
-      throw new Error('Simulating online dispatch not implemented yet');
-    },
-  );
+    const result = await dispatchEmergencyAlert(
+      [{ name: 'Test Contact', phoneNumber: '+923175718391' }],
+      {
+        userName: 'Abdul Basit',
+        userPhone: '+923321276653',
+        severity: 'Moderate',
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      },
+      async () => {
+        throw new Error('Simulating online dispatch not implemented yet');
+      },
+    );
 
-  alert(`Fallback test result: ${result.mode}`);
-};
+    alert(`Fallback test result: ${result.mode}`);
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Driver Portal</Text>
@@ -64,8 +67,8 @@ function DriverHome({ navigation }: any) {
         <Text style={styles.navBtnText}>🧪 Test Emergency Fallback</Text>
       </TouchableOpacity>
       <TouchableOpacity style={[styles.navBtn, { backgroundColor: '#b71c1c' }]} onPress={() => navigation.navigate('SOS')}>
-  <Text style={styles.navBtnText}>🆘 Emergency SOS</Text>
-</TouchableOpacity>
+        <Text style={styles.navBtnText}>🆘 Emergency SOS</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -167,7 +170,6 @@ function AdminHome({ navigation }: any) {
       <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('Profile')}>
         <Text style={styles.navBtnText}>Go to My Profile</Text>
       </TouchableOpacity>
-     
     </View>
   );
 }
@@ -217,6 +219,21 @@ function AppStack({ role }: { role: string }) {
         return 'ResQDrive';
     }
   };
+
+  React.useEffect(() => {
+    registerForPushNotificationsAsync().catch((err) => {
+      console.log('Push notification registration failed:', err);
+    });
+
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const mapsLink = response.notification.request.content.data?.mapsLink as string;
+      if (mapsLink) {
+        Linking.openURL(mapsLink);
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   return (
     <Stack.Navigator

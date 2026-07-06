@@ -35,7 +35,7 @@ export class UsersService {
       throw new NotFoundException('User not found.');
     }
 
-    const { fullName, phoneNumber, profilePictureUrl, ...details } = updateProfileDto;
+   const { fullName, phoneNumber, profilePictureUrl, pushToken, ...details } = updateProfileDto;
 
     if (phoneNumber && phoneNumber !== user.phoneNumber) {
       const conflictUser = await this.prisma.user.findUnique({
@@ -47,15 +47,15 @@ export class UsersService {
     }
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.user.update({
-        where: { id: userId },
-        data: {
-          fullName,
-          phoneNumber,
-          profilePictureUrl,
-        },
-      });
-
+    await tx.user.update({
+  where: { id: userId },
+  data: {
+    fullName,
+    phoneNumber,
+    profilePictureUrl,
+    pushToken,
+  },
+});
       if (user.role === UserRole.DRIVER) {
         await tx.driverDetails.upsert({
           where: { userId },

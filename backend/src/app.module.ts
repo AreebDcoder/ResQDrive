@@ -9,6 +9,8 @@ import { UploadModule } from './upload/upload.module';
 import { HospitalsModule } from './hospitals/hospitals.module';
 import { WorkshopsModule } from './workshops/workshops.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { EmergencyNumbersModule } from './emergency-numbers/emergency-numbers.module';
+import { AlertDispatchModule } from './alert-dispatch/alert-dispatch.module';
 
 @Module({
   imports: [
@@ -25,6 +27,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     UploadModule,
     HospitalsModule,
     WorkshopsModule,
+    EmergencyNumbersModule,
+    AlertDispatchModule,
   ],
 })
 export class AppModule {}
