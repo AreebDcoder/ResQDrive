@@ -82,6 +82,13 @@ export class AuthService {
         });
       }
 
+      // Auto-initialize default notification preferences for the user
+      await tx.notificationPreference.create({
+        data: {
+          userId: user.id,
+        },
+      });
+
       return user;
     });
 

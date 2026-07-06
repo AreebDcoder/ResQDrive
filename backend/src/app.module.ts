@@ -11,6 +11,10 @@ import { WorkshopsModule } from './workshops/workshops.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EmergencyNumbersModule } from './emergency-numbers/emergency-numbers.module';
 import { AlertDispatchModule } from './alert-dispatch/alert-dispatch.module';
+import { VehiclesModule } from './vehicles/vehicles.module';
+import { EmergencyContactsModule } from './emergency-contacts/emergency-contacts.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { CrashSoundDetectionModule } from './crash-sound-detection/crash-sound-detection.module';
 
 @Module({
   imports: [
@@ -29,6 +33,10 @@ import { AlertDispatchModule } from './alert-dispatch/alert-dispatch.module';
     WorkshopsModule,
     EmergencyNumbersModule,
     AlertDispatchModule,
+    VehiclesModule,
+    EmergencyContactsModule,
+    NotificationsModule,
+    CrashSoundDetectionModule,
   ],
 })
 export class AppModule {}
