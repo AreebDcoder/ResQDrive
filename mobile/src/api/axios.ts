@@ -1,22 +1,22 @@
 import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import { store } from '../store/store';
 import { logoutAction, setTokens } from '../store/slices/authSlice';
+import { getItemAsync, setItemAsync, deleteItemAsync } from '../utils/secureStorage';
 
+const LOCALHOST_API_URL = 'http://localhost:3000';
+const MOBILE_API_URL = process.env.EXPO_PUBLIC_API_URL || LOCALHOST_API_URL;
 
-
-// Use 192.168.100.4 (your computer's Wi-Fi IP) so your physical phone can connect
-const API_URL = 'http://192.168.18.186:3000';
+const API_URL = Platform.OS === 'web' ? LOCALHOST_API_URL : MOBILE_API_URL;
 
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 10000,
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request Interceptor: Attach the current Access Token from memory/Redux state
 api.interceptors.request.use(
   async (config) => {
     const token = store.getState().auth.accessToken;
@@ -28,7 +28,6 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor: Silent refresh on 401 (Unauthorized)
 let isRefreshing = false;
 let failedQueue: any[] = [];
 
@@ -48,7 +47,6 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Guard to prevent looping if the error was on the refresh endpoint itself
     if (originalRequest.url.includes('/auth/refresh')) {
       return Promise.reject(error);
     }
@@ -69,12 +67,11 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const storedRefreshToken = await SecureStore.getItemAsync('refreshToken');
+        const storedRefreshToken = await getItemAsync('refreshToken');
         if (!storedRefreshToken) {
           throw new Error('No refresh token stored');
         }
 
-        // Silent refresh call
         const response = await axios.post(`${API_URL}/auth/refresh`, {}, {
           headers: {
             Authorization: `Bearer ${storedRefreshToken}`,
@@ -83,19 +80,16 @@ api.interceptors.response.use(
 
         const { accessToken, refreshToken } = response.data;
 
-        // Store new rotated tokens
-        await SecureStore.setItemAsync('refreshToken', refreshToken);
+        await setItemAsync('refreshToken', refreshToken);
         store.dispatch(setTokens({ accessToken, refreshToken }));
 
-        // Retry original requests queued during the refresh
         processQueue(null, accessToken);
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-        
+
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        // Force logout if refresh token invalid/expired
-        await SecureStore.deleteItemAsync('refreshToken');
+        await deleteItemAsync('refreshToken');
         store.dispatch(logoutAction());
         return Promise.reject(refreshError);
       } finally {

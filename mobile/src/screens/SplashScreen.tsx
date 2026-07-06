@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
 import { useDispatch } from 'react-redux';
 import { loginSuccess, logoutAction, setLoading } from '../store/slices/authSlice';
 import api from '../api/axios';
+import { getItemAsync, setItemAsync, deleteItemAsync } from '../utils/secureStorage';
 
 export default function SplashScreen() {
   const dispatch = useDispatch();
@@ -11,13 +11,12 @@ export default function SplashScreen() {
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const refreshToken = await SecureStore.getItemAsync('refreshToken');
+        const refreshToken = await getItemAsync('refreshToken');
         if (!refreshToken) {
           dispatch(logoutAction());
           return;
         }
 
-        // Silent refresh to fetch current profile & active access token
         const response = await api.post('/auth/refresh', {}, {
           headers: {
             Authorization: `Bearer ${refreshToken}`,
@@ -25,9 +24,8 @@ export default function SplashScreen() {
         });
 
         const { accessToken, refreshToken: newRefreshToken } = response.data;
-        await SecureStore.setItemAsync('refreshToken', newRefreshToken);
+        await setItemAsync('refreshToken', newRefreshToken);
 
-        // Fetch user profile
         const profileResponse = await api.get('/users/me', {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -36,8 +34,7 @@ export default function SplashScreen() {
 
         dispatch(loginSuccess({ accessToken, user: profileResponse.data }));
       } catch (error) {
-        console.log('Session restoration failed:', error);
-        await SecureStore.deleteItemAsync('refreshToken');
+        await deleteItemAsync('refreshToken');
         dispatch(logoutAction());
       } finally {
         dispatch(setLoading(false));

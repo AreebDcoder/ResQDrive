@@ -19,6 +19,12 @@ import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import HospitalsScreen from '../screens/HospitalsScreen';
 import WorkshopsScreen from '../screens/WorkshopsScreen';
+import IncidentsListScreen from '../screens/IncidentsListScreen';
+import IncidentDetailScreen from '../screens/IncidentDetailScreen';
+import CreateIncidentScreen from '../screens/CreateIncidentScreen';
+import LocationSharingScreen from '../screens/LocationSharingScreen';
+import EmergencyNotificationScreen from '../screens/EmergencyNotificationScreen';
+import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
 import SOSScreen from '../screens/SOSScreen';
 import MyVehiclesScreen from '../screens/MyVehiclesScreen';
 import AddEditVehicleScreen from '../screens/AddEditVehicleScreen';
@@ -33,7 +39,6 @@ import { FCMService } from '../services/fcmService';
 
 const Stack = createStackNavigator();
 
-// Simple Placeholder homepages for Driver and Mechanic
 function DriverHome({ navigation }: any) {
   const dispatch = useDispatch();
   const vehicles = useSelector((state: RootState) => state.vehicles.list);
@@ -224,6 +229,30 @@ function DriverHome({ navigation }: any) {
 
       <TouchableOpacity
         style={styles.menuItem}
+        onPress={() => navigation.navigate('IncidentsList')}
+      >
+        <Text style={styles.menuItemText}>📋 Incident History</Text>
+        <Text style={styles.menuItemArrow}>›</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.menuItem}
+        onPress={() => navigation.navigate('LocationSharing')}
+      >
+        <Text style={styles.menuItemText}>📡 Share Live Location</Text>
+        <Text style={styles.menuItemArrow}>›</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.menuItem}
+        onPress={() => navigation.navigate('EmergencyNotification')}
+      >
+        <Text style={styles.menuItemText}>🚨 Emergency Alert</Text>
+        <Text style={styles.menuItemArrow}>›</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.menuItem}
         onPress={testEmergencyFallback}
       >
         <Text style={styles.menuItemText}>🧪 Test Emergency Fallback</Text>
@@ -268,7 +297,6 @@ function AdminHome({ navigation }: any) {
       );
       setPendingMechanics(unverified);
     } catch (err: any) {
-      console.log('Failed to fetch pending mechanics:', err);
       setMessage('Failed to load pending approvals list.');
     } finally {
       setIsLoading(false);
@@ -281,9 +309,7 @@ function AdminHome({ navigation }: any) {
 
   const handleApprove = async (userId: string) => {
     try {
-      await api.patch(`/admin/users/${userId}/verify-workshop`, {
-        isWorkshopVerified: true,
-      });
+      await api.patch(`/admin/users/${userId}/verify-workshop`, { isWorkshopVerified: true });
       setPendingMechanics((prev) => prev.filter((m) => m.id !== userId));
     } catch (err) {
       alert('Failed to approve workshop.');
@@ -313,21 +339,13 @@ function AdminHome({ navigation }: any) {
             <View key={mechanic.id} style={styles.approvalCard}>
               <View style={styles.cardRow}>
                 <Text style={styles.mechanicName}>{mechanic.fullName}</Text>
-                <Text style={styles.specializationBadge}>
-                  {mechanic.mechanicDetails?.specialization}
-                </Text>
+                <Text style={styles.specializationBadge}>{mechanic.mechanicDetails?.specialization}</Text>
               </View>
               <Text style={styles.cardInfo}>Email: {mechanic.email}</Text>
               <Text style={styles.cardInfo}>Phone: {mechanic.phoneNumber}</Text>
-              <Text style={styles.cardInfo}>
-                Workshop: <Text style={{ fontWeight: 'bold', color: '#ffffff' }}>{mechanic.mechanicDetails?.workshopName}</Text>
-              </Text>
+              <Text style={styles.cardInfo}>Workshop: <Text style={{ fontWeight: 'bold', color: '#ffffff' }}>{mechanic.mechanicDetails?.workshopName}</Text></Text>
               <Text style={styles.cardInfo}>Address: {mechanic.mechanicDetails?.workshopAddress}</Text>
-
-              <TouchableOpacity
-                style={styles.approveBtn}
-                onPress={() => handleApprove(mechanic.id)}
-              >
+              <TouchableOpacity style={styles.approveBtn} onPress={() => handleApprove(mechanic.id)}>
                 <Text style={styles.approveBtnText}>Approve & Verify Workshop</Text>
               </TouchableOpacity>
             </View>
@@ -335,6 +353,9 @@ function AdminHome({ navigation }: any) {
         </ScrollView>
       )}
 
+      <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('AdminDashboard')}>
+        <Text style={styles.navBtnText}>📊 Analytics Dashboard</Text>
+      </TouchableOpacity>
       <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('Profile')}>
         <Text style={styles.navBtnText}>Go to My Profile</Text>
       </TouchableOpacity>
@@ -364,27 +385,19 @@ function AuthStack() {
 function AppStack({ role }: { role: string }) {
   const getHomeComponent = () => {
     switch (role) {
-      case 'DRIVER':
-        return DriverHome;
-      case 'MECHANIC':
-        return MechanicHome;
-      case 'ADMIN':
-        return AdminHome;
-      default:
-        return DriverHome;
+      case 'DRIVER': return DriverHome;
+      case 'MECHANIC': return MechanicHome;
+      case 'ADMIN': return AdminHome;
+      default: return DriverHome;
     }
   };
 
   const getHeaderTitle = () => {
     switch (role) {
-      case 'DRIVER':
-        return 'ResQDrive';
-      case 'MECHANIC':
-        return 'Workshop Dashboard';
-      case 'ADMIN':
-        return 'Admin Controls';
-      default:
-        return 'ResQDrive';
+      case 'DRIVER': return 'ResQDrive';
+      case 'MECHANIC': return 'Workshop Dashboard';
+      case 'ADMIN': return 'Admin Controls';
+      default: return 'ResQDrive';
     }
   };
 
@@ -412,14 +425,16 @@ function AppStack({ role }: { role: string }) {
         cardStyle: { backgroundColor: '#121212' },
       }}
     >
-      <Stack.Screen 
-        name="Home" 
-        component={getHomeComponent()} 
-        options={{ title: getHeaderTitle() }} 
-      />
+      <Stack.Screen name="Home" component={getHomeComponent()} options={{ title: getHeaderTitle() }} />
       <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'My Profile' }} />
       <Stack.Screen name="Hospitals" component={HospitalsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Workshops" component={WorkshopsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="IncidentsList" component={IncidentsListScreen} options={{ title: 'Incident History' }} />
+      <Stack.Screen name="IncidentDetail" component={IncidentDetailScreen} options={{ title: 'Incident Detail' }} />
+      <Stack.Screen name="CreateIncident" component={CreateIncidentScreen} options={({ route }: any) => ({ title: route.params?.mode === 'edit' ? 'Edit Incident' : 'New Incident' })} />
+      <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} options={{ title: 'Admin Dashboard' }} />
+      <Stack.Screen name="LocationSharing" component={LocationSharingScreen} options={{ title: 'Live Location' }} />
+      <Stack.Screen name="EmergencyNotification" component={EmergencyNotificationScreen} options={{ title: 'Emergency Alert' }} />
       <Stack.Screen name="SOS" component={SOSScreen} options={{ headerShown: false }} />
       <Stack.Screen name="MyVehicles" component={MyVehiclesScreen} options={{ title: 'My Vehicles' }} />
       <Stack.Screen name="AddEditVehicle" component={AddEditVehicleScreen} options={{ title: 'Vehicle Details' }} />

@@ -24,6 +24,7 @@ interface Hospital {
 }
 
 export default function HospitalsScreen({ navigation }: { navigation: any }) {
+  // see it is already correct i just add comment and push
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);

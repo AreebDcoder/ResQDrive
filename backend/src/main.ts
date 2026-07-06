@@ -2,16 +2,18 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 import * as path from 'path';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // Configure CORS
-  app.enableCors();
+  app.enableCors({
+    origin: true,
+    credentials: true,
+  });
 
-  // Global validation pipe with class-validator configurations
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -20,19 +22,22 @@ async function bootstrap() {
     }),
   );
 
-  // Serve uploads folder locally for profile picture fallback
   app.useStaticAssets(path.join(process.cwd(), 'uploads'), {
     prefix: '/uploads/',
   });
 
-  // Setup Swagger API Documentation
+  app.useStaticAssets(path.join(process.cwd(), 'public'), {
+    prefix: '/',
+  });
+
+  app.useWebSocketAdapter(new IoAdapter(app));
+
   const config = new DocumentBuilder()
-    .setTitle('ResQDrive - User Management API')
-    .setDescription('Technical Module 6.1 specification implementation for User Profile, RBAC & Auth')
+    .setTitle('ResQDrive API')
+    .setDescription('ResQDrive smart accident detection and emergency response system')
     .setVersion('1.0')
     .addBearerAuth()
     .build();
-  
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 

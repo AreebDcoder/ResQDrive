@@ -13,10 +13,10 @@ import {
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useDispatch } from 'react-redux';
-import * as SecureStore from 'expo-secure-store';
 import { loginSchema, LoginInput } from '../schemas/validation';
 import { loginSuccess } from '../store/slices/authSlice';
 import api from '../api/axios';
+import { setItemAsync } from '../utils/secureStorage';
 
 export default function LoginScreen({ navigation }: { navigation: any }) {
   const dispatch = useDispatch();
@@ -42,8 +42,8 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
     try {
       const response = await api.post('/auth/login', data);
       const { accessToken, refreshToken, user } = response.data;
-      
-      await SecureStore.setItemAsync('refreshToken', refreshToken);
+
+      await setItemAsync('refreshToken', refreshToken);
       dispatch(loginSuccess({ accessToken, user }));
     } catch (err: any) {
       setErrorMsg(err.response?.data?.message || 'Login failed. Please check your credentials.');

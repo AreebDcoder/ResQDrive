@@ -8,6 +8,9 @@ import { EmailModule } from './email/email.module';
 import { UploadModule } from './upload/upload.module';
 import { HospitalsModule } from './hospitals/hospitals.module';
 import { WorkshopsModule } from './workshops/workshops.module';
+import { IncidentsModule } from './incidents/incidents.module';
+import { LocationSharingModule } from './location-sharing/location-sharing.module';
+import { EmergencyNotificationModule } from './emergency-notification/emergency-notification.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EmergencyNumbersModule } from './emergency-numbers/emergency-numbers.module';
 import { AlertDispatchModule } from './alert-dispatch/alert-dispatch.module';
@@ -32,6 +35,9 @@ import { VoiceCommandsModule } from './voice-commands/voice-commands.module';
     UploadModule,
     HospitalsModule,
     WorkshopsModule,
+    IncidentsModule,
+    LocationSharingModule,
+    EmergencyNotificationModule,
     EmergencyNumbersModule,
     AlertDispatchModule,
     VehiclesModule,

@@ -12,7 +12,7 @@ import {
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useDispatch, useSelector } from 'react-redux';
-import * as SecureStore from 'expo-secure-store';
+import { getItemAsync, deleteItemAsync } from '../utils/secureStorage';
 import { RootState } from '../store/store';
 import { updateUserProfile, logoutAction } from '../store/slices/authSlice';
 import { updateProfileSchema, changePasswordSchema, UpdateProfileInput, ChangePasswordInput } from '../schemas/validation';
@@ -109,14 +109,14 @@ export default function ProfileScreen() {
       // De-register push token from backend prior to destroying auth tokens
       await FCMService.unregisterDeviceWithBackend();
 
-      const token = await SecureStore.getItemAsync('refreshToken');
+      const token = await getItemAsync('refreshToken');
       if (token) {
         await api.post('/auth/logout', { refreshToken: token });
       }
     } catch (err) {
       console.log('Logout API call failed:', err);
     } finally {
-      await SecureStore.deleteItemAsync('refreshToken');
+            await deleteItemAsync('refreshToken');
       dispatch(logoutAction());
     }
   };
