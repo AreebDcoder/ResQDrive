@@ -3,8 +3,10 @@ import * as SecureStore from 'expo-secure-store';
 import { store } from '../store/store';
 import { logoutAction, setTokens } from '../store/slices/authSlice';
 
+
+
 // Use 192.168.100.4 (your computer's Wi-Fi IP) so your physical phone can connect
-const API_URL = 'http://192.168.100.4:3000';
+const API_URL = 'http://192.168.18.186:3000';
 
 const api = axios.create({
   baseURL: API_URL,

@@ -4,6 +4,11 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
+import api from '../api/axios';
+import * as Location from 'expo-location';
+import * as Notifications from 'expo-notifications';
+import { dispatchEmergencyAlert } from '../utils/emergencyFallback';
+import { registerForPushNotificationsAsync } from '../utils/registerPushToken';
 
 import SplashScreen from '../screens/SplashScreen';
 import LoginScreen from '../screens/LoginScreen';
@@ -12,6 +17,9 @@ import EmailVerificationScreen from '../screens/EmailVerificationScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import HospitalsScreen from '../screens/HospitalsScreen';
+import WorkshopsScreen from '../screens/WorkshopsScreen';
+import SOSScreen from '../screens/SOSScreen';
 import MyVehiclesScreen from '../screens/MyVehiclesScreen';
 import AddEditVehicleScreen from '../screens/AddEditVehicleScreen';
 import VehicleInsuranceScreen from '../screens/VehicleInsuranceScreen';
@@ -21,7 +29,6 @@ import NotificationPreferencesScreen from '../screens/NotificationPreferencesScr
 import NotificationHistoryScreen from '../screens/NotificationHistoryScreen';
 import CrashSoundDemoScreen from '../screens/CrashSoundDemoScreen';
 import { FCMService } from '../services/fcmService';
-import api from '../api/axios';
 
 const Stack = createStackNavigator();
 
@@ -58,6 +65,31 @@ function DriverHome({ navigation }: any) {
     if (primaryContact) {
       Linking.openURL(`tel:${primaryContact.phoneNumber}`);
     }
+  };
+
+  const testEmergencyFallback = async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      alert('Location permission needed for this test.');
+      return;
+    }
+    const location = await Location.getCurrentPositionAsync({});
+
+    const result = await dispatchEmergencyAlert(
+      [{ name: 'Test Contact', phoneNumber: '+923175718391' }],
+      {
+        userName: 'Abdul Basit',
+        userPhone: '+923321276653',
+        severity: 'Moderate',
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      },
+      async () => {
+        throw new Error('Simulating online dispatch not implemented yet');
+      },
+    );
+
+    alert(`Fallback test result: ${result.mode}`);
   };
 
   return (
@@ -125,7 +157,6 @@ function DriverHome({ navigation }: any) {
         <Text style={styles.menuItemText}>🚗 My Vehicles</Text>
         <Text style={styles.menuItemArrow}>›</Text>
       </TouchableOpacity>
-
       <TouchableOpacity
         style={styles.menuItem}
         onPress={() => navigation.navigate('EmergencyContacts')}
@@ -165,6 +196,38 @@ function DriverHome({ navigation }: any) {
         <Text style={styles.menuItemText}>👤 My Profile Details</Text>
         <Text style={styles.menuItemArrow}>›</Text>
       </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.menuItem}
+        onPress={() => navigation.navigate('Hospitals')}
+      >
+        <Text style={styles.menuItemText}>🏥 Nearest Hospitals</Text>
+        <Text style={styles.menuItemArrow}>›</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.menuItem}
+        onPress={() => navigation.navigate('Workshops')}
+      >
+        <Text style={styles.menuItemText}>🔧 Nearby Workshops</Text>
+        <Text style={styles.menuItemArrow}>›</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.menuItem}
+        onPress={testEmergencyFallback}
+      >
+        <Text style={styles.menuItemText}>🧪 Test Emergency Fallback</Text>
+        <Text style={styles.menuItemArrow}>›</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.menuItem, { backgroundColor: '#b71c1c' }]}
+        onPress={() => navigation.navigate('SOS')}
+      >
+        <Text style={[styles.menuItemText, { color: '#ffffff' }]}>🆘 Emergency SOS</Text>
+        <Text style={[styles.menuItemArrow, { color: '#ffffff' }]}>›</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -190,9 +253,7 @@ function AdminHome({ navigation }: any) {
     setIsLoading(true);
     setMessage(null);
     try {
-      // Get all mechanics from the admin endpoint
       const response = await api.get('/admin/users?role=MECHANIC');
-      // Filter for those whose workshops are not verified yet
       const unverified = response.data.users.filter(
         (u: any) => u.mechanicDetails && u.mechanicDetails.isWorkshopVerified === false
       );
@@ -214,7 +275,6 @@ function AdminHome({ navigation }: any) {
       await api.patch(`/admin/users/${userId}/verify-workshop`, {
         isWorkshopVerified: true,
       });
-      // Remove approved mechanic from local list state
       setPendingMechanics((prev) => prev.filter((m) => m.id !== userId));
     } catch (err) {
       alert('Failed to approve workshop.');
@@ -319,6 +379,21 @@ function AppStack({ role }: { role: string }) {
     }
   };
 
+  React.useEffect(() => {
+    registerForPushNotificationsAsync().catch((err) => {
+      console.log('Push notification registration failed:', err);
+    });
+
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const mapsLink = response.notification.request.content.data?.mapsLink as string;
+      if (mapsLink) {
+        Linking.openURL(mapsLink);
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
+
   return (
     <Stack.Navigator
       screenOptions={{
@@ -334,6 +409,9 @@ function AppStack({ role }: { role: string }) {
         options={{ title: getHeaderTitle() }} 
       />
       <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'My Profile' }} />
+      <Stack.Screen name="Hospitals" component={HospitalsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Workshops" component={WorkshopsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="SOS" component={SOSScreen} options={{ headerShown: false }} />
       <Stack.Screen name="MyVehicles" component={MyVehiclesScreen} options={{ title: 'My Vehicles' }} />
       <Stack.Screen name="AddEditVehicle" component={AddEditVehicleScreen} options={{ title: 'Vehicle Details' }} />
       <Stack.Screen name="VehicleInsurance" component={VehicleInsuranceScreen} options={{ title: 'Insurance Reference' }} />
