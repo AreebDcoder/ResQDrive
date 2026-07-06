@@ -42,4 +42,9 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   specialization?: string;
+
+  @ApiProperty({ required: false, example: 'ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]' })
+  @IsOptional()
+  @IsString()
+  pushToken?: string;
 }

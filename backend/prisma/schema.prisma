@@ -25,6 +25,8 @@ model User {
   isActive          Boolean             @default(true) @map("is_active")
   createdAt         DateTime            @default(now()) @map("created_at")
   updatedAt         DateTime            @updatedAt @map("updated_at")
+  pushToken         String?             @map("push_token")
+
 
   driverDetails       DriverDetails?
   mechanicDetails     MechanicDetails?
@@ -54,6 +56,8 @@ model MechanicDetails {
   userId             String  @id @map("user_id") @db.Uuid
   workshopName       String? @map("workshop_name") @db.VarChar(150)
   workshopAddress    String? @map("workshop_address") @db.Text
+  workshopLatitude   Float?  @map("workshop_latitude")
+  workshopLongitude  Float?  @map("workshop_longitude")
   specialization     String? @db.VarChar(100)
   isWorkshopVerified Boolean @default(false) @map("is_workshop_verified")
   user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -81,6 +85,43 @@ model PasswordResetToken {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("password_reset_tokens")
+}
+model EmailQueue {
+  id        String   @id @default(uuid()) @db.Uuid
+  to        String
+  subject   String
+  html      String   @db.Text
+  attempts  Int      @default(0)
+  status    String   @default("PENDING") // PENDING, SENT, FAILED
+  createdAt DateTime @default(now()) @map("created_at")
+  lastTriedAt DateTime? @map("last_tried_at")
+
+  @@map("email_queue")
+}
+model EmergencyNumber {
+  id        String   @id @default(uuid()) @db.Uuid
+  region    String
+  name      String
+  number    String
+  isDefault Boolean  @default(true) @map("is_default")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("emergency_numbers")
+}
+model AlertDispatchLog {
+  id            String   @id @default(uuid()) @db.Uuid
+  incidentId    String?  @map("incident_id") @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  payload       Json
+  pushStatus    String   @default("PENDING") @map("push_status")
+  smsStatus     String   @default("PENDING") @map("sms_status")
+  emailStatus   String   @default("PENDING") @map("email_status")
+  attempts      Int      @default(1)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("alert_dispatch_logs")
 }
 
 model Vehicle {
