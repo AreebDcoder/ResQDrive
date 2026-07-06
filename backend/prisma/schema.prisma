@@ -38,6 +38,7 @@ model User {
   notificationPreference NotificationPreference?
   notificationLogs       NotificationLog[]
   crashSoundDetectionLogs CrashSoundDetectionLog[]
+  voiceCommandLogs       VoiceCommandLog[]
 
   @@map("users")
 }
@@ -237,4 +238,24 @@ model CrashSoundDetectionLog {
   user                     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("crash_sound_detection_logs")
+}
+
+enum VoiceIntent {
+  cancel
+  sos
+  unknown
+}
+
+model VoiceCommandLog {
+  id                String      @id @default(uuid()) @db.Uuid
+  userId            String      @map("user_id") @db.Uuid
+  incidentId        String?     @map("incident_id") @db.Uuid
+  rawTranscript     String      @map("raw_transcript") @db.Text
+  classifiedIntent  VoiceIntent @map("classified_intent")
+  recognitionEngine String      @map("recognition_engine") @db.VarChar(20)
+  actionTaken       Boolean     @default(false) @map("action_taken")
+  createdAt         DateTime    @default(now()) @map("created_at")
+  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("voice_command_logs")
 }

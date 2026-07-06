@@ -28,6 +28,7 @@ import AddEditContactScreen from '../screens/AddEditContactScreen';
 import NotificationPreferencesScreen from '../screens/NotificationPreferencesScreen';
 import NotificationHistoryScreen from '../screens/NotificationHistoryScreen';
 import CrashSoundDemoScreen from '../screens/CrashSoundDemoScreen';
+import VoiceCommandDemoScreen from '../screens/VoiceCommandDemoScreen';
 import { FCMService } from '../services/fcmService';
 
 const Stack = createStackNavigator();
@@ -186,6 +187,14 @@ function DriverHome({ navigation }: any) {
         onPress={() => navigation.navigate('CrashSoundDemo')}
       >
         <Text style={styles.menuItemText}>🎙️ Crash Sound Detection</Text>
+        <Text style={styles.menuItemArrow}>›</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.menuItem}
+        onPress={() => navigation.navigate('VoiceCommandDemo')}
+      >
+        <Text style={styles.menuItemText}>🗣️ Voice Commands</Text>
         <Text style={styles.menuItemArrow}>›</Text>
       </TouchableOpacity>
 
@@ -420,6 +429,7 @@ function AppStack({ role }: { role: string }) {
       <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} options={{ title: 'Preferences' }} />
       <Stack.Screen name="NotificationHistory" component={NotificationHistoryScreen} options={{ title: 'Notifications' }} />
       <Stack.Screen name="CrashSoundDemo" component={CrashSoundDemoScreen} options={{ title: 'Sound Detection' }} />
+      <Stack.Screen name="VoiceCommandDemo" component={VoiceCommandDemoScreen} options={{ title: 'Voice Commands' }} />
     </Stack.Navigator>
   );
 }
