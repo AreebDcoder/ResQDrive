@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ResQDrive — Live Location</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #f3f4f6;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .header {
+      background: #d32f2f;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .header-title { font-size: 18px; font-weight: 700; color: white; }
+    .header-status {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.2);
+      color: white;
+    }
+    .header-status.active { background: #22c55e; }
+    .header-status.ended { background: #6b7280; }
+    .header-status.expired { background: #f59e0b; }
+    .header-status.connecting { background: #f59e0b; }
+    #map { flex: 1; width: 100%; }
+    .info-panel {
+      background: #1e293b;
+      padding: 14px 20px;
+      border-top: 1px solid #334155;
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+    .info-row { margin: 4px 0; }
+    .info-label { color: #64748b; }
+    .info-value { color: #f1f5f9; font-weight: 500; }
+    .pulse {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      margin-right: 6px;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(34,197,94,0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(34,197,94,0); }
+      100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+    }
+    .error-screen {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      padding: 20px;
+      text-align: center;
+    }
+    .error-screen h2 { color: #ef4444; margin-bottom: 12px; }
+    .error-screen p { color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-title">🛡️ ResQDrive Live Location</div>
+    <div id="status" class="header-status connecting">Connecting…</div>
+  </div>
+
+  <div id="map"></div>
+
+  <div class="info-panel">
+    <div class="info-row">
+      <span class="info-label">Sharing since:</span>
+      <span class="info-value" id="startedAt">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Last update:</span>
+      <span class="info-value" id="lastUpdate">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Coordinates:</span>
+      <span class="info-value" id="coords">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Viewers watching:</span>
+      <span class="info-value" id="viewers">0</span>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const shareToken = params.get('session');
+
+    const statusEl = document.getElementById('status');
+    const startedAtEl = document.getElementById('startedAt');
+    const lastUpdateEl = document.getElementById('lastUpdate');
+    const coordsEl = document.getElementById('coords');
+    const viewersEl = document.getElementById('viewers');
+
+    if (!shareToken) {
+      document.getElementById('map').style.display = 'none';
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'error-screen';
+      errorDiv.innerHTML = '<h2>Invalid Link</h2><p>No session ID provided in the URL.</p>';
+      document.body.appendChild(errorDiv);
+      throw new Error('No session');
+    }
+
+    const map = L.map('map').setView([33.6844, 73.0479], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19,
+    }).addTo(map);
+
+    let marker = null;
+    let trail = [];
+    let trailLine = null;
+
+    function setStatus(text, cls) {
+      statusEl.textContent = text;
+      statusEl.className = 'header-status ' + cls;
+    }
+
+    function addOrUpdateMarker(lat, lng) {
+      const latlng = [lat, lng];
+      if (!marker) {
+        marker = L.marker(latlng).addTo(map);
+        map.setView(latlng, 16);
+      } else {
+        marker.setLatLng(latlng);
+      }
+
+      trail.push(latlng);
+      if (trail.length > 100) trail.shift();
+
+      if (trailLine) {
+        trailLine.setLatLngs(trail);
+      } else if (trail.length >= 2) {
+        trailLine = L.polyline(trail, { color: '#d32f2f', weight: 3, opacity: 0.7 }).addTo(map);
+      }
+
+      coordsEl.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      lastUpdateEl.textContent = new Date().toLocaleTimeString();
+    }
+
+    async function fetchSessionInfo() {
+      try {
+        const res = await fetch(`/location-sharing/public/${shareToken}`);
+        if (!res.ok) throw new Error('Not found');
+        const data = await res.json();
+        startedAtEl.textContent = new Date(data.startedAt).toLocaleString();
+
+        if (data.status === 'ACTIVE' && data.lastLat != null && data.lastLng != null) {
+          addOrUpdateMarker(data.lastLat, data.lastLng);
+          if (data.status === 'ACTIVE') {
+            setStatus('● LIVE', 'active');
+          }
+        } else if (data.status === 'ENDED') {
+          setStatus('Session ended', 'ended');
+        } else if (data.status === 'EXPIRED') {
+          setStatus('Session expired', 'expired');
+        }
+      } catch (err) {
+        console.warn('Could not fetch session info:', err);
+      }
+    }
+
+    const socket = io({
+      path: '/socket.io/',
+      transports: ['websocket', 'polling'],
+    });
+
+    socket.on('connect', () => {
+      console.log('Socket connected:', socket.id);
+      socket.emit('join_session', { shareToken });
+      fetchSessionInfo();
+    });
+
+    socket.on('location_broadcast', (data) => {
+      addOrUpdateMarker(data.lat, data.lng);
+      if (statusEl.textContent !== '● LIVE') {
+        setStatus('● LIVE', 'active');
+      }
+    });
+
+    socket.on('viewer_count', (data) => {
+      viewersEl.textContent = data.viewers;
+    });
+
+    socket.on('session_ended', () => {
+      setStatus('Session ended', 'ended');
+    });
+
+    socket.on('error', (err) => {
+      console.error('Socket error:', err);
+      setStatus('Error', 'expired');
+    });
+
+    socket.on('disconnect', () => {
+      setStatus('Reconnecting…', 'connecting');
+    });
+  </script>
+</body>
+</html>

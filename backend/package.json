@@ -28,8 +28,10 @@
     "@nestjs/jwt": "^10.2.0",
     "@nestjs/passport": "^10.0.3",
     "@nestjs/platform-express": "^10.0.0",
+    "@nestjs/platform-socket.io": "^10.0.0",
     "@nestjs/swagger": "^7.1.17",
     "@nestjs/throttler": "^5.1.1",
+    "@nestjs/websockets": "^10.0.0",
     "@prisma/client": "^5.7.0",
     "@types/pdfkit": "^0.17.6",
     "axios": "^1.18.1",
@@ -42,7 +44,8 @@
     "passport-jwt": "^4.0.1",
     "pdfkit": "^0.19.1",
     "reflect-metadata": "^0.1.13",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "socket.io": "^4.8.3"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",

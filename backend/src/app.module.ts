@@ -9,6 +9,7 @@ import { UploadModule } from './upload/upload.module';
 import { HospitalsModule } from './hospitals/hospitals.module';
 import { WorkshopsModule } from './workshops/workshops.module';
 import { IncidentsModule } from './incidents/incidents.module';
+import { LocationSharingModule } from './location-sharing/location-sharing.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { IncidentsModule } from './incidents/incidents.module';
     HospitalsModule,
     WorkshopsModule,
     IncidentsModule,
+    LocationSharingModule,
   ],
 })
 export class AppModule {}

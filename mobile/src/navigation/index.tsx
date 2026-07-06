@@ -18,6 +18,7 @@ import WorkshopsScreen from '../screens/WorkshopsScreen';
 import IncidentsListScreen from '../screens/IncidentsListScreen';
 import IncidentDetailScreen from '../screens/IncidentDetailScreen';
 import CreateIncidentScreen from '../screens/CreateIncidentScreen';
+import LocationSharingScreen from '../screens/LocationSharingScreen';
 import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
 
 const Stack = createStackNavigator();
@@ -30,6 +31,9 @@ function DriverHome({ navigation }: any) {
 
       <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('IncidentsList')}>
         <Text style={styles.navBtnText}>📋 Incident History</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('LocationSharing')}>
+      <Text style={styles.navBtnText}>📡 Share Live Location</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('Profile')}>
         <Text style={styles.navBtnText}>👤 My Profile</Text>
@@ -192,6 +196,7 @@ function AppStack({ role }: { role: string }) {
       <Stack.Screen name="IncidentDetail" component={IncidentDetailScreen} options={{ title: 'Incident Detail' }} />
       <Stack.Screen name="CreateIncident" component={CreateIncidentScreen} options={({ route }: any) => ({ title: route.params?.mode === 'edit' ? 'Edit Incident' : 'New Incident' })} />
       <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} options={{ title: 'Admin Dashboard' }} />
+      <Stack.Screen name="LocationSharing" component={LocationSharingScreen} options={{ title: 'Live Location' }} />
     </Stack.Navigator>
   );
 }
