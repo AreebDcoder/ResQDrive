@@ -39,6 +39,7 @@ import VoiceCommandDemoScreen from '../screens/VoiceCommandDemoScreen';
 import DamageAssessmentScreen from '../screens/DamageAssessmentScreen';
 import RepairCostScreen from '../screens/RepairCostScreen';
 import { FCMService } from '../services/fcmService';
+import CountdownScreen from '../screens/CountdownScreen';
 
 const Stack = createStackNavigator();
 
@@ -137,6 +138,58 @@ function DriverHome({ navigation }: any) {
     alert(`Fallback test result: ${result.mode}`);
   };
 
+  const triggerRealEmergencyDispatch = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Location permission needed to send an alert.');
+        return;
+      }
+      const location = await Location.getCurrentPositionAsync({});
+
+      if (!contacts || contacts.length === 0) {
+        alert('No emergency contacts saved yet. Add contacts first.');
+        navigation.navigate('EmergencyContacts');
+        return;
+      }
+
+      const dispatchContacts = contacts.map((c: any) => ({
+        name: c.name,
+        phoneNumber: c.phoneNumber,
+        email: c.email,
+      }));
+
+      const meRes = await api.get('/users/me');
+      const currentUser = meRes.data;
+
+      const result = await dispatchEmergencyAlert(
+        dispatchContacts,
+        {
+          userName: currentUser.fullName,
+          userPhone: currentUser.phoneNumber,
+          severity: 'Moderate',
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        },
+        async () => {
+          await api.post('/alert-dispatch', {
+            userId: currentUser.id,
+            userName: currentUser.fullName,
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            severity: 'Moderate',
+            contacts: dispatchContacts,
+          });
+        },
+      );
+
+      alert(`Emergency alert sent via: ${result.mode}`);
+    } catch (err: any) {
+      console.log('Emergency dispatch failed:', err);
+      alert('Failed to send emergency alert. Please try again or call emergency services directly.');
+    }
+  };
+
   const handleTabPress = (tabName: 'home' | 'alert' | 'damage' | 'services' | 'parts' | 'voice') => {
     if (tabName === 'voice') {
       alert('Voice Commands feature is currently disabled.');
@@ -162,81 +215,23 @@ function DriverHome({ navigation }: any) {
           <ScrollView style={styles.scrollContainer} contentContainerStyle={{ paddingBottom: 40 }}>
             {/* Paired Vehicle Widget */}
             <View style={styles.dashboardCard}>
-              <Text style={styles.cardHeaderTitle}>🚗 Paired Vehicle</Text>
-              {activeVehicle ? (
-                <View style={styles.vehicleDetailsBlock}>
-                  <Text style={styles.activeVehicleName}>
-                    {activeVehicle.make} {activeVehicle.model} ({activeVehicle.year})
-                  </Text>
-                  <View style={styles.activePlateBadge}>
-                    <Text style={styles.activePlateText}>{activeVehicle.licensePlate.toUpperCase()}</Text>
-                  </View>
+              <View style={styles.toggleRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.toggleRowLabel}>🚗 Driving Detection Mode</Text>
+                  <Text style={styles.toggleRowDesc}>Auto SOS monitoring runs only when enabled</Text>
                 </View>
-              ) : (
-                <View style={styles.vehicleDetailsBlock}>
-                  <Text style={styles.noVehicleText}>No active vehicle paired for crash detection.</Text>
-                  <TouchableOpacity
-                    style={styles.actionBtnSecondary}
-                    onPress={() => navigation.navigate('MyVehicles')}
-                  >
-                    <Text style={styles.actionBtnText}>+ Add Vehicle</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-
-            {/* Emergency Contact Quick Access Widget */}
-            <View style={styles.dashboardCard}>
-              <Text style={styles.cardHeaderTitle}>🛡️ Quick-Access Contact</Text>
-              {primaryContact ? (
-                <View style={styles.contactDetailsBlock}>
-                  <View style={{ flex: 1, marginRight: 12 }}>
-                    <Text style={styles.contactDisplayName}>{primaryContact.name}</Text>
-                    <Text style={styles.contactDisplaySub}>
-                      {primaryContact.relationship} • {primaryContact.phoneNumber}
-                    </Text>
-                  </View>
-                  <TouchableOpacity style={styles.callNowBtn} onPress={handleQuickCall}>
-                    <Text style={styles.callNowBtnText}>📞 CALL</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View style={styles.vehicleDetailsBlock}>
-                  <Text style={styles.noVehicleText}>No emergency contacts registered.</Text>
-                  <TouchableOpacity
-                    style={styles.actionBtnSecondary}
-                    onPress={() => navigation.navigate('EmergencyContacts')}
-                  >
-                    <Text style={styles.actionBtnText}>+ Add Contact</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-
-            {/* Driving Mode Preference Toggle Widget */}
-            <View style={styles.dashboardCard}>
-              <TouchableOpacity
-                onPress={handleToggleDrivingMode}
-                disabled={isUpdatingPref || !preferences}
-                style={[
-                  styles.drivingModeCircle,
-                  (preferences?.drivingModeEnabled ?? true) ? styles.circleActive : styles.circleInactive
-                ]}
-                activeOpacity={0.8}
-              >
-                <Ionicons
-                  name="power"
-                  size={48}
-                  color={(preferences?.drivingModeEnabled ?? true) ? '#ffffff' : '#b71c1c'}
-                />
-              </TouchableOpacity>
-
-              <Text style={styles.drivingModeStatusText}>
-                Driving Mode
-              </Text>
-              <Text style={styles.drivingModeActionText}>
-                {(preferences?.drivingModeEnabled ?? true) ? 'Off' : 'On'}
-              </Text>
+                {isUpdatingPref ? (
+                  <ActivityIndicator size="small" color="#d32f2f" />
+                ) : (
+                  <Switch
+                    value={preferences ? preferences.drivingModeEnabled : false}
+                    onValueChange={handleToggleDrivingMode}
+                    trackColor={{ false: '#767577', true: '#ef9a9a' }}
+                    thumbColor={preferences?.drivingModeEnabled ? '#d32f2f' : '#f4f3f4'}
+                    disabled={isUpdatingPref}
+                  />
+                )}
+              </View>
             </View>
           </ScrollView>
         );
@@ -245,24 +240,21 @@ function DriverHome({ navigation }: any) {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#121212' }}>
-      {/* Custom Header with Left Drawer Hamburger */}
+      {/* Header */}
       <View style={styles.customHeader}>
-        {activeTab === 'home' ? (
-          <TouchableOpacity onPress={() => setIsDrawerOpen(true)} style={styles.headerIconBtn}>
-            <Ionicons name="menu-outline" size={28} color="#ffffff" />
-          </TouchableOpacity>
-        ) : (
-          <View style={{ width: 28 }} />
-        )}
+        <TouchableOpacity onPress={() => setIsDrawerOpen(true)}>
+          <Ionicons name="menu" size={28} color="#ffffff" />
+        </TouchableOpacity>
         <Text style={styles.customHeaderTitle}>ResQDrive</Text>
         <View style={{ width: 28 }} />
       </View>
 
+      {/* Main Content Area */}
       <View style={{ flex: 1 }}>
         {renderContent()}
       </View>
 
-      {/* Global Bottom Tab Bar */}
+      {/* Bottom Tabs */}
       <View style={tabStyles.tabBar}>
         <TouchableOpacity style={tabStyles.tabItem} onPress={() => handleTabPress('home')}>
           {activeTab === 'home' && <View style={tabStyles.activeIndicator} />}
@@ -295,20 +287,13 @@ function DriverHome({ navigation }: any) {
         </TouchableOpacity>
       </View>
 
-      {/* Slide Menu Drawer (Left Drawer Overlay) */}
+      {/* Sidebar Drawer Modal Overlay */}
       {isDrawerOpen && (
         <View style={drawerStyles.overlay}>
-          {/* Backdrop click to close */}
-          <TouchableOpacity
-            style={drawerStyles.backdrop}
-            activeOpacity={1}
-            onPress={() => setIsDrawerOpen(false)}
-          />
-
-          {/* Drawer Content */}
+          <TouchableOpacity style={drawerStyles.backdrop} activeOpacity={1} onPress={() => setIsDrawerOpen(false)} />
           <View style={drawerStyles.drawerContainer}>
             <View style={drawerStyles.drawerHeader}>
-              <Text style={drawerStyles.drawerTitle}>Control Settings</Text>
+              <Text style={drawerStyles.drawerTitle}>Menu Options</Text>
               <TouchableOpacity onPress={() => setIsDrawerOpen(false)}>
                 <Ionicons name="close-outline" size={24} color="#ffffff" />
               </TouchableOpacity>
@@ -436,7 +421,42 @@ function DriverHome({ navigation }: any) {
                 <Text style={styles.menuItemArrow}>›</Text>
               </TouchableOpacity>
 
-              {/* Removed Emergency SOS item as it is already in the alert tab */}
+              <TouchableOpacity
+                style={[styles.menuItem, { borderColor: '#d32f2f', borderWidth: 1 }]}
+                onPress={() => {
+                  setIsDrawerOpen(false);
+                  triggerRealEmergencyDispatch();
+                }}
+              >
+                <Text style={[styles.menuItemText, { color: '#d32f2f', fontWeight: 'bold' }]}>🚨 Send Emergency Alert</Text>
+                <Text style={[styles.menuItemArrow, { color: '#d32f2f' }]}>›</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.menuItem, { backgroundColor: '#b71c1c' }]}
+                onPress={() => {
+                  setIsDrawerOpen(false);
+                  navigation.navigate('SOS');
+                }}
+              >
+                <Text style={[styles.menuItemText, { color: '#ffffff' }]}>🆘 Emergency SOS</Text>
+                <Text style={[styles.menuItemArrow, { color: '#ffffff' }]}>›</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.menuItem, { backgroundColor: '#8b0000' }]}
+                onPress={() => {
+                  setIsDrawerOpen(false);
+                  navigation.navigate('Countdown', {
+                    latitude: 33.6844,
+                    longitude: 73.0479,
+                    severity: 'Moderate',
+                  });
+                }}
+              >
+                <Text style={[styles.menuItemText, { color: '#fff' }]}>💥 Simulate Crash (Test Countdown)</Text>
+                <Text style={[styles.menuItemArrow, { color: '#fff' }]}>›</Text>
+              </TouchableOpacity>
             </ScrollView>
           </View>
         </View>
@@ -630,6 +650,7 @@ function AppStack({ role }: { role: string }) {
       <Stack.Screen name="VoiceCommandDemo" component={VoiceCommandDemoScreen} options={{ title: 'Voice Commands' }} />
       <Stack.Screen name="DamageAssessment" component={DamageAssessmentScreen} options={{ title: 'Damage Assessment' }} />
       <Stack.Screen name="RepairCost" component={RepairCostScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Countdown" component={CountdownScreen} options={{ headerShown: false, gestureEnabled: false }} />
     </Stack.Navigator>
   );
 }
@@ -995,6 +1016,22 @@ const styles = StyleSheet.create({
     },
     headerIconBtn: {
       padding: 4,
+    },
+    toggleRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 12,
+    },
+    toggleRowLabel: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: '#ffffff',
+    },
+    toggleRowDesc: {
+      fontSize: 12,
+      color: '#888888',
+      marginTop: 4,
     },
   });
   
