@@ -215,23 +215,81 @@ function DriverHome({ navigation }: any) {
           <ScrollView style={styles.scrollContainer} contentContainerStyle={{ paddingBottom: 40 }}>
             {/* Paired Vehicle Widget */}
             <View style={styles.dashboardCard}>
-              <View style={styles.toggleRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.toggleRowLabel}>🚗 Driving Detection Mode</Text>
-                  <Text style={styles.toggleRowDesc}>Auto SOS monitoring runs only when enabled</Text>
+              <Text style={styles.cardHeaderTitle}>🚗 Paired Vehicle</Text>
+              {activeVehicle ? (
+                <View style={styles.vehicleDetailsBlock}>
+                  <Text style={styles.activeVehicleName}>
+                    {activeVehicle.make} {activeVehicle.model} ({activeVehicle.year})
+                  </Text>
+                  <View style={styles.activePlateBadge}>
+                    <Text style={styles.activePlateText}>{activeVehicle.licensePlate.toUpperCase()}</Text>
+                  </View>
                 </View>
-                {isUpdatingPref ? (
-                  <ActivityIndicator size="small" color="#d32f2f" />
-                ) : (
-                  <Switch
-                    value={preferences ? preferences.drivingModeEnabled : false}
-                    onValueChange={handleToggleDrivingMode}
-                    trackColor={{ false: '#767577', true: '#ef9a9a' }}
-                    thumbColor={preferences?.drivingModeEnabled ? '#d32f2f' : '#f4f3f4'}
-                    disabled={isUpdatingPref}
-                  />
-                )}
-              </View>
+              ) : (
+                <View style={styles.vehicleDetailsBlock}>
+                  <Text style={styles.noVehicleText}>No active vehicle paired for crash detection.</Text>
+                  <TouchableOpacity
+                    style={styles.actionBtnSecondary}
+                    onPress={() => navigation.navigate('MyVehicles')}
+                  >
+                    <Text style={styles.actionBtnText}>+ Add Vehicle</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+
+            {/* Emergency Contact Quick Access Widget */}
+            <View style={styles.dashboardCard}>
+              <Text style={styles.cardHeaderTitle}>🛡️ Quick-Access Contact</Text>
+              {primaryContact ? (
+                <View style={styles.contactDetailsBlock}>
+                  <View style={{ flex: 1, marginRight: 12 }}>
+                    <Text style={styles.contactDisplayName}>{primaryContact.name}</Text>
+                    <Text style={styles.contactDisplaySub}>
+                      {primaryContact.relationship} • {primaryContact.phoneNumber}
+                    </Text>
+                  </View>
+                  <TouchableOpacity style={styles.callNowBtn} onPress={handleQuickCall}>
+                    <Text style={styles.callNowBtnText}>📞 CALL</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.vehicleDetailsBlock}>
+                  <Text style={styles.noVehicleText}>No emergency contacts registered.</Text>
+                  <TouchableOpacity
+                    style={styles.actionBtnSecondary}
+                    onPress={() => navigation.navigate('EmergencyContacts')}
+                  >
+                    <Text style={styles.actionBtnText}>+ Add Contact</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+
+            {/* Driving Mode Preference Toggle Widget */}
+            <View style={[styles.dashboardCard, { alignItems: 'center' }]}>
+              <TouchableOpacity
+                onPress={handleToggleDrivingMode}
+                disabled={isUpdatingPref || !preferences}
+                style={[
+                  styles.drivingModeCircle,
+                  (preferences?.drivingModeEnabled) ? styles.circleActive : styles.circleInactive
+                ]}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name="power"
+                  size={48}
+                  color={(preferences?.drivingModeEnabled) ? '#ffffff' : '#b71c1c'}
+                />
+              </TouchableOpacity>
+
+              <Text style={styles.drivingModeStatusText}>
+                Driving Mode
+              </Text>
+              <Text style={styles.drivingModeActionText}>
+                {(preferences?.drivingModeEnabled) ? 'On' : 'Off'}
+              </Text>
             </View>
           </ScrollView>
         );
@@ -432,16 +490,7 @@ function DriverHome({ navigation }: any) {
                 <Text style={[styles.menuItemArrow, { color: '#d32f2f' }]}>›</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[styles.menuItem, { backgroundColor: '#b71c1c' }]}
-                onPress={() => {
-                  setIsDrawerOpen(false);
-                  navigation.navigate('SOS');
-                }}
-              >
-                <Text style={[styles.menuItemText, { color: '#ffffff' }]}>🆘 Emergency SOS</Text>
-                <Text style={[styles.menuItemArrow, { color: '#ffffff' }]}>›</Text>
-              </TouchableOpacity>
+
 
               <TouchableOpacity
                 style={[styles.menuItem, { backgroundColor: '#8b0000' }]}
