@@ -36,6 +36,7 @@ import NotificationHistoryScreen from '../screens/NotificationHistoryScreen';
 import CrashSoundDemoScreen from '../screens/CrashSoundDemoScreen';
 import VoiceCommandDemoScreen from '../screens/VoiceCommandDemoScreen';
 import { FCMService } from '../services/fcmService';
+import CountdownScreen from '../screens/CountdownScreen';
 
 const Stack = createStackNavigator();
 
@@ -73,31 +74,57 @@ function DriverHome({ navigation }: any) {
     }
   };
 
-  const testEmergencyFallback = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      alert('Location permission needed for this test.');
-      return;
+  const triggerRealEmergencyDispatch = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Location permission needed to send an alert.');
+        return;
+      }
+      const location = await Location.getCurrentPositionAsync({});
+
+      if (!contacts || contacts.length === 0) {
+        alert('No emergency contacts saved yet. Add contacts first.');
+        navigation.navigate('EmergencyContacts');
+        return;
+      }
+
+      const dispatchContacts = contacts.map((c: any) => ({
+        name: c.name,
+        phoneNumber: c.phoneNumber,
+        email: c.email,
+      }));
+
+      const meRes = await api.get('/users/me');
+      const currentUser = meRes.data;
+
+      const result = await dispatchEmergencyAlert(
+        dispatchContacts,
+        {
+          userName: currentUser.fullName,
+          userPhone: currentUser.phoneNumber,
+          severity: 'Moderate',
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        },
+        async () => {
+          await api.post('/alert-dispatch', {
+            userId: currentUser.id,
+            userName: currentUser.fullName,
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            severity: 'Moderate',
+            contacts: dispatchContacts,
+          });
+        },
+      );
+
+      alert(`Emergency alert sent via: ${result.mode}`);
+    } catch (err: any) {
+      console.log('Emergency dispatch failed:', err);
+      alert('Failed to send emergency alert. Please try again or call emergency services directly.');
     }
-    const location = await Location.getCurrentPositionAsync({});
-
-    const result = await dispatchEmergencyAlert(
-      [{ name: 'Test Contact', phoneNumber: '+923175718391' }],
-      {
-        userName: 'Abdul Basit',
-        userPhone: '+923321276653',
-        severity: 'Moderate',
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      },
-      async () => {
-        throw new Error('Simulating online dispatch not implemented yet');
-      },
-    );
-
-    alert(`Fallback test result: ${result.mode}`);
   };
-
   return (
     <ScrollView style={styles.scrollContainer} contentContainerStyle={{ paddingBottom: 40 }}>
       {/* Paired Vehicle Widget */}
@@ -251,12 +278,12 @@ function DriverHome({ navigation }: any) {
         <Text style={styles.menuItemArrow}>›</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.menuItem}
-        onPress={testEmergencyFallback}
+     <TouchableOpacity
+        style={[styles.menuItem, { borderColor: '#d32f2f', borderWidth: 1.5 }]}
+        onPress={triggerRealEmergencyDispatch}
       >
-        <Text style={styles.menuItemText}>🧪 Test Emergency Fallback</Text>
-        <Text style={styles.menuItemArrow}>›</Text>
+        <Text style={[styles.menuItemText, { color: '#d32f2f', fontWeight: 'bold' }]}>🚨 Send Emergency Alert</Text>
+        <Text style={[styles.menuItemArrow, { color: '#d32f2f' }]}>›</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -266,6 +293,19 @@ function DriverHome({ navigation }: any) {
         <Text style={[styles.menuItemText, { color: '#ffffff' }]}>🆘 Emergency SOS</Text>
         <Text style={[styles.menuItemArrow, { color: '#ffffff' }]}>›</Text>
       </TouchableOpacity>
+      <TouchableOpacity
+  style={[styles.menuItem, { backgroundColor: '#8b0000' }]}
+  onPress={() =>
+    navigation.navigate('Countdown', {
+      latitude: 33.6844,
+      longitude: 73.0479,
+      severity: 'Moderate',
+    })
+  }
+>
+  <Text style={[styles.menuItemText, { color: '#fff' }]}>💥 Simulate Crash (Test Countdown)</Text>
+  <Text style={[styles.menuItemArrow, { color: '#fff' }]}>›</Text>
+</TouchableOpacity>
     </ScrollView>
   );
 }
@@ -445,6 +485,7 @@ function AppStack({ role }: { role: string }) {
       <Stack.Screen name="NotificationHistory" component={NotificationHistoryScreen} options={{ title: 'Notifications' }} />
       <Stack.Screen name="CrashSoundDemo" component={CrashSoundDemoScreen} options={{ title: 'Sound Detection' }} />
       <Stack.Screen name="VoiceCommandDemo" component={VoiceCommandDemoScreen} options={{ title: 'Voice Commands' }} />
+      <Stack.Screen name="Countdown" component={CountdownScreen} options={{ headerShown: false, gestureEnabled: false }} />
     </Stack.Navigator>
   );
 }
