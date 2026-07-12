@@ -19,6 +19,8 @@ import { EmergencyContactsModule } from './emergency-contacts/emergency-contacts
 import { NotificationsModule } from './notifications/notifications.module';
 import { CrashSoundDetectionModule } from './crash-sound-detection/crash-sound-detection.module';
 import { VoiceCommandsModule } from './voice-commands/voice-commands.module';
+import { DamageAssessmentModule } from './damage-assessment/damage-assessment.module';
+import { RepairCostModule } from './repair-cost/repair-cost.module';
 
 @Module({
   imports: [
@@ -45,6 +47,8 @@ import { VoiceCommandsModule } from './voice-commands/voice-commands.module';
     NotificationsModule,
     CrashSoundDetectionModule,
     VoiceCommandsModule,
+    DamageAssessmentModule,
+    RepairCostModule,
   ],
 })
 export class AppModule {}

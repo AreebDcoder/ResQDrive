@@ -19,7 +19,7 @@ interface EmergencyNumberItem {
   number: string;
 }
 
-export default function SOSScreen({ navigation }: { navigation: any }) {
+export default function SOSScreen({ navigation, isInline }: { navigation: any; isInline?: boolean }) {
   const [numbers, setNumbers] = useState<EmergencyNumberItem[]>([]);
   const [region, setRegion] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
@@ -84,9 +84,11 @@ export default function SOSScreen({ navigation }: { navigation: any }) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backBtnText}>←</Text>
-        </TouchableOpacity>
+        {!isInline && (
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Text style={styles.backBtnText}>←</Text>
+          </TouchableOpacity>
+        )}
         <View>
           <Text style={styles.title}>Emergency SOS</Text>
           <Text style={styles.subtitle}>

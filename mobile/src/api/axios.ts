@@ -7,7 +7,7 @@ import { getItemAsync, setItemAsync, deleteItemAsync } from '../utils/secureStor
 const LOCALHOST_API_URL = 'http://localhost:3000';
 const MOBILE_API_URL = process.env.EXPO_PUBLIC_API_URL || LOCALHOST_API_URL;
 
-const API_URL = Platform.OS === 'web' ? LOCALHOST_API_URL : MOBILE_API_URL;
+export const API_URL = Platform.OS === 'web' ? LOCALHOST_API_URL : MOBILE_API_URL;
 
 const api = axios.create({
   baseURL: API_URL,
