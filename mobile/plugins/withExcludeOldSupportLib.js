@@ -13,6 +13,12 @@ android {
         exclude group: 'com.android.support', module: 'support-fragment'
         exclude group: 'com.android.support', module: 'support-core-utils'
         exclude group: 'com.android.support', module: 'support-core-ui'
+        exclude group: 'com.android.support', module: 'appcompat-v7'
+    }
+    packaging {
+        resources {
+            pickFirsts += ['META-INF/androidx.appcompat_appcompat.version']
+        }
     }
 }
 `;
