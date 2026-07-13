@@ -28,6 +28,7 @@
       "package": "com.basit_009.resqdrivemobile"
     },
     "plugins": [
+       "./plugins/withManifestFix",
       [
         "expo-location",
         {
