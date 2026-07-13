@@ -19,7 +19,6 @@ admin-web/dist/
 backend/coverage/
 
 # Firebase / sensitive config
-mobile/google-services.json
 mobile/.json
 
 # Logs
