@@ -37,6 +37,7 @@ import CrashSoundDemoScreen from '../screens/CrashSoundDemoScreen';
 import VoiceCommandDemoScreen from '../screens/VoiceCommandDemoScreen';
 import { FCMService } from '../services/fcmService';
 import CountdownScreen from '../screens/CountdownScreen';
+import { CrashSoundDetectionService } from '../services/crashSoundDetectionService';
 
 const Stack = createStackNavigator();
 
@@ -60,6 +61,7 @@ function DriverHome({ navigation }: any) {
         console.log('Failed to background sync dashboard data:', err);
       }
     };
+    
     syncData();
 
     // Register FCM token & setup foreground push reception listeners
@@ -67,7 +69,49 @@ function DriverHome({ navigation }: any) {
     const unsubscribe = FCMService.setupFCMListeners();
     return unsubscribe;
   }, [dispatch]);
+  // ⬇️ ADD THE NEW useEffect RIGHT HERE, AFTER THE ONE ABOVE ENDS ⬇️
+  React.useEffect(() => {
+  let isCountdownActive = false;
 
+  CrashSoundDetectionService.subscribeToCrashEvents((confidence, topClass) => {
+    if (isCountdownActive) {
+      console.log('⏸️ Crash detected but countdown already active — ignoring duplicate trigger.');
+      return;
+    }
+
+    console.log('🚨 CRASH CALLBACK FIRED — confidence:', confidence, 'class:', topClass);
+    isCountdownActive = true;
+
+    Location.requestForegroundPermissionsAsync()
+      .then(({ status }) => {
+        if (status !== 'granted') {
+          console.log('❌ Location permission not granted, cannot navigate to Countdown.');
+          isCountdownActive = false;
+          return;
+        }
+        return Location.getCurrentPositionAsync({});
+      })
+      .then((location) => {
+        if (!location) return;
+        console.log('📍 Got location, navigating to Countdown now...');
+        navigation.navigate('Countdown', {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+          severity: confidence > 0.75 ? 'Severe' : 'Moderate',
+        });
+      })
+      .catch((err) => {
+        console.log('❌ Location fetch failed:', err);
+        isCountdownActive = false;
+      });
+  });
+
+  CrashSoundDetectionService.startMonitoring();
+
+  return () => {
+    CrashSoundDetectionService.stopMonitoring();
+  };
+}, [navigation]);
   const handleQuickCall = () => {
     if (primaryContact) {
       Linking.openURL(`tel:${primaryContact.phoneNumber}`);
