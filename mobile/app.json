@@ -28,13 +28,15 @@
       "package": "com.basit_009.resqdrivemobile"
     },
     "plugins": [
-       "./plugins/withManifestFix",
+      "./plugins/withManifestFix",
+      "./plugins/withExcludeOldSupportLib",
       [
         "expo-location",
         {
           "locationAlwaysAndWhenInUsePermission": "Allow ResQDrive to use your location to find nearby hospitals."
         }
-      ]
+      ],
+      "expo-font"
     ],
     "extra": {
       "eas": {
