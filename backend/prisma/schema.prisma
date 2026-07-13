@@ -75,20 +75,22 @@ model User {
   updatedAt         DateTime            @updatedAt @map("updated_at")
   pushToken         String?             @map("push_token")
 
-  driverDetails        DriverDetails?
-  mechanicDetails      MechanicDetails?
-  refreshTokens        RefreshToken[]
-  passwordResetTokens  PasswordResetToken[]
-  incidents            Incident[]
-  locationSessions     LocationSession[]
-  notificationSessions NotificationSession[]
-  vehicles            Vehicle[]
-  emergencyContacts   EmergencyContact[]
-  deviceTokens         DeviceToken[]
+  driverDetails          DriverDetails?
+  mechanicDetails        MechanicDetails?
+  refreshTokens          RefreshToken[]
+  passwordResetTokens    PasswordResetToken[]
+  incidents              Incident[]
+  locationSessions       LocationSession[]
+  notificationSessions   NotificationSession[]
+  vehicles               Vehicle[]
+  emergencyContacts      EmergencyContact[]
+  deviceTokens           DeviceToken[]
   notificationPreference NotificationPreference?
   notificationLogs       NotificationLog[]
   crashSoundDetectionLogs CrashSoundDetectionLog[]
   voiceCommandLogs       VoiceCommandLog[]
+  damageAssessments      DamageAssessment[]
+  repairCostReports      RepairCostReport[]
 
   @@map("users")
 }
@@ -283,6 +285,8 @@ model Vehicle {
   updatedAt    DateTime          @updatedAt @map("updated_at")
   user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   insurance    VehicleInsurance?
+  damageAssessments DamageAssessment[]
+  repairCostReports RepairCostReport[]
 
   @@map("vehicles")
 }
@@ -404,4 +408,114 @@ model VoiceCommandLog {
   user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("voice_command_logs")
+}
+
+enum DamageType {
+  crack
+  dent
+  glass_shatter
+  lamp_broken
+  scratch
+  tire_flat
+}
+
+enum DamageSeverity {
+  minor
+  moderate
+  severe
+}
+
+model DamageAssessment {
+  id                  String         @id @default(uuid()) @db.Uuid
+  userId              String         @map("user_id") @db.Uuid
+  vehicleId           String?        @map("vehicle_id") @db.Uuid
+  incidentId          String?        @map("incident_id") @db.Uuid
+  photoUrl            String         @map("photo_url") @db.Text
+  predictedDamageType DamageType     @map("predicted_damage_type")
+  confidenceScore     Float          @map("confidence_score")
+  derivedSeverity     DamageSeverity @map("derived_severity")
+  inferenceTimeMs     Int?           @map("inference_time_ms")
+  modelVersion        String         @default("cardd_v1") @map("model_version") @db.VarChar(20)
+  partTag             PartTag        @default(other) @map("part_tag")
+  createdAt           DateTime       @default(now()) @map("created_at")
+
+  user                User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicle             Vehicle?       @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+
+  @@map("damage_assessments")
+}
+
+enum PartTag {
+  front_bumper
+  rear_bumper
+  bonnet
+  left_mirror
+  right_mirror
+  headlight
+  taillight
+  door
+  windshield
+  roof
+  tire
+  other
+}
+
+enum RepairAction {
+  repair
+  replace
+}
+
+model LaborCostRate {
+  id         String       @id @default(uuid()) @db.Uuid
+  partTag    PartTag      @map("part_tag")
+  action     RepairAction
+  minCostPkr Int          @map("min_cost_pkr")
+  maxCostPkr Int          @map("max_cost_pkr")
+
+  @@unique([partTag, action])
+  @@map("labor_cost_rates")
+}
+
+model PartsPriceCache {
+  id           String       @id @default(uuid()) @db.Uuid
+  vehicleMake  String       @map("vehicle_make") @db.VarChar(50)
+  vehicleModel String       @map("vehicle_model") @db.VarChar(50)
+  vehicleYear  Int          @map("vehicle_year")
+  partTag      PartTag      @map("part_tag")
+  action       RepairAction
+  minPricePkr  Int          @map("min_price_pkr")
+  maxPricePkr  Int          @map("max_price_pkr")
+  source       String       @default("gemini_ai") @db.VarChar(20)
+  fetchedAt    DateTime     @default(now()) @map("fetched_at")
+
+  @@unique([vehicleMake, vehicleModel, vehicleYear, partTag, action])
+  @@map("parts_price_caches")
+}
+
+model FallbackPartsPrice {
+  id          String       @id @default(uuid()) @db.Uuid
+  partTag     PartTag      @map("part_tag")
+  action      RepairAction
+  minPricePkr Int          @map("min_price_pkr")
+  maxPricePkr Int          @map("max_price_pkr")
+
+  @@unique([partTag, action])
+  @@map("fallback_parts_prices")
+}
+
+model RepairCostReport {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  incidentId      String?  @map("incident_id") @db.Uuid
+  vehicleId       String?  @map("vehicle_id") @db.Uuid
+  totalMinCostPkr Int      @map("total_min_cost_pkr")
+  totalMaxCostPkr Int      @map("total_max_cost_pkr")
+  lineItems       Json     @map("line_items")
+  pdfUrl          String?  @map("pdf_url") @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicle         Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+
+  @@map("repair_cost_reports")
 }

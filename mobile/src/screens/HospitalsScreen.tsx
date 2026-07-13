@@ -23,7 +23,7 @@ interface Hospital {
   durationSeconds: number;
 }
 
-export default function HospitalsScreen({ navigation }: { navigation: any }) {
+export default function HospitalsScreen({ navigation, isInline }: { navigation: any; isInline?: boolean }) {
   // see it is already correct i just add comment and push
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -124,9 +124,11 @@ export default function HospitalsScreen({ navigation }: { navigation: any }) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backBtnText}>←</Text>
-        </TouchableOpacity>
+        {!isInline && (
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Text style={styles.backBtnText}>←</Text>
+          </TouchableOpacity>
+        )}
         <View>
           <Text style={styles.title}>Nearest Hospitals</Text>
           <Text style={styles.subtitle}>Emergency medical care near you</Text>

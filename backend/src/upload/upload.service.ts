@@ -29,32 +29,73 @@ export class UploadService {
 
   async uploadProfilePicture(file: Express.Multer.File): Promise<string> {
     if (this.useCloudinary) {
-      return new Promise((resolve, reject) => {
-        cloudinary.uploader.upload_stream(
-          { folder: 'resqdrive/profiles' },
-          (error, result) => {
-            if (error) {
-              this.logger.error(`Cloudinary upload failed: ${error.message}`);
-              reject(error);
-            } else {
-              resolve(result.secure_url);
+      try {
+        const secureUrl = await new Promise<string>((resolve, reject) => {
+          cloudinary.uploader.upload_stream(
+            { folder: 'resqdrive/profiles' },
+            (error, result) => {
+              if (error) {
+                reject(error);
+              } else {
+                resolve(result.secure_url);
+              }
             }
-          }
-        ).end(file.buffer);
-      });
-    } else {
-      const uploadDir = path.join(process.cwd(), 'uploads');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
+          ).end(file.buffer);
+        });
+        return secureUrl;
+      } catch (error: any) {
+        this.logger.warn(`Cloudinary profile upload failed (${error.message}). Falling back to local storage.`);
       }
-
-      const fileExtension = path.extname(file.originalname);
-      const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${fileExtension}`;
-      const filePath = path.join(uploadDir, fileName);
-
-      await fs.promises.writeFile(filePath, file.buffer);
-      
-      return `http://localhost:3000/uploads/${fileName}`;
     }
+
+    // Local storage fallback
+    const uploadDir = path.join(process.cwd(), 'uploads');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    const fileExtension = path.extname(file.originalname);
+    const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${fileExtension}`;
+    const filePath = path.join(uploadDir, fileName);
+
+    await fs.promises.writeFile(filePath, file.buffer);
+    
+    return `/uploads/${fileName}`;
+  }
+
+  async uploadDamagePhoto(file: Express.Multer.File): Promise<string> {
+    if (this.useCloudinary) {
+      try {
+        const secureUrl = await new Promise<string>((resolve, reject) => {
+          cloudinary.uploader.upload_stream(
+            { folder: 'resqdrive/damages' },
+            (error, result) => {
+              if (error) {
+                reject(error);
+              } else {
+                resolve(result.secure_url);
+              }
+            }
+          ).end(file.buffer);
+        });
+        return secureUrl;
+      } catch (error: any) {
+        this.logger.warn(`Cloudinary damage photo upload failed (${error.message}). Falling back to local storage.`);
+      }
+    }
+
+    // Local storage fallback
+    const uploadDir = path.join(process.cwd(), 'uploads', 'damages');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    const fileExtension = path.extname(file.originalname);
+    const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${fileExtension}`;
+    const filePath = path.join(uploadDir, fileName);
+
+    await fs.promises.writeFile(filePath, file.buffer);
+    
+    return `/uploads/damages/${fileName}`;
   }
 }

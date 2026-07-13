@@ -25,7 +25,7 @@ interface Workshop {
   durationSeconds: number;
 }
 
-export default function WorkshopsScreen({ navigation }: { navigation: any }) {
+export default function WorkshopsScreen({ navigation, isInline }: { navigation: any; isInline?: boolean }) {
   const [workshops, setWorkshops] = useState<Workshop[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -141,9 +141,11 @@ export default function WorkshopsScreen({ navigation }: { navigation: any }) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backBtnText}>←</Text>
-        </TouchableOpacity>
+        {!isInline && (
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Text style={styles.backBtnText}>←</Text>
+          </TouchableOpacity>
+        )}
         <View>
           <Text style={styles.title}>Nearby Workshops</Text>
           <Text style={styles.subtitle}>Verified mechanics near you</Text>

@@ -1,13 +1,15 @@
 import React, { useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator,
-  RefreshControl, SafeAreaView,
+  RefreshControl, SafeAreaView, Alert,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import {
   fetchIncidents, setFilters, clearFilters, clearCurrent,
 } from '../store/slices/incidentsSlice';
+import { Ionicons } from '@expo/vector-icons';
+import api from '../api/axios';
 
 const SEVERITY_COLORS: Record<string, string> = {
   NONE: '#666666', MINOR: '#fbc02d', MODERATE: '#f57c00', SEVERE: '#d32f2f',
@@ -43,26 +45,59 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
     else dispatch(setFilters({ severity: sev }));
   };
 
+  const handleDeleteIncident = (id: string) => {
+    Alert.alert(
+      'Confirm Delete',
+      'Are you sure you want to delete this incident record?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete(`/incidents/${id}`);
+              dispatch(fetchIncidents({ page: 1, refresh: true }));
+            } catch (err) {
+              Alert.alert('Error', 'Failed to delete incident.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const renderItem = ({ item }: { item: any }) => {
     const date = new Date(item.occurredAt).toLocaleString();
     return (
-      <TouchableOpacity
-        style={styles.card}
-        onPress={() => navigation.navigate('IncidentDetail', { id: item.id })}
-      >
-        <View style={styles.cardHeader}>
-          <View style={[styles.badge, { backgroundColor: SEVERITY_COLORS[item.severity] || '#666' }]}>
-            <Text style={styles.badgeText}>{item.severity}</Text>
+      <View style={styles.card}>
+        <TouchableOpacity
+          style={{ flex: 1 }}
+          onPress={() => navigation.navigate('IncidentDetail', { id: item.id })}
+        >
+          <View style={styles.cardHeader}>
+            <View style={[styles.badge, { backgroundColor: SEVERITY_COLORS[item.severity] || '#666' }]}>
+              <Text style={styles.badgeText}>{item.severity}</Text>
+            </View>
+            <View style={[styles.badge, { backgroundColor: STATUS_COLORS[item.status] || '#444' }]}>
+              <Text style={styles.badgeText}>{item.status.replace('_', ' ')}</Text>
+            </View>
+            <Text style={styles.cardType}>{item.type === 'AUTO' ? '🤖 Auto' : '✍️ Manual'}</Text>
           </View>
-          <View style={[styles.badge, { backgroundColor: STATUS_COLORS[item.status] || '#444' }]}>
-            <Text style={styles.badgeText}>{item.status.replace('_', ' ')}</Text>
-          </View>
-          <Text style={styles.cardType}>{item.type === 'AUTO' ? '🤖 Auto' : '✍️ Manual'}</Text>
-        </View>
-        <Text style={styles.cardDate}>{date}</Text>
-        {item.address ? <Text style={styles.cardAddress} numberOfLines={1}>📍 {item.address}</Text> : null}
-        {item.description ? <Text style={styles.cardDesc} numberOfLines={2}>{item.description}</Text> : null}
-      </TouchableOpacity>
+          <Text style={styles.cardDate}>{date}</Text>
+          {item.address ? <Text style={styles.cardAddress} numberOfLines={1}>📍 {item.address}</Text> : null}
+          {item.description ? <Text style={styles.cardDesc} numberOfLines={2}>{item.description}</Text> : null}
+        </TouchableOpacity>
+
+        {item.status !== 'ARCHIVED' && (
+          <TouchableOpacity 
+            style={styles.deleteCardBtn}
+            onPress={() => handleDeleteIncident(item.id)}
+          >
+            <Ionicons name="trash-outline" size={20} color="#ef5350" />
+          </TouchableOpacity>
+        )}
+      </View>
     );
   };
 
@@ -137,7 +172,8 @@ const styles = StyleSheet.create({
   filterChipTextActive: { color: '#ffffff' },
   card: {
     backgroundColor: '#1e1e1e', borderRadius: 10, padding: 16, marginBottom: 12,
-    borderWidth: 1, borderColor: '#2e2e2e',
+    borderWidth: 1, borderColor: '#2e2e2e', flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between',
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   badge: { paddingVertical: 3, paddingHorizontal: 8, borderRadius: 4 },
@@ -163,4 +199,10 @@ const styles = StyleSheet.create({
     elevation: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5,
   },
   fabText: { color: '#ffffff', fontSize: 28, fontWeight: 'bold', marginTop: -2 },
+  deleteCardBtn: {
+    padding: 8,
+    marginLeft: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });

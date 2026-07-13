@@ -19,11 +19,6 @@ import api from '../api/axios';
 
 const CATEGORIES = [
   {
-    key: 'drivingModeEnabled',
-    title: 'Driving Mode Indicators',
-    description: 'Alert when sensor monitoring pairs or terminates in driving mode.',
-  },
-  {
     key: 'alertDeliveryEnabled',
     title: 'Alert Confirmations',
     description: 'Notifications confirming emergency dispatch delivery status.',
