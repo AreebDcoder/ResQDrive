@@ -32,7 +32,12 @@ export class EmailService {
   }
 
   async sendVerificationEmail(email: string, fullName: string, token: string): Promise<void> {
-    const verificationLink = `http://localhost:3000/auth/verify-email?token=${token}`;
+      this.logger.log(`Verification token for ${email}: ${token}`);
+  this.logger.log(
+    `Verification URL: http://localhost:3000/auth/verify-email?token=${token}`,
+  );
+
+  const verificationLink = `http://localhost:3000/auth/verify-email?token=${token}`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
         <h2 style="color: #d32f2f;">Welcome to ResQDrive, ${fullName}!</h2>
