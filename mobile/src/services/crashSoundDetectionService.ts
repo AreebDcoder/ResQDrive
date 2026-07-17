@@ -46,13 +46,30 @@ export class CrashSoundDetectionService {
    * Initializes and starts rolling 2-second audio monitoring.
    * If running in Expo Go, falls back to a simulated periodic audio inference loop.
    */
-  static async startMonitoring() {
-    if (this.isMonitoring) return;
-    this.isMonitoring = true;
+static async startMonitoring() {
+  if (this.isMonitoring) return;
+  this.isMonitoring = true;
 
-    if (isNativeSupported) {
-      try {
-        console.log('Starting native TFLite crash sound monitoring...');
+  if (isNativeSupported) {
+    try {
+      const { PermissionsAndroid, Platform } = require('react-native');
+      if (Platform.OS === 'android') {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+          {
+            title: 'Microphone Permission',
+            message: 'ResQDrive needs microphone access to detect crash sounds automatically.',
+            buttonPositive: 'Allow',
+          },
+        );
+        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+          console.log('Microphone permission denied. Falling back to mock monitoring.');
+          this.startMockMonitoring();
+          return;
+        }
+      }
+
+      console.log('Starting native TFLite crash sound monitoring...');
         
         // 1. Load YAMNet TFLite model from assets if not loaded
         if (!this.model) {
