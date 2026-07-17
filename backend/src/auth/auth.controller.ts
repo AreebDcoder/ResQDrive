@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query, Res, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
@@ -10,6 +10,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
+import { Response } from 'express';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -68,7 +69,30 @@ export class AuthController {
   async verifyEmail(@Body() verifyEmailDto: VerifyEmailDto) {
     return this.authService.verifyEmail(verifyEmailDto.token);
   }
-
+@Get('verify-email')
+  @ApiOperation({ summary: 'Verify email by clicking the link directly (browser-friendly)' })
+  async verifyEmailByLink(@Query('token') token: string, @Res() res: Response) {
+    try {
+      await this.authService.verifyEmail(token);
+      return res.send(`
+        <html>
+          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #121212; color: white;">
+            <h1 style="color: #4caf50;">✅ Email Verified!</h1>
+            <p>Your ResQDrive account is now active. You can close this page and log in from the app.</p>
+          </body>
+        </html>
+      `);
+    } catch (err) {
+      return res.status(400).send(`
+        <html>
+          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #121212; color: white;">
+            <h1 style="color: #d32f2f;">❌ Verification Failed</h1>
+            <p>This link may have expired or already been used.</p>
+          </body>
+        </html>
+      `);
+    }
+  }
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Request password reset verification email' })

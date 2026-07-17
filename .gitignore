@@ -37,3 +37,6 @@ Thumbs.db
 *.swp
 *.swo
 
+__pycache__/
+*.pyc
+backend/uploads/
