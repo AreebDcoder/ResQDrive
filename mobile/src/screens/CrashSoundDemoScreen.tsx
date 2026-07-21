@@ -194,6 +194,17 @@ export default function CrashSoundDemoScreen() {
         <Text style={styles.infoDesc}>
           This module monitors audio locally at 16kHz mono. It uses YAMNet's pre-trained AudioSet classification layers to identify crash events without uploading raw files or recording data to disk.
         </Text>
+        {!CrashSoundDetectionService.isNativeSupported() && (
+          <View style={styles.webWarningBox}>
+            <Text style={styles.webWarningTitle}>⚠️ Running in Web/Mock Simulator Mode</Text>
+            <Text style={styles.webWarningDesc}>
+              Since standard web browsers cannot run native TensorFlow Lite models directly, clapping or other loud noise spikes will trigger simulated crash classifications (like Explosion, Shatter, Skidding) for database logging and telemetry testing.
+            </Text>
+            <Text style={styles.webWarningFooter}>
+              To run the real YAMNet AI classification on phone microphone audio, run: npx expo run:android
+            </Text>
+          </View>
+        )}
       </View>
     </ScrollView>
   );
@@ -396,5 +407,30 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#777777',
     lineHeight: 18,
+  },
+  webWarningBox: {
+    marginTop: 14,
+    padding: 12,
+    backgroundColor: '#3e2723',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#d84315',
+  },
+  webWarningTitle: {
+    color: '#ff8a65',
+    fontSize: 13,
+    fontWeight: 'bold',
+    marginBottom: 6,
+  },
+  webWarningDesc: {
+    color: '#d7ccc8',
+    fontSize: 11,
+    lineHeight: 16,
+    marginBottom: 8,
+  },
+  webWarningFooter: {
+    color: '#ffab91',
+    fontSize: 11,
+    fontWeight: 'bold',
   },
 });

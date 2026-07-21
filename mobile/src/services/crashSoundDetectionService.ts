@@ -48,6 +48,10 @@ export class CrashSoundDetectionService {
   private static model: any = null;
   private static isMonitoring = false;
   private static mockIntervalId: any = null;
+
+  static isNativeSupported(): boolean {
+    return isNativeSupported && Platform.OS !== 'web';
+  }
   private static onCrashCallback: ((confidence: number, topClass: string) => void) | null = null;
   private static onTelemetryCallback: ((data: AudioTelemetryData) => void) | null = null;
 
