@@ -137,17 +137,9 @@ static async startMonitoring() {
     this.mockIntervalId = setInterval(async () => {
       if (!this.isMonitoring) return;
 
-      // 5% chance of generating a crash sound, otherwise baseline traffic rumble
-      const isCrashEvent = Math.random() < 0.06;
-      let topClass: CrashRelevantClassName = 'Vehicle';
-      let confidence = 0.05 + Math.random() * 0.12;
-
-      if (isCrashEvent) {
-        const crashClasses: CrashRelevantClassName[] = ['Skidding', 'Glass', 'Explosion', 'Tire squeal'];
-        topClass = crashClasses[Math.floor(Math.random() * crashClasses.length)];
-        confidence = 0.45 + Math.random() * 0.45;
-      }
-
+      // Baseline ambient traffic / vehicle sound (non-crash baseline)
+      const topClass: CrashRelevantClassName = 'Vehicle';
+      const confidence = 0.05 + Math.random() * 0.10;
       const isExceeded = confidence > CRASH_CONFIDENCE_THRESHOLD;
 
       console.log(

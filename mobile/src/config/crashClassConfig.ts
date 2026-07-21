@@ -6,14 +6,14 @@ export const CRASH_RELEVANT_CLASS_NAMES = [
   'Skidding',
   'Tire squeal',
   'Vehicle',
-  'Breaking',
+  'Crash',
 ] as const;
 
 export type CrashRelevantClassName = (typeof CRASH_RELEVANT_CLASS_NAMES)[number];
 
-// Resolved index mapping from yamnet_class_map.csv:
-// 'Glass': 435, 'Shatter': 437, 'Explosion': 420, 'Boom': 430, 'Skidding': 306, 'Tire squeal': 307, 'Vehicle': 294, 'Breaking': 464
-export const CRASH_CLASS_INDICES: number[] = [435, 437, 420, 430, 306, 307, 294, 464];
+// Resolved index mapping from YAMNet audioset class map:
+// 'Glass': 435, 'Shatter': 437, 'Explosion': 420, 'Boom': 430, 'Skidding': 306, 'Tire squeal': 307, 'Vehicle': 294, 'Crash': 463 (Smash, crash)
+export const CRASH_CLASS_INDICES: number[] = [435, 437, 420, 430, 306, 307, 294, 463];
 
 export const CLASS_INDEX_TO_NAME: Record<number, CrashRelevantClassName> = {
   435: 'Glass',
@@ -23,7 +23,7 @@ export const CLASS_INDEX_TO_NAME: Record<number, CrashRelevantClassName> = {
   306: 'Skidding',
   307: 'Tire squeal',
   294: 'Vehicle',
-  464: 'Breaking',
+  463: 'Crash',
 };
 
 export const CRASH_CONFIDENCE_THRESHOLD = 0.3;
