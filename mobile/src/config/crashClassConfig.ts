@@ -26,6 +26,6 @@ export const CLASS_INDEX_TO_NAME: Record<number, CrashRelevantClassName> = {
   463: 'Crash',
 };
 
-export const CRASH_CONFIDENCE_THRESHOLD = 0.3;
+export const CRASH_CONFIDENCE_THRESHOLD = 0.15;
 export const ROLLING_WINDOW_SECONDS = 2;
 export const SAMPLE_RATE_HZ = 16000;

@@ -125,8 +125,8 @@ export default function CrashSoundDemoScreen() {
 
         <View style={styles.telemetryRow}>
           <Text style={styles.telemetryTitle}>Transient Energy Multiplier:</Text>
-          <Text style={[styles.telemetryValue, telemetry.transientRatio >= 3.5 ? styles.dangerValue : styles.normalValue]}>
-            {telemetry.transientRatio.toFixed(1)}x (Threshold: 3.5x)
+          <Text style={[styles.telemetryValue, telemetry.transientRatio >= 1.8 ? styles.dangerValue : styles.normalValue]}>
+            {telemetry.transientRatio.toFixed(1)}x (Threshold: 1.8x)
           </Text>
         </View>
 
