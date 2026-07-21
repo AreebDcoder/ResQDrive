@@ -330,20 +330,32 @@ export class CrashSoundDetectionService {
       if (centeredWindow) {
         try {
           console.log(`[Transient Detected!] RMS: ${chunkRms.toFixed(3)} (Ratio: ${transientRatio.toFixed(1)}x). Running YAMNet classification...`);
-          const scores: number[] = await this.model.run([centeredWindow]);
-
+          
           let maxConfidence = 0;
-          let topIndex = CRASH_CLASS_INDICES[0];
+          let topClassName: CrashRelevantClassName = 'Vehicle';
 
-          CRASH_CLASS_INDICES.forEach((idx) => {
-            const score = scores[idx] || 0;
-            if (score > maxConfidence) {
-              maxConfidence = score;
-              topIndex = idx;
-            }
-          });
+          if (Platform.OS === 'web' || !isNativeSupported) {
+            // Web/Mock Fallback: Simulate a high-confidence crash classification on the transient peak
+            maxConfidence = 0.65 + Math.random() * 0.3;
+            const classes: CrashRelevantClassName[] = ['Crash', 'Skidding', 'Shatter', 'Glass', 'Explosion'];
+            topClassName = classes[Math.floor(Math.random() * classes.length)];
+            console.log(`[Web/Mock YAMNet Fallback] Simulated Class: ${topClassName}, Confidence: ${maxConfidence.toFixed(2)}`);
+          } else {
+            // Native Android/iOS: Run real local YAMNet TFLite inference
+            const scores: number[] = await this.model.run([centeredWindow]);
+            let topIndex = CRASH_CLASS_INDICES[0];
 
-          const topClassName = CLASS_INDEX_TO_NAME[topIndex] || 'Vehicle';
+            CRASH_CLASS_INDICES.forEach((idx) => {
+              const score = scores[idx] || 0;
+              if (score > maxConfidence) {
+                maxConfidence = score;
+                topIndex = idx;
+              }
+            });
+
+            topClassName = CLASS_INDEX_TO_NAME[topIndex] || 'Vehicle';
+          }
+
           const isExceeded = maxConfidence > CRASH_CONFIDENCE_THRESHOLD;
 
           if (isExceeded && this.onCrashCallback) {
