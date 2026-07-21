@@ -15,6 +15,8 @@ mobile/.env
 backend/dist/
 mobile/.expo/
 mobile/web-build/
+mobile/android/
+mobile/ios/
 admin-web/dist/
 backend/coverage/
 
