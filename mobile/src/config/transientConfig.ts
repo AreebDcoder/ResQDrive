@@ -4,11 +4,11 @@
  * while ignoring ambient noise and steady-state background music.
  */
 
-// Instantaneous RMS must exceed 1.8x rolling average to flag a transient (tuned for high sensitivity)
-export const TRANSIENT_MULTIPLIER = 1.8;
+// Instantaneous RMS must exceed 2.5x rolling average to flag a transient (prevents room hum false alerts)
+export const TRANSIENT_MULTIPLIER = 2.5;
 
-// Absolute minimum RMS floor to prevent false triggers in silence (tuned for soft mic streams)
-export const TRANSIENT_MIN_RMS = 0.003;
+// Absolute minimum RMS floor to prevent false triggers in silence (prevents room noise floor triggers)
+export const TRANSIENT_MIN_RMS = 0.015;
 
 // Audio pre-buffer to extract BEFORE the transient peak (0.75 seconds)
 export const PRE_TRANSIENT_SECONDS = 0.75;

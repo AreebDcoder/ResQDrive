@@ -24,22 +24,22 @@ describe('Transient Detector Utility Tests', () => {
   });
 
   describe('isTransientDetected', () => {
-    it('should return true for an acoustic spike exceeding 1.8x rolling average and min noise floor', () => {
+    it('should return true for an acoustic spike exceeding 2.5x rolling average and min noise floor', () => {
       const currentRms = 0.05;
-      const rollingAvgRms = 0.02;
-      // 0.05 >= 0.02 * 1.8 = 0.036, and 0.05 >= 0.003
+      const rollingAvgRms = 0.015;
+      // 0.05 >= 0.015 * 2.5 = 0.0375, and 0.05 >= 0.015
       expect(isTransientDetected(currentRms, rollingAvgRms)).toBe(true);
     });
 
     it('should return false if RMS is below min noise floor even if ratio is high', () => {
-      const currentRms = 0.001; // Below 0.003 min floor
-      const rollingAvgRms = 0.0001; // 10x ratio
+      const currentRms = 0.005; // Below 0.015 min floor
+      const rollingAvgRms = 0.0005; // 10x ratio
       expect(isTransientDetected(currentRms, rollingAvgRms)).toBe(false);
     });
 
     it('should return false if spike ratio is below multiplier threshold', () => {
-      const currentRms = 0.025;
-      const rollingAvgRms = 0.02; // Only 1.25x ratio, less than 1.8x
+      const currentRms = 0.03;
+      const rollingAvgRms = 0.02; // Only 1.5x ratio, less than 2.5x
       expect(isTransientDetected(currentRms, rollingAvgRms)).toBe(false);
     });
   });
