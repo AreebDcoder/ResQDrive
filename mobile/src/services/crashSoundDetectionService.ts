@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import api from '../api/axios';
 import {
   CRASH_CLASS_INDICES,
@@ -74,6 +75,10 @@ export class CrashSoundDetectionService {
     this.onTelemetryCallback = callback;
   }
 
+  private static webAudioContext: any = null;
+  private static webMediaStream: any = null;
+  private static webScriptNode: any = null;
+
   /**
    * Starts event-driven transient-triggered audio monitoring.
    */
@@ -85,6 +90,35 @@ export class CrashSoundDetectionService {
     this.totalSamplesWritten = 0;
     this.currentRms = 0;
     this.rollingAvgRms = 0.01;
+
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.mediaDevices) {
+      try {
+        console.log('Starting Web Audio API live microphone monitoring...');
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        this.webMediaStream = stream;
+
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        this.webAudioContext = new AudioCtx({ sampleRate: SAMPLE_RATE_HZ });
+
+        const source = this.webAudioContext.createMediaStreamSource(stream);
+        const scriptNode = this.webAudioContext.createScriptProcessor(2048, 1, 1);
+        this.webScriptNode = scriptNode;
+
+        scriptNode.onaudioprocess = (audioProcessingEvent: any) => {
+          if (!this.isMonitoring) return;
+          const inputBuffer = audioProcessingEvent.inputBuffer;
+          const pcmData = inputBuffer.getChannelData(0); // Float32Array [-1.0, 1.0]
+          this.processFloat32Chunk(pcmData);
+        };
+
+        source.connect(scriptNode);
+        scriptNode.connect(this.webAudioContext.destination);
+        console.log('Live Web Microphone stream initialized successfully.');
+        return;
+      } catch (err) {
+        console.error('Failed to access web microphone stream:', err);
+      }
+    }
 
     if (isNativeSupported) {
       try {
@@ -134,10 +168,29 @@ export class CrashSoundDetectionService {
   }
 
   /**
-   * Stops audio capture and clears timers.
+   * Stops audio capture and clears timers/streams.
    */
   static stopMonitoring() {
     this.isMonitoring = false;
+
+    if (this.webScriptNode) {
+      try {
+        this.webScriptNode.disconnect();
+        this.webScriptNode = null;
+      } catch (e) {}
+    }
+    if (this.webMediaStream) {
+      try {
+        this.webMediaStream.getTracks().forEach((track: any) => track.stop());
+        this.webMediaStream = null;
+      } catch (e) {}
+    }
+    if (this.webAudioContext) {
+      try {
+        this.webAudioContext.close();
+        this.webAudioContext = null;
+      } catch (e) {}
+    }
 
     if (isNativeSupported && LiveAudioStream) {
       try {
@@ -207,6 +260,21 @@ export class CrashSoundDetectionService {
   }
 
   /**
+   * Process raw Float32 audio samples (e.g. from Web Audio API microphone stream).
+   */
+  private static async processFloat32Chunk(chunkSamples: Float32Array) {
+    const bufLen = this.circularBuffer.length;
+    for (let i = 0; i < chunkSamples.length; i++) {
+      const sample = chunkSamples[i];
+      this.circularBuffer[this.writeHead] = sample;
+      this.writeHead = (this.writeHead + 1) % bufLen;
+      this.totalSamplesWritten++;
+    }
+
+    await this.evaluateAudioChunk(chunkSamples);
+  }
+
+  /**
    * Appends PCM chunks into 3s circular buffer, computes instantaneous RMS,
    * updates 5s moving average, and triggers YAMNet ONLY upon transient detection.
    */
@@ -225,6 +293,10 @@ export class CrashSoundDetectionService {
       this.totalSamplesWritten++;
     }
 
+    await this.evaluateAudioChunk(chunkSamples);
+  }
+
+  private static async evaluateAudioChunk(chunkSamples: Float32Array) {
     // 1. Calculate chunk RMS energy and update 5s moving average
     const chunkRms = computeRms(chunkSamples);
     this.currentRms = chunkRms;
