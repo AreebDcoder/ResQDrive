@@ -20,6 +20,15 @@ export default function CrashSoundDemoScreen() {
   const [lastAlert, setLastAlert] = useState<{ confidence: number; className: string; timestamp: Date } | null>(null);
   const [flashWarning, setFlashWarning] = useState(false);
 
+  // Transient Telemetry State
+  const [telemetry, setTelemetry] = useState({
+    currentRms: 0,
+    rollingAvgRms: 0.01,
+    transientRatio: 1.0,
+    isTransient: false,
+  });
+  const [transientFlash, setTransientFlash] = useState(false);
+
   useEffect(() => {
     // 1. Subscribe to YAMNet crash events
     CrashSoundDetectionService.subscribeToCrashEvents((confidence, className) => {
@@ -31,17 +40,22 @@ export default function CrashSoundDemoScreen() {
         timestamp: new Date(),
       });
       
-      // Trigger warning flash banner
       setFlashWarning(true);
-      
-      // Reset flash banner after 3 seconds
       setTimeout(() => {
         setFlashWarning(false);
       }, 3000);
     });
 
+    // 2. Subscribe to live audio RMS telemetry & transient events
+    CrashSoundDetectionService.subscribeToTelemetry((data) => {
+      setTelemetry(data);
+      if (data.isTransient) {
+        setTransientFlash(true);
+        setTimeout(() => setTransientFlash(false), 1500);
+      }
+    });
+
     return () => {
-      // Clean up sound capture on unmount
       CrashSoundDetectionService.stopMonitoring();
     };
   }, []);
@@ -63,11 +77,20 @@ export default function CrashSoundDemoScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <View style={styles.header}>
-        <Text style={styles.title}>Crash Sound Detection</Text>
+        <Text style={styles.title}>Transient-Triggered Crash Sound Detection</Text>
         <Text style={styles.subtitle}>
-          Zero-Shot YAMNet Classifier running local audio inference in real-time
+          Event-driven audio classifier: RMS transient detector triggers YAMNet inference on centered 2-second windows.
         </Text>
       </View>
+
+      {/* Transient Flash Banner */}
+      {transientFlash && (
+        <View style={styles.transientBanner}>
+          <Text style={styles.transientBannerText}>
+            ⚡ ACOUSTIC TRANSIENT DETECTED (Ratio: {telemetry.transientRatio.toFixed(1)}x)
+          </Text>
+        </View>
+      )}
 
       {/* Warning Flash Banner */}
       {flashWarning && lastAlert && (
@@ -80,13 +103,30 @@ export default function CrashSoundDemoScreen() {
 
       {/* Live Telemetry Display */}
       <View style={styles.telemetryCard}>
-        <Text style={styles.cardLabel}>Real-Time Diagnostics</Text>
+        <Text style={styles.cardLabel}>Real-Time Audio Diagnostics</Text>
         
         <View style={styles.telemetryRow}>
           <Text style={styles.telemetryTitle}>Status:</Text>
           <View style={[styles.statusDot, isMonitoring ? styles.activeDot : styles.idleDot]} />
           <Text style={[styles.telemetryValue, isMonitoring ? styles.activeText : styles.idleText]}>
             {isMonitoring ? 'Monitoring Active' : 'Idle'}
+          </Text>
+        </View>
+
+        <View style={styles.telemetryRow}>
+          <Text style={styles.telemetryTitle}>Instantaneous RMS Energy:</Text>
+          <Text style={styles.telemetryValue}>{telemetry.currentRms.toFixed(4)}</Text>
+        </View>
+
+        <View style={styles.telemetryRow}>
+          <Text style={styles.telemetryTitle}>Rolling 5s Avg RMS:</Text>
+          <Text style={styles.telemetryValue}>{telemetry.rollingAvgRms.toFixed(4)}</Text>
+        </View>
+
+        <View style={styles.telemetryRow}>
+          <Text style={styles.telemetryTitle}>Transient Energy Multiplier:</Text>
+          <Text style={[styles.telemetryValue, telemetry.transientRatio >= 3.5 ? styles.dangerValue : styles.normalValue]}>
+            {telemetry.transientRatio.toFixed(1)}x (Threshold: 3.5x)
           </Text>
         </View>
 
@@ -170,6 +210,19 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 24,
+  },
+  transientBanner: {
+    backgroundColor: '#f57c00',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  transientBannerText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
   },
   title: {
     fontSize: 24,

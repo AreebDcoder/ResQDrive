@@ -384,6 +384,7 @@ model CrashSoundDetectionLog {
   thresholdUsed            Float     @map("threshold_used")
   flaggedAsCrash           Boolean   @map("flagged_as_crash")
   combinedWithSensorSignal Boolean   @default(false) @map("combined_with_sensor_signal")
+  triggeredByTransient     Boolean   @default(true) @map("triggered_by_transient")
   createdAt                DateTime  @default(now()) @map("created_at")
   user                     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 

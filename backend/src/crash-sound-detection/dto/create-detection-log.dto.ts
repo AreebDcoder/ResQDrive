@@ -32,4 +32,9 @@ export class CreateDetectionLogDto {
   @IsOptional()
   @IsBoolean()
   combinedWithSensorSignal?: boolean;
+
+  @ApiProperty({ required: false, example: true })
+  @IsOptional()
+  @IsBoolean()
+  triggeredByTransient?: boolean;
 }

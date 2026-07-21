@@ -1,20 +1,29 @@
-import { Platform } from 'react-native';
 import api from '../api/axios';
 import {
   CRASH_CLASS_INDICES,
   CLASS_INDEX_TO_NAME,
   CRASH_CONFIDENCE_THRESHOLD,
   SAMPLE_RATE_HZ,
-  ROLLING_WINDOW_SECONDS,
   CrashRelevantClassName,
 } from '../config/crashClassConfig';
+import {
+  CIRCULAR_BUFFER_SECONDS,
+  REFRACTORY_PERIOD_MS,
+  TRANSIENT_MULTIPLIER,
+  TRANSIENT_MIN_RMS,
+} from '../config/transientConfig';
+import {
+  computeRms,
+  isTransientDetected,
+  updateRollingAverage,
+  extractCenteredWindow,
+} from '../utils/transientDetector';
 
 let loadTensorflowModel: any = null;
 let LiveAudioStream: any = null;
 let isNativeSupported = false;
 
 try {
-  // Safe runtime imports to prevent app crashes on Expo Go clients
   const tflite = require('react-native-fast-tflite');
   loadTensorflowModel = tflite.loadTensorflowModel || tflite.useTensorflowModel;
   LiveAudioStream = require('react-native-live-audio-stream').default;
@@ -27,62 +36,81 @@ try {
   console.log('Running in Mock Audio Classification mode (Native TFLite/Audio recording not supported).');
 }
 
+export interface AudioTelemetryData {
+  currentRms: number;
+  rollingAvgRms: number;
+  transientRatio: number;
+  isTransient: boolean;
+}
+
 export class CrashSoundDetectionService {
   private static model: any = null;
   private static isMonitoring = false;
   private static mockIntervalId: any = null;
   private static onCrashCallback: ((confidence: number, topClass: string) => void) | null = null;
-  private static audioBuffer: Float32Array | null = null;
-  private static bufferIndex = 0;
+  private static onTelemetryCallback: ((data: AudioTelemetryData) => void) | null = null;
+
+  // 3.0s Sample-indexed Circular Buffer (48,000 samples at 16kHz)
+  private static circularBuffer: Float32Array = new Float32Array(SAMPLE_RATE_HZ * CIRCULAR_BUFFER_SECONDS);
+  private static writeHead = 0;
+  private static totalSamplesWritten = 0;
+
+  // RMS & Transient Detection State
+  private static currentRms = 0;
+  private static rollingAvgRms = 0.01;
+  private static lastTransientTimestamp = 0;
 
   /**
-   * Registers a callback listener that triggers whenever the crash confidence threshold is exceeded.
+   * Registers a callback listener that triggers whenever crash sound confidence threshold is exceeded.
    */
   static subscribeToCrashEvents(callback: (confidence: number, topClass: string) => void) {
     this.onCrashCallback = callback;
   }
 
   /**
-   * Initializes and starts rolling 2-second audio monitoring.
-   * If running in Expo Go, falls back to a simulated periodic audio inference loop.
+   * Registers a telemetry listener for live diagnostics (RMS gauges & transient ratio).
    */
-static async startMonitoring() {
-  if (this.isMonitoring) return;
-  this.isMonitoring = true;
+  static subscribeToTelemetry(callback: (data: AudioTelemetryData) => void) {
+    this.onTelemetryCallback = callback;
+  }
 
-  if (isNativeSupported) {
-    try {
-      const { PermissionsAndroid, Platform } = require('react-native');
-      if (Platform.OS === 'android') {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-          {
-            title: 'Microphone Permission',
-            message: 'ResQDrive needs microphone access to detect crash sounds automatically.',
-            buttonPositive: 'Allow',
-          },
-        );
-        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          console.log('Microphone permission denied. Falling back to mock monitoring.');
-          this.startMockMonitoring();
-          return;
+  /**
+   * Starts event-driven transient-triggered audio monitoring.
+   */
+  static async startMonitoring() {
+    if (this.isMonitoring) return;
+    this.isMonitoring = true;
+
+    this.writeHead = 0;
+    this.totalSamplesWritten = 0;
+    this.currentRms = 0;
+    this.rollingAvgRms = 0.01;
+
+    if (isNativeSupported) {
+      try {
+        const { PermissionsAndroid } = require('react-native');
+        if (Platform.OS === 'android') {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+            {
+              title: 'Microphone Permission',
+              message: 'ResQDrive needs microphone access to detect crash sounds automatically.',
+              buttonPositive: 'Allow',
+            },
+          );
+          if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+            console.log('Microphone permission denied. Falling back to mock monitoring.');
+            this.startMockMonitoring();
+            return;
+          }
         }
-      }
 
-      console.log('Starting native TFLite crash sound monitoring...');
+        console.log('Starting native transient-triggered YAMNet crash sound monitoring...');
         
-        // 1. Load YAMNet TFLite model from assets if not loaded
         if (!this.model) {
-          // Bundled asset path relative to the app
           this.model = await loadTensorflowModel(require('../../assets/yamnet.tflite'));
         }
 
-        // Initialize 2-second rolling buffer (16000 HZ * 2 seconds = 32000 samples)
-        const bufferSize = SAMPLE_RATE_HZ * ROLLING_WINDOW_SECONDS;
-        this.audioBuffer = new Float32Array(bufferSize);
-        this.bufferIndex = 0;
-
-        // 2. Initialize live audio stream capture (16kHz mono 16-bit PCM)
         LiveAudioStream.init({
           sampleRate: SAMPLE_RATE_HZ,
           channels: 1,
@@ -106,7 +134,7 @@ static async startMonitoring() {
   }
 
   /**
-   * Stops rolling audio capture and clears inference timers.
+   * Stops audio capture and clears timers.
    */
   static stopMonitoring() {
     this.isMonitoring = false;
@@ -128,109 +156,145 @@ static async startMonitoring() {
   }
 
   /**
-   * Fallback simulator loop running every 2 seconds, generating mock driving sounds
-   * and occasionally simulating crash sounds for validation testing.
+   * Fallback simulator loop running every 100ms for telemetry preview in Expo Go.
    */
   private static startMockMonitoring() {
-    console.log('Starting Mock YAMNet audio classification loop...');
+    console.log('Starting Mock transient-triggered audio monitoring loop...');
     
-    this.mockIntervalId = setInterval(async () => {
+    this.mockIntervalId = setInterval(() => {
       if (!this.isMonitoring) return;
 
-      // Baseline ambient traffic / vehicle sound (non-crash baseline)
-      const topClass: CrashRelevantClassName = 'Vehicle';
-      const confidence = 0.05 + Math.random() * 0.10;
-      const isExceeded = confidence > CRASH_CONFIDENCE_THRESHOLD;
+      // Ambient traffic rumble simulation
+      this.currentRms = 0.01 + Math.random() * 0.015;
+      this.rollingAvgRms = updateRollingAverage(this.rollingAvgRms, this.currentRms, 0.05);
 
-      console.log(
-        `[Mock YAMNet] Rolling window analyzed. Top Class: ${topClass}, Confidence: ${confidence.toFixed(2)} (Exceeded: ${isExceeded})`
-      );
+      const ratio = this.currentRms / Math.max(this.rollingAvgRms, 0.001);
+      const isTransient = isTransientDetected(this.currentRms, this.rollingAvgRms);
 
-      // Trigger event listener callback if threshold is crossed
-      if (isExceeded && this.onCrashCallback) {
-        this.onCrashCallback(confidence, topClass);
+      if (this.onTelemetryCallback) {
+        this.onTelemetryCallback({
+          currentRms: this.currentRms,
+          rollingAvgRms: this.rollingAvgRms,
+          transientRatio: ratio,
+          isTransient,
+        });
       }
-
-      // Log window result to backend telemetry
-      this.logTelemetryWindow(confidence, topClass, isExceeded);
-    }, ROLLING_WINDOW_SECONDS * 1000);
+    }, 100);
   }
 
   /**
-   * Manual trigger method used strictly for screen testing buttons.
+   * Manual trigger method for simulating acoustic transients or crash sounds.
    */
-  static simulateManualCrash(topClass: CrashRelevantClassName = 'Skidding', confidence = 0.85) {
+  static simulateManualCrash(topClass: CrashRelevantClassName = 'Crash', confidence = 0.85) {
     const isExceeded = confidence > CRASH_CONFIDENCE_THRESHOLD;
-    console.log(`[Manual Simulation] Triggered Crash event: ${topClass} (${confidence})`);
+    console.log(`[Transient Event Manual Trigger] Crash sound: ${topClass} (${confidence})`);
+
+    // Notify live visual flash
+    if (this.onTelemetryCallback) {
+      this.onTelemetryCallback({
+        currentRms: 0.35,
+        rollingAvgRms: 0.02,
+        transientRatio: 17.5,
+        isTransient: true,
+      });
+    }
 
     if (isExceeded && this.onCrashCallback) {
       this.onCrashCallback(confidence, topClass);
     }
 
-    this.logTelemetryWindow(confidence, topClass, isExceeded);
+    this.logTelemetryWindow(confidence, topClass, isExceeded, true);
   }
 
   /**
-   * Shift-and-append PCM bytes into the rolling waveform buffer, running model inference
-   * once the buffer contains exactly 2 seconds of audio.
+   * Appends PCM chunks into 3s circular buffer, computes instantaneous RMS,
+   * updates 5s moving average, and triggers YAMNet ONLY upon transient detection.
    */
   private static async processAudioChunk(dataBase64: string) {
-    if (!this.audioBuffer) return;
-
-    // Convert base64 chunk string to PCM signed 16-bit integer array
     const rawBuffer = Buffer.from(dataBase64, 'base64');
     const pcmData = new Int16Array(rawBuffer.buffer, rawBuffer.byteOffset, rawBuffer.length / 2);
+    const chunkSamples = new Float32Array(pcmData.length);
 
-    // Normalize PCM values to Float32 [-1.0, 1.0] as expected by YAMNet
+    // Convert PCM int16 to float32 [-1.0, 1.0] and store into circular buffer
+    const bufLen = this.circularBuffer.length;
     for (let i = 0; i < pcmData.length; i++) {
-      const normalizedSample = pcmData[i] / 32768.0;
-      
-      // Shift buffer if it is full (rolling window mechanism)
-      if (this.bufferIndex >= this.audioBuffer.length) {
-        this.audioBuffer.copyWithin(0, 1);
-        this.audioBuffer[this.audioBuffer.length - 1] = normalizedSample;
-      } else {
-        this.audioBuffer[this.bufferIndex++] = normalizedSample;
-      }
+      const sample = pcmData[i] / 32768.0;
+      chunkSamples[i] = sample;
+      this.circularBuffer[this.writeHead] = sample;
+      this.writeHead = (this.writeHead + 1) % bufLen;
+      this.totalSamplesWritten++;
     }
 
-    // Run inference once the buffer is fully populated
-    if (this.bufferIndex >= this.audioBuffer.length) {
-      try {
-        // YAMNet model accepts [waveform] as input and outputs flat float array of 521 scores
-        const scores: number[] = await this.model.run([this.audioBuffer]);
-        
-        // Find maximum confidence score among target indices
-        let maxConfidence = 0;
-        let topIndex = CRASH_CLASS_INDICES[0];
+    // 1. Calculate chunk RMS energy and update 5s moving average
+    const chunkRms = computeRms(chunkSamples);
+    this.currentRms = chunkRms;
+    this.rollingAvgRms = updateRollingAverage(this.rollingAvgRms, chunkRms, 0.05);
 
-        CRASH_CLASS_INDICES.forEach((idx) => {
-          const score = scores[idx] || 0;
-          if (score > maxConfidence) {
-            maxConfidence = score;
-            topIndex = idx;
+    const transientRatio = chunkRms / Math.max(this.rollingAvgRms, 0.001);
+    const isTransient = isTransientDetected(chunkRms, this.rollingAvgRms);
+
+    // Emit live telemetry to UI
+    if (this.onTelemetryCallback) {
+      this.onTelemetryCallback({
+        currentRms: this.currentRms,
+        rollingAvgRms: this.rollingAvgRms,
+        transientRatio,
+        isTransient,
+      });
+    }
+
+    // 2. Event-Driven Trigger: Run YAMNet ONLY when a transient spike occurs
+    const now = Date.now();
+    if (isTransient && (now - this.lastTransientTimestamp > REFRACTORY_PERIOD_MS)) {
+      this.lastTransientTimestamp = now;
+
+      // Extract 2.0s window centered on the transient (0.75s pre-peak, 1.25s post-peak)
+      const centeredWindow = extractCenteredWindow(
+        this.circularBuffer,
+        this.writeHead,
+        this.totalSamplesWritten
+      );
+
+      if (centeredWindow) {
+        try {
+          console.log(`[Transient Detected!] RMS: ${chunkRms.toFixed(3)} (Ratio: ${transientRatio.toFixed(1)}x). Running YAMNet classification...`);
+          const scores: number[] = await this.model.run([centeredWindow]);
+
+          let maxConfidence = 0;
+          let topIndex = CRASH_CLASS_INDICES[0];
+
+          CRASH_CLASS_INDICES.forEach((idx) => {
+            const score = scores[idx] || 0;
+            if (score > maxConfidence) {
+              maxConfidence = score;
+              topIndex = idx;
+            }
+          });
+
+          const topClassName = CLASS_INDEX_TO_NAME[topIndex] || 'Vehicle';
+          const isExceeded = maxConfidence > CRASH_CONFIDENCE_THRESHOLD;
+
+          if (isExceeded && this.onCrashCallback) {
+            this.onCrashCallback(maxConfidence, topClassName);
           }
-        });
 
-        const topClassName = CLASS_INDEX_TO_NAME[topIndex] || 'Vehicle';
-        const isExceeded = maxConfidence > CRASH_CONFIDENCE_THRESHOLD;
-
-        if (isExceeded && this.onCrashCallback) {
-          this.onCrashCallback(maxConfidence, topClassName);
+          this.logTelemetryWindow(maxConfidence, topClassName, isExceeded, true);
+        } catch (err) {
+          console.error('Transient YAMNet inference failed:', err);
         }
-
-        // Fire-and-forget logging telemetry to database
-        this.logTelemetryWindow(maxConfidence, topClassName, isExceeded);
-      } catch (err) {
-        console.error('YAMNet TFLite inference run failed:', err);
       }
     }
   }
 
   /**
-   * Submits the telemetry results to the NestJS logging API for tuning analysis.
+   * Submits window analysis result to NestJS backend API.
    */
-  private static async logTelemetryWindow(confidence: number, topClass: string, flagged: boolean) {
+  private static async logTelemetryWindow(
+    confidence: number,
+    topClass: string,
+    flagged: boolean,
+    triggeredByTransient = true
+  ) {
     try {
       await api.post('/crash-sound-detection/log', {
         windowTimestamp: new Date().toISOString(),
@@ -238,9 +302,11 @@ static async startMonitoring() {
         crashConfidence: confidence,
         thresholdUsed: CRASH_CONFIDENCE_THRESHOLD,
         flaggedAsCrash: flagged,
+        triggeredByTransient,
       });
     } catch (error: any) {
-      console.log('Failed to log telemetry window to backend:', error.message);
+      console.log('Failed to log transient window telemetry to backend:', error.message);
     }
   }
 }
+

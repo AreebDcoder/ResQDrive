@@ -17,6 +17,7 @@ export class CrashSoundDetectionService {
         thresholdUsed: dto.thresholdUsed,
         flaggedAsCrash: dto.flaggedAsCrash,
         combinedWithSensorSignal: dto.combinedWithSensorSignal ?? false,
+        triggeredByTransient: dto.triggeredByTransient ?? true,
       },
     });
   }
