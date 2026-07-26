@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store/store';
 import { CrashSoundDetectionService } from '../services/crashSoundDetectionService';
 import {
   CRASH_CONFIDENCE_THRESHOLD,
@@ -14,7 +16,10 @@ import {
 } from '../config/crashClassConfig';
 
 export default function CrashSoundDemoScreen() {
-  const [isMonitoring, setIsMonitoring] = useState(false);
+  const preferences = useSelector((state: RootState) => state.notifications.preferences);
+  const drivingModeEnabled = !!preferences?.drivingModeEnabled;
+
+  const [isMonitoring, setIsMonitoring] = useState(drivingModeEnabled);
   const [currentConfidence, setCurrentConfidence] = useState(0);
   const [currentClass, setCurrentClass] = useState<string | null>(null);
   const [lastAlert, setLastAlert] = useState<{ confidence: number; className: string; timestamp: Date } | null>(null);
@@ -30,6 +35,11 @@ export default function CrashSoundDemoScreen() {
   const [transientFlash, setTransientFlash] = useState(false);
 
   useEffect(() => {
+    // If driving mode is active, make sure monitoring is running
+    if (drivingModeEnabled) {
+      CrashSoundDetectionService.startMonitoring();
+    }
+
     // 1. Subscribe to YAMNet crash events
     CrashSoundDetectionService.subscribeToCrashEvents((confidence, className) => {
       setCurrentConfidence(confidence);
@@ -56,9 +66,12 @@ export default function CrashSoundDemoScreen() {
     });
 
     return () => {
-      CrashSoundDetectionService.stopMonitoring();
+      // Only stop background monitoring on unmount if driving mode is disabled
+      if (!drivingModeEnabled) {
+        CrashSoundDetectionService.stopMonitoring();
+      }
     };
-  }, []);
+  }, [drivingModeEnabled]);
 
   const handleToggleMonitoring = async () => {
     if (isMonitoring) {

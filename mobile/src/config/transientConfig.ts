@@ -10,11 +10,11 @@ export const TRANSIENT_MULTIPLIER = 2.5;
 // Absolute minimum RMS floor to prevent false triggers in silence (prevents room noise floor triggers)
 export const TRANSIENT_MIN_RMS = 0.015;
 
-// Audio pre-buffer to extract BEFORE the transient peak (0.75 seconds)
-export const PRE_TRANSIENT_SECONDS = 0.75;
+// Audio pre-buffer to extract BEFORE the transient peak (0.475 seconds)
+export const PRE_TRANSIENT_SECONDS = 0.475;
 
-// Audio post-buffer to extract AFTER the transient peak (1.25 seconds)
-export const POST_TRANSIENT_SECONDS = 1.25;
+// Audio post-buffer to extract AFTER the transient peak (0.500 seconds)
+export const POST_TRANSIENT_SECONDS = 0.500;
 
 // Total depth of the circular audio sample buffer (3.0 seconds)
 export const CIRCULAR_BUFFER_SECONDS = 3.0;

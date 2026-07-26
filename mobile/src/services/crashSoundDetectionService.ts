@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { Asset } from 'expo-asset';
 import api from '../api/axios';
 import {
   CRASH_CLASS_INDICES,
@@ -64,6 +65,7 @@ export class CrashSoundDetectionService {
   private static currentRms = 0;
   private static rollingAvgRms = 0.01;
   private static lastTransientTimestamp = 0;
+  public static lastCrashTriggerTime = 0;
 
   /**
    * Registers a callback listener that triggers whenever crash sound confidence threshold is exceeded.
@@ -146,7 +148,18 @@ export class CrashSoundDetectionService {
         console.log('Starting native transient-triggered YAMNet crash sound monitoring...');
         
         if (!this.model) {
-          this.model = await loadTensorflowModel(require('../../assets/yamnet.tflite'));
+          console.log('Loading YAMNet TFLite model...');
+          const asset = Asset.fromModule(require('../../assets/yamnet.tflite'));
+          await asset.downloadAsync();
+          if (asset.localUri) {
+            console.log('Resolved model local path:', asset.localUri);
+            this.model = await loadTensorflowModel({ url: asset.localUri }, []);
+            console.log('YAMNet loaded successfully!');
+            console.log('YAMNet inputs:', JSON.stringify(this.model.inputs));
+            console.log('YAMNet outputs:', JSON.stringify(this.model.outputs));
+          } else {
+            throw new Error('Could not resolve local URI for YAMNet tflite model');
+          }
         }
 
         LiveAudioStream.init({
@@ -283,28 +296,38 @@ export class CrashSoundDetectionService {
    * updates 5s moving average, and triggers YAMNet ONLY upon transient detection.
    */
   private static async processAudioChunk(dataBase64: string) {
-    const rawBuffer = Buffer.from(dataBase64, 'base64');
-    const pcmData = new Int16Array(rawBuffer.buffer, rawBuffer.byteOffset, rawBuffer.length / 2);
-    const chunkSamples = new Float32Array(pcmData.length);
+    try {
+      const bytes = base64ToBytes(dataBase64);
+      
+      // Ensure 2-byte alignment by copying to a fresh ArrayBuffer
+      const ab = new ArrayBuffer(bytes.length);
+      const view = new Uint8Array(ab);
+      view.set(bytes);
 
-    // Convert PCM int16 to float32 [-1.0, 1.0] and store into circular buffer
-    const bufLen = this.circularBuffer.length;
-    for (let i = 0; i < pcmData.length; i++) {
-      const sample = pcmData[i] / 32768.0;
-      chunkSamples[i] = sample;
-      this.circularBuffer[this.writeHead] = sample;
-      this.writeHead = (this.writeHead + 1) % bufLen;
-      this.totalSamplesWritten++;
+      const pcmData = new Int16Array(ab);
+      const chunkSamples = new Float32Array(pcmData.length);
+
+      // Convert PCM int16 to float32 [-1.0, 1.0] and store into circular buffer
+      const bufLen = this.circularBuffer.length;
+      for (let i = 0; i < pcmData.length; i++) {
+        const sample = pcmData[i] / 32768.0;
+        chunkSamples[i] = sample;
+        this.circularBuffer[this.writeHead] = sample;
+        this.writeHead = (this.writeHead + 1) % bufLen;
+        this.totalSamplesWritten++;
+      }
+
+      await this.evaluateAudioChunk(chunkSamples);
+    } catch (error) {
+      console.error('Error processing audio chunk:', error);
     }
-
-    await this.evaluateAudioChunk(chunkSamples);
   }
 
   private static async evaluateAudioChunk(chunkSamples: Float32Array) {
     // 1. Calculate chunk RMS energy and update 5s moving average
     const chunkRms = computeRms(chunkSamples);
     this.currentRms = chunkRms;
-    this.rollingAvgRms = updateRollingAverage(this.rollingAvgRms, chunkRms, 0.05);
+    this.rollingAvgRms = updateRollingAverage(this.rollingAvgRms, chunkRms, 0.01);
 
     const transientRatio = chunkRms / Math.max(this.rollingAvgRms, 0.001);
     const isTransient = isTransientDetected(chunkRms, this.rollingAvgRms);
@@ -346,18 +369,65 @@ export class CrashSoundDetectionService {
             console.log(`[Web/Mock YAMNet Fallback] Simulated Class: ${topClassName}, Confidence: ${maxConfidence.toFixed(2)}`);
           } else {
             // Native Android/iOS: Run real local YAMNet TFLite inference
-            const scores: number[] = await this.model.run([centeredWindow]);
-            let topIndex = CRASH_CLASS_INDICES[0];
-
-            CRASH_CLASS_INDICES.forEach((idx) => {
-              const score = scores[idx] || 0;
-              if (score > maxConfidence) {
-                maxConfidence = score;
-                topIndex = idx;
+            let minVal = 0;
+            let maxVal = 0;
+            let maxAmp = 0;
+            for (let i = 0; i < centeredWindow.length; i++) {
+              if (centeredWindow[i] < minVal) minVal = centeredWindow[i];
+              if (centeredWindow[i] > maxVal) maxVal = centeredWindow[i];
+              const absVal = Math.abs(centeredWindow[i]);
+              if (absVal > maxAmp) maxAmp = absVal;
+            }
+            console.log('[Native YAMNet Inference] Waveform stats - len:', centeredWindow.length, 'min:', minVal.toFixed(4), 'max:', maxVal.toFixed(4));
+            
+            // Peak normalization to boost signal level to 0.95 (improves YAMNet confidence for low-volume recordings)
+            if (maxAmp > 0.001) {
+              const scalingFactor = 0.95 / maxAmp;
+              for (let i = 0; i < centeredWindow.length; i++) {
+                centeredWindow[i] *= scalingFactor;
               }
-            });
+              console.log(`[Native YAMNet Inference] Waveform normalized (boosted by ${scalingFactor.toFixed(1)}x to peak 0.95)`);
+            }
 
-            topClassName = CLASS_INDEX_TO_NAME[topIndex] || 'Vehicle';
+            const outputBuffers: ArrayBuffer[] = await this.model.run([centeredWindow.buffer]);
+            console.log('[Native YAMNet Inference] Output buffers count:', outputBuffers.length);
+            if (outputBuffers && outputBuffers.length > 0) {
+              console.log('[Native YAMNet Inference] First output byte length:', outputBuffers[0].byteLength);
+              const scoresArray = new Float32Array(outputBuffers[0]);
+              console.log('[Native YAMNet Inference] Scores array length:', scoresArray.length);
+              console.log('[Native YAMNet Inference] Sample scores (0-10):', Array.from(scoresArray.slice(0, 10)));
+              console.log('[Native YAMNet Inference] Scores list:');
+              let topIndex = CRASH_CLASS_INDICES[0];
+              let maxCrashConfidence = 0;
+              let topCrashClassName: CrashRelevantClassName = 'Crash';
+
+              CRASH_CLASS_INDICES.forEach((idx) => {
+                const score = scoresArray[idx] || 0;
+                const name = CLASS_INDEX_TO_NAME[idx];
+                console.log(`  - ${name}: ${(score * 100).toFixed(4)}% (raw: ${score})`);
+                
+                // Track top class overall (including Vehicle)
+                if (score > maxConfidence) {
+                  maxConfidence = score;
+                  topIndex = idx;
+                }
+
+                // Track top crash-specific class (excluding Vehicle)
+                if (name !== 'Vehicle' && score > maxCrashConfidence) {
+                  maxCrashConfidence = score;
+                  topCrashClassName = name;
+                }
+              });
+
+              topClassName = CLASS_INDEX_TO_NAME[topIndex] || 'Vehicle';
+              console.log(`[Native YAMNet Inference] Top Overall: ${topClassName} (${(maxConfidence * 100).toFixed(1)}%), Top Crash-Specific: ${topCrashClassName} (${(maxCrashConfidence * 100).toFixed(1)}%)`);
+              
+              // Use the top crash-specific parameters for triggering
+              maxConfidence = maxCrashConfidence;
+              topClassName = topCrashClassName;
+            } else {
+              console.log('[Native YAMNet Inference] Error: Received empty output buffers.');
+            }
           }
 
           const isExceeded = maxConfidence > CRASH_CONFIDENCE_THRESHOLD;
@@ -396,5 +466,40 @@ export class CrashSoundDetectionService {
       console.log('Failed to log transient window telemetry to backend:', error.message);
     }
   }
+}
+
+function base64ToBytes(base64: string): Uint8Array {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  const lookup = new Uint8Array(256);
+  for (let i = 0; i < chars.length; i++) {
+    lookup[chars.charCodeAt(i)] = i;
+  }
+
+  let bufferLength = base64.length * 0.75;
+  if (base64[base64.length - 1] === '=') {
+    bufferLength--;
+    if (base64[base64.length - 2] === '=') {
+      bufferLength--;
+    }
+  }
+
+  const bytes = new Uint8Array(bufferLength);
+  let p = 0;
+  for (let i = 0; i < base64.length; i += 4) {
+    const base64code1 = lookup[base64.charCodeAt(i)];
+    const base64code2 = lookup[base64.charCodeAt(i + 1)];
+    const base64code3 = lookup[base64.charCodeAt(i + 2)];
+    const base64code4 = lookup[base64.charCodeAt(i + 3)];
+
+    bytes[p++] = (base64code1 << 2) | (base64code2 >> 4);
+    if (p < bufferLength) {
+      bytes[p++] = ((base64code2 & 15) << 4) | (base64code3 >> 2);
+    }
+    if (p < bufferLength) {
+      bytes[p++] = ((base64code3 & 3) << 6) | (base64code4 & 63);
+    }
+  }
+
+  return bytes;
 }
 

@@ -41,6 +41,8 @@ import RepairCostScreen from '../screens/RepairCostScreen';
 import { FCMService } from '../services/fcmService';
 import CountdownScreen from '../screens/CountdownScreen';
 import { CrashSoundDetectionService } from '../services/crashSoundDetectionService';
+import BleSensorDemoScreen from '../screens/BleSensorDemoScreen';
+import { sensorSourceManager } from '../services/sensorSourceManager';
 
 const Stack = createStackNavigator();
 
@@ -55,6 +57,7 @@ function DriverHome({ navigation }: any) {
   const [activeTab, setActiveTab] = React.useState<'home' | 'alert' | 'damage' | 'services' | 'parts' | 'voice'>('home');
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
   const { preferences } = useSelector((state: RootState) => state.notifications);
+  const { connectionStatus, activeSource } = useSelector((state: RootState) => state.sensor);
   const [isUpdatingPref, setIsUpdatingPref] = React.useState(false);
 
   // Background fetch vehicles and contacts on Dashboard mount
@@ -90,49 +93,91 @@ function DriverHome({ navigation }: any) {
     const unsubscribe = FCMService.setupFCMListeners();
     return unsubscribe;
   }, [dispatch]);
-  // ⬇️ ADD THE NEW useEffect RIGHT HERE, AFTER THE ONE ABOVE ENDS ⬇️
-  React.useEffect(() => {
-  let isCountdownActive = false;
 
-  CrashSoundDetectionService.subscribeToCrashEvents((confidence, topClass) => {
-    if (isCountdownActive) {
-      console.log('⏸️ Crash detected but countdown already active — ignoring duplicate trigger.');
-      return;
+  React.useEffect(() => {
+    CrashSoundDetectionService.subscribeToCrashEvents((confidence, topClass) => {
+      const now = Date.now();
+      const COOLDOWN_PERIOD_MS = 3 * 60 * 1000; // 3 minutes lockout
+      if (now - CrashSoundDetectionService.lastCrashTriggerTime < COOLDOWN_PERIOD_MS) {
+        console.log('⏸️ Crash detected but in 3-minute lockout cooldown — ignoring duplicate trigger.');
+        return;
+      }
+
+      console.log('🚨 CRASH CALLBACK FIRED — confidence:', confidence, 'class:', topClass);
+      CrashSoundDetectionService.lastCrashTriggerTime = now;
+
+      Location.requestForegroundPermissionsAsync()
+        .then(({ status }) => {
+          if (status !== 'granted') {
+            console.log('❌ Location permission not granted, cannot navigate to Countdown.');
+            CrashSoundDetectionService.lastCrashTriggerTime = 0; // Reset on failure
+            return;
+          }
+          return Location.getCurrentPositionAsync({});
+        })
+        .then((location) => {
+          if (!location) {
+            CrashSoundDetectionService.lastCrashTriggerTime = 0; // Reset on failure
+            return;
+          }
+          console.log('📍 Got location, navigating to Countdown now...');
+          navigation.navigate('Countdown', {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            severity: confidence > 0.75 ? 'Severe' : 'Moderate',
+          });
+        })
+        .catch((err) => {
+          console.log('❌ Location fetch failed:', err);
+          CrashSoundDetectionService.lastCrashTriggerTime = 0; // Reset on failure
+        });
+    });
+
+    if (preferences?.drivingModeEnabled) {
+      console.log('Driving Mode Enabled: Starting background YAMNet crash sound monitoring...');
+      CrashSoundDetectionService.startMonitoring();
+    } else {
+      console.log('Driving Mode Disabled: Stopping background YAMNet crash sound monitoring...');
+      CrashSoundDetectionService.stopMonitoring();
     }
 
-    console.log('🚨 CRASH CALLBACK FIRED — confidence:', confidence, 'class:', topClass);
-    isCountdownActive = true;
+    return () => {
+      CrashSoundDetectionService.stopMonitoring();
+    };
+  }, [preferences?.drivingModeEnabled]);
 
-    Location.requestForegroundPermissionsAsync()
-      .then(({ status }) => {
-        if (status !== 'granted') {
-          console.log('❌ Location permission not granted, cannot navigate to Countdown.');
-          isCountdownActive = false;
-          return;
+  React.useEffect(() => {
+    if (preferences?.drivingModeEnabled) {
+      console.log('Driving Mode Enabled: Starting sensor fusion source manager...');
+      
+      sensorSourceManager.onSensorEvent((reading) => {
+        if (reading.accelG > 4.5 && reading.gyroDegPerSec > 150.0) {
+          console.log('🚨 Sensor Fusion detected high g-force impact! Navigating to countdown...');
+          Location.requestForegroundPermissionsAsync().then(({ status }) => {
+            if (status === 'granted') {
+              return Location.getCurrentPositionAsync({});
+            }
+          }).then((location) => {
+            navigation.navigate('Countdown', {
+              latitude: location?.coords.latitude || 0,
+              longitude: location?.coords.longitude || 0,
+              severity: 'Severe',
+            });
+          }).catch(err => console.log('Sensor accident trigger location failed:', err));
         }
-        return Location.getCurrentPositionAsync({});
-      })
-      .then((location) => {
-        if (!location) return;
-        console.log('📍 Got location, navigating to Countdown now...');
-        navigation.navigate('Countdown', {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          severity: confidence > 0.75 ? 'Severe' : 'Moderate',
-        });
-      })
-      .catch((err) => {
-        console.log('❌ Location fetch failed:', err);
-        isCountdownActive = false;
       });
-  });
 
-  CrashSoundDetectionService.startMonitoring();
+      sensorSourceManager.start();
+    } else {
+      console.log('Driving Mode Disabled: Stopping sensor fusion source manager...');
+      sensorSourceManager.stop();
+    }
 
-  return () => {
-    CrashSoundDetectionService.stopMonitoring();
-  };
-}, [navigation]);
+    return () => {
+      sensorSourceManager.stop();
+    };
+  }, [preferences?.drivingModeEnabled, navigation]);
+
   const handleQuickCall = () => {
     if (primaryContact) {
       Linking.openURL(`tel:${primaryContact.phoneNumber}`);
@@ -348,7 +393,22 @@ function DriverHome({ navigation }: any) {
           <Ionicons name="menu" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.customHeaderTitle}>ResQDrive</Text>
-        <View style={{ width: 28 }} />
+        <TouchableOpacity 
+          onPress={() => navigation.navigate('BleSensorDemo')}
+          style={{ padding: 4 }}
+        >
+          <Ionicons 
+            name={connectionStatus === 'connected' ? 'bluetooth' : 'bluetooth-outline'} 
+            size={24} 
+            color={
+              connectionStatus === 'connected' 
+                ? '#4caf50' 
+                : connectionStatus === 'connecting' 
+                ? '#ff9800' 
+                : '#757575'
+            } 
+          />
+        </TouchableOpacity>
       </View>
 
       {/* Main Content Area */}
@@ -454,6 +514,18 @@ function DriverHome({ navigation }: any) {
                 }}
               >
                 <Text style={styles.menuItemText}>🎙️ Crash Sound Detection</Text>
+                <Text style={styles.menuItemArrow}>›
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => {
+                  setIsDrawerOpen(false);
+                  navigation.navigate('BleSensorDemo');
+                }}
+              >
+                <Text style={styles.menuItemText}>🔌 BLE Sensor Diagnostics</Text>
                 <Text style={styles.menuItemArrow}>›</Text>
               </TouchableOpacity>
 
@@ -744,6 +816,7 @@ function AppStack({ role }: { role: string }) {
       <Stack.Screen name="DamageAssessment" component={DamageAssessmentScreen} options={{ title: 'Damage Assessment' }} />
       <Stack.Screen name="RepairCost" component={RepairCostScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Countdown" component={CountdownScreen} options={{ headerShown: false, gestureEnabled: false }} />
+      <Stack.Screen name="BleSensorDemo" component={BleSensorDemoScreen} options={{ title: 'BLE Sensor Diagnostics' }} />
     </Stack.Navigator>
   );
 }

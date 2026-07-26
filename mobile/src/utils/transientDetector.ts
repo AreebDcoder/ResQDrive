@@ -61,15 +61,15 @@ export function extractCenteredWindow(
   writeHead: number,
   totalSamplesWritten: number,
   sampleRate = 16000,
-  preSeconds = PRE_TRANSIENT_SECONDS,
-  postSeconds = POST_TRANSIENT_SECONDS
+  preSeconds = 0.975,
+  postSeconds = 0.000
 ): Float32Array | null {
   const preSamples = Math.round(preSeconds * sampleRate);
   const postSamples = Math.round(postSeconds * sampleRate);
   const targetTotalSamples = preSamples + postSamples;
 
-  // Startup edge-case protection: discard if less than preSeconds of history exists
-  if (totalSamplesWritten < preSamples + 1600) {
+  // Startup edge-case protection: discard if less than preSamples of history exists
+  if (totalSamplesWritten < preSamples) {
     return null;
   }
 

@@ -6,6 +6,7 @@ import emergencyReducer from './slices/emergencySlice';
 import vehiclesReducer from './slices/vehiclesSlice';
 import contactsReducer from './slices/contactsSlice';
 import notificationsReducer from './slices/notificationsSlice';
+import sensorReducer from './slices/sensorSlice';
 
 export const store = configureStore({
   reducer: {
@@ -16,6 +17,7 @@ export const store = configureStore({
     vehicles: vehiclesReducer,
     contacts: contactsReducer,
     notifications: notificationsReducer,
+    sensor: sensorReducer,
   },
 });
 

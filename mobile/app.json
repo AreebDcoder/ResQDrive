@@ -38,7 +38,8 @@
           "locationAlwaysAndWhenInUsePermission": "Allow ResQDrive to use your location to find nearby hospitals."
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-asset"
     ],
     "extra": {
       "eas": {
