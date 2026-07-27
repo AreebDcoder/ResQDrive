@@ -18,6 +18,11 @@ export class PhoneSensorFallbackService implements SensorFusionService {
   private speedBuffer: number[] = [];
   private lastSpeedKmh = 0;
 
+  // Software Gyroscope Fallback State
+  private isGyroHardwareAvailable = false;
+  private lastAccel = { x: 0, y: 0, z: 1.0 };
+  private lastAccelTimestamp = Date.now();
+
   onSensorEvent(callback: (reading: SensorReading) => void): void {
     this.callbacks.push(callback);
   }
@@ -34,21 +39,24 @@ export class PhoneSensorFallbackService implements SensorFusionService {
     try {
       const accelAvailable = await Accelerometer.isAvailableAsync();
       const gyroAvailable = await Gyroscope.isAvailableAsync();
+      this.isGyroHardwareAvailable = gyroAvailable;
       console.log(`[PhoneFallback] Hardware sensor status -> Accelerometer: ${accelAvailable ? 'AVAILABLE' : 'NOT_FOUND'}, Gyroscope: ${gyroAvailable ? 'AVAILABLE' : 'NOT_FOUND'}`);
     } catch (err: any) {
       console.log('[PhoneFallback] Error checking sensor availability:', err.message);
+      this.isGyroHardwareAvailable = false;
     }
 
     Accelerometer.setUpdateInterval(200);
-    Gyroscope.setUpdateInterval(200);
-
     this.accelSubscription = Accelerometer.addListener(data => {
       this.currentAccel = data;
     });
 
-    this.gyroSubscription = Gyroscope.addListener(data => {
-      this.currentGyro = data;
-    });
+    if (this.isGyroHardwareAvailable) {
+      Gyroscope.setUpdateInterval(200);
+      this.gyroSubscription = Gyroscope.addListener(data => {
+        this.currentGyro = data;
+      });
+    }
 
     try {
       console.log('PhoneFallback: Requesting foreground location permission...');
@@ -61,7 +69,6 @@ export class PhoneSensorFallbackService implements SensorFusionService {
             distanceInterval: 1,
           },
           location => {
-            // location.coords.speed is in meters/second -> convert to km/h
             const speedKmh = Math.max(0, (location.coords.speed || 0) * 3.6);
             this.lastSpeedKmh = speedKmh;
             
@@ -75,6 +82,9 @@ export class PhoneSensorFallbackService implements SensorFusionService {
     } catch (e: any) {
       console.log('PhoneFallback: Failed to start location tracking:', e.message);
     }
+
+    this.lastAccel = { ...this.currentAccel };
+    this.lastAccelTimestamp = Date.now();
 
     // Merge and emit readings 5 times per second (200ms)
     this.intervalId = setInterval(() => {
@@ -109,14 +119,34 @@ export class PhoneSensorFallbackService implements SensorFusionService {
 
   private emitSensorEvent() {
     const { x: ax, y: ay, z: az } = this.currentAccel;
-    const { x: gx, y: gy, z: gz } = this.currentGyro;
-
+    
     // 1. Compute magnitude of accelerometer g-forces
     const accelG = Math.sqrt(ax * ax + ay * ay + az * az);
 
-    // 2. Compute magnitude of gyroscope rotation (converting rad/s to degrees/s)
-    const gyroRadPerSec = Math.sqrt(gx * gx + gy * gy + gz * gz);
-    const gyroDegPerSec = gyroRadPerSec * (180.0 / Math.PI);
+    // 2. Compute magnitude of rotation
+    let gyroDegPerSec = 0;
+    if (this.isGyroHardwareAvailable) {
+      const { x: gx, y: gy, z: gz } = this.currentGyro;
+      const gyroRadPerSec = Math.sqrt(gx * gx + gy * gy + gz * gz);
+      gyroDegPerSec = gyroRadPerSec * (180.0 / Math.PI);
+    } else {
+      // Software Gyroscope Fallback: Compute angular velocity based on Accelerometer gravity vector changes
+      const { x: lax, y: lay, z: laz } = this.lastAccel;
+      const dot = ax * lax + ay * lay + az * laz;
+      const mag1 = Math.sqrt(ax * ax + ay * ay + az * az);
+      const mag2 = Math.sqrt(lax * lax + lay * lay + laz * laz);
+      const cosTheta = (mag1 * mag2 > 0) ? (dot / (mag1 * mag2)) : 1.0;
+      const clampedCos = Math.max(-1.0, Math.min(1.0, cosTheta));
+      const thetaRad = Math.acos(clampedCos);
+      const now = Date.now();
+      const dtSeconds = Math.max(0.01, (now - this.lastAccelTimestamp) / 1000.0);
+      
+      gyroDegPerSec = (thetaRad * (180.0 / Math.PI)) / dtSeconds;
+
+      // Save values for next tick
+      this.lastAccel = { x: ax, y: ay, z: az };
+      this.lastAccelTimestamp = now;
+    }
 
     // 3. Compute GPS speed drop
     let gpsSpeedDropKmh = 0;
