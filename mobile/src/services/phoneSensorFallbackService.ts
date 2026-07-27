@@ -29,6 +29,16 @@ export class PhoneSensorFallbackService implements SensorFusionService {
     if (this.intervalId) return;
 
     console.log('PhoneFallback: Initializing accelerometer and gyroscope...');
+    
+    // Check hardware availability of sensors
+    try {
+      const accelAvailable = await Accelerometer.isAvailableAsync();
+      const gyroAvailable = await Gyroscope.isAvailableAsync();
+      console.log(`[PhoneFallback] Hardware sensor status -> Accelerometer: ${accelAvailable ? 'AVAILABLE' : 'NOT_FOUND'}, Gyroscope: ${gyroAvailable ? 'AVAILABLE' : 'NOT_FOUND'}`);
+    } catch (err: any) {
+      console.log('[PhoneFallback] Error checking sensor availability:', err.message);
+    }
+
     Accelerometer.setUpdateInterval(200);
     Gyroscope.setUpdateInterval(200);
 
