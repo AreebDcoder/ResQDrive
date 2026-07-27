@@ -57,7 +57,7 @@ function DriverHome({ navigation }: any) {
   const [activeTab, setActiveTab] = React.useState<'home' | 'alert' | 'damage' | 'services' | 'parts' | 'voice'>('home');
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
   const { preferences } = useSelector((state: RootState) => state.notifications);
-  const { connectionStatus, activeSource } = useSelector((state: RootState) => state.sensor);
+  const { connectionStatus, activeSource, latestReading } = useSelector((state: RootState) => state.sensor);
   const [isUpdatingPref, setIsUpdatingPref] = React.useState(false);
 
   // Background fetch vehicles and contacts on Dashboard mount
@@ -352,6 +352,37 @@ function DriverHome({ navigation }: any) {
                     <Text style={styles.actionBtnText}>+ Add Contact</Text>
                   </TouchableOpacity>
                 </View>
+              )}
+            </View>
+
+            {/* Live Telemetry Widget */}
+            <View style={styles.dashboardCard}>
+              <Text style={styles.cardHeaderTitle}>📊 Live Telemetry</Text>
+              {preferences?.drivingModeEnabled ? (
+                <View>
+                  <View style={styles.telemetryRow}>
+                    <Text style={styles.telemetryLabel}>Source:</Text>
+                    <Text style={styles.telemetryValueBold}>
+                      {activeSource === 'ble' ? '🔌 BLE Hardware' : '📱 Phone Sensors'}
+                    </Text>
+                  </View>
+                  <View style={styles.telemetryRow}>
+                    <Text style={styles.telemetryLabel}>G-Force Magnitude:</Text>
+                    <Text style={styles.telemetryValue}>
+                      {latestReading ? `${latestReading.accelG.toFixed(3)} G` : '1.000 G'}
+                    </Text>
+                  </View>
+                  <View style={styles.telemetryRow}>
+                    <Text style={styles.telemetryLabel}>Rotation Speed:</Text>
+                    <Text style={styles.telemetryValue}>
+                      {latestReading ? `${latestReading.gyroDegPerSec.toFixed(1)} °/s` : '0.0 °/s'}
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <Text style={styles.noVehicleText}>
+                  Telemetry inactive. Turn on Driving Mode to view live sensors.
+                </Text>
               )}
             </View>
 
@@ -995,6 +1026,25 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: '#2e2e2e',
+  },
+  telemetryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  telemetryLabel: {
+    fontSize: 14,
+    color: '#888888',
+  },
+  telemetryValue: {
+    fontSize: 14,
+    color: '#ffffff',
+  },
+  telemetryValueBold: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#00e676',
   },
   cardHeaderTitle: {
     fontSize: 15,
