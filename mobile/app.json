@@ -31,6 +31,8 @@
     },
     "plugins": [
       "./plugins/withManifestFix",
+      "@react-native-firebase/app",
+      "@react-native-firebase/messaging",
       "./plugins/withExcludeOldSupportLib",
       [
         "expo-location",
@@ -43,8 +45,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "c54004a9-148d-4eff-a7c4-8b697feab609"
+        "projectId": "8f305b36-7ae5-4a0c-be6d-ffb44c306565"
       }
-    }
+    },
+    "owner": "resqdrive"
   }
 }

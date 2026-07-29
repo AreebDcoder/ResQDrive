@@ -13,6 +13,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import api from '../api/axios';
 import { dispatchEmergencyAlert } from '../utils/emergencyFallback';
+import * as Sms from 'expo-sms'; // <-- Added expo-sms import
 
 const COUNTDOWN_SECONDS = 10;
 
@@ -85,6 +86,23 @@ export default function CountdownScreen({ navigation, route }: any) {
       email: c.email,
     }));
 
+    // 1. Try sending SMS directly from the phone (100% Free)
+    try {
+      const isAvailable = await Sms.isAvailableAsync();
+      if (isAvailable) {
+        const phoneNumbers = dispatchContacts.map(c => c.phoneNumber);
+        const messageBody = `ResQDrive ALERT: ${user?.fullName || 'Unknown'} may have been in a ${severity} accident. Location: https://www.google.com/maps?q=${latitude},${longitude}`;
+        
+        await Sms.sendSMSAsync(phoneNumbers, messageBody);
+        console.log('✅ SMS sent successfully via device SIM!');
+      } else {
+        console.log('❌ SMS not available on this device');
+      }
+    } catch (err) {
+      console.log('Device SMS failed, relying on backend fallback:', err);
+    }
+
+    // 2. Also fire the backend API for Push, Email, and Database logging
     let result;
     try {
       result = await dispatchEmergencyAlert(
@@ -111,7 +129,7 @@ export default function CountdownScreen({ navigation, route }: any) {
       result = { mode: 'failed' };
     }
 
-    await logIncident('ACTIVE', { dispatchMode: result.mode });
+    await logIncident('ACTIVE', { dispatchMode: result.mode, smsSentViaDevice: true });
 
     navigation.replace('Home');
   }, [contacts, user, severity, latitude, longitude, logIncident, navigation]);
