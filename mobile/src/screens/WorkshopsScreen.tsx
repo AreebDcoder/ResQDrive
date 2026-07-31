@@ -1,3 +1,8 @@
+// ═══════════════════════════════════════════════════════════════
+// ResQDrive v2 — WORKSHOPS SCREEN (Modernized)
+// All imports, logic, state, handlers preserved identically.
+// Only JSX structure + StyleSheet updated: dark glassmorphism theme.
+// ═══════════════════════════════════════════════════════════════
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
@@ -85,7 +90,7 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
     <View style={[styles.card, index === 0 && styles.cardNearest]}>
       {index === 0 && (
         <View style={styles.nearestBadge}>
-          <Text style={styles.nearestBadgeText}>NEAREST</Text>
+          <Text style={styles.nearestBadgeText}>⚡ NEAREST</Text>
         </View>
       )}
 
@@ -140,6 +145,7 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* ── Header ── */}
       <View style={styles.header}>
         {!isInline && (
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
@@ -147,14 +153,14 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
           </TouchableOpacity>
         )}
         <View>
-          <Text style={styles.title}>Nearby Workshops</Text>
+          <Text style={styles.title}>🔧 Nearby Workshops</Text>
           <Text style={styles.subtitle}>Verified mechanics near you</Text>
         </View>
       </View>
 
       {isLoading && (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#d32f2f" />
+          <ActivityIndicator size="large" color="#E53935" />
           <Text style={styles.loadingText}>Finding nearby workshops...</Text>
         </View>
       )}
@@ -164,7 +170,7 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
           <Text style={styles.errorIcon}>⚠️</Text>
           <Text style={styles.errorText}>{errorMsg}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={() => fetchWorkshops()}>
-            <Text style={styles.retryBtnText}>Try Again</Text>
+            <Text style={styles.retryBtnText}>🔄 Try Again</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -186,8 +192,8 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={() => fetchWorkshops(true)}
-              tintColor="#d32f2f"
-              colors={['#d32f2f']}
+              tintColor="#E53935"
+              colors={['#E53935']}
             />
           }
         />
@@ -197,7 +203,10 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#121212' },
+  container: {
+    flex: 1,
+    backgroundColor: '#0A0A0F',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -208,99 +217,216 @@ const styles = StyleSheet.create({
   backBtn: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#1e1e1e',
+    borderRadius: 12,
+    backgroundColor: 'rgba(28, 28, 46, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
     borderWidth: 1,
-    borderColor: '#2e2e2e',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
   },
-  backBtnText: { color: '#ffffff', fontSize: 20 },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#ffffff' },
-  subtitle: { fontSize: 13, color: '#888888', marginTop: 2 },
-  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
-  loadingText: { color: '#888888', fontSize: 15, marginTop: 16 },
-  errorIcon: { fontSize: 40, marginBottom: 12 },
-  errorText: { color: '#cccccc', fontSize: 15, textAlign: 'center', marginBottom: 20 },
-  retryBtn: { backgroundColor: '#d32f2f', paddingHorizontal: 28, paddingVertical: 12, borderRadius: 8 },
-  retryBtnText: { color: '#ffffff', fontWeight: 'bold', fontSize: 15 },
-  listContent: { paddingHorizontal: 20, paddingBottom: 24 },
+  backBtnText: {
+    color: '#FFFFFF',
+    fontSize: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  subtitle: {
+    fontSize: 13,
+    color: '#A0A0B8',
+    marginTop: 2,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  loadingText: {
+    color: '#A0A0B8',
+    fontSize: 15,
+    marginTop: 16,
+  },
+  errorIcon: {
+    fontSize: 40,
+    marginBottom: 12,
+  },
+  errorText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryBtn: {
+    backgroundColor: '#E53935',
+    paddingHorizontal: 28,
+    paddingVertical: 12,
+    borderRadius: 10,
+    shadowColor: '#E53935',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  retryBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+  },
   card: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: 'rgba(28, 28, 46, 0.6)',
     borderRadius: 16,
     padding: 18,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#2a2a2a',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 4,
   },
-  cardNearest: { borderColor: '#d32f2f', borderWidth: 1.5 },
+  cardNearest: {
+    borderColor: 'rgba(229, 57, 53, 0.35)',
+    borderWidth: 1.5,
+    backgroundColor: 'rgba(229, 57, 53, 0.04)',
+  },
   nearestBadge: {
     position: 'absolute',
     top: -1,
     right: 16,
-    backgroundColor: '#d32f2f',
+    backgroundColor: '#E53935',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderBottomLeftRadius: 8,
     borderBottomRightRadius: 8,
   },
-  nearestBadgeText: { color: '#ffffff', fontSize: 10, fontWeight: 'bold', letterSpacing: 0.5 },
-  cardHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 },
+  nearestBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
   iconCircle: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#2a1414',
+    backgroundColor: 'rgba(229, 57, 53, 0.12)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
   },
-  iconText: { fontSize: 22 },
-  cardHeaderText: { flex: 1 },
-  workshopName: { color: '#ffffff', fontSize: 16, fontWeight: '700', marginBottom: 4 },
-  workshopAddress: { color: '#999999', fontSize: 13, marginBottom: 6 },
+  iconText: {
+    fontSize: 22,
+  },
+  cardHeaderText: {
+    flex: 1,
+  },
+  workshopName: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  workshopAddress: {
+    color: '#A0A0B8',
+    fontSize: 13,
+    marginBottom: 6,
+  },
   specializationBadge: {
-    backgroundColor: '#3a2222',
+    backgroundColor: 'rgba(229, 57, 53, 0.12)',
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 4,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#d32f2f',
+    borderColor: 'rgba(229, 57, 53, 0.25)',
   },
-  specializationText: { color: '#ff8a80', fontSize: 11, fontWeight: 'bold' },
+  specializationText: {
+    color: '#FF8A80',
+    fontSize: 11,
+    fontWeight: '700',
+  },
   statsRow: {
     flexDirection: 'row',
-    backgroundColor: '#141414',
-    borderRadius: 10,
+    backgroundColor: 'rgba(10, 10, 15, 0.5)',
+    borderRadius: 12,
     paddingVertical: 12,
     marginBottom: 14,
   },
-  statBox: { flex: 1, alignItems: 'center' },
-  statValue: { color: '#ffffff', fontSize: 16, fontWeight: '700' },
-  statLabel: { color: '#777777', fontSize: 11, marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.5 },
-  statDivider: { width: 1, backgroundColor: '#2a2a2a' },
-  actionRow: { flexDirection: 'row', gap: 10 },
+  statBox: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statValue: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  statLabel: {
+    color: '#6B6B80',
+    fontSize: 11,
+    marginTop: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
   callBtn: {
     flex: 1,
-    backgroundColor: '#1e1e1e',
+    backgroundColor: 'rgba(0, 230, 118, 0.08)',
     borderRadius: 10,
     paddingVertical: 13,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#388e3c',
+    borderColor: 'rgba(0, 230, 118, 0.25)',
   },
-  callBtnText: { color: '#81c784', fontWeight: 'bold', fontSize: 15 },
+  callBtnText: {
+    color: '#00E676',
+    fontWeight: '700',
+    fontSize: 15,
+  },
   navigateBtn: {
     flex: 1,
-    backgroundColor: '#d32f2f',
+    backgroundColor: '#E53935',
     borderRadius: 10,
     paddingVertical: 13,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#E53935',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  navigateBtnText: { color: '#ffffff', fontWeight: 'bold', fontSize: 15, marginRight: 6 },
-  navigateBtnArrow: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
+  navigateBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 15,
+    marginRight: 6,
+  },
+  navigateBtnArrow: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
 });

@@ -1,3 +1,8 @@
+// ═══════════════════════════════════════════════════════════════
+// ResQDrive v2 — PROFILE SCREEN (Modernized)
+// All imports, logic, state, handlers preserved identically.
+// Only JSX structure + StyleSheet updated: dark glassmorphism theme.
+// ═══════════════════════════════════════════════════════════════
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -139,26 +144,36 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-      {/* Profile Picture Header */}
+      {/* ── Profile Picture Header ── */}
       <View style={styles.profileHeader}>
-        <TouchableOpacity onPress={simulatePictureUpload}>
-          <Image
-            source={{ uri: user.profilePictureUrl || 'https://i.pravatar.cc/300?img=11' }}
-            style={styles.avatar}
-          />
+        <TouchableOpacity onPress={simulatePictureUpload} style={styles.avatarWrap}>
+          <View style={styles.avatarRing}>
+            <Image
+              source={{ uri: user.profilePictureUrl || 'https://i.pravatar.cc/300?img=11' }}
+              style={styles.avatar}
+            />
+          </View>
           <View style={styles.editBadge}>
-            <Text style={styles.editBadgeText}>Camera</Text>
+            <Text style={styles.editBadgeText}>📷</Text>
           </View>
         </TouchableOpacity>
         <Text style={styles.profileName}>{user.fullName}</Text>
-        <Text style={styles.profileRole}>Role: <Text style={styles.roleLabel}>{user.role}</Text></Text>
+        <View style={styles.roleRow}>
+          <Text style={styles.profileRole}>Role: </Text>
+          <View style={styles.rolePill}>
+            <Text style={styles.roleLabel}>{user.role}</Text>
+          </View>
+        </View>
         {user.role === 'MECHANIC' && (
-          <Text style={styles.verificationText}>
-            Workshop Verified: {user.mechanicDetails?.isWorkshopVerified ? '✅ Yes' : '⏳ Pending Approval'}
-          </Text>
+          <View style={styles.verificationRow}>
+            <Text style={styles.verificationText}>
+              Workshop Verified: {user.mechanicDetails?.isWorkshopVerified ? '✅ Yes' : '⏳ Pending Approval'}
+            </Text>
+          </View>
         )}
       </View>
 
+      {/* ── Profile Alert ── */}
       {profileMessage && (
         <View style={profileMessage.type === 'success' ? styles.alertSuccess : styles.alertError}>
           <Text style={profileMessage.type === 'success' ? styles.successText : styles.alertText}>
@@ -167,19 +182,21 @@ export default function ProfileScreen() {
         </View>
       )}
 
-      {/* Profile Details Form */}
+      {/* ── Account Details Card ── */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>Account Details</Text>
+          <Text style={styles.cardTitle}>👤 Account Details</Text>
           <TouchableOpacity onPress={() => { setIsEditing(!isEditing); setProfileMessage(null); }}>
-            <Text style={styles.editToggleBtn}>{isEditing ? 'Cancel' : 'Edit'}</Text>
+            <View style={isEditing ? styles.cancelBtn : styles.editBtn}>
+              <Text style={isEditing ? styles.cancelBtnText : styles.editBtnText}>{isEditing ? 'Cancel' : 'Edit'}</Text>
+            </View>
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.label}>Email Address (Read-only)</Text>
+        <Text style={styles.label}>📧 Email Address (Read-only)</Text>
         <TextInput style={[styles.input, styles.inputDisabled]} value={user.email} editable={false} />
 
-        <Text style={styles.label}>Full Name</Text>
+        <Text style={styles.label}>🏷️ Full Name</Text>
         <Controller
           control={profileControl}
           name="fullName"
@@ -195,7 +212,7 @@ export default function ProfileScreen() {
         />
         {profileErrors.fullName && <Text style={styles.errorHelper}>{profileErrors.fullName.message}</Text>}
 
-        <Text style={styles.label}>Phone Number</Text>
+        <Text style={styles.label}>📱 Phone Number</Text>
         <Controller
           control={profileControl}
           name="phoneNumber"
@@ -214,7 +231,7 @@ export default function ProfileScreen() {
         {/* Dynamic Driver Fields */}
         {user.role === 'DRIVER' && (
           <View>
-            <Text style={styles.label}>CNIC Number</Text>
+            <Text style={styles.label}>🪪 CNIC Number</Text>
             <Controller
               control={profileControl}
               name="cnicNumber"
@@ -230,7 +247,7 @@ export default function ProfileScreen() {
             />
             {profileErrors.cnicNumber && <Text style={styles.errorHelper}>{profileErrors.cnicNumber.message}</Text>}
 
-            <Text style={styles.label}>Driving License Number</Text>
+            <Text style={styles.label}>🪪 Driving License Number</Text>
             <Controller
               control={profileControl}
               name="drivingLicenseNumber"
@@ -253,7 +270,7 @@ export default function ProfileScreen() {
         {/* Dynamic Mechanic Fields */}
         {user.role === 'MECHANIC' && (
           <View>
-            <Text style={styles.label}>Workshop Name</Text>
+            <Text style={styles.label}>🔧 Workshop Name</Text>
             <Controller
               control={profileControl}
               name="workshopName"
@@ -269,7 +286,7 @@ export default function ProfileScreen() {
             />
             {profileErrors.workshopName && <Text style={styles.errorHelper}>{profileErrors.workshopName.message}</Text>}
 
-            <Text style={styles.label}>Workshop Address</Text>
+            <Text style={styles.label}>📍 Workshop Address</Text>
             <Controller
               control={profileControl}
               name="workshopAddress"
@@ -287,7 +304,7 @@ export default function ProfileScreen() {
               <Text style={styles.errorHelper}>{profileErrors.workshopAddress.message}</Text>
             )}
 
-            <Text style={styles.label}>Specialization</Text>
+            <Text style={styles.label}>🛠️ Specialization</Text>
             <Controller
               control={profileControl}
               name="specialization"
@@ -309,15 +326,15 @@ export default function ProfileScreen() {
 
         {isEditing && (
           <TouchableOpacity style={styles.saveBtn} onPress={handleProfileSubmit(onUpdateProfile)} disabled={isLoading}>
-            {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Save Profile</Text>}
+            {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>💾 Save Profile</Text>}
           </TouchableOpacity>
         )}
       </View>
 
-      {/* Change Password Card */}
+      {/* ── Change Password Card ── */}
       <View style={styles.card}>
         <TouchableOpacity style={styles.cardHeader} onPress={() => { setIsChangingPassword(!isChangingPassword); setPwMessage(null); }}>
-          <Text style={styles.cardTitle}>Security & Password</Text>
+          <Text style={styles.cardTitle}>🔒 Security & Password</Text>
           <Text style={styles.expandIcon}>{isChangingPassword ? '▲' : '▼'}</Text>
         </TouchableOpacity>
 
@@ -331,7 +348,7 @@ export default function ProfileScreen() {
               </View>
             )}
 
-            <Text style={styles.label}>Current Password</Text>
+            <Text style={styles.label}>🔑 Current Password</Text>
             <Controller
               control={pwControl}
               name="currentPassword"
@@ -340,7 +357,7 @@ export default function ProfileScreen() {
                   <TextInput
                     style={styles.passwordInput}
                     placeholder="Enter current password"
-                    placeholderTextColor="#666"
+                    placeholderTextColor="#6B6B80"
                     secureTextEntry={!showCurrentPassword}
                     autoCapitalize="none"
                     onBlur={onBlur}
@@ -351,14 +368,14 @@ export default function ProfileScreen() {
                     style={styles.eyeBtn}
                     onPress={() => setShowCurrentPassword(!showCurrentPassword)}
                   >
-                    <Text style={styles.eyeBtnText}>{showCurrentPassword ? 'Hide' : 'Show'}</Text>
+                    <Text style={styles.eyeBtnText}>{showCurrentPassword ? '🙈' : '👁️'}</Text>
                   </TouchableOpacity>
                 </View>
               )}
             />
             {pwErrors.currentPassword && <Text style={styles.errorHelper}>{pwErrors.currentPassword.message}</Text>}
 
-            <Text style={styles.label}>New Password</Text>
+            <Text style={styles.label}>🔑 New Password</Text>
             <Controller
               control={pwControl}
               name="newPassword"
@@ -367,7 +384,7 @@ export default function ProfileScreen() {
                   <TextInput
                     style={styles.passwordInput}
                     placeholder="At least 8 chars, 1 num, 1 spec"
-                    placeholderTextColor="#666"
+                    placeholderTextColor="#6B6B80"
                     secureTextEntry={!showNewPassword}
                     autoCapitalize="none"
                     onBlur={onBlur}
@@ -375,14 +392,14 @@ export default function ProfileScreen() {
                     value={value}
                   />
                   <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowNewPassword(!showNewPassword)}>
-                    <Text style={styles.eyeBtnText}>{showNewPassword ? 'Hide' : 'Show'}</Text>
+                    <Text style={styles.eyeBtnText}>{showNewPassword ? '🙈' : '👁️'}</Text>
                   </TouchableOpacity>
                 </View>
               )}
             />
             {pwErrors.newPassword && <Text style={styles.errorHelper}>{pwErrors.newPassword.message}</Text>}
 
-            <Text style={styles.label}>Confirm New Password</Text>
+            <Text style={styles.label}>🔑 Confirm New Password</Text>
             <Controller
               control={pwControl}
               name="confirmNewPassword"
@@ -391,7 +408,7 @@ export default function ProfileScreen() {
                   <TextInput
                     style={styles.passwordInput}
                     placeholder="Confirm new password"
-                    placeholderTextColor="#666"
+                    placeholderTextColor="#6B6B80"
                     secureTextEntry={!showConfirmNewPassword}
                     autoCapitalize="none"
                     onBlur={onBlur}
@@ -402,7 +419,7 @@ export default function ProfileScreen() {
                     style={styles.eyeBtn}
                     onPress={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
                   >
-                    <Text style={styles.eyeBtnText}>{showConfirmNewPassword ? 'Hide' : 'Show'}</Text>
+                    <Text style={styles.eyeBtnText}>{showConfirmNewPassword ? '🙈' : '👁️'}</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -412,15 +429,15 @@ export default function ProfileScreen() {
             )}
 
             <TouchableOpacity style={styles.pwSubmitBtn} onPress={handlePwSubmit(onChangePassword)} disabled={isPwLoading}>
-              {isPwLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.pwSubmitBtnText}>Update Password</Text>}
+              {isPwLoading ? <ActivityIndicator color="#E53935" /> : <Text style={styles.pwSubmitBtnText}>🔄 Update Password</Text>}
             </TouchableOpacity>
           </View>
         )}
       </View>
 
-      {/* Logout button */}
+      {/* ── Logout ── */}
       <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-        <Text style={styles.logoutBtnText}>Log Out</Text>
+        <Text style={styles.logoutBtnText}>🚪 Log Out</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -429,64 +446,100 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: '#0A0A0F',
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 60,
   },
   profileHeader: {
     alignItems: 'center',
-    marginVertical: 24,
+    marginTop: 20,
+    marginBottom: 28,
   },
-  avatar: {
+  avatarWrap: {
+    position: 'relative',
+  },
+  avatarRing: {
     width: 110,
     height: 110,
     borderRadius: 55,
+    padding: 3,
     borderWidth: 3,
-    borderColor: '#d32f2f',
+    borderColor: '#E53935',
+    shadowColor: '#E53935',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 8,
+    backgroundColor: '#1C1C2E',
+  },
+  avatar: {
+    width: 104,
+    height: 104,
+    borderRadius: 52,
   },
   editBadge: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#d32f2f',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    bottom: -4,
+    right: -4,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#2979FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#0A0A0F',
   },
   editBadgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
+    fontSize: 14,
   },
   profileName: {
     fontSize: 22,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginTop: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginTop: 16,
+  },
+  roleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
   },
   profileRole: {
     fontSize: 14,
-    color: '#888888',
-    marginTop: 6,
+    color: '#A0A0B8',
+  },
+  rolePill: {
+    backgroundColor: 'rgba(229, 57, 53, 0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
   },
   roleLabel: {
-    color: '#d32f2f',
-    fontWeight: 'bold',
+    color: '#E53935',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  verificationRow: {
+    marginTop: 8,
   },
   verificationText: {
     fontSize: 13,
-    color: '#cccccc',
-    marginTop: 6,
+    color: '#A0A0B8',
   },
   card: {
-    backgroundColor: '#1e1e1e',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    borderRadius: 16,
+    padding: 20,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#2e2e2e',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 6,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -495,127 +548,152 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#ffffff',
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
-  editToggleBtn: {
-    color: '#d32f2f',
-    fontWeight: 'bold',
-    fontSize: 14,
+  editBtn: {
+    backgroundColor: 'rgba(41, 121, 255, 0.15)',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  editBtnText: {
+    color: '#2979FF',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  cancelBtn: {
+    backgroundColor: 'rgba(229, 57, 53, 0.15)',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  cancelBtnText: {
+    color: '#E53935',
+    fontWeight: '700',
+    fontSize: 13,
   },
   expandIcon: {
-    color: '#888888',
+    color: '#6B6B80',
     fontSize: 14,
   },
   label: {
     fontSize: 12,
-    color: '#888888',
+    color: '#A0A0B8',
     marginBottom: 6,
-    marginTop: 10,
+    marginTop: 12,
     fontWeight: '600',
   },
   input: {
-    backgroundColor: '#161616',
-    color: '#ffffff',
+    backgroundColor: 'rgba(10, 10, 15, 0.6)',
+    color: '#FFFFFF',
     paddingHorizontal: 14,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     fontSize: 15,
     borderWidth: 1,
-    borderColor: '#262626',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   inputDisabled: {
-    color: '#888888',
-    borderColor: '#222222',
+    color: '#6B6B80',
+    borderColor: 'rgba(255, 255, 255, 0.03)',
   },
   inputError: {
-    borderColor: '#d32f2f',
+    borderColor: '#E53935',
   },
   errorHelper: {
-    color: '#ff8a80',
+    color: '#FF8A80',
     fontSize: 12,
     marginTop: 4,
   },
   saveBtn: {
-    backgroundColor: '#d32f2f',
+    backgroundColor: '#E53935',
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
     marginTop: 20,
+    shadowColor: '#E53935',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   saveBtnText: {
-    color: '#ffffff',
+    color: '#FFFFFF',
     fontSize: 15,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   pwContainer: {
     marginTop: 10,
   },
   pwSubmitBtn: {
-    backgroundColor: '#121212',
-    borderColor: '#d32f2f',
+    backgroundColor: 'rgba(41, 121, 255, 0.1)',
+    borderColor: '#2979FF',
     borderWidth: 1,
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
     marginTop: 20,
   },
   pwSubmitBtnText: {
-    color: '#d32f2f',
+    color: '#2979FF',
     fontSize: 15,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   logoutBtn: {
-    backgroundColor: '#d32f2f',
+    backgroundColor: 'rgba(229, 57, 53, 0.12)',
+    borderColor: 'rgba(229, 57, 53, 0.3)',
+    borderWidth: 1,
     paddingVertical: 16,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
     marginTop: 10,
+    marginBottom: 20,
   },
   logoutBtnText: {
-    color: '#ffffff',
+    color: '#E53935',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   alertError: {
-    backgroundColor: '#3a1313',
+    backgroundColor: 'rgba(255, 23, 68, 0.12)',
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#d32f2f',
+    borderColor: 'rgba(255, 23, 68, 0.3)',
     marginBottom: 20,
   },
   alertSuccess: {
-    backgroundColor: '#133513',
+    backgroundColor: 'rgba(0, 230, 118, 0.1)',
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#388e3c',
+    borderColor: 'rgba(0, 230, 118, 0.3)',
     marginBottom: 20,
   },
   alertText: {
-    color: '#ff8a80',
+    color: '#FF8A80',
     fontSize: 14,
     textAlign: 'center',
   },
   successText: {
-    color: '#a5d6a7',
+    color: '#69F0AE',
     fontSize: 14,
     textAlign: 'center',
   },
   passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#161616',
-    borderRadius: 8,
+    backgroundColor: 'rgba(10, 10, 15, 0.6)',
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#262626',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
     paddingRight: 14,
   },
   passwordInput: {
     flex: 1,
-    color: '#ffffff',
+    color: '#FFFFFF',
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
@@ -625,8 +703,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   eyeBtnText: {
-    color: '#d32f2f',
-    fontSize: 13,
-    fontWeight: 'bold',
+    fontSize: 16,
   },
 });

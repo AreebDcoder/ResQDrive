@@ -1,3 +1,8 @@
+// ═══════════════════════════════════════════════════════════════
+// ResQDrive v2 — REPAIR COST SCREEN (Modernized)
+// All imports, logic, state, handlers preserved identically.
+// Only JSX structure + StyleSheet updated: dark glassmorphism theme.
+// ═══════════════════════════════════════════════════════════════
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -170,9 +175,10 @@ export default function RepairCostScreen({ route, navigation }: any) {
           setReport(item);
           setActiveSegment('details');
         }}
+        activeOpacity={0.7}
       >
         <View style={styles.historyCardHeader}>
-          <Text style={styles.historyCarName}>{carText}</Text>
+          <Text style={styles.historyCarName}>🚗 {carText}</Text>
           <Text style={styles.historyDateText}>{formattedDate}</Text>
         </View>
         <Text style={styles.historyCostText}>
@@ -189,7 +195,7 @@ export default function RepairCostScreen({ route, navigation }: any) {
     if (isLoading) {
       return (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#d32f2f" />
+          <ActivityIndicator size="large" color="#E53935" />
           <Text style={styles.loadingText}>Generating auto repair estimates...</Text>
         </View>
       );
@@ -198,7 +204,7 @@ export default function RepairCostScreen({ route, navigation }: any) {
     if (!report) {
       return (
         <View style={styles.centerContainer}>
-          <Ionicons name="receipt-outline" size={64} color="#555" />
+          <Text style={styles.emptyEmoji}>🧾</Text>
           <Text style={styles.emptyText}>No cost report loaded. Check history to open past estimates.</Text>
         </View>
       );
@@ -209,58 +215,60 @@ export default function RepairCostScreen({ route, navigation }: any) {
 
     return (
       <ScrollView style={styles.tabContent} contentContainerStyle={{ paddingBottom: 40 }}>
-        {/* Total Estimate Card */}
+        {/* ── Total Estimate Card ── */}
         <View style={styles.totalCard}>
-          <Text style={styles.totalLabel}>TOTAL ESTIMATED COST RANGE</Text>
+          <Text style={styles.totalLabel}>💰 TOTAL ESTIMATED COST RANGE</Text>
           <Text style={styles.totalValue}>
             PKR {report.totalMinCostPkr.toLocaleString()} - {report.totalMaxCostPkr.toLocaleString()}
           </Text>
           {report.vehicle && (
             <Text style={styles.vehicleSubText}>
-              Vehicle: {report.vehicle.year} {report.vehicle.make} {report.vehicle.model} ({report.vehicle.licensePlate.toUpperCase()})
+              🚗 {report.vehicle.year} {report.vehicle.make} {report.vehicle.model} ({report.vehicle.licensePlate.toUpperCase()})
             </Text>
           )}
         </View>
 
-        {/* Warning notification for Fallback estimates */}
+        {/* ── Warning banner for Fallback estimates ── */}
         {hasFallbackItems && (
           <View style={styles.warningBanner}>
-            <Ionicons name="warning" size={20} color="#ffa726" style={{ marginRight: 8 }} />
+            <Text style={styles.warningEmoji}>⚡</Text>
             <Text style={styles.warningText}>
               Note: Certain parts are priced matching flat generic fallback averages because the Gemini AI pricing engine timed out.
             </Text>
           </View>
         )}
 
-        {/* Line Items List */}
-        <Text style={styles.sectionHeaderTitle}>DAMAGED PARTS BREAKDOWN</Text>
+        {/* ── Line Items ── */}
+        <Text style={styles.sectionHeaderTitle}>🔧 DAMAGED PARTS BREAKDOWN</Text>
         {report.lineItems.map((item, index) => (
           <View key={index} style={styles.lineItemCard}>
             <View style={styles.itemHeader}>
               <Text style={styles.itemPartName}>{getPartName(item.partTag)}</Text>
               <View style={[
                 styles.badge, 
-                { backgroundColor: item.action === 'repair' ? 'rgba(46, 125, 50, 0.2)' : 'rgba(211, 47, 47, 0.2)' }
+                { backgroundColor: item.action === 'repair' ? 'rgba(0, 230, 118, 0.12)' : 'rgba(255, 23, 68, 0.12)' }
               ]}>
                 <Text style={[
                   styles.badgeText, 
-                  { color: item.action === 'repair' ? '#66bb6a' : '#ef5350' }
+                  { color: item.action === 'repair' ? '#00E676' : '#FF1744' }
                 ]}>
                   {item.action.toUpperCase()}
                 </Text>
               </View>
             </View>
 
-            <Text style={styles.itemSubText}>Damage: {item.damageType.toUpperCase().replace('_', ' ')}</Text>
+            <Text style={styles.itemSubText}>💥 Damage: {item.damageType.toUpperCase().replace('_', ' ')}</Text>
 
             <View style={styles.costDetailsBox}>
               <View style={styles.costRow}>
-                <Text style={styles.costLabel}>Workshop Labor Cost</Text>
+                <Text style={styles.costLabel}>🔧 Workshop Labor Cost</Text>
                 <Text style={styles.costVal}>PKR {item.laborCost.min} - {item.laborCost.max}</Text>
               </View>
 
               <View style={styles.costRow}>
-                <Text style={styles.costLabel}>Parts Price ({item.partsSource === 'gemini_ai' ? 'Gemini AI' : 'Fallback Defaults'})</Text>
+                <Text style={styles.costLabel}>
+                  📦 Parts Price ({item.partsSource === 'gemini_ai' ? 'Gemini AI' : 'Fallback Defaults'})
+                </Text>
                 <Text style={styles.costVal}>PKR {item.partsCost.min} - {item.partsCost.max}</Text>
               </View>
 
@@ -272,7 +280,7 @@ export default function RepairCostScreen({ route, navigation }: any) {
           </View>
         ))}
 
-        {/* Action button to share report */}
+        {/* ── Share Report Button ── */}
         <TouchableOpacity 
           style={styles.shareBtn} 
           onPress={handleShareReport}
@@ -281,10 +289,7 @@ export default function RepairCostScreen({ route, navigation }: any) {
           {isSharing ? (
             <ActivityIndicator size="small" color="#ffffff" />
           ) : (
-            <>
-              <Ionicons name="share-social-outline" size={20} color="#ffffff" style={{ marginRight: 8 }} />
-              <Text style={styles.shareBtnText}>Share Breakdown Report (PDF)</Text>
-            </>
+            <Text style={styles.shareBtnText}>📤 Share Breakdown Report (PDF)</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
@@ -293,25 +298,25 @@ export default function RepairCostScreen({ route, navigation }: any) {
 
   return (
     <View style={styles.container}>
-      {/* Header bar back redirection if routed */}
+      {/* ── Header bar ── */}
       {!incidentId && !reportId && (
         <View style={styles.headerBar}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color="#ffffff" />
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerBarTitle}>Repair Estimation</Text>
+          <Text style={styles.headerBarTitle}>🔧 Repair Estimation</Text>
           <View style={{ width: 24 }} />
         </View>
       )}
 
-      {/* Segment controls */}
+      {/* ── Segment controls ── */}
       <View style={styles.segmentedHeader}>
         <TouchableOpacity
           style={[styles.segmentBtn, activeSegment === 'details' && styles.segmentBtnActive]}
           onPress={() => setActiveSegment('details')}
         >
           <Text style={[styles.segmentBtnText, activeSegment === 'details' && styles.segmentBtnTextActive]}>
-            Estimate Report
+            📋 Estimate Report
           </Text>
         </TouchableOpacity>
 
@@ -320,20 +325,20 @@ export default function RepairCostScreen({ route, navigation }: any) {
           onPress={() => setActiveSegment('history')}
         >
           <Text style={[styles.segmentBtnText, activeSegment === 'history' && styles.segmentBtnTextActive]}>
-            Reports History
+            📁 Reports History
           </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Error display */}
+      {/* ── Error display ── */}
       {errorMsg && (
         <View style={styles.errorBanner}>
-          <Ionicons name="alert-circle" size={20} color="#ffffff" style={{ marginRight: 8 }} />
+          <Text style={styles.errorEmoji}>⚠️</Text>
           <Text style={styles.errorText}>{errorMsg}</Text>
         </View>
       )}
 
-      {/* Content wrapper */}
+      {/* ── Content ── */}
       {activeSegment === 'details' ? (
         renderDetailsTab()
       ) : (
@@ -347,7 +352,7 @@ export default function RepairCostScreen({ route, navigation }: any) {
           ListEmptyComponent={
             !historyLoading ? (
               <View style={styles.centerContainer}>
-                <Ionicons name="folder-open-outline" size={48} color="#555" />
+                <Text style={styles.emptyEmoji}>📂</Text>
                 <Text style={styles.emptyText}>No repair estimates generated yet.</Text>
               </View>
             ) : null
@@ -361,7 +366,7 @@ export default function RepairCostScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: '#0A0A0F',
   },
   headerBar: {
     flexDirection: 'row',
@@ -370,39 +375,46 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 48,
     paddingBottom: 16,
-    backgroundColor: '#1e1e1e',
+    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
   },
   headerBarTitle: {
-    color: '#ffffff',
+    color: '#FFFFFF',
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   segmentedHeader: {
     flexDirection: 'row',
-    backgroundColor: '#1e1e1e',
+    backgroundColor: 'rgba(28, 28, 46, 0.4)',
     marginHorizontal: 16,
     marginTop: 12,
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 4,
     borderWidth: 1,
-    borderColor: '#2e2e2e',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   segmentBtn: {
     flex: 1,
     paddingVertical: 10,
     alignItems: 'center',
-    borderRadius: 6,
+    borderRadius: 10,
   },
   segmentBtnActive: {
-    backgroundColor: '#d32f2f',
+    backgroundColor: '#E53935',
+    shadowColor: '#E53935',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   segmentBtnText: {
-    color: '#888888',
+    color: '#6B6B80',
     fontSize: 14,
     fontWeight: '600',
   },
   segmentBtnTextActive: {
-    color: '#ffffff',
+    color: '#FFFFFF',
   },
   tabContent: {
     flex: 1,
@@ -416,74 +428,93 @@ const styles = StyleSheet.create({
     paddingTop: 100,
   },
   loadingText: {
-    color: '#ffffff',
+    color: '#A0A0B8',
     marginTop: 16,
     fontSize: 14,
   },
+  emptyEmoji: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
   emptyText: {
-    color: '#555555',
-    marginTop: 12,
+    color: '#6B6B80',
+    marginTop: 0,
     fontSize: 14,
     textAlign: 'center',
+    paddingHorizontal: 20,
   },
   totalCard: {
-    backgroundColor: '#d32f2f',
-    borderRadius: 12,
+    backgroundColor: 'rgba(229, 57, 53, 0.15)',
+    borderRadius: 16,
     padding: 24,
     alignItems: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(229, 57, 53, 0.3)',
+    shadowColor: '#E53935',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
     elevation: 6,
     marginBottom: 16,
   },
   totalLabel: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#A0A0B8',
     fontSize: 11,
-    fontWeight: 'bold',
+    fontWeight: '700',
     letterSpacing: 1.5,
     marginBottom: 8,
   },
   totalValue: {
-    color: '#ffffff',
+    color: '#FFFFFF',
     fontSize: 22,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   vehicleSubText: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: '#A0A0B8',
     fontSize: 12,
     marginTop: 12,
   },
   warningBanner: {
-    backgroundColor: '#e65100',
-    borderRadius: 8,
+    backgroundColor: 'rgba(255, 167, 38, 0.1)',
+    borderRadius: 10,
     padding: 12,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 167, 38, 0.2)',
+  },
+  warningEmoji: {
+    fontSize: 16,
+    marginRight: 8,
+    marginTop: 1,
   },
   warningText: {
-    color: '#ffffff',
+    color: '#FFA726',
     fontSize: 12,
     flex: 1,
     lineHeight: 16,
   },
   sectionHeaderTitle: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: 'bold',
+    color: '#A0A0B8',
+    fontSize: 12,
+    fontWeight: '700',
     letterSpacing: 1,
     marginBottom: 12,
     marginTop: 8,
   },
   lineItemCard: {
-    backgroundColor: '#1e1e1e',
-    borderRadius: 8,
+    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#2e2e2e',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
     padding: 16,
     marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 2,
   },
   itemHeader: {
     flexDirection: 'row',
@@ -492,30 +523,30 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   itemPartName: {
-    color: '#ffffff',
+    color: '#FFFFFF',
     fontSize: 15,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   badge: {
     paddingVertical: 3,
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     borderRadius: 8,
   },
   badgeText: {
     fontSize: 10,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   itemSubText: {
-    color: '#888888',
+    color: '#A0A0B8',
     fontSize: 12,
     marginBottom: 12,
   },
   costDetailsBox: {
-    backgroundColor: '#151515',
-    borderRadius: 6,
+    backgroundColor: 'rgba(10, 10, 15, 0.5)',
+    borderRadius: 10,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#222222',
+    borderColor: 'rgba(255, 255, 255, 0.04)',
   },
   costRow: {
     flexDirection: 'row',
@@ -523,74 +554,80 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   costLabel: {
-    color: '#666666',
+    color: '#6B6B80',
     fontSize: 12,
   },
   costVal: {
-    color: '#aaaaaa',
+    color: '#A0A0B8',
     fontSize: 12,
   },
   totalRow: {
     borderTopWidth: 1,
-    borderTopColor: '#2a2a2a',
+    borderTopColor: 'rgba(255, 255, 255, 0.06)',
     marginTop: 6,
     paddingTop: 8,
   },
   totalRowLabel: {
-    color: '#ffffff',
+    color: '#FFFFFF',
     fontSize: 13,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   totalRowVal: {
-    color: '#d32f2f',
+    color: '#E53935',
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   shareBtn: {
-    flexDirection: 'row',
+    backgroundColor: 'rgba(0, 230, 118, 0.12)',
+    borderColor: 'rgba(0, 230, 118, 0.3)',
+    borderWidth: 1,
     height: 52,
-    backgroundColor: '#2e7d32',
-    borderRadius: 8,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 16,
     marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
   },
   shareBtnText: {
-    color: '#ffffff',
+    color: '#00E676',
     fontSize: 15,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   errorBanner: {
-    backgroundColor: '#b71c1c',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 23, 68, 0.12)',
     marginHorizontal: 16,
     marginTop: 12,
     padding: 12,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 23, 68, 0.3)',
+  },
+  errorEmoji: {
+    fontSize: 16,
+    marginRight: 8,
   },
   errorText: {
-    color: '#ffffff',
+    color: '#FF8A80',
     fontSize: 13,
     flex: 1,
   },
-  // History tab styles
   historyListContent: {
     padding: 16,
   },
   historyCard: {
-    backgroundColor: '#1e1e1e',
-    borderRadius: 8,
+    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#2e2e2e',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
     padding: 16,
     marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 2,
   },
   historyCardHeader: {
     flexDirection: 'row',
@@ -599,22 +636,22 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   historyCarName: {
-    color: '#ffffff',
+    color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   historyDateText: {
-    color: '#666666',
+    color: '#6B6B80',
     fontSize: 11,
   },
   historyCostText: {
-    color: '#d32f2f',
+    color: '#E53935',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
     marginBottom: 4,
   },
   historyItemsText: {
-    color: '#888888',
+    color: '#A0A0B8',
     fontSize: 12,
   },
 });
