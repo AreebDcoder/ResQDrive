@@ -1,3 +1,8 @@
+// ═══════════════════════════════════════════════════════════════
+// ResQDrive v2 — CREATE INCIDENT SCREEN (Modernized)
+// All imports, logic, state, handlers preserved identically.
+// Only JSX structure + StyleSheet updated: dark glassmorphism theme.
+// ═══════════════════════════════════════════════════════════════
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator,
@@ -15,10 +20,10 @@ import {
 } from '../schemas/incidentValidation';
 
 const SEVERITY_COLORS: Record<string, string> = {
-  NONE: '#666666', MINOR: '#fbc02d', MODERATE: '#f57c00', SEVERE: '#d32f2f',
+  NONE: '#6B6B80', MINOR: '#FFD600', MODERATE: '#FF9100', SEVERE: '#FF1744',
 };
 const STATUS_COLORS: Record<string, string> = {
-  ACTIVE: '#d32f2f', RESOLVED: '#388e3c', FALSE_ALARM: '#666666',
+  ACTIVE: '#FF1744', RESOLVED: '#00E676', FALSE_ALARM: '#6B6B80',
 };
 
 const nowISO = () => new Date().toISOString().slice(0, 16);
@@ -95,8 +100,8 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.container}
     >
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
-        <Text style={styles.label}>Severity</Text>
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
+        <Text style={styles.sectionTitle}>🏷️ Severity</Text>
         <Controller
           control={control}
           name="severity"
@@ -105,10 +110,13 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
               {SEVERITY_OPTIONS.map((opt) => (
                 <TouchableOpacity
                   key={opt}
-                  style={[styles.chip, { backgroundColor: value === opt ? SEVERITY_COLORS[opt] : '#1e1e1e', borderColor: value === opt ? SEVERITY_COLORS[opt] : '#2e2e2e' }]}
+                  style={[styles.chip, {
+                    backgroundColor: value === opt ? SEVERITY_COLORS[opt] + '25' : 'rgba(255, 255, 255, 0.04)',
+                    borderColor: value === opt ? SEVERITY_COLORS[opt] : 'rgba(255, 255, 255, 0.06)',
+                  }]}
                   onPress={() => onChange(opt)}
                 >
-                  <Text style={[styles.chipText, value === opt && styles.chipTextActive]}>{opt}</Text>
+                  <Text style={[styles.chipText, value === opt && { color: SEVERITY_COLORS[opt] }]}>{opt}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -116,7 +124,7 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
         />
         {errors.severity && <Text style={styles.errorHelper}>{errors.severity.message}</Text>}
 
-        <Text style={styles.label}>Status</Text>
+        <Text style={styles.sectionTitle}>🚦 Status</Text>
         <Controller
           control={control}
           name="status"
@@ -125,17 +133,20 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
               {STATUS_OPTIONS.map((opt) => (
                 <TouchableOpacity
                   key={opt}
-                  style={[styles.chip, { backgroundColor: value === opt ? STATUS_COLORS[opt] : '#1e1e1e', borderColor: value === opt ? STATUS_COLORS[opt] : '#2e2e2e' }]}
+                  style={[styles.chip, {
+                    backgroundColor: value === opt ? STATUS_COLORS[opt] + '25' : 'rgba(255, 255, 255, 0.04)',
+                    borderColor: value === opt ? STATUS_COLORS[opt] : 'rgba(255, 255, 255, 0.06)',
+                  }]}
                   onPress={() => onChange(opt)}
                 >
-                  <Text style={[styles.chipText, value === opt && styles.chipTextActive]}>{opt.replace('_', ' ')}</Text>
+                  <Text style={[styles.chipText, value === opt && { color: STATUS_COLORS[opt] }]}>{opt.replace('_', ' ')}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           )}
         />
 
-        <Text style={styles.label}>Date &amp; Time (YYYY-MM-DDTHH:MM)</Text>
+        <Text style={styles.label}>📅 Date & Time (YYYY-MM-DDTHH:MM)</Text>
         <Controller
           control={control}
           name="occurredAt"
@@ -144,14 +155,14 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
               style={styles.input}
               value={value}
               onChangeText={onChange}
-              placeholderTextColor="#666"
+              placeholderTextColor="#6B6B80"
               autoCapitalize="none"
             />
           )}
         />
         {errors.occurredAt && <Text style={styles.errorHelper}>{errors.occurredAt.message}</Text>}
 
-        <Text style={styles.label}>Address (optional)</Text>
+        <Text style={styles.label}>📍 Address (optional)</Text>
         <Controller
           control={control}
           name="address"
@@ -161,12 +172,12 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
               value={value}
               onChangeText={onChange}
               placeholder="e.g. Shahrah-e-Faisal, Karachi"
-              placeholderTextColor="#666"
+              placeholderTextColor="#6B6B80"
             />
           )}
         />
 
-        <Text style={styles.label}>Description (optional)</Text>
+        <Text style={styles.label}>📝 Description (optional)</Text>
         <Controller
           control={control}
           name="description"
@@ -176,7 +187,7 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
               value={value}
               onChangeText={onChange}
               placeholder="Describe what happened..."
-              placeholderTextColor="#666"
+              placeholderTextColor="#6B6B80"
               multiline
               numberOfLines={4}
               textAlignVertical="top"
@@ -186,7 +197,7 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
 
         <View style={styles.row}>
           <View style={{ flex: 1, marginRight: 8 }}>
-            <Text style={styles.label}>Latitude (optional)</Text>
+            <Text style={styles.label}>📍 Latitude</Text>
             <Controller
               control={control}
               name="latitude"
@@ -196,14 +207,14 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
                   value={value ? String(value) : ''}
                   onChangeText={onChange}
                   placeholder="24.8607"
-                  placeholderTextColor="#666"
+                  placeholderTextColor="#6B6B80"
                   keyboardType="numeric"
                 />
               )}
             />
           </View>
           <View style={{ flex: 1, marginLeft: 8 }}>
-            <Text style={styles.label}>Longitude (optional)</Text>
+            <Text style={styles.label}>📍 Longitude</Text>
             <Controller
               control={control}
               name="longitude"
@@ -213,7 +224,7 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
                   value={value ? String(value) : ''}
                   onChangeText={onChange}
                   placeholder="67.0011"
-                  placeholderTextColor="#666"
+                  placeholderTextColor="#6B6B80"
                   keyboardType="numeric"
                 />
               )}
@@ -230,7 +241,7 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
           {isSubmitting ? (
             <ActivityIndicator color="#ffffff" />
           ) : (
-            <Text style={styles.submitBtnText}>{isEdit ? 'Update Incident' : 'Save Incident'}</Text>
+            <Text style={styles.submitBtnText}>{isEdit ? '💾 Update Incident' : '🚨 Save Incident'}</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
@@ -239,25 +250,43 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#121212' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: '#121212' },
-  label: { color: '#cccccc', fontSize: 13, fontWeight: '600', marginBottom: 8, marginTop: 14 },
+  container: { flex: 1, backgroundColor: '#0A0A0F' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: '#0A0A0F' },
+  sectionTitle: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', marginBottom: 10, marginTop: 18 },
+  label: { color: '#A0A0B8', fontSize: 13, fontWeight: '600', marginBottom: 8, marginTop: 14 },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
-    paddingVertical: 8, paddingHorizontal: 14, borderRadius: 18, borderWidth: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+    borderWidth: 1,
   },
-  chipText: { color: '#cccccc', fontSize: 12, fontWeight: '600' },
-  chipTextActive: { color: '#ffffff' },
+  chipText: { color: '#6B6B80', fontSize: 12, fontWeight: '600' },
   input: {
-    backgroundColor: '#1e1e1e', color: '#ffffff', paddingHorizontal: 14, paddingVertical: 12,
-    borderRadius: 8, fontSize: 15, borderWidth: 1, borderColor: '#2e2e2e',
+    backgroundColor: 'rgba(10, 10, 15, 0.6)',
+    color: '#FFFFFF',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 10,
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   textArea: { minHeight: 100, paddingTop: 12 },
   row: { flexDirection: 'row' },
-  errorHelper: { color: '#ff8a80', fontSize: 11, marginTop: 4 },
-  errorText: { color: '#ff8a80', fontSize: 14, textAlign: 'center' },
+  errorHelper: { color: '#FF8A80', fontSize: 11, marginTop: 4 },
+  errorText: { color: '#FF8A80', fontSize: 14, textAlign: 'center' },
   submitBtn: {
-    backgroundColor: '#d32f2f', paddingVertical: 16, borderRadius: 8, alignItems: 'center', marginTop: 24,
+    backgroundColor: '#E53935',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 24,
+    shadowColor: '#E53935',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 5,
   },
-  submitBtnText: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
+  submitBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
 });

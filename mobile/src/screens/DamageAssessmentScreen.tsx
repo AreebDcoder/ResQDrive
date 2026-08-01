@@ -1,3 +1,8 @@
+// ═══════════════════════════════════════════════════════════════
+// ResQDrive v2 — DAMAGE ASSESSMENT SCREEN (Modernized)
+// All imports, logic, state, handlers preserved identically.
+// Only JSX structure + StyleSheet updated: dark glassmorphism theme.
+// ═══════════════════════════════════════════════════════════════
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -263,13 +268,13 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
   const getSeverityColor = (severity: 'minor' | 'moderate' | 'severe') => {
     switch (severity) {
       case 'minor':
-        return '#2e7d32'; // Green
+        return '#00E676';
       case 'moderate':
-        return '#f57c00'; // Orange
+        return '#FF9100';
       case 'severe':
-        return '#d32f2f'; // Red
+        return '#FF1744';
       default:
-        return '#888888';
+        return '#6B6B80';
     }
   };
 
@@ -302,7 +307,7 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
           style={styles.deleteCardBtn}
           onPress={() => handleDeleteAssessment(item.id)}
         >
-          <Ionicons name="trash-outline" size={20} color="#ef5350" />
+          <Ionicons name="trash-outline" size={20} color="#FF5252" />
         </TouchableOpacity>
       </View>
     );
@@ -328,7 +333,7 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
           }}
         >
           <View style={styles.costHistoryThumbContainer}>
-            <Ionicons name="receipt-outline" size={24} color="#d32f2f" />
+            <Ionicons name="receipt-outline" size={24} color="#E53935" />
           </View>
           <View style={styles.historyCardInfo}>
             <View style={styles.historyCardHeader}>
@@ -345,7 +350,7 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
           style={styles.deleteCardBtn}
           onPress={() => handleDeleteCostReport(item.id)}
         >
-          <Ionicons name="trash-outline" size={20} color="#ef5350" />
+          <Ionicons name="trash-outline" size={20} color="#FF5252" />
         </TouchableOpacity>
       </View>
     );
@@ -416,7 +421,7 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
 
     return (
       <ScrollView style={styles.tabContent} contentContainerStyle={{ paddingBottom: 40 }}>
-        {/* Photo Selection Card */}
+        {/* ── Photo Selection Card ── */}
         <View style={styles.card}>
           <Text style={styles.cardHeaderTitle}>📷 Upload Damage Image</Text>
           <Text style={styles.cardDescription}>
@@ -448,7 +453,7 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
             <Image source={{ uri: selectedImage }} style={styles.previewImage} />
           ) : (
             <View style={styles.placeholderContainer}>
-              <Ionicons name="images-outline" size={64} color="#555" />
+              <Text style={styles.placeholderEmoji}>🖼️</Text>
               <Text style={styles.placeholderText}>No image selected</Text>
             </View>
           )}
@@ -478,13 +483,13 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
 
           <View style={styles.pickerRow}>
             <TouchableOpacity style={styles.pickerBtn} onPress={() => handlePickImage(true)}>
-              <Ionicons name="camera" size={24} color="#ffffff" />
-              <Text style={styles.pickerBtnText}>Camera</Text>
+              <Ionicons name="camera" size={24} color="#FFFFFF" />
+              <Text style={styles.pickerBtnText}>📸 Camera</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.pickerBtn} onPress={() => handlePickImage(false)}>
-              <Ionicons name="image" size={24} color="#ffffff" />
-              <Text style={styles.pickerBtnText}>Gallery</Text>
+              <Ionicons name="image" size={24} color="#FFFFFF" />
+              <Text style={styles.pickerBtnText}>🖼️ Gallery</Text>
             </TouchableOpacity>
           </View>
 
@@ -495,9 +500,8 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
           )}
         </View>
 
-        {/* Note stating scoped out damage area localization */}
         <Text style={styles.scopeNoticeText}>
-          ℹ️ Note: Damage area localization (front/rear/left/right/roof) has been evaluated and deferred to future releases due to insufficient COCO dataset limits.
+          ℹ️ Note: Damage area localization has been evaluated and deferred to future releases due to insufficient COCO dataset limits.
         </Text>
       </ScrollView>
     );
@@ -505,14 +509,14 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
 
   return (
     <View style={styles.container}>
-      {/* Segmented Controller Header */}
+      {/* ── Segmented Controller ── */}
       <View style={styles.segmentedHeader}>
         <TouchableOpacity
           style={[styles.segmentBtn, activeSegment === 'new' && styles.segmentBtnActive]}
           onPress={() => setActiveSegment('new')}
         >
           <Text style={[styles.segmentBtnText, activeSegment === 'new' && styles.segmentBtnTextActive]}>
-            New Damage
+            📷 New
           </Text>
         </TouchableOpacity>
 
@@ -521,7 +525,7 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
           onPress={() => setActiveSegment('history')}
         >
           <Text style={[styles.segmentBtnText, activeSegment === 'history' && styles.segmentBtnTextActive]}>
-            History Log
+            📋 History
           </Text>
         </TouchableOpacity>
 
@@ -530,28 +534,28 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
           onPress={() => setActiveSegment('cost_history')}
         >
           <Text style={[styles.segmentBtnText, activeSegment === 'cost_history' && styles.segmentBtnTextActive]}>
-            Cost History
+            💰 Costs
           </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Error Banner */}
+      {/* ── Error Banner ── */}
       {errorMsg && (
         <View style={styles.errorBanner}>
-          <Ionicons name="alert-circle" size={20} color="#ffffff" style={{ marginRight: 8 }} />
+          <Text style={styles.errorEmoji}>⚠️</Text>
           <Text style={styles.errorText} numberOfLines={3}>{errorMsg}</Text>
         </View>
       )}
 
-      {/* Loading Overlay */}
+      {/* ── Loading Overlay ── */}
       {isAnalyzing && (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#d32f2f" />
+          <ActivityIndicator size="large" color="#E53935" />
           <Text style={styles.loadingText}>{analysisStage}</Text>
         </View>
       )}
 
-      {/* Active Tab View */}
+      {/* ── Active Tab ── */}
       {activeSegment === 'new' && renderNewAssessmentTab()}
 
       {activeSegment === 'history' && (
@@ -570,13 +574,13 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
           onEndReachedThreshold={0.3}
           ListFooterComponent={
             historyLoading ? (
-              <ActivityIndicator size="small" color="#d32f2f" style={{ marginVertical: 16 }} />
+              <ActivityIndicator size="small" color="#E53935" style={{ marginVertical: 16 }} />
             ) : null
           }
           ListEmptyComponent={
             !historyLoading ? (
               <View style={styles.emptyContainer}>
-                <Ionicons name="folder-open-outline" size={48} color="#555" />
+                <Text style={styles.emptyEmoji}>📂</Text>
                 <Text style={styles.emptyText}>No damage logs recorded yet.</Text>
               </View>
             ) : null
@@ -595,7 +599,7 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
           ListEmptyComponent={
             !costHistoryLoading ? (
               <View style={styles.emptyContainer}>
-                <Ionicons name="receipt-outline" size={48} color="#555" />
+                <Text style={styles.emptyEmoji}>🧾</Text>
                 <Text style={styles.emptyText}>No repair cost reports saved yet.</Text>
               </View>
             ) : null
@@ -607,172 +611,115 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#121212',
-  },
+  container: { flex: 1, backgroundColor: '#0A0A0F' },
   segmentedHeader: {
     flexDirection: 'row',
-    backgroundColor: '#1e1e1e',
+    backgroundColor: 'rgba(28, 28, 46, 0.4)',
     marginHorizontal: 16,
     marginTop: 12,
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 4,
     borderWidth: 1,
-    borderColor: '#2e2e2e',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
   },
-  segmentBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 6,
-  },
+  segmentBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
   segmentBtnActive: {
-    backgroundColor: '#d32f2f',
+    backgroundColor: '#E53935',
+    shadowColor: '#E53935',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  segmentBtnText: {
-    color: '#888888',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  segmentBtnTextActive: {
-    color: '#ffffff',
-  },
-  tabContent: {
-    flex: 1,
-    paddingTop: 16,
-    paddingHorizontal: 16,
-  },
+  segmentBtnText: { color: '#6B6B80', fontSize: 13, fontWeight: '600' },
+  segmentBtnTextActive: { color: '#FFFFFF' },
+  tabContent: { flex: 1, paddingTop: 16, paddingHorizontal: 16 },
   card: {
-    backgroundColor: '#1e1e1e',
-    borderRadius: 12,
+    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#2e2e2e',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 3,
     marginBottom: 16,
   },
-  cardHeaderTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 8,
-  },
-  cardDescription: {
-    fontSize: 13,
-    color: '#888888',
-    lineHeight: 18,
-    marginBottom: 16,
-  },
+  cardHeaderTitle: { fontSize: 16, fontWeight: '700', color: '#FFFFFF', marginBottom: 8 },
+  cardDescription: { fontSize: 13, color: '#A0A0B8', lineHeight: 18, marginBottom: 16 },
   placeholderContainer: {
     height: 180,
-    backgroundColor: '#151515',
-    borderRadius: 8,
+    backgroundColor: 'rgba(10, 10, 15, 0.5)',
+    borderRadius: 12,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: '#3e3e3e',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
   },
-  placeholderText: {
-    color: '#555555',
-    marginTop: 8,
-    fontSize: 14,
-  },
-  previewImage: {
-    width: '100%',
-    height: 200,
-    borderRadius: 8,
-    marginBottom: 16,
-    backgroundColor: '#151515',
-  },
-  pickerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
+  placeholderEmoji: { fontSize: 40, marginBottom: 8 },
+  placeholderText: { color: '#6B6B80', fontSize: 14 },
+  previewImage: { width: '100%', height: 200, borderRadius: 12, marginBottom: 16, backgroundColor: 'rgba(10, 10, 15, 0.5)' },
+  pickerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
   pickerBtn: {
     flex: 0.48,
     flexDirection: 'row',
     height: 48,
-    backgroundColor: '#2e2e2e',
-    borderRadius: 8,
+    backgroundColor: 'rgba(41, 121, 255, 0.1)',
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#3e3e3e',
+    borderColor: 'rgba(41, 121, 255, 0.25)',
   },
-  pickerBtnText: {
-    color: '#ffffff',
-    marginLeft: 8,
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
+  pickerBtnText: { color: '#FFFFFF', marginLeft: 8, fontSize: 14, fontWeight: '700' },
   actionBtnPrimary: {
     height: 48,
-    backgroundColor: '#d32f2f',
-    borderRadius: 8,
+    backgroundColor: '#E53935',
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#E53935',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   actionBtnSecondary: {
     height: 48,
-    backgroundColor: '#2e2e2e',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
     borderWidth: 1,
-    borderColor: '#3e3e3e',
-    borderRadius: 8,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  actionBtnText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  dropdownContainer: {
-    marginBottom: 16,
-  },
-  dropdownLabel: {
-    color: '#888888',
-    fontSize: 12,
-    marginBottom: 8,
-  },
-  vehicleScroll: {
-    flexDirection: 'row',
-  },
+  actionBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  dropdownContainer: { marginBottom: 16 },
+  dropdownLabel: { color: '#A0A0B8', fontSize: 12, marginBottom: 8, fontWeight: '600' },
+  vehicleScroll: { flexDirection: 'row' },
   vehicleChip: {
-    backgroundColor: '#2e2e2e',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 16,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: '#3e3e3e',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
   },
-  vehicleChipActive: {
-    backgroundColor: '#d32f2f',
-    borderColor: '#d32f2f',
-  },
-  vehicleChipText: {
-    color: '#aaaaaa',
-    fontSize: 13,
-  },
-  vehicleChipTextActive: {
-    color: '#ffffff',
-    fontWeight: '600',
-  },
-  resultImage: {
-    width: '100%',
-    height: 220,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
+  vehicleChipActive: { backgroundColor: '#E53935', borderColor: '#E53935' },
+  vehicleChipText: { color: '#6B6B80', fontSize: 13 },
+  vehicleChipTextActive: { color: '#FFFFFF', fontWeight: '600' },
+  resultImage: { width: '100%', height: 220, borderRadius: 12, marginBottom: 16 },
   resultsContainer: {
-    backgroundColor: '#151515',
-    borderRadius: 8,
+    backgroundColor: 'rgba(10, 10, 15, 0.5)',
+    borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#2e2e2e',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
     marginBottom: 16,
   },
   resultField: {
@@ -781,29 +728,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#252525',
+    borderBottomColor: 'rgba(255, 255, 255, 0.04)',
   },
-  resultLabel: {
-    color: '#888888',
-    fontSize: 14,
-  },
-  resultValue: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: 'bold',
-  },
-  severityBadgeLarge: {
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-  },
-  severityBadgeText: {
-    color: '#ffffff',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
+  resultLabel: { color: '#A0A0B8', fontSize: 14 },
+  resultValue: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  severityBadgeLarge: { paddingVertical: 4, paddingHorizontal: 12, borderRadius: 12 },
+  severityBadgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
   scopeNoticeText: {
-    color: '#666666',
+    color: '#6B6B80',
     fontSize: 11,
     lineHeight: 16,
     textAlign: 'center',
@@ -811,118 +743,54 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   errorBanner: {
-    backgroundColor: '#b71c1c',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 23, 68, 0.12)',
     marginHorizontal: 16,
     marginTop: 12,
     padding: 12,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 23, 68, 0.3)',
   },
-  errorText: {
-    color: '#ffffff',
-    fontSize: 13,
-    flex: 1,
-  },
+  errorEmoji: { fontSize: 16, marginRight: 8 },
+  errorText: { color: '#FF8A80', fontSize: 13, flex: 1 },
   loadingContainer: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(18, 18, 18, 0.9)',
+    backgroundColor: 'rgba(10, 10, 15, 0.92)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
   },
-  loadingText: {
-    color: '#ffffff',
-    marginTop: 16,
-    fontSize: 14,
-  },
-  // History logs styles
-  historyListContent: {
-    padding: 16,
-  },
+  loadingText: { color: '#A0A0B8', marginTop: 16, fontSize: 14 },
+  historyListContent: { padding: 16 },
   historyCard: {
     flexDirection: 'row',
-    backgroundColor: '#1e1e1e',
-    borderRadius: 8,
+    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    borderRadius: 14,
     padding: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#2e2e2e',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
   },
-  historyThumb: {
-    width: 80,
-    height: 80,
-    borderRadius: 6,
-    backgroundColor: '#151515',
-  },
-  historyCardInfo: {
-    flex: 1,
-    marginLeft: 12,
-    justifyContent: 'center',
-  },
-  historyCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  historyTypeTitle: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  severityBadge: {
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-  },
-  historyConfText: {
-    color: '#888888',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  historyDateText: {
-    color: '#555555',
-    fontSize: 11,
-    marginTop: 4,
-  },
-  emptyHistoryContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyHistoryText: {
-    color: '#555555',
-    marginTop: 12,
-    fontSize: 14,
-  },
-  deleteCardBtn: {
-    padding: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  historyThumb: { width: 80, height: 80, borderRadius: 10, backgroundColor: 'rgba(10, 10, 15, 0.5)' },
+  historyCardInfo: { flex: 1, marginLeft: 12, justifyContent: 'center' },
+  historyCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  historyTypeTitle: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  severityBadge: { paddingVertical: 2, paddingHorizontal: 8, borderRadius: 8 },
+  historyConfText: { color: '#A0A0B8', fontSize: 12, marginTop: 2 },
+  historyDateText: { color: '#6B6B80', fontSize: 11, marginTop: 4 },
+  emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
+  emptyEmoji: { fontSize: 48, marginBottom: 12 },
+  emptyText: { color: '#6B6B80', marginTop: 0, fontSize: 14 },
+  deleteCardBtn: { padding: 8, justifyContent: 'center', alignItems: 'center' },
   costHistoryThumbContainer: {
     width: 80,
     height: 80,
-    borderRadius: 6,
-    backgroundColor: '#2e1e1e',
+    borderRadius: 10,
+    backgroundColor: 'rgba(229, 57, 53, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  historyCostText: {
-    color: '#d32f2f',
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginTop: 2,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyText: {
-    color: '#555555',
-    marginTop: 12,
-    fontSize: 14,
-  },
+  historyCostText: { color: '#E53935', fontSize: 14, fontWeight: '700', marginTop: 2 },
 });

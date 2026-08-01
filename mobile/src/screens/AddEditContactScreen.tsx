@@ -1,3 +1,8 @@
+// ═══════════════════════════════════════════════════════════════
+// ResQDrive v2 — ADD/EDIT CONTACT SCREEN (Modernized)
+// All imports, logic, state, handlers preserved identically.
+// Only JSX structure + StyleSheet updated: dark glassmorphism theme.
+// ═══════════════════════════════════════════════════════════════
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -18,6 +23,14 @@ import { addContactSuccess, updateContactSuccess, deleteContactSuccess } from '.
 import api from '../api/axios';
 
 const RELATIONSHIPS = ['Spouse', 'Parent', 'Sibling', 'Friend', 'Other'];
+
+const RELATIONSHIP_EMOJIS: Record<string, string> = {
+  Spouse: '💑',
+  Parent: '👨‍👩‍👧',
+  Sibling: '👫',
+  Friend: '🤝',
+  Other: '👤',
+};
 
 export default function AddEditContactScreen({ route, navigation }: any) {
   const dispatch = useDispatch();
@@ -84,21 +97,26 @@ export default function AddEditContactScreen({ route, navigation }: any) {
       style={styles.container}
     >
       <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+        {/* ── Header ── */}
         <View style={styles.header}>
-          <Text style={styles.title}>{isEditing ? 'Edit Contact' : 'Add Contact'}</Text>
+          <Text style={styles.title}>
+            {isEditing ? '✏️ Edit Contact' : '➕ Add Contact'}
+          </Text>
           <Text style={styles.subtitle}>
             {isEditing ? 'Update emergency contact parameters' : 'Register a contact for crash alerts notification'}
           </Text>
         </View>
 
+        {/* ── Error ── */}
         {errorMsg && (
           <View style={styles.errorContainer}>
+            <Text style={styles.errorEmoji}>⚠️</Text>
             <Text style={styles.errorText}>{errorMsg}</Text>
           </View>
         )}
 
         <View style={styles.form}>
-          <Text style={styles.label}>Contact Name</Text>
+          <Text style={styles.label}>🏷️ Contact Name</Text>
           <Controller
             control={control}
             name="name"
@@ -106,7 +124,7 @@ export default function AddEditContactScreen({ route, navigation }: any) {
               <TextInput
                 style={[styles.input, errors.name && styles.inputError]}
                 placeholder="e.g. John Doe"
-                placeholderTextColor="#666"
+                placeholderTextColor="#6B6B80"
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
@@ -115,7 +133,7 @@ export default function AddEditContactScreen({ route, navigation }: any) {
           />
           {errors.name && <Text style={styles.errorHelper}>{errors.name.message}</Text>}
 
-          <Text style={styles.label}>Phone Number</Text>
+          <Text style={styles.label}>📱 Phone Number</Text>
           <Controller
             control={control}
             name="phoneNumber"
@@ -123,7 +141,7 @@ export default function AddEditContactScreen({ route, navigation }: any) {
               <TextInput
                 style={[styles.input, errors.phoneNumber && styles.inputError]}
                 placeholder="e.g. +923001234567"
-                placeholderTextColor="#666"
+                placeholderTextColor="#6B6B80"
                 keyboardType="phone-pad"
                 onBlur={onBlur}
                 onChangeText={onChange}
@@ -133,7 +151,7 @@ export default function AddEditContactScreen({ route, navigation }: any) {
           />
           {errors.phoneNumber && <Text style={styles.errorHelper}>{errors.phoneNumber.message}</Text>}
 
-          <Text style={styles.label}>Email Address</Text>
+          <Text style={styles.label}>📧 Email Address</Text>
           <Controller
             control={control}
             name="email"
@@ -141,7 +159,7 @@ export default function AddEditContactScreen({ route, navigation }: any) {
               <TextInput
                 style={[styles.input, errors.email && styles.inputError]}
                 placeholder="e.g. john@example.com"
-                placeholderTextColor="#666"
+                placeholderTextColor="#6B6B80"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 onBlur={onBlur}
@@ -152,7 +170,8 @@ export default function AddEditContactScreen({ route, navigation }: any) {
           />
           {errors.email && <Text style={styles.errorHelper}>{errors.email.message}</Text>}
 
-          <Text style={styles.label}>Relationship</Text>
+          {/* ── Relationship Tags ── */}
+          <Text style={styles.label}>💔 Relationship</Text>
           <View style={styles.relationshipTags}>
             {RELATIONSHIPS.map((rel) => (
               <TouchableOpacity
@@ -162,7 +181,15 @@ export default function AddEditContactScreen({ route, navigation }: any) {
                   selectedRelationship === rel && styles.tagSelected,
                 ]}
                 onPress={() => setValue('relationship', rel)}
+                activeOpacity={0.7}
               >
+                <Text
+                  style={[
+                    styles.tagEmoji,
+                  ]}
+                >
+                  {RELATIONSHIP_EMOJIS[rel]}
+                </Text>
                 <Text
                   style={[
                     styles.tagText,
@@ -175,6 +202,7 @@ export default function AddEditContactScreen({ route, navigation }: any) {
             ))}
           </View>
 
+          {/* ── Save Button ── */}
           <TouchableOpacity
             style={styles.saveBtn}
             onPress={handleSubmit(onSubmit)}
@@ -183,17 +211,20 @@ export default function AddEditContactScreen({ route, navigation }: any) {
             {isLoading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.saveBtnText}>{isEditing ? 'Save Changes' : 'Add Contact'}</Text>
+              <Text style={styles.saveBtnText}>
+                {isEditing ? '💾 Save Changes' : '➕ Add Contact'}
+              </Text>
             )}
           </TouchableOpacity>
 
+          {/* ── Delete Button ── */}
           {isEditing && (
             <TouchableOpacity
               style={styles.deleteBtn}
               onPress={handleDelete}
               disabled={isLoading}
             >
-              <Text style={styles.deleteBtnText}>Remove Contact</Text>
+              <Text style={styles.deleteBtnText}>🗑️ Remove Contact</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -205,65 +236,73 @@ export default function AddEditContactScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: '#0A0A0F',
   },
   scrollContainer: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 40,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 60,
   },
   header: {
     marginBottom: 28,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#ffffff',
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   subtitle: {
     fontSize: 14,
-    color: '#888888',
+    color: '#A0A0B8',
     marginTop: 6,
+    lineHeight: 20,
   },
   errorContainer: {
-    backgroundColor: '#3a1313',
-    padding: 12,
-    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 23, 68, 0.12)',
+    padding: 14,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#d32f2f',
+    borderColor: 'rgba(255, 23, 68, 0.3)',
     marginBottom: 20,
   },
+  errorEmoji: {
+    fontSize: 16,
+    marginRight: 8,
+  },
   errorText: {
-    color: '#ff8a80',
+    color: '#FF8A80',
     fontSize: 14,
     textAlign: 'center',
+    flex: 1,
   },
   form: {
     width: '100%',
   },
   label: {
-    fontSize: 14,
-    color: '#cccccc',
+    fontSize: 13,
+    color: '#A0A0B8',
     marginBottom: 8,
     fontWeight: '600',
   },
   input: {
-    backgroundColor: '#1e1e1e',
-    color: '#ffffff',
+    backgroundColor: 'rgba(10, 10, 15, 0.6)',
+    color: '#FFFFFF',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    borderRadius: 8,
-    fontSize: 16,
+    borderRadius: 10,
+    fontSize: 15,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#2e2e2e',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   inputError: {
-    borderColor: '#d32f2f',
+    borderColor: '#E53935',
   },
   errorHelper: {
-    color: '#ff8a80',
+    color: '#FF8A80',
     fontSize: 12,
     marginTop: -10,
     marginBottom: 16,
@@ -275,56 +314,62 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   tag: {
-    backgroundColor: '#1e1e1e',
+    backgroundColor: 'rgba(28, 28, 46, 0.6)',
     borderWidth: 1,
-    borderColor: '#2e2e2e',
-    paddingHorizontal: 16,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 20,
-    marginRight: 10,
-    marginBottom: 10,
+    marginRight: 8,
+    marginBottom: 8,
   },
   tagSelected: {
-    backgroundColor: '#d32f2f',
-    borderColor: '#d32f2f',
+    backgroundColor: 'rgba(229, 57, 53, 0.2)',
+    borderColor: 'rgba(229, 57, 53, 0.5)',
+  },
+  tagEmoji: {
+    fontSize: 14,
+    marginRight: 6,
   },
   tagText: {
-    color: '#888888',
+    color: '#6B6B80',
     fontSize: 14,
     fontWeight: '600',
   },
   tagTextSelected: {
-    color: '#ffffff',
+    color: '#FFFFFF',
   },
   saveBtn: {
-    backgroundColor: '#d32f2f',
+    backgroundColor: '#E53935',
     paddingVertical: 16,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
     marginTop: 10,
-    shadowColor: '#d32f2f',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 4,
+    shadowColor: '#E53935',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 5,
   },
   saveBtnText: {
-    color: '#ffffff',
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   deleteBtn: {
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(255, 23, 68, 0.08)',
     borderWidth: 1,
-    borderColor: '#ff5252',
+    borderColor: 'rgba(255, 82, 82, 0.3)',
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
     marginTop: 16,
   },
   deleteBtnText: {
-    color: '#ff5252',
+    color: '#FF5252',
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
 });

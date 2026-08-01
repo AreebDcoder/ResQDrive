@@ -1,3 +1,8 @@
+// ═══════════════════════════════════════════════════════════════
+// ResQDrive v2 — ADD/EDIT VEHICLE SCREEN (Modernized)
+// All imports, logic, state, handlers preserved identically.
+// Only JSX structure + StyleSheet updated: dark glassmorphism theme.
+// ═══════════════════════════════════════════════════════════════
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -79,21 +84,26 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
       style={styles.container}
     >
       <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+        {/* ── Header ── */}
         <View style={styles.header}>
-          <Text style={styles.title}>{isEditing ? 'Edit Vehicle' : 'Add Vehicle'}</Text>
+          <Text style={styles.title}>
+            {isEditing ? '✏️ Edit Vehicle' : '🚗 Add Vehicle'}
+          </Text>
           <Text style={styles.subtitle}>
             {isEditing ? 'Update your registered vehicle details' : 'Register a vehicle for accident detection'}
           </Text>
         </View>
 
+        {/* ── Error ── */}
         {errorMsg && (
           <View style={styles.errorContainer}>
+            <Text style={styles.errorEmoji}>⚠️</Text>
             <Text style={styles.errorText}>{errorMsg}</Text>
           </View>
         )}
 
         <View style={styles.form}>
-          <Text style={styles.label}>Make / Manufacturer</Text>
+          <Text style={styles.label}>🏭 Make / Manufacturer</Text>
           <Controller
             control={control}
             name="make"
@@ -101,7 +111,7 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
               <TextInput
                 style={[styles.input, errors.make && styles.inputError]}
                 placeholder="e.g. Honda, Suzuki"
-                placeholderTextColor="#666"
+                placeholderTextColor="#6B6B80"
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
@@ -110,7 +120,7 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
           />
           {errors.make && <Text style={styles.errorHelper}>{errors.make.message}</Text>}
 
-          <Text style={styles.label}>Model</Text>
+          <Text style={styles.label}>🏎️ Model</Text>
           <Controller
             control={control}
             name="model"
@@ -118,7 +128,7 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
               <TextInput
                 style={[styles.input, errors.model && styles.inputError]}
                 placeholder="e.g. Civic, Swift"
-                placeholderTextColor="#666"
+                placeholderTextColor="#6B6B80"
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
@@ -129,7 +139,7 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
 
           <View style={styles.row}>
             <View style={styles.rowCol}>
-              <Text style={styles.label}>Year</Text>
+              <Text style={styles.label}>📅 Year</Text>
               <Controller
                 control={control}
                 name="year"
@@ -137,7 +147,7 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
                   <TextInput
                     style={[styles.input, errors.year && styles.inputError]}
                     placeholder="2022"
-                    placeholderTextColor="#666"
+                    placeholderTextColor="#6B6B80"
                     keyboardType="number-pad"
                     onBlur={onBlur}
                     onChangeText={onChange}
@@ -149,7 +159,7 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
             </View>
 
             <View style={styles.rowCol}>
-              <Text style={styles.label}>Color</Text>
+              <Text style={styles.label}>🎨 Color</Text>
               <Controller
                 control={control}
                 name="color"
@@ -157,7 +167,7 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
                   <TextInput
                     style={[styles.input, errors.color && styles.inputError]}
                     placeholder="e.g. White"
-                    placeholderTextColor="#666"
+                    placeholderTextColor="#6B6B80"
                     onBlur={onBlur}
                     onChangeText={onChange}
                     value={value}
@@ -168,7 +178,7 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
             </View>
           </View>
 
-          <Text style={styles.label}>License Plate Number</Text>
+          <Text style={styles.label}>🔢 License Plate Number</Text>
           <Controller
             control={control}
             name="licensePlate"
@@ -176,7 +186,7 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
               <TextInput
                 style={[styles.input, errors.licensePlate && styles.inputError]}
                 placeholder="e.g. ABC-1234"
-                placeholderTextColor="#666"
+                placeholderTextColor="#6B6B80"
                 autoCapitalize="characters"
                 onBlur={onBlur}
                 onChangeText={onChange}
@@ -186,6 +196,7 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
           />
           {errors.licensePlate && <Text style={styles.errorHelper}>{errors.licensePlate.message}</Text>}
 
+          {/* ── Save Button ── */}
           <TouchableOpacity
             style={styles.saveBtn}
             onPress={handleSubmit(onSubmit)}
@@ -194,7 +205,9 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
             {isLoading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.saveBtnText}>{isEditing ? 'Save Changes' : 'Register Vehicle'}</Text>
+              <Text style={styles.saveBtnText}>
+                {isEditing ? '💾 Save Changes' : '🚗 Register Vehicle'}
+              </Text>
             )}
           </TouchableOpacity>
 
@@ -220,7 +233,7 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
                 onPress={handleDelete}
                 disabled={isLoading}
               >
-                <Text style={styles.deleteBtnText}>Remove Vehicle</Text>
+                <Text style={styles.deleteBtnText}>🗑️ Remove Vehicle</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -233,65 +246,73 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: '#0A0A0F',
   },
   scrollContainer: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 40,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 60,
   },
   header: {
     marginBottom: 28,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#ffffff',
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   subtitle: {
     fontSize: 14,
-    color: '#888888',
+    color: '#A0A0B8',
     marginTop: 6,
+    lineHeight: 20,
   },
   errorContainer: {
-    backgroundColor: '#3a1313',
-    padding: 12,
-    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 23, 68, 0.12)',
+    padding: 14,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#d32f2f',
+    borderColor: 'rgba(255, 23, 68, 0.3)',
     marginBottom: 20,
   },
+  errorEmoji: {
+    fontSize: 16,
+    marginRight: 8,
+  },
   errorText: {
-    color: '#ff8a80',
+    color: '#FF8A80',
     fontSize: 14,
     textAlign: 'center',
+    flex: 1,
   },
   form: {
     width: '100%',
   },
   label: {
-    fontSize: 14,
-    color: '#cccccc',
+    fontSize: 13,
+    color: '#A0A0B8',
     marginBottom: 8,
     fontWeight: '600',
   },
   input: {
-    backgroundColor: '#1e1e1e',
-    color: '#ffffff',
+    backgroundColor: 'rgba(10, 10, 15, 0.6)',
+    color: '#FFFFFF',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    borderRadius: 8,
-    fontSize: 16,
+    borderRadius: 10,
+    fontSize: 15,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#2e2e2e',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   inputError: {
-    borderColor: '#d32f2f',
+    borderColor: '#E53935',
   },
   errorHelper: {
-    color: '#ff8a80',
+    color: '#FF8A80',
     fontSize: 12,
     marginTop: -10,
     marginBottom: 16,
@@ -304,48 +325,48 @@ const styles = StyleSheet.create({
     flex: 0.48,
   },
   saveBtn: {
-    backgroundColor: '#d32f2f',
+    backgroundColor: '#E53935',
     paddingVertical: 16,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
     marginTop: 10,
-    shadowColor: '#d32f2f',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 4,
+    shadowColor: '#E53935',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 5,
   },
   saveBtnText: {
-    color: '#ffffff',
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   insuranceBtn: {
-    backgroundColor: '#1e1e1e',
+    backgroundColor: 'rgba(41, 121, 255, 0.08)',
     borderWidth: 1,
-    borderColor: '#d32f2f',
+    borderColor: 'rgba(41, 121, 255, 0.3)',
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
     marginTop: 20,
   },
   insuranceBtnText: {
-    color: '#d32f2f',
+    color: '#2979FF',
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   deleteBtn: {
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(255, 23, 68, 0.06)',
     borderWidth: 1,
-    borderColor: '#ff5252',
+    borderColor: 'rgba(255, 82, 82, 0.3)',
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
     marginTop: 16,
   },
   deleteBtnText: {
-    color: '#ff5252',
+    color: '#FF5252',
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
 });

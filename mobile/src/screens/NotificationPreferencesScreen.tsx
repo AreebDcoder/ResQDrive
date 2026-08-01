@@ -1,3 +1,8 @@
+// ═══════════════════════════════════════════════════════════════
+// ResQDrive v2 — NOTIFICATION PREFERENCES SCREEN (Modernized)
+// All imports, logic, state, handlers preserved identically.
+// Only JSX structure + StyleSheet updated: dark glassmorphism theme.
+// ═══════════════════════════════════════════════════════════════
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -22,21 +27,25 @@ const CATEGORIES = [
     key: 'alertDeliveryEnabled',
     title: 'Alert Confirmations',
     description: 'Notifications confirming emergency dispatch delivery status.',
+    emoji: '🛡️',
   },
   {
     key: 'falseAlarmLogEnabled',
     title: 'False Alarm Logging',
     description: 'Reports logged when alerts are canceled or false alarm flags are set.',
+    emoji: '⚠️',
   },
   {
     key: 'systemStatusEnabled',
     title: 'System Status Reports',
     description: 'App status audits, connection reports, and settings configurations.',
+    emoji: '⚙️',
   },
   {
     key: 'generalEnabled',
     title: 'General Alerts',
     description: 'General system reports, updates, and community alerts.',
+    emoji: '🔔',
   },
 ];
 
@@ -83,21 +92,34 @@ export default function NotificationPreferencesScreen() {
   if (isLoading && !preferences) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#d32f2f" />
+        <ActivityIndicator size="large" color="#E53935" />
       </View>
     );
   }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      {/* ── Header ── */}
       <View style={styles.header}>
-        <Text style={styles.title}>Notification Preferences</Text>
+        <Text style={styles.title}>⚙️ Notification Preferences</Text>
         <Text style={styles.subtitle}>
           Configure which categories of push notifications you want to receive on your device
         </Text>
       </View>
 
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {/* ── Updating indicator ── */}
+      {isUpdating && (
+        <View style={styles.updatingBanner}>
+          <ActivityIndicator size="small" color="#2979FF" />
+          <Text style={styles.updatingText}> Syncing...</Text>
+        </View>
+      )}
+
+      {error && (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
 
       {preferences && (
         <View style={styles.list}>
@@ -105,17 +127,23 @@ export default function NotificationPreferencesScreen() {
             const isEnabled = (preferences as any)[category.key] ?? true;
 
             return (
-              <View key={category.key} style={styles.preferenceRow}>
+              <View key={category.key} style={[
+                styles.preferenceRow,
+                isEnabled && styles.preferenceRowActive,
+              ]}>
                 <View style={styles.textContainer}>
-                  <Text style={styles.preferenceTitle}>{category.title}</Text>
-                  <Text style={styles.preferenceDesc}>{category.description}</Text>
+                  <Text style={styles.emojiLabel}>{category.emoji}</Text>
+                  <View style={styles.textInner}>
+                    <Text style={styles.preferenceTitle}>{category.title}</Text>
+                    <Text style={styles.preferenceDesc}>{category.description}</Text>
+                  </View>
                 </View>
                 <Switch
                   value={isEnabled}
                   onValueChange={() => handleToggle(category.key, isEnabled)}
                   disabled={isUpdating}
-                  trackColor={{ false: '#3e3e3e', true: '#d32f2f' }}
-                  thumbColor={isEnabled ? '#ffffff' : '#f4f3f4'}
+                  trackColor={{ false: 'rgba(255, 255, 255, 0.08)', true: '#E53935' }}
+                  thumbColor={isEnabled ? '#FFFFFF' : '#6B6B80'}
                 />
               </View>
             );
@@ -129,36 +157,58 @@ export default function NotificationPreferencesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: '#0A0A0F',
   },
   scrollContent: {
-    padding: 24,
+    padding: 20,
   },
   centerContainer: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: '#0A0A0F',
     justifyContent: 'center',
     alignItems: 'center',
   },
   header: {
-    marginBottom: 28,
+    marginBottom: 24,
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#ffffff',
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   subtitle: {
     fontSize: 14,
-    color: '#888888',
+    color: '#A0A0B8',
     marginTop: 6,
     lineHeight: 20,
   },
+  updatingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(41, 121, 255, 0.08)',
+    paddingVertical: 8,
+    borderRadius: 10,
+    marginBottom: 16,
+  },
+  updatingText: {
+    color: '#2979FF',
+    fontSize: 13,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  errorBanner: {
+    backgroundColor: 'rgba(255, 23, 68, 0.12)',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 23, 68, 0.3)',
+    marginVertical: 14,
+  },
   errorText: {
-    color: '#ff5252',
+    color: '#FF8A80',
     fontSize: 14,
     textAlign: 'center',
-    marginVertical: 14,
   },
   list: {
     width: '100%',
@@ -167,24 +217,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#1e1e1e',
-    borderRadius: 12,
+    backgroundColor: 'rgba(28, 28, 46, 0.4)',
+    borderRadius: 14,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#2e2e2e',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  preferenceRowActive: {
+    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   textContainer: {
     flex: 0.8,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  emojiLabel: {
+    fontSize: 20,
+    marginRight: 12,
+    marginTop: 2,
+  },
+  textInner: {
+    flex: 1,
   },
   preferenceTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   preferenceDesc: {
     fontSize: 12,
-    color: '#888888',
+    color: '#A0A0B8',
     marginTop: 4,
     lineHeight: 16,
   },

@@ -13,7 +13,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import api from '../api/axios';
 import { dispatchEmergencyAlert } from '../utils/emergencyFallback';
-import * as Sms from 'expo-sms'; // <-- Added expo-sms import
+import * as Sms from 'expo-sms';
 
 const COUNTDOWN_SECONDS = 10;
 
@@ -26,7 +26,12 @@ export default function CountdownScreen({ navigation, route }: any) {
   const [isDispatching, setIsDispatching] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+  }, [fadeAnim]);
 
   // Prevent Android back button from silently escaping the countdown
   useEffect(() => {
@@ -55,8 +60,8 @@ export default function CountdownScreen({ navigation, route }: any) {
           longitude,
           description:
             status === 'FALSE_ALARM'
-              ? 'Countdown cancelled by user — false alarm'
-              : 'Countdown reached zero — emergency alert dispatched',
+              ? 'Countdown cancelled by user \u2014 false alarm'
+              : 'Countdown reached zero \u2014 emergency alert dispatched',
           alertDispatchStatus: dispatchStatus,
         });
       } catch (err) {
@@ -94,9 +99,9 @@ export default function CountdownScreen({ navigation, route }: any) {
         const messageBody = `ResQDrive ALERT: ${user?.fullName || 'Unknown'} may have been in a ${severity} accident. Location: https://www.google.com/maps?q=${latitude},${longitude}`;
         
         await Sms.sendSMSAsync(phoneNumbers, messageBody);
-        console.log('✅ SMS sent successfully via device SIM!');
+        console.log('SMS sent successfully via device SIM!');
       } else {
-        console.log('❌ SMS not available on this device');
+        console.log('SMS not available on this device');
       }
     } catch (err) {
       console.log('Device SMS failed, relying on backend fallback:', err);
@@ -154,8 +159,14 @@ export default function CountdownScreen({ navigation, route }: any) {
   if (isCancelled) {
     return (
       <SafeAreaView style={styles.cancelledContainer}>
-        <Text style={styles.cancelledIcon}>✅</Text>
-        <Text style={styles.cancelledText}>Marked as false alarm</Text>
+        <View style={StyleSheet.absoluteFillObject}>
+          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0A0F' }]} />
+          <View style={[StyleSheet.absoluteFillObject, styles.cancelledGrad]} />
+        </View>
+        <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', opacity: fadeAnim }}>
+          <Text style={styles.cancelledIcon}>\u2705</Text>
+          <Text style={styles.cancelledText}>Marked as false alarm</Text>
+        </Animated.View>
       </SafeAreaView>
     );
   }
@@ -163,33 +174,51 @@ export default function CountdownScreen({ navigation, route }: any) {
   if (isDispatching) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text style={styles.dispatchingIcon}>📡</Text>
-        <Text style={styles.dispatchingText}>Sending emergency alert...</Text>
+        <View style={StyleSheet.absoluteFillObject}>
+          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0A0F' }]} />
+          <View style={[StyleSheet.absoluteFillObject, styles.gradTop]} />
+          <View style={[StyleSheet.absoluteFillObject, styles.gradBottom]} />
+        </View>
+        <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', opacity: fadeAnim }}>
+          <Text style={styles.dispatchingIcon}>\ud83d\udce1</Text>
+          <Text style={styles.dispatchingText}>Sending emergency alert...</Text>
+        </Animated.View>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.warningLabel}>POSSIBLE ACCIDENT DETECTED</Text>
+      {/* Background gradient layers */}
+      <View style={StyleSheet.absoluteFillObject}>
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0A0F' }]} />
+        <View style={[StyleSheet.absoluteFillObject, styles.gradTop]} />
+        <View style={[StyleSheet.absoluteFillObject, styles.gradBottom]} />
+        <View style={[StyleSheet.absoluteFillObject, styles.gradCenter]} />
+      </View>
 
-      <Animated.View style={[styles.numberCircle, { transform: [{ scale: pulseAnim }] }]}>
-        <Text style={styles.countdownNumber}>{secondsLeft}</Text>
+      <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24, opacity: fadeAnim }}>
+        <Text style={styles.warningLabel}>POSSIBLE ACCIDENT DETECTED</Text>
+
+        <Animated.View style={[styles.numberCircle, { transform: [{ scale: pulseAnim }] }]}>
+          <View style={[StyleSheet.absoluteFillObject, styles.numberCircleGrad]} />
+          <Text style={styles.countdownNumber}>{secondsLeft}</Text>
+        </Animated.View>
+
+        <Text style={styles.subLabel}>
+          Emergency alert will be sent automatically in {secondsLeft} second{secondsLeft !== 1 ? 's' : ''}
+        </Text>
+
+        <TouchableOpacity
+          style={styles.cancelBtn}
+          onPress={() => handleCancel('BUTTON')}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.cancelBtnText}>I AM OK \u2014 CANCEL</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.voiceHint}>\ud83d\udcac You can also say "I am OK" or "Cancel"</Text>
       </Animated.View>
-
-      <Text style={styles.subLabel}>
-        Emergency alert will be sent automatically in {secondsLeft} second{secondsLeft !== 1 ? 's' : ''}
-      </Text>
-
-      <TouchableOpacity
-        style={styles.cancelBtn}
-        onPress={() => handleCancel('BUTTON')}
-        activeOpacity={0.85}
-      >
-        <Text style={styles.cancelBtnText}>I AM OK — CANCEL</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.voiceHint}>💬 You can also say "I am OK" or "Cancel"</Text>
     </SafeAreaView>
   );
 }
@@ -197,13 +226,13 @@ export default function CountdownScreen({ navigation, route }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a0000',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
+    backgroundColor: '#0A0A0F',
   },
+ gradTop: { top: 0, height: 400, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
+  gradBottom: { bottom: 0, height: 400, backgroundColor: 'rgba(229, 57, 53, 0.06)' },
+  gradCenter: { top: '30%', height: 300, backgroundColor: 'rgba(229, 57, 53, 0.05)' },
   warningLabel: {
-    color: '#ff8a80',
+    color: '#FF8A80',
     fontSize: 16,
     fontWeight: 'bold',
     letterSpacing: 2,
@@ -214,43 +243,55 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: '#d32f2f',
+    backgroundColor: '#E53935',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 40,
-    shadowColor: '#d32f2f',
+    shadowColor: '#E53935',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 30,
-    elevation: 10,
+    shadowOpacity: 0.7,
+    shadowRadius: 40,
+    elevation: 12,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 138, 128, 0.3)',
+  },
+  numberCircleGrad: {
+    borderRadius: 100,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
   },
   countdownNumber: {
     fontSize: 96,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: '#FFFFFF',
   },
   subLabel: {
-    color: '#ffcdd2',
+    color: 'rgba(255, 205, 210, 0.8)',
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 48,
     lineHeight: 24,
   },
   cancelBtn: {
-    backgroundColor: '#ffffff',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     paddingVertical: 20,
     paddingHorizontal: 48,
     borderRadius: 16,
     marginBottom: 24,
+    shadowColor: '#FFFFFF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
   },
   cancelBtnText: {
-    color: '#1a0000',
+    color: '#0A0A0F',
     fontSize: 18,
     fontWeight: 'bold',
     letterSpacing: 1,
   },
   voiceHint: {
-    color: '#ff8a8080',
+    color: 'rgba(255, 138, 128, 0.5)',
     fontSize: 13,
     textAlign: 'center',
   },
@@ -259,22 +300,21 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   dispatchingText: {
-    color: '#ffffff',
+    color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '600',
   },
   cancelledContainer: {
     flex: 1,
-    backgroundColor: '#0d2818',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: '#0A0A0F',
   },
+  cancelledGrad: { top: 0, height: '100%', backgroundColor: 'rgba(0, 230, 118, 0.06)' },
   cancelledIcon: {
     fontSize: 60,
     marginBottom: 16,
   },
   cancelledText: {
-    color: '#ffffff',
+    color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '600',
   },

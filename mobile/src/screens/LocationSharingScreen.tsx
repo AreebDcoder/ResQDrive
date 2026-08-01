@@ -1,3 +1,8 @@
+// ═══════════════════════════════════════════════════════════════
+// ResQDrive v2 — LOCATION SHARING SCREEN (Modernized)
+// All imports, logic, state, handlers preserved identically.
+// Only JSX structure + StyleSheet updated: dark glassmorphism theme.
+// ═══════════════════════════════════════════════════════════════
 import React, { useEffect, useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
@@ -185,50 +190,56 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color="#d32f2f" size="large" />
+        <ActivityIndicator color="#E53935" size="large" />
         <Text style={styles.loadingText}>Checking session status…</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      {/* ── Intro Card ── */}
       <View style={styles.card}>
-        <Text style={styles.title}>Real-Time Location Sharing</Text>
+        <Text style={styles.title}>📍 Real-Time Location Sharing</Text>
         <Text style={styles.subtitle}>
           Share your live location with emergency contacts via a simple link.
           No app install required for them.
         </Text>
       </View>
 
+      {/* ── Error ── */}
       {error && (
         <View style={styles.errorBox}>
+          <Text style={styles.errorEmoji}>⚠️</Text>
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
 
+      {/* ── Permission Warning ── */}
       {permissionDenied && (
         <View style={styles.warnBox}>
+          <Text style={styles.warnEmoji}>🔒</Text>
           <Text style={styles.warnText}>
-            ⚠️ Location permission denied. Please enable it in your device settings to share your location.
+            Location permission denied. Please enable it in your device settings to share your location.
           </Text>
         </View>
       )}
 
+      {/* ── Active Session Card ── */}
       {session && (
         <View style={styles.activeCard}>
           <View style={styles.activeHeader}>
             <View style={styles.liveDot} />
             <Text style={styles.activeTitle}>LIVE — Sharing</Text>
           </View>
-          <Text style={styles.activeSince}>Started: {new Date(session.startedAt).toLocaleString()}</Text>
+          <Text style={styles.activeSince}>⏱️ Started: {new Date(session.startedAt).toLocaleString()}</Text>
           <Text style={styles.socketStatus}>
-            Socket: {socketStatus === 'connected' ? '🟢 Connected' : socketStatus === 'connecting' ? '🟡 Connecting…' : '🔴 Disconnected'}
+            🔌 Socket: {socketStatus === 'connected' ? '🟢 Connected' : socketStatus === 'connecting' ? '🟡 Connecting…' : '🔴 Disconnected'}
           </Text>
           {lastSent ? (
-            <Text style={styles.lastUpdate}>Last GPS ping: {lastSent}</Text>
+            <Text style={styles.lastUpdate}>📡 Last GPS ping: {lastSent}</Text>
           ) : (
-            <Text style={styles.lastUpdate}>Waiting for first GPS fix…</Text>
+            <Text style={styles.lastUpdate}>📡 Waiting for first GPS fix…</Text>
           )}
 
           <TouchableOpacity style={styles.linkBtn} onPress={copyShareLink}>
@@ -246,12 +257,13 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
             {isStopping ? (
               <ActivityIndicator color="#ffffff" />
             ) : (
-              <Text style={styles.stopBtnText}>Stop Sharing</Text>
+              <Text style={styles.stopBtnText}>⏹️ Stop Sharing</Text>
             )}
           </TouchableOpacity>
         </View>
       )}
 
+      {/* ── Start Button ── */}
       {!session && (
         <TouchableOpacity
           style={[styles.startBtn, isStarting && { opacity: 0.5 }]}
@@ -261,13 +273,14 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
           {isStarting ? (
             <ActivityIndicator color="#ffffff" />
           ) : (
-            <Text style={styles.startBtnText}>Start Live Location Sharing</Text>
+            <Text style={styles.startBtnText}>🚀 Start Live Location Sharing</Text>
           )}
         </TouchableOpacity>
       )}
 
+      {/* ── Info Card ── */}
       <View style={styles.infoCard}>
-        <Text style={styles.infoTitle}>How it works</Text>
+        <Text style={styles.infoTitle}>ℹ️ How it works</Text>
         <Text style={styles.infoText}>• Your phone sends GPS coordinates every 5 seconds</Text>
         <Text style={styles.infoText}>• After 10 minutes, backs off to every 30 seconds (battery saver)</Text>
         <Text style={styles.infoText}>• Emergency contacts open the link in any browser</Text>
@@ -279,32 +292,215 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#121212' },
-  center: { flex: 1, backgroundColor: '#121212', justifyContent: 'center', alignItems: 'center', padding: 24 },
-  loadingText: { color: '#888888', marginTop: 12 },
-  card: { backgroundColor: '#1e1e1e', borderRadius: 12, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: '#2e2e2e' },
-  title: { color: '#ffffff', fontSize: 22, fontWeight: 'bold', marginBottom: 8 },
-  subtitle: { color: '#888888', fontSize: 14, lineHeight: 20 },
-  errorBox: { backgroundColor: '#3a1313', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#d32f2f', marginBottom: 16 },
-  errorText: { color: '#ff8a80', fontSize: 13, textAlign: 'center' },
-  warnBox: { backgroundColor: '#3a2a13', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#f59e0b', marginBottom: 16 },
-  warnText: { color: '#fbbf24', fontSize: 13 },
-  activeCard: { backgroundColor: '#1e1e1e', borderRadius: 12, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: '#d32f2f' },
-  activeHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  liveDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#22c55e', marginRight: 8 },
-  activeTitle: { color: '#22c55e', fontSize: 16, fontWeight: 'bold' },
-  activeSince: { color: '#cccccc', fontSize: 12, marginBottom: 4 },
-  socketStatus: { color: '#999999', fontSize: 12, marginBottom: 4 },
-  lastUpdate: { color: '#888888', fontSize: 12, marginBottom: 16 },
-  linkBtn: { backgroundColor: '#2a2a2a', paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginBottom: 8, borderWidth: 1, borderColor: '#444' },
-  linkBtnText: { color: '#ffffff', fontSize: 14, fontWeight: '600' },
-  linkBtnSecondary: { backgroundColor: '#1e1e1e', paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginBottom: 16, borderWidth: 1, borderColor: '#2e2e2e' },
-  linkBtnSecondaryText: { color: '#d32f2f', fontSize: 14, fontWeight: '600' },
-  stopBtn: { backgroundColor: '#3a1313', paddingVertical: 14, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: '#d32f2f' },
-  stopBtnText: { color: '#ffffff', fontSize: 14, fontWeight: 'bold' },
-  startBtn: { backgroundColor: '#d32f2f', paddingVertical: 16, borderRadius: 8, alignItems: 'center', marginBottom: 16 },
-  startBtnText: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
-  infoCard: { backgroundColor: '#1a1a1a', borderRadius: 8, padding: 14, borderWidth: 1, borderColor: '#2a2a2a' },
-  infoTitle: { color: '#d32f2f', fontSize: 12, fontWeight: 'bold', marginBottom: 8, textTransform: 'uppercase' },
-  infoText: { color: '#888888', fontSize: 12, lineHeight: 18 },
+  container: {
+    flex: 1,
+    backgroundColor: '#0A0A0F',
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 60,
+  },
+  center: {
+    flex: 1,
+    backgroundColor: '#0A0A0F',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  loadingText: {
+    color: '#A0A0B8',
+    marginTop: 12,
+  },
+  card: {
+    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  title: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  subtitle: {
+    color: '#A0A0B8',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 23, 68, 0.12)',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 23, 68, 0.3)',
+    marginBottom: 16,
+  },
+  errorEmoji: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  errorText: {
+    color: '#FF8A80',
+    fontSize: 13,
+    textAlign: 'center',
+    flex: 1,
+  },
+  warnBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(255, 167, 38, 0.1)',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 167, 38, 0.25)',
+    marginBottom: 16,
+  },
+  warnEmoji: {
+    fontSize: 16,
+    marginRight: 8,
+    marginTop: 1,
+  },
+  warnText: {
+    color: '#FFB74D',
+    fontSize: 13,
+    flex: 1,
+    lineHeight: 18,
+  },
+  activeCard: {
+    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 230, 118, 0.25)',
+    shadowColor: '#00E676',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  activeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  liveDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#00E676',
+    marginRight: 8,
+    shadowColor: '#00E676',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
+  },
+  activeTitle: {
+    color: '#00E676',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  activeSince: {
+    color: '#A0A0B8',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  socketStatus: {
+    color: '#6B6B80',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  lastUpdate: {
+    color: '#6B6B80',
+    fontSize: 12,
+    marginBottom: 16,
+  },
+  linkBtn: {
+    backgroundColor: 'rgba(41, 121, 255, 0.1)',
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(41, 121, 255, 0.25)',
+  },
+  linkBtnText: {
+    color: '#2979FF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  linkBtnSecondary: {
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  linkBtnSecondaryText: {
+    color: '#E53935',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  stopBtn: {
+    backgroundColor: 'rgba(255, 23, 68, 0.12)',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 23, 68, 0.3)',
+  },
+  stopBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  startBtn: {
+    backgroundColor: '#E53935',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 16,
+    shadowColor: '#E53935',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  startBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  infoCard: {
+    backgroundColor: 'rgba(28, 28, 46, 0.4)',
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  infoTitle: {
+    color: '#E53935',
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  infoText: {
+    color: '#A0A0B8',
+    fontSize: 13,
+    lineHeight: 20,
+  },
 });
