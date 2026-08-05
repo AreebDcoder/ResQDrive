@@ -8,7 +8,10 @@ import {
   TouchableOpacity,
   View,
   Animated,
+  Linking,
 } from 'react-native';
+import * as Location from 'expo-location';
+import api from '../api/axios';
 import { VoiceCommandService } from '../services/voiceCommandService';
 import { TtsService } from '../services/ttsService';
 
@@ -38,9 +41,56 @@ export default function VoiceCommandDemoScreen() {
         triggerCallbackFlash('Abort Callback Fired (onCancelCountdown) ❌');
         Alert.alert('System Action', 'onCancelCountdown() successfully triggered via voice! Aborting accident warning.');
       },
-      () => {
+      async () => {
         triggerCallbackFlash('SOS Callback Fired (onTriggerSOS) 🚨');
-        Alert.alert('System Action', 'onTriggerSOS() successfully triggered via voice! Dispatching alert immediately.');
+        Alert.alert(
+          'System Action',
+          'onTriggerSOS() successfully triggered via voice! Dialing emergency services immediately.',
+          [
+            {
+              text: 'Call Now',
+              style: 'destructive',
+              onPress: async () => {
+                try {
+                  const { status } = await Location.requestForegroundPermissionsAsync();
+                  if (status !== 'granted') {
+                    console.log('Location permission denied, dialing default.');
+                    Linking.openURL('tel:1122');
+                    return;
+                  }
+                  const location = await Promise.race([
+                    Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+                    new Promise<any>((resolve) => setTimeout(() => resolve(null), 3000))
+                  ]);
+                  const latitude = location?.coords?.latitude ?? 33.6844;
+                  const longitude = location?.coords?.longitude ?? 73.0479;
+
+                  const response = await api.get('/emergency-sos/numbers', {
+                    params: { lat: latitude, lng: longitude },
+                  });
+
+                  const regional = response.data.regionalNumbers || [];
+                  const custom = response.data.customNumbers || [];
+                  const target = regional[0] || custom[0];
+
+                  if (target) {
+                    await api.post('/emergency-sos/log-call', {
+                      serviceName: target.serviceName || target.label || 'Rescue',
+                      autoDialed: false,
+                    });
+                    Linking.openURL(`tel:${target.phoneNumber}`);
+                  } else {
+                    Linking.openURL('tel:1122');
+                  }
+                } catch (err) {
+                  console.log('Voice SOS execution failed:', err);
+                  Linking.openURL('tel:1122');
+                }
+              },
+            },
+            { text: 'Cancel', style: 'cancel' },
+          ]
+        );
       },
       (text, isFinal) => {
         setTranscript(text);

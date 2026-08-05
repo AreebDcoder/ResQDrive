@@ -380,13 +380,13 @@ export class CrashSoundDetectionService {
             }
             console.log('[Native YAMNet Inference] Waveform stats - len:', centeredWindow.length, 'min:', minVal.toFixed(4), 'max:', maxVal.toFixed(4));
             
-            // Peak normalization to boost signal level to 0.95 (improves YAMNet confidence for low-volume recordings)
+            // Moderate Peak Normalization: Cap scaling factor to 4.0x max to avoid over-amplifying minor ambient thuds (e.g. dropping phone)
             if (maxAmp > 0.001) {
-              const scalingFactor = 0.95 / maxAmp;
+              const scalingFactor = Math.min(0.95 / maxAmp, 4.0);
               for (let i = 0; i < centeredWindow.length; i++) {
                 centeredWindow[i] *= scalingFactor;
               }
-              console.log(`[Native YAMNet Inference] Waveform normalized (boosted by ${scalingFactor.toFixed(1)}x to peak 0.95)`);
+              console.log(`[Native YAMNet Inference] Waveform normalized (scaling factor: ${scalingFactor.toFixed(1)}x)`);
             }
 
             const outputBuffers: ArrayBuffer[] = await this.model.run([centeredWindow.buffer]);
@@ -397,46 +397,51 @@ export class CrashSoundDetectionService {
               console.log('[Native YAMNet Inference] Scores array length:', scoresArray.length);
               console.log('[Native YAMNet Inference] Sample scores (0-10):', Array.from(scoresArray.slice(0, 10)));
               console.log('[Native YAMNet Inference] Scores list:');
-              let topIndex = CRASH_CLASS_INDICES[0];
-              let maxCrashConfidence = 0;
-              let topCrashClassName: CrashRelevantClassName = 'Crash';
+              let isExceeded = false;
+              const directCrashClasses = ['Crash', 'Skidding', 'Tire squeal', 'Glass', 'Shatter'];
+              let maxDirectScore = 0;
+              let directClassName: CrashRelevantClassName = 'Crash';
 
               CRASH_CLASS_INDICES.forEach((idx) => {
                 const score = scoresArray[idx] || 0;
                 const name = CLASS_INDEX_TO_NAME[idx];
                 console.log(`  - ${name}: ${(score * 100).toFixed(4)}% (raw: ${score})`);
-                
-                // Track top class overall (including Vehicle)
-                if (score > maxConfidence) {
-                  maxConfidence = score;
-                  topIndex = idx;
-                }
 
-                // Track top crash-specific class (excluding Vehicle)
-                if (name !== 'Vehicle' && score > maxCrashConfidence) {
-                  maxCrashConfidence = score;
-                  topCrashClassName = name;
+                if (directCrashClasses.includes(name) && score > maxDirectScore) {
+                  maxDirectScore = score;
+                  directClassName = name;
                 }
               });
 
-              topClassName = CLASS_INDEX_TO_NAME[topIndex] || 'Vehicle';
-              console.log(`[Native YAMNet Inference] Top Overall: ${topClassName} (${(maxConfidence * 100).toFixed(1)}%), Top Crash-Specific: ${topCrashClassName} (${(maxCrashConfidence * 100).toFixed(1)}%)`);
-              
-              // Use the top crash-specific parameters for triggering
-              maxConfidence = maxCrashConfidence;
-              topClassName = topCrashClassName;
+              const explosionScore = Math.max(scoresArray[420] || 0, scoresArray[430] || 0); // Explosion / Boom
+
+              // Direct crash sounds require >= 35% confidence. Generic bangs (claps/thuds) require >= 60% confidence.
+              if (maxDirectScore >= 0.35) {
+                isExceeded = true;
+                maxConfidence = maxDirectScore;
+                topClassName = directClassName;
+              } else if (explosionScore >= 0.60) {
+                isExceeded = true;
+                maxConfidence = explosionScore;
+                topClassName = (scoresArray[420] || 0) >= (scoresArray[430] || 0) ? 'Explosion' : 'Boom';
+              } else {
+                isExceeded = false;
+                maxConfidence = Math.max(maxDirectScore, explosionScore);
+                topClassName = directClassName;
+              }
+
+              console.log(`[Native YAMNet Inference] Direct Crash: ${(maxDirectScore * 100).toFixed(1)}% (${directClassName}), Explosion/Boom: ${(explosionScore * 100).toFixed(1)}% -> Trigger: ${isExceeded}`);
+
+              if (isExceeded && this.onCrashCallback) {
+                this.onCrashCallback(maxConfidence, topClassName);
+              }
+
+              this.logTelemetryWindow(maxConfidence, topClassName, isExceeded, true);
+              return;
             } else {
               console.log('[Native YAMNet Inference] Error: Received empty output buffers.');
             }
           }
-
-          const isExceeded = maxConfidence > CRASH_CONFIDENCE_THRESHOLD;
-
-          if (isExceeded && this.onCrashCallback) {
-            this.onCrashCallback(maxConfidence, topClassName);
-          }
-
-          this.logTelemetryWindow(maxConfidence, topClassName, isExceeded, true);
         } catch (err) {
           console.error('Transient YAMNet inference failed:', err);
         }

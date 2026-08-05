@@ -1,29 +1,30 @@
-import { Alert, NativeModules, PermissionsAndroid, Platform } from 'react-native';
+import { NativeModules, PermissionsAndroid, Platform } from 'react-native';
 import api from '../api/axios';
 import { classifyIntent, VoiceIntent } from '../utils/voiceClassifier';
 
-// Dynamic modules load wrappers to prevent Expo Go crashes
+// Log all registered NativeModules so we can see the exact module name
+console.log('[VoiceCommandService]: Registered NativeModules keys:', Object.keys(NativeModules).join(', '));
+
+// Always load Voice unconditionally — it registers as RCTVoice not Voice
 let Voice: any = null;
 let Vosk: any = null;
 let NetInfo: any = null;
 
-const isVoiceNativeSupported = !!NativeModules.Voice;
-const isVoskNativeSupported = !!NativeModules.Vosk || !!NativeModules.VoskModule;
+try {
+  const voiceModule = require('@react-native-voice/voice');
+  Voice = voiceModule.default || voiceModule;
+  console.log('[VoiceCommandService]: Voice module loaded, keys:', Object.keys(Voice || {}).join(', '));
+} catch (e: any) {
+  console.warn('[VoiceCommandService]: Voice require FAILED:', e?.message);
+}
 
 try {
   NetInfo = require('@react-native-community/netinfo').default;
 } catch (e) {
-  console.warn('NetInfo not loaded. Operating in default online mode.');
+  console.warn('NetInfo not loaded.');
 }
 
-if (isVoiceNativeSupported) {
-  try {
-    Voice = require('@react-native-voice/voice').default;
-  } catch (e) {
-    console.warn('Native Voice package could not be loaded.');
-  }
-}
-
+const isVoskNativeSupported = !!NativeModules.Vosk || !!NativeModules.VoskModule;
 if (isVoskNativeSupported) {
   try {
     Vosk = require('react-native-vosk').default;
@@ -56,7 +57,6 @@ export class VoiceCommandService {
 
   /**
    * Request microphone recording permission.
-   * Gracefully disables voice mode if denied.
    */
   static async requestPermissions(): Promise<boolean> {
     try {
@@ -71,23 +71,24 @@ export class VoiceCommandService {
             buttonPositive: 'OK',
           }
         );
+        console.log('[VoiceCommandService]: PermissionsAndroid.request RECORD_AUDIO result =', granted);
         return granted === PermissionsAndroid.RESULTS.GRANTED;
       }
       return true;
     } catch (err) {
-      console.warn('Permissions request error:', err);
+      console.warn('[VoiceCommandService]: Permissions request error:', err);
       return false;
     }
   }
 
   /**
-   * Starts listening to audio. Automatically chooses Native SpeechRecognizer (if online)
-   * or Vosk (if offline). Falls back to mock simulator if in Expo Go.
+   * Starts listening. Always tries native Voice first, falls back to Vosk or mock.
    */
   static async startListening() {
     if (this.isListening) return;
 
     const hasPermission = await this.requestPermissions();
+    console.log('[VoiceCommandService]: hasPermission =', hasPermission, 'Voice =', !!Voice);
     if (!hasPermission) {
       this.updateStatus('Voice permission denied.');
       return;
@@ -95,22 +96,12 @@ export class VoiceCommandService {
 
     this.isListening = true;
 
-    // Check connectivity status
-    let isOnline = true;
-    if (NetInfo) {
-      try {
-        const state = await NetInfo.fetch();
-        isOnline = !!state.isConnected;
-      } catch (e) {
-        isOnline = true;
-      }
-    }
-
-    if (isOnline && isVoiceNativeSupported && Voice) {
+    if (Voice) {
       this.startNativeSpeech();
-    } else if (!isOnline && isVoskNativeSupported && Vosk) {
+    } else if (isVoskNativeSupported && Vosk) {
       this.startVoskSpeech();
     } else {
+      console.warn('[VoiceCommandService]: No speech engine available. Using mock mode.');
       this.startMockSpeech();
     }
   }
@@ -120,9 +111,16 @@ export class VoiceCommandService {
    */
   static stopListening() {
     this.isListening = false;
+    this.sessionCount++; // Invalidate any in-flight session callbacks
     this.updateStatus('Idle');
 
-    if (isVoiceNativeSupported && Voice) {
+    // Cancel any pending restart timer
+    if (this.restartDelay) {
+      clearTimeout(this.restartDelay);
+      this.restartDelay = null;
+    }
+
+    if (Voice) {
       try {
         Voice.destroy().then(() => Voice.removeAllListeners());
       } catch (e) {
@@ -142,37 +140,80 @@ export class VoiceCommandService {
   /**
    * Native Google/Apple Cloud-assisted Speech Recognition API implementation
    */
+  private static restartDelay: ReturnType<typeof setTimeout> | null = null;
+  private static sessionCount = 0;
+
   private static startNativeSpeech() {
     this.updateEngine('Native (Online)');
     this.updateStatus('Listening...');
 
     if (!Voice) return;
 
-    try {
-      Voice.onSpeechResults = (e: any) => {
-        if (e.value && e.value.length > 0) {
-          const transcript = e.value[0];
-          this.handleTranscriptResult(transcript, true, 'native');
-        }
-      };
+    const scheduleRestart = (delayMs: number) => {
+      if (!this.isListening) return;
+      if (this.restartDelay) clearTimeout(this.restartDelay);
+      this.restartDelay = setTimeout(() => this.startNativeSpeech(), delayMs);
+    };
 
-      Voice.onSpeechPartialResults = (e: any) => {
-        if (e.value && e.value.length > 0) {
-          const transcript = e.value[0];
-          this.handleTranscriptResult(transcript, false, 'native');
-        }
-      };
+    // Tear down any previous session cleanly first
+    try { Voice.removeAllListeners(); } catch (_) {}
 
-      Voice.onSpeechError = (e: any) => {
-        console.log('Native Speech recognition error:', e.error);
-        this.updateStatus('Recognition Error');
-      };
+    Voice.destroy()
+      .catch(() => {})
+      .finally(() => {
+        if (!this.isListening) return;
 
-      Voice.start('en-US');
-    } catch (err) {
-      console.warn('Failed to start native Voice speech recognizer:', err);
-      this.startMockSpeech();
-    }
+        this.sessionCount++;
+        const session = this.sessionCount;
+        console.log(`[Voice] Session #${session} starting...`);
+
+        // Attach handlers BEFORE calling start()
+        Voice.onSpeechResults = (e: any) => {
+          if (!this.isListening || this.sessionCount !== session) return;
+          const transcript = e?.value?.[0] ?? '';
+          console.log(`[Voice] #${session} RESULT: "${transcript}"`);
+          if (transcript) this.handleTranscriptResult(transcript, true, 'native');
+          scheduleRestart(400);
+        };
+
+        Voice.onSpeechPartialResults = (e: any) => {
+          if (!this.isListening || this.sessionCount !== session) return;
+          const transcript = e?.value?.[0] ?? '';
+          console.log(`[Voice] #${session} PARTIAL: "${transcript}"`);
+          if (transcript) this.handleTranscriptResult(transcript, false, 'native');
+        };
+
+        // Do NOT restart on onSpeechEnd — that fires too eagerly before any audio
+        Voice.onSpeechEnd = () => {
+          console.log(`[Voice] #${session} onSpeechEnd`);
+        };
+
+        Voice.onSpeechError = (e: any) => {
+          if (!this.isListening || this.sessionCount !== session) return;
+          const code = String(e?.error?.code ?? e?.error ?? '');
+          console.log(`[Voice] #${session} ERROR code=${code}`);
+          // Recoverable errors — just restart:
+          // 2=network error, 6=speech timeout, 7=no match, 8=server error, 9=insufficient permissions
+          if (['2', '6', '7', '8', '9'].includes(code)) {
+            const delay = code === '2' ? 1500 : 500; // Longer delay for network errors
+            scheduleRestart(delay);
+          } else {
+            console.warn('[Voice] Unrecoverable error, stopping:', e.error);
+            this.isListening = false;
+          }
+        };
+
+        Voice.start('en-US', {
+            // Prefer on-device offline recognition — avoids ERROR_NETWORK (code 2)
+            // and works without Google cloud connectivity
+            EXTRA_PREFER_OFFLINE: true,
+          })
+          .then(() => console.log(`[Voice] #${session} start() OK — say something!`))
+          .catch((err: any) => {
+            console.warn(`[Voice] #${session} start() REJECTED:`, err?.message);
+            scheduleRestart(1000);
+          });
+      });
   }
 
   /**
@@ -250,19 +291,19 @@ export class VoiceCommandService {
       this.onTranscriptUpdateCallback(transcript, isFinal);
     }
 
-    if (!isFinal) return;
-
-    // Classify using our unit-tested intent classifier
+    // Classify using our unit-tested intent classifier in real-time (no latency)
     const intent = classifyIntent(transcript);
     let actionTaken = false;
 
     if (intent === 'CANCEL') {
       actionTaken = true;
+      this.stopListening(); // Stop immediately to prevent double-firing
       if (this.onCancelCallback) {
         this.onCancelCallback();
       }
     } else if (intent === 'SOS') {
       actionTaken = true;
+      this.stopListening(); // Stop immediately to prevent double-firing
       if (this.onSOSCallback) {
         this.onSOSCallback();
       }

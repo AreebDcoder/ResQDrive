@@ -12,27 +12,66 @@ async function main() {
     where: { email },
   });
 
-  if (existingAdmin) {
+  if (!existingAdmin) {
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash('AdminPassword123!', saltRounds);
+
+    const admin = await prisma.user.create({
+      data: {
+        fullName: 'ResQDrive Admin',
+        email,
+        phoneNumber,
+        passwordHash,
+        role: UserRole.ADMIN,
+        isVerified: true,
+        isActive: true,
+      },
+    });
+
+    console.log(`Successfully seeded Admin user: ${admin.email} (Password: AdminPassword123!)`);
+  } else {
     console.log('Admin user already exists.');
-    return;
   }
 
-  const saltRounds = 10;
-  const passwordHash = await bcrypt.hash('AdminPassword123!', saltRounds);
-
-  const admin = await prisma.user.create({
-    data: {
-      fullName: 'ResQDrive Admin',
-      email,
-      phoneNumber,
-      passwordHash,
-      role: UserRole.ADMIN,
-      isVerified: true,
-      isActive: true,
-    },
-  });
-
-  console.log(`Successfully seeded Admin user: ${admin.email} (Password: AdminPassword123!)`);
+  // Seed regional emergency numbers
+  const count = await prisma.regionalEmergencyNumber.count();
+  if (count === 0) {
+    await prisma.regionalEmergencyNumber.createMany({
+      data: [
+        {
+          regionName: 'Punjab / Islamabad',
+          serviceName: 'Rescue 1122',
+          phoneNumber: '1122',
+          priorityOrder: 1,
+          isActive: true,
+        },
+        {
+          regionName: 'Karachi',
+          serviceName: 'Edhi Foundation',
+          phoneNumber: '115',
+          priorityOrder: 1,
+          isActive: true,
+        },
+        {
+          regionName: 'Karachi',
+          serviceName: 'Chhipa Welfare',
+          phoneNumber: '1020',
+          priorityOrder: 2,
+          isActive: true,
+        },
+        {
+          regionName: 'Khyber Pakhtunkhwa',
+          serviceName: 'Rescue 1122 KPK',
+          phoneNumber: '1122',
+          priorityOrder: 1,
+          isActive: true,
+        },
+      ],
+    });
+    console.log('Successfully seeded regional emergency numbers.');
+  } else {
+    console.log('Regional emergency numbers already seeded.');
+  }
 }
 
 main()

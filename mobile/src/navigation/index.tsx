@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Linking, Switch, Platform, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Linking, Switch, Platform, StatusBar, Alert } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useSelector, useDispatch } from 'react-redux';
@@ -10,6 +10,7 @@ import * as Notifications from 'expo-notifications';
 import { dispatchEmergencyAlert } from '../utils/emergencyFallback';
 import { registerForPushNotificationsAsync } from '../utils/registerPushToken';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { logoutAction } from '../store/slices/authSlice';
 
 import SplashScreen from '../screens/SplashScreen';
 import LoginScreen from '../screens/LoginScreen';
@@ -26,12 +27,14 @@ import CreateIncidentScreen from '../screens/CreateIncidentScreen';
 import LocationSharingScreen from '../screens/LocationSharingScreen';
 import EmergencyNotificationScreen from '../screens/EmergencyNotificationScreen';
 import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
+import AdminEmergencyNumbersScreen from '../screens/admin/AdminEmergencyNumbersScreen';
 import SOSScreen from '../screens/SOSScreen';
 import MyVehiclesScreen from '../screens/MyVehiclesScreen';
 import AddEditVehicleScreen from '../screens/AddEditVehicleScreen';
 import VehicleInsuranceScreen from '../screens/VehicleInsuranceScreen';
 import EmergencyContactsScreen from '../screens/EmergencyContactsScreen';
 import AddEditContactScreen from '../screens/AddEditContactScreen';
+import CustomEmergencyNumbersScreen from '../screens/CustomEmergencyNumbersScreen';
 import NotificationPreferencesScreen from '../screens/NotificationPreferencesScreen';
 import NotificationHistoryScreen from '../screens/NotificationHistoryScreen';
 import CrashSoundDemoScreen from '../screens/CrashSoundDemoScreen';
@@ -41,8 +44,10 @@ import RepairCostScreen from '../screens/RepairCostScreen';
 import { FCMService } from '../services/fcmService';
 import CountdownScreen from '../screens/CountdownScreen';
 import { CrashSoundDetectionService } from '../services/crashSoundDetectionService';
+import { VoiceCommandService } from '../services/voiceCommandService';
 import BleSensorDemoScreen from '../screens/BleSensorDemoScreen';
 import { sensorSourceManager } from '../services/sensorSourceManager';
+import { DrivingNotificationService } from '../services/drivingNotificationService';
 
 const Stack = createStackNavigator();
 
@@ -93,6 +98,56 @@ function DriverHome({ navigation }: any) {
     const unsubscribe = FCMService.setupFCMListeners();
     return unsubscribe;
   }, [dispatch]);
+
+  React.useEffect(() => {
+    // Subscribe to VoiceCommandService SOS callback globally
+    VoiceCommandService.subscribeToCallbacks(
+      () => {
+        console.log('Voice Abort Callback Fired');
+      },
+      async () => {
+        console.log('Voice SOS Callback Fired! Dialing immediately.');
+        try {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status !== 'granted') {
+            console.log('Location permission denied, dialing default.');
+            Linking.openURL('tel:1122');
+            return;
+          }
+          const location = await Promise.race([
+            Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+            new Promise<any>((resolve) => setTimeout(() => resolve(null), 3000))
+          ]);
+          const latitude = location?.coords?.latitude ?? 33.6844;
+          const longitude = location?.coords?.longitude ?? 73.0479;
+
+          const response = await api.get('/emergency-sos/numbers', {
+            params: { lat: latitude, lng: longitude },
+          });
+
+          const regional = response.data.regionalNumbers || [];
+          const custom = response.data.customNumbers || [];
+          const target = regional[0] || custom[0];
+
+          if (target) {
+            await api.post('/emergency-sos/log-call', {
+              serviceName: target.serviceName || target.label || 'Rescue',
+              autoDialed: false,
+            });
+            Linking.openURL(`tel:${target.phoneNumber}`);
+          } else {
+            Linking.openURL('tel:1122');
+          }
+        } catch (err) {
+          console.log('Voice SOS execution failed:', err);
+          Linking.openURL('tel:1122');
+        }
+      },
+      () => {},
+      () => {},
+      () => {}
+    );
+  }, []);
 
   React.useEffect(() => {
     CrashSoundDetectionService.subscribeToCrashEvents((confidence, topClass) => {
@@ -285,6 +340,47 @@ function DriverHome({ navigation }: any) {
     } else {
       setActiveTab(tabName);
     }
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to log out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: () => {
+            dispatch(logoutAction());
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you absolutely sure you want to permanently delete your account? This action is irreversible and all your vehicles, incidents, and data will be deleted forever.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Permanently',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete('/users/me');
+              dispatch(logoutAction());
+              Alert.alert('Account Deleted', 'Your account has been deleted successfully.');
+            } catch (err: any) {
+              console.log('Failed to delete account:', err);
+              Alert.alert('Error', 'Failed to delete your account. Please try again.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   // Render content based on activeTab
@@ -519,6 +615,17 @@ function DriverHome({ navigation }: any) {
                 style={styles.menuItem}
                 onPress={() => {
                   setIsDrawerOpen(false);
+                  navigation.navigate('CustomEmergencyNumbers');
+                }}
+              >
+                <Text style={styles.menuItemText}>➕ Custom Override Numbers</Text>
+                <Text style={styles.menuItemArrow}>›</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => {
+                  setIsDrawerOpen(false);
                   navigation.navigate('NotificationHistory');
                 }}
               >
@@ -652,6 +759,30 @@ function DriverHome({ navigation }: any) {
               >
                 <Text style={[styles.menuItemText, { color: '#fff' }]}>💥 Simulate Crash (Test Countdown)</Text>
                 <Text style={[styles.menuItemArrow, { color: '#fff' }]}>›</Text>
+              </TouchableOpacity>
+
+              {/* Logout Button */}
+              <TouchableOpacity
+                style={[styles.menuItem, { marginTop: 12, borderTopWidth: 1, borderTopColor: '#2e2e2e', paddingTop: 16 }]}
+                onPress={() => {
+                  setIsDrawerOpen(false);
+                  handleLogout();
+                }}
+              >
+                <Text style={[styles.menuItemText, { color: '#ff9800', fontWeight: 'bold' }]}>🔓 Log Out</Text>
+                <Text style={[styles.menuItemArrow, { color: '#ff9800' }]}>›</Text>
+              </TouchableOpacity>
+
+              {/* Delete Account Button */}
+              <TouchableOpacity
+                style={[styles.menuItem, { backgroundColor: '#2c1212', borderColor: '#d32f2f', borderWidth: 1 }]}
+                onPress={() => {
+                  setIsDrawerOpen(false);
+                  handleDeleteAccount();
+                }}
+              >
+                <Text style={[styles.menuItemText, { color: '#ff1744', fontWeight: 'bold' }]}>🗑️ Delete Account</Text>
+                <Text style={[styles.menuItemArrow, { color: '#ff1744' }]}>›</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -805,15 +936,6 @@ function AppStack({ role }: { role: string }) {
     registerForPushNotificationsAsync().catch((err) => {
       console.log('Push notification registration failed:', err);
     });
-
-    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-      const mapsLink = response.notification.request.content.data?.mapsLink as string;
-      if (mapsLink) {
-        Linking.openURL(mapsLink);
-      }
-    });
-
-    return () => subscription.remove();
   }, []);
 
   return (
@@ -833,9 +955,11 @@ function AppStack({ role }: { role: string }) {
       <Stack.Screen name="IncidentDetail" component={IncidentDetailScreen} options={{ title: 'Incident Detail' }} />
       <Stack.Screen name="CreateIncident" component={CreateIncidentScreen} options={({ route }: any) => ({ title: route.params?.mode === 'edit' ? 'Edit Incident' : 'New Incident' })} />
       <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} options={{ title: 'Admin Dashboard' }} />
+      <Stack.Screen name="AdminEmergencyNumbers" component={AdminEmergencyNumbersScreen} options={{ title: 'Manage Regional Numbers' }} />
       <Stack.Screen name="LocationSharing" component={LocationSharingScreen} options={{ title: 'Live Location' }} />
       <Stack.Screen name="EmergencyNotification" component={EmergencyNotificationScreen} options={{ title: 'Emergency Alert' }} />
       <Stack.Screen name="SOS" component={SOSScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CustomEmergencyNumbers" component={CustomEmergencyNumbersScreen} options={{ title: 'Custom Overrides' }} />
       <Stack.Screen name="MyVehicles" component={MyVehiclesScreen} options={{ title: 'My Vehicles' }} />
       <Stack.Screen name="AddEditVehicle" component={AddEditVehicleScreen} options={{ title: 'Vehicle Details' }} />
       <Stack.Screen name="VehicleInsurance" component={VehicleInsuranceScreen} options={{ title: 'Insurance Reference' }} />

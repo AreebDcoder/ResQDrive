@@ -91,6 +91,9 @@ model User {
   voiceCommandLogs       VoiceCommandLog[]
   damageAssessments      DamageAssessment[]
   repairCostReports      RepairCostReport[]
+  updatedRegionalNumbers  RegionalEmergencyNumber[]   @relation("AdminUpdatedNumbers")
+  customEmergencyNumbers  UserCustomEmergencyNumber[]
+  accidentReports         AccidentReport[]
 
   @@map("users")
 }
@@ -287,6 +290,7 @@ model Vehicle {
   insurance    VehicleInsurance?
   damageAssessments DamageAssessment[]
   repairCostReports RepairCostReport[]
+  accidentReports   AccidentReport[]
 
   @@map("vehicles")
 }
@@ -519,4 +523,58 @@ model RepairCostReport {
   vehicle         Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
 
   @@map("repair_cost_reports")
+}
+
+enum AccidentReportSeverity {
+  minor
+  moderate
+  severe
+}
+
+model RegionalEmergencyNumber {
+  id                String    @id @default(uuid()) @db.Uuid
+  regionName        String    @map("region_name")
+  serviceName       String    @map("service_name")
+  phoneNumber       String    @map("phone_number")
+  priorityOrder     Int       @default(1) @map("priority_order")
+  isActive          Boolean   @default(true) @map("is_active")
+  updatedByAdminId  String?   @map("updated_by_admin_id") @db.Uuid
+  updatedByAdmin    User?     @relation("AdminUpdatedNumbers", fields: [updatedByAdminId], references: [id], onDelete: SetNull)
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@map("regional_emergency_numbers")
+}
+
+model UserCustomEmergencyNumber {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label         String
+  phoneNumber   String   @map("phone_number")
+  priorityOrder Int      @default(1) @map("priority_order")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("user_custom_emergency_numbers")
+}
+
+model AccidentReport {
+  id                String                 @id @default(uuid()) @db.Uuid
+  userId            String                 @map("user_id") @db.Uuid
+  user              User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicleId         String?                @map("vehicle_id") @db.Uuid
+  vehicle           Vehicle?               @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  incidentId        String?                @map("incident_id") @db.Uuid
+  severity          AccidentReportSeverity
+  latitude          Float?
+  longitude         Float?
+  detectedRegion    String?                @map("detected_region")
+  calledServiceName String?                @map("called_service_name")
+  calledAt          DateTime?              @map("called_at")
+  autoDialed        Boolean                @default(false) @map("auto_dialed")
+  damagePhotoUrls   Json?                  @map("damage_photo_urls")
+  pdfUrl            String?                @map("pdf_url")
+  createdAt         DateTime               @default(now()) @map("created_at")
+
+  @@map("accident_reports")
 }

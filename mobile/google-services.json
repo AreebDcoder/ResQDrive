@@ -1,13 +1,14 @@
 {
   "project_info": {
-    "project_number": "67462047048",
-    "project_id": "resqdrive-f55dd",
-    "storage_bucket": "resqdrive-f55dd.firebasestorage.app"
+    "project_number": "380626624829",
+    "firebase_url": "https://database-5b633-default-rtdb.firebaseio.com",
+    "project_id": "database-5b633",
+    "storage_bucket": "database-5b633.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:67462047048:android:94f6f038ca10fefd383f7d",
+        "mobilesdk_app_id": "1:380626624829:android:89004d0bdd114c7b176554",
         "android_client_info": {
           "package_name": "com.basit_009.resqdrivemobile"
         }
@@ -15,7 +16,26 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAMxau3GeWhobnsVumOG6iuC8r-3fELkNw"
+          "current_key": "AIzaSyA8YU7vnK148oz1965JFnIsd94pEqQC8gQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:380626624829:android:8b84626e0929cf36176554",
+        "android_client_info": {
+          "package_name": "com.resqdrive"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA8YU7vnK148oz1965JFnIsd94pEqQC8gQ"
         }
       ],
       "services": {

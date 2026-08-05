@@ -117,59 +117,126 @@ export class AlertDispatchService {
   }
 
   /**
-   * Sends Real Push Notifications via Firebase Cloud Messaging (FCM)
+   * Sends Push Notifications via:
+   * 1. Expo Push API  → for ExponentPushToken stored in user.pushToken
+   * 2. Firebase Admin → for raw FCM tokens in DeviceToken table
    */
   private async sendPushChannel(payload: AlertPayload, mapsLink: string): Promise<void> {
-    if (!this.firebaseAdmin) {
-      throw new Error('Firebase Admin SDK is not initialized.');
-    }
+    const messageBody = `🚨 ${payload.userName} may have been in a ${payload.severity} accident. Tap to view location.`;
 
-    // 1. Fetch the driver's active device tokens from the database
-    const devices = await this.prisma.deviceToken.findMany({
+    // Collect tokens
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: { pushToken: true },
+    });
+
+    const fcmDevices = await this.prisma.deviceToken.findMany({
       where: { userId: payload.userId, isActive: true },
     });
 
-    if (devices.length === 0) {
-      throw new Error('No active device tokens found for the driver');
+    const expoTokens: string[] = [];
+    const fcmTokens: string[] = fcmDevices
+      .map((d) => d.fcmToken)
+      .filter((t) => !t.startsWith('mock-'));
+
+    if (user?.pushToken) {
+      if (Expo.isExpoPushToken(user.pushToken)) {
+        expoTokens.push(user.pushToken);
+      } else {
+        fcmTokens.push(user.pushToken);
+      }
     }
 
-    const registrationTokens = devices.map((d) => d.fcmToken);
-    const messageBody = `🚨 ${payload.userName} may have been in a ${payload.severity} accident. Tap to view location.`;
+    if (expoTokens.length === 0 && fcmTokens.length === 0) {
+      throw new Error('No active push tokens found for this user.');
+    }
 
-    // 2. Send via Firebase Admin SDK
-    const response = await this.firebaseAdmin.messaging().sendEachForMulticast({
-      tokens: registrationTokens,
-      notification: {
+    let anySuccess = false;
+
+    // --- Expo Push API ---
+    if (expoTokens.length > 0) {
+      const messages: ExpoPushMessage[] = expoTokens.map((token) => ({
+        to: token,
         title: '🚨 ResQDrive Emergency Alert',
         body: messageBody,
-      },
-      data: { mapsLink, severity: payload.severity },
-    });
+        data: { mapsLink, severity: payload.severity },
+        priority: 'high',
+        sound: 'default',
+        channelId: 'emergency-alerts',
+      }));
 
-    // 3. Handle failed tokens (e.g. app uninstalled)
-    if (response.failureCount > 0) {
-      const failedTokens: string[] = [];
-      response.responses.forEach((resp: any, idx: number) => {
-        if (!resp.success) {
-          failedTokens.push(registrationTokens[idx]);
+      const chunks = this.expo.chunkPushNotifications(messages);
+      for (const chunk of chunks) {
+        try {
+          const tickets = await this.expo.sendPushNotificationsAsync(chunk);
+          const sent = tickets.filter((t) => t.status === 'ok').length;
+          if (sent > 0) anySuccess = true;
+
+          const receiptIds: string[] = tickets
+            .filter((t) => t.status === 'ok' && (t as any).id)
+            .map((t) => (t as any).id);
+
+          this.logger.log(`✅ Expo push sent: ${sent}/${tickets.length} tickets OK`);
+
+          // Check receipts after 5s
+          if (receiptIds.length > 0) {
+            setTimeout(async () => {
+              try {
+                const receiptChunks = this.expo.chunkPushNotificationReceiptIds(receiptIds);
+                for (const rc of receiptChunks) {
+                  const receipts = await this.expo.getPushNotificationReceiptsAsync(rc);
+                  for (const [id, receipt] of Object.entries(receipts)) {
+                    if (receipt.status === 'ok') {
+                      this.logger.log(`📬 Push receipt [${id}]: DELIVERED ✅`);
+                    } else {
+                      this.logger.warn(`📬 Push receipt [${id}]: FAILED — ${JSON.stringify(receipt)}`);
+                    }
+                  }
+                }
+              } catch (err: any) {
+                this.logger.warn(`Receipt check failed: ${err.message}`);
+              }
+            }, 5000);
+          }
+        } catch (err: any) {
+          this.logger.warn(`Expo push chunk failed: ${err.message}`);
         }
-      });
-      
-      // Deactivate failed tokens in the database
-      if (failedTokens.length > 0) {
-        await this.prisma.deviceToken.updateMany({
-          where: { userId: payload.userId, fcmToken: { in: failedTokens } },
-          data: { isActive: false },
-        });
-      }
-
-      if (response.successCount === 0) {
-        throw new Error('All Firebase push notifications failed');
       }
     }
-    
-    this.logger.log(`✅ Push notification sent to ${response.successCount} device(s) via Firebase!`);
+
+    // --- Firebase Admin SDK (raw FCM tokens) ---
+    if (fcmTokens.length > 0 && this.firebaseAdmin) {
+      try {
+        const response = await this.firebaseAdmin.messaging().sendEachForMulticast({
+          tokens: fcmTokens,
+          notification: { title: '🚨 ResQDrive Emergency Alert', body: messageBody },
+          data: { mapsLink, severity: payload.severity },
+          android: { priority: 'high', notification: { channelId: 'emergency-alerts' } },
+        });
+
+        if (response.successCount > 0) anySuccess = true;
+
+        const failedTokens: string[] = [];
+        response.responses.forEach((resp: any, idx: number) => {
+          if (!resp.success) failedTokens.push(fcmTokens[idx]);
+        });
+        if (failedTokens.length > 0) {
+          await this.prisma.deviceToken.updateMany({
+            where: { userId: payload.userId, fcmToken: { in: failedTokens } },
+            data: { isActive: false },
+          });
+        }
+        this.logger.log(`✅ FCM push sent to ${response.successCount}/${fcmTokens.length} device(s)`);
+      } catch (err: any) {
+        this.logger.warn(`Firebase push failed: ${err.message}`);
+      }
+    }
+
+    if (!anySuccess) {
+      throw new Error('All push notification channels failed.');
+    }
   }
+
 
   /**
    * Sends real SMS via Twilio silently from the backend server.

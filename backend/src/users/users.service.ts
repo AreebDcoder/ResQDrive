@@ -122,4 +122,43 @@ export class UsersService {
 
     return { message: 'Password updated successfully. You have been logged out of all devices.' };
   }
+
+  async deleteAccount(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Delete profile details
+      await tx.driverDetails.deleteMany({ where: { userId } });
+      await tx.mechanicDetails.deleteMany({ where: { userId } });
+
+      // 2. Delete configuration and sessions
+      await tx.refreshToken.deleteMany({ where: { userId } });
+      await tx.passwordResetToken.deleteMany({ where: { userId } });
+      await tx.deviceToken.deleteMany({ where: { userId } });
+      await tx.notificationPreference.deleteMany({ where: { userId } });
+      await tx.notificationLog.deleteMany({ where: { userId } });
+      await tx.notificationSession.deleteMany({ where: { userId } });
+
+      // 3. Delete logs & contacts
+      await tx.crashSoundDetectionLog.deleteMany({ where: { userId } });
+      await tx.voiceCommandLog.deleteMany({ where: { userId } });
+      await tx.emergencyContact.deleteMany({ where: { userId } });
+      await tx.locationSession.deleteMany({ where: { userId } });
+
+      // 4. Delete user data records
+      await tx.vehicle.deleteMany({ where: { userId } });
+      await tx.damageAssessment.deleteMany({ where: { userId } });
+      await tx.repairCostReport.deleteMany({ where: { userId } });
+      await tx.incident.deleteMany({ where: { userId } });
+
+      // 5. Finally delete the user account
+      await tx.user.delete({ where: { id: userId } });
+    });
+  }
 }

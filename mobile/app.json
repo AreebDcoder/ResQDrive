@@ -24,7 +24,8 @@
         "ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
-        "RECORD_AUDIO"
+        "RECORD_AUDIO",
+        "android.permission.RECORD_AUDIO"
       ],
       "googleServicesFile": "./google-services.json",
       "package": "com.basit_009.resqdrivemobile"
@@ -33,6 +34,12 @@
       "./plugins/withManifestFix",
       "@react-native-firebase/app",
       "@react-native-firebase/messaging",
+      [
+        "@react-native-voice/voice",
+        {
+          "microphonePermission": "Allow ResQDrive to recognize hands-free voice commands."
+        }
+      ],
       "./plugins/withExcludeOldSupportLib",
       [
         "expo-location",
@@ -45,9 +52,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "8f305b36-7ae5-4a0c-be6d-ffb44c306565"
+        "projectId": "a2c8c14e-cb8b-452e-949b-e23cb10ae9ee"
       }
     },
-    "owner": "resqdrive"
+    "owner": "areebislam77"
   }
 }

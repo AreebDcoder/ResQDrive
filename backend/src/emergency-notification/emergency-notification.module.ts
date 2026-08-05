@@ -3,9 +3,10 @@ import { EmergencyNotificationController } from './emergency-notification.contro
 import { EmergencyNotificationService } from './emergency-notification.service';
 import { EmergencyNotificationScheduler } from './emergency-notification.scheduler';
 import { LocationSharingModule } from '../location-sharing/location-sharing.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [LocationSharingModule],
+  imports: [LocationSharingModule, NotificationsModule],
   controllers: [EmergencyNotificationController],
   providers: [EmergencyNotificationService, EmergencyNotificationScheduler],
   exports: [EmergencyNotificationService],

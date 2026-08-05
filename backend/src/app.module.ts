@@ -13,6 +13,7 @@ import { LocationSharingModule } from './location-sharing/location-sharing.modul
 import { EmergencyNotificationModule } from './emergency-notification/emergency-notification.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EmergencyNumbersModule } from './emergency-numbers/emergency-numbers.module';
+import { EmergencySosModule } from './emergency-sos/emergency-sos.module';
 import { AlertDispatchModule } from './alert-dispatch/alert-dispatch.module';
 import { VehiclesModule } from './vehicles/vehicles.module';
 import { EmergencyContactsModule } from './emergency-contacts/emergency-contacts.module';
@@ -41,6 +42,7 @@ import { RepairCostModule } from './repair-cost/repair-cost.module';
     LocationSharingModule,
     EmergencyNotificationModule,
     EmergencyNumbersModule,
+    EmergencySosModule,
     AlertDispatchModule,
     VehiclesModule,
     EmergencyContactsModule,

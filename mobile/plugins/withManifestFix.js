@@ -17,6 +17,29 @@ module.exports = function withManifestFix(config) {
     application['$']['android:appComponentFactory'] = 'androidx.core.app.CoreComponentFactory';
     application['$']['tools:replace'] = 'android:appComponentFactory';
 
+    // Add queries for speech recognition package visibility
+    if (!manifest.queries) {
+      manifest.queries = [{ intent: [] }];
+    }
+    const queries = manifest.queries[0];
+    if (!queries.intent) {
+      queries.intent = [];
+    }
+    const hasSpeechQuery = queries.intent.some(
+      (item) => item.action && item.action[0]['$'] && item.action[0]['$']['android:name'] === 'android.speech.RecognitionService'
+    );
+    if (!hasSpeechQuery) {
+      queries.intent.push({
+        action: [
+          {
+            '$': {
+              'android:name': 'android.speech.RecognitionService'
+            }
+          }
+        ]
+      });
+    }
+
     return config;
   });
 

@@ -14,7 +14,7 @@ const SEVERITY_COLORS: Record<string, string> = {
   NONE: '#6B6B80', MINOR: '#FFD600', MODERATE: '#FF9100', SEVERE: '#FF1744',
 };
 
-export default function AdminDashboardScreen() {
+export default function AdminDashboardScreen({ navigation }: any) {
   const dispatch = useDispatch<any>();
   const { summary, trends, hotspots, isLoading, isRefreshing, error } = useSelector(
     (state: RootState) => state.admin
@@ -91,6 +91,13 @@ export default function AdminDashboardScreen() {
           contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#E53935']} tintColor="#E53935" />}
         >
+          <TouchableOpacity
+            style={styles.manageSosBtn}
+            onPress={() => navigation.navigate('AdminEmergencyNumbers')}
+          >
+            <Text style={styles.manageSosBtnText}>📞 Manage SOS Emergency Numbers</Text>
+          </TouchableOpacity>
+
           <Text style={styles.sectionTitle}>Overview</Text>
           <View style={styles.cardsRow}>
             <View style={[styles.card, { borderLeftColor: '#E53935' }]}>
@@ -275,4 +282,22 @@ const styles = StyleSheet.create({
   recentAddr: { color: '#6B6B80', fontSize: 11, marginTop: 2 },
   recentStatus: { color: '#6B6B80', fontSize: 11, textTransform: 'capitalize' },
   emptyText: { color: '#6B6B80', fontSize: 13, textAlign: 'center', paddingVertical: 12 },
+  manageSosBtn: {
+    backgroundColor: '#E53935',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginBottom: 16,
+    alignItems: 'center',
+    shadowColor: '#E53935',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  manageSosBtnText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 15,
+  },
 });

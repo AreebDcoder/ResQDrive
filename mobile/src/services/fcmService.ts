@@ -67,8 +67,9 @@ export class FCMService {
       if (messaging && isNativeFirebaseLinked) {
         try {
           fcmToken = await messaging().getToken();
-        } catch (e) {
-          console.warn('Native FCM token retrieval failed. Falling back to mock token.');
+        } catch (e: any) {
+          console.warn('Native FCM token retrieval failed:', e?.message ?? e);
+          console.warn('FCM error stack:', e?.stack ?? 'no stack');
         }
       }
 

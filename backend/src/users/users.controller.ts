@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -64,5 +65,13 @@ export class UsersController {
   ) {
     const profilePictureUrl = await this.uploadService.uploadProfilePicture(file);
     return this.usersService.updateProfile(user.id, { profilePictureUrl });
+  }
+
+  @Delete('me')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete current user account' })
+  @ApiResponse({ status: 204, description: 'Account deleted successfully.' })
+  async deleteAccount(@CurrentUser() user: { id: string }) {
+    return this.usersService.deleteAccount(user.id);
   }
 }

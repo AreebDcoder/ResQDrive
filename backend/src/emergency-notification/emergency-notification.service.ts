@@ -4,7 +4,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { NotificationChannel, NotificationSessionStatus, NotificationAttemptStatus } from '@prisma/client';
+import { NotificationChannel, NotificationSessionStatus, NotificationAttemptStatus, NotificationCategory } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { LocationSharingService } from '../location-sharing/location-sharing.service';
 import { TriggerNotificationDto } from './dto/trigger-notification.dto';
@@ -21,6 +21,8 @@ interface TestContact {
   priorityOrder: number;
 }
 
+import { NotificationsService } from '../notifications/notifications.service';
+
 @Injectable()
 export class EmergencyNotificationService {
   private readonly logger = new Logger(EmergencyNotificationService.name);
@@ -28,6 +30,7 @@ export class EmergencyNotificationService {
   constructor(
     private prisma: PrismaService,
     private locationSharingService: LocationSharingService,
+    private notificationsService: NotificationsService,
   ) {}
 
   private getTestContacts(): TestContact[] {
@@ -157,6 +160,20 @@ export class EmergencyNotificationService {
     }
 
     this.logger.log(`Emergency notification ${sessionId} cancelled by user`);
+
+    // Log & Push False Alarm Notification per user preference
+    try {
+      await this.notificationsService.send(
+        userId,
+        NotificationCategory.false_alarm_log,
+        '⚠️ Alert Cancelled (False Alarm Logged)',
+        'Emergency alert was cancelled by user. Emergency contacts notified of safety.',
+        { sessionId }
+      );
+    } catch (err: any) {
+      this.logger.warn(`Could not dispatch false alarm log notification: ${err.message}`);
+    }
+
     return { sessionId: updated.id, status: updated.status, cancelledAt: updated.cancelledAt };
   }
 
@@ -196,6 +213,20 @@ export class EmergencyNotificationService {
     ]);
 
     this.logger.log(`Session ${session.id} acknowledged by ${acknowledgerName}`);
+
+    // Dispatch Alert Delivery Confirmation per user preference
+    try {
+      await this.notificationsService.send(
+        session.userId,
+        NotificationCategory.alert_delivery_confirmation,
+        '🛡️ Emergency Alert Acknowledged',
+        `Your emergency alert was acknowledged by ${acknowledgerName}.`,
+        { sessionId: session.id, acknowledgedBy: acknowledgerName }
+      );
+    } catch (err: any) {
+      this.logger.warn(`Could not dispatch delivery confirmation notification: ${err.message}`);
+    }
+
     return {
       sessionId: session.id,
       status: NotificationSessionStatus.ACKNOWLEDGED,

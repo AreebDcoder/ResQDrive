@@ -12,8 +12,11 @@ import {
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import api from '../api/axios';
+import * as Notifications from 'expo-notifications';
 import { dispatchEmergencyAlert } from '../utils/emergencyFallback';
 import * as Sms from 'expo-sms';
+import { VoiceCommandService } from '../services/voiceCommandService';
+import { CrashSoundDetectionService } from '../services/crashSoundDetectionService';
 
 const COUNTDOWN_SECONDS = 10;
 
@@ -51,7 +54,7 @@ export default function CountdownScreen({ navigation, route }: any) {
   const logIncident = useCallback(
     async (status: 'FALSE_ALARM' | 'ACTIVE', dispatchStatus?: Record<string, any>) => {
       try {
-        await api.post('/incidents', {
+        const response = await api.post('/incidents', {
           type: 'AUTO',
           severity: status === 'FALSE_ALARM' ? 'NONE' : severity.toUpperCase(),
           status,
@@ -60,12 +63,14 @@ export default function CountdownScreen({ navigation, route }: any) {
           longitude,
           description:
             status === 'FALSE_ALARM'
-              ? 'Countdown cancelled by user \u2014 false alarm'
-              : 'Countdown reached zero \u2014 emergency alert dispatched',
+              ? 'Countdown cancelled by user false alarm'
+              : 'Countdown reached zero emergency alert dispatched',
           alertDispatchStatus: dispatchStatus,
         });
+        return response.data;
       } catch (err) {
         console.log('Failed to log incident:', err);
+        return null;
       }
     },
     [severity, latitude, longitude],
@@ -97,7 +102,7 @@ export default function CountdownScreen({ navigation, route }: any) {
       if (isAvailable) {
         const phoneNumbers = dispatchContacts.map(c => c.phoneNumber);
         const messageBody = `ResQDrive ALERT: ${user?.fullName || 'Unknown'} may have been in a ${severity} accident. Location: https://www.google.com/maps?q=${latitude},${longitude}`;
-        
+
         await Sms.sendSMSAsync(phoneNumbers, messageBody);
         console.log('SMS sent successfully via device SIM!');
       } else {
@@ -134,10 +139,69 @@ export default function CountdownScreen({ navigation, route }: any) {
       result = { mode: 'failed' };
     }
 
-    await logIncident('ACTIVE', { dispatchMode: result.mode, smsSentViaDevice: true });
+    const incident = await logIncident('ACTIVE', { dispatchMode: result.mode, smsSentViaDevice: true });
 
-    navigation.replace('Home');
+    // Instantly present local Emergency Push Notification on device
+    try {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '🚨 ResQDrive Emergency Alert',
+          body: `Multi-channel emergency alert dispatched to contacts! Live GPS tracking active.`,
+          sound: true,
+          data: { mapsLink: `https://www.google.com/maps?q=${latitude},${longitude}`, severity },
+        },
+        trigger: null,
+      });
+    } catch (e) {
+      console.log('Local emergency notification trigger failed:', e);
+    }
+
+    navigation.replace('SOS', {
+      severity: severity.toLowerCase(),
+      incidentId: incident?.id || null,
+    });
   }, [contacts, user, severity, latitude, longitude, logIncident, navigation]);
+
+  const cancelCallbackRef = useRef(handleCancel);
+  const timeoutCallbackRef = useRef(handleTimeout);
+
+  useEffect(() => {
+    cancelCallbackRef.current = handleCancel;
+    timeoutCallbackRef.current = handleTimeout;
+  }, [handleCancel, handleTimeout]);
+
+  useEffect(() => {
+    // Release the microphone from crash detection so speech recognizer gets exclusive access
+    console.log('[Countdown]: Stopping crash audio monitoring to free microphone for voice commands.');
+    CrashSoundDetectionService.stopMonitoring();
+
+    // Small delay to let the native mic resource fully release before starting speech recognition
+    const startDelay = setTimeout(() => {
+      VoiceCommandService.startListening();
+    }, 600);
+
+    VoiceCommandService.subscribeToCallbacks(
+      () => {
+        console.log('[Countdown Voice Command]: CANCEL action detected.');
+        cancelCallbackRef.current('VOICE');
+      },
+      () => {
+        console.log('[Countdown Voice Command]: SOS action detected. Bypassing countdown!');
+        timeoutCallbackRef.current();
+      },
+      () => {},
+      () => {},
+      () => {}
+    );
+
+    return () => {
+      clearTimeout(startDelay);
+      // Stop voice, restart crash monitoring
+      VoiceCommandService.stopListening();
+      console.log('[Countdown]: Restarting crash audio monitoring.');
+      CrashSoundDetectionService.startMonitoring();
+    };
+  }, []);
 
   useEffect(() => {
     intervalRef.current = setInterval(() => {
@@ -180,7 +244,7 @@ export default function CountdownScreen({ navigation, route }: any) {
           <View style={[StyleSheet.absoluteFillObject, styles.gradBottom]} />
         </View>
         <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', opacity: fadeAnim }}>
-          <Text style={styles.dispatchingIcon}>\ud83d\udce1</Text>
+          <Text style={styles.dispatchingIcon}></Text>
           <Text style={styles.dispatchingText}>Sending emergency alert...</Text>
         </Animated.View>
       </SafeAreaView>
@@ -214,10 +278,27 @@ export default function CountdownScreen({ navigation, route }: any) {
           onPress={() => handleCancel('BUTTON')}
           activeOpacity={0.85}
         >
-          <Text style={styles.cancelBtnText}>I AM OK \u2014 CANCEL</Text>
+          <Text style={styles.cancelBtnText}>I AM OK CANCEL</Text>
         </TouchableOpacity>
 
-        <Text style={styles.voiceHint}>\ud83d\udcac You can also say "I am OK" or "Cancel"</Text>
+        <Text style={styles.voiceHint}>You can also say "I am OK" or "Cancel"</Text>
+
+        {__DEV__ && (
+          <View style={styles.devSimRow}>
+            <TouchableOpacity
+              style={styles.devSimBtn}
+              onPress={() => VoiceCommandService.simulateSpeechInput('Cancel')}
+            >
+              <Text style={styles.devSimText}>🗣️ Simulate Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.devSimBtn, { borderColor: '#d32f2f' }]}
+              onPress={() => VoiceCommandService.simulateSpeechInput('SOS')}
+            >
+              <Text style={[styles.devSimText, { color: '#ff1744' }]}>🗣️ Simulate SOS</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </Animated.View>
     </SafeAreaView>
   );
@@ -228,7 +309,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0A0A0F',
   },
- gradTop: { top: 0, height: 400, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
+  gradTop: { top: 0, height: 400, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
   gradBottom: { bottom: 0, height: 400, backgroundColor: 'rgba(229, 57, 53, 0.06)' },
   gradCenter: { top: '30%', height: 300, backgroundColor: 'rgba(229, 57, 53, 0.05)' },
   warningLabel: {
@@ -317,5 +398,24 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '600',
+  },
+  devSimRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+    marginTop: 16,
+  },
+  devSimBtn: {
+    backgroundColor: '#1c1c2e',
+    borderColor: '#3e3e3e',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  devSimText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });
