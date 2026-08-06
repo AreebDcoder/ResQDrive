@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query, Res, UseGuard
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
+import { GoogleAuthService } from './google-auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
@@ -11,11 +12,47 @@ import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Response } from 'express';
+import { PrismaService } from '../prisma/prisma.service';
 
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+   constructor(
+    private authService: AuthService,
+    private googleAuthService: GoogleAuthService,
+    private prisma: PrismaService,
+  ) {}
+  @Post('google')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Login or pre-register via Google Sign-In' })
+  async googleLogin(@Body('idToken') idToken: string) {
+    if (!idToken) {
+      throw new (await import('@nestjs/common')).BadRequestException('idToken is required');
+    }
+    const result = await this.googleAuthService.verifyGoogleToken(idToken);
+
+    if (result.isNewUser) {
+      return { isNewUser: true, googleData: result.googleData };
+    }
+
+    // Fetch user fresh from DB (guaranteed to exist)
+    const user = await this.prisma.user.findUnique({
+      where: { email: (result as any).email },
+      include: { driverDetails: true, mechanicDetails: true },
+    });
+
+    if (!user) {
+      throw new (await import('@nestjs/common')).UnauthorizedException('User not found');
+    }
+
+    return this.authService.loginWithGoogle(user);
+  }
+  @Post('google/register')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Complete registration after Google Sign-In (no password needed)' })
+  async googleRegister(@Body() body: any) {
+    return this.authService.registerWithGoogle(body);
+  }
 
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
@@ -33,8 +70,8 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login using email or phone number' })
-  @ApiResponse({ status: 200, description: 'Login successful. Returns access and refresh token.' })
-  @ApiResponse({ status: 401, description: 'Invalid credentials or inactive account.' })
+  @ApiResponse({ status: 200, description: 'Login successful.' })
+  @ApiResponse({ status: 401, description: 'Invalid credentials.' })
   async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
   }
@@ -43,8 +80,6 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh access and rotate refresh token' })
-  @ApiResponse({ status: 200, description: 'New token pair issued.' })
-  @ApiResponse({ status: 401, description: 'Session expired or token invalid.' })
   async refresh(@CurrentUser() sessionUser: { userId: string; email: string; refreshToken: string }) {
     return this.authService.refreshTokens(sessionUser.userId, sessionUser.refreshToken);
   }
@@ -52,8 +87,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Invalidate current user refresh token session' })
-  @ApiResponse({ status: 200, description: 'Logout successful.' })
+  @ApiOperation({ summary: 'Invalidate current refresh token' })
   async logout(
     @CurrentUser() user: { id: string },
     @Body('refreshToken') refreshToken: string,
@@ -63,14 +97,13 @@ export class AuthController {
 
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Verify email using signed token link' })
-  @ApiResponse({ status: 200, description: 'Email verified.' })
-  @ApiResponse({ status: 400, description: 'Expired or invalid link.' })
+  @ApiOperation({ summary: 'Verify email using token' })
   async verifyEmail(@Body() verifyEmailDto: VerifyEmailDto) {
     return this.authService.verifyEmail(verifyEmailDto.token);
   }
-@Get('verify-email')
-  @ApiOperation({ summary: 'Verify email by clicking the link directly (browser-friendly)' })
+
+  @Get('verify-email')
+  @ApiOperation({ summary: 'Verify email by link (browser)' })
   async verifyEmailByLink(@Query('token') token: string, @Res() res: Response) {
     try {
       await this.authService.verifyEmail(token);
@@ -93,19 +126,17 @@ export class AuthController {
       `);
     }
   }
+
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Request password reset verification email' })
-  @ApiResponse({ status: 200, description: 'Reset link generated and emailed.' })
+  @ApiOperation({ summary: 'Request password reset email' })
   async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
     return this.authService.forgotPassword(forgotPasswordDto.email);
   }
 
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Reset account password' })
-  @ApiResponse({ status: 200, description: 'Password reset completed.' })
-  @ApiResponse({ status: 400, description: 'Token invalid or expired.' })
+  @ApiOperation({ summary: 'Reset password' })
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.authService.resetPassword(resetPasswordDto);
   }

@@ -3,25 +3,23 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { PrismaModule } from '../prisma/prisma.module';
 import { AuthService } from './auth.service';
+import { GoogleAuthService } from './google-auth.service';
 import { AuthController } from './auth.controller';
 import { JwtAccessStrategy } from './strategies/jwt-access.strategy';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
 
 @Module({
   imports: [
+    PrismaModule,
     PassportModule,
     JwtModule.register({}),
     ConfigModule,
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60000,
-        limit: 10,
-      },
-    ]),
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 10 }]),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtAccessStrategy, JwtRefreshStrategy],
-  exports: [AuthService],
+  providers: [AuthService, GoogleAuthService, JwtAccessStrategy, JwtRefreshStrategy],
+  exports: [AuthService, GoogleAuthService],
 })
 export class AuthModule {}

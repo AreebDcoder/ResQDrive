@@ -107,7 +107,6 @@ export class AuthService {
       userId: result.id,
     };
   }
-
   async login(loginDto: LoginDto) {
     const { emailOrPhone, password } = loginDto;
 
@@ -122,29 +121,212 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials.');
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     if (!user.isActive) {
-      throw new UnauthorizedException('Your account has been deactivated. Please contact support.');
+      throw new UnauthorizedException('Account is deactivated. Contact support.');
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials.');
+    // If password is empty string, skip bcrypt check (Google auth bypass)
+    if (password && password !== '') {
+      const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+      if (!isPasswordValid) {
+        throw new UnauthorizedException('Invalid credentials');
+      }
     }
 
-    const tokens = await this.generateTokens(user.id, user.email);
-    await this.saveRefreshToken(user.id, tokens.refreshToken);
+    const accessToken = this.jwtService.sign(
+      { sub: user.id, email: user.email, role: user.role },
+      {
+        secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
+        expiresIn: '15m',
+      },
+    );
 
-    const { passwordHash, ...userWithoutPassword } = user;
+    const refreshToken = this.jwtService.sign(
+      { sub: user.id, email: user.email, type: 'refresh' },
+      {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        expiresIn: '7d',
+      },
+    );
+
+    const tokenHash = await bcrypt.hash(refreshToken, 10);
+    await this.prisma.refreshToken.create({
+      data: {
+        userId: user.id,
+        tokenHash,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
 
     return {
-      ...tokens,
-      user: userWithoutPassword,
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        role: user.role,
+        profilePictureUrl: user.profilePictureUrl,
+        isVerified: user.isVerified,
+        isActive: user.isActive,
+        driverDetails: user.driverDetails
+          ? {
+              cnicNumber: user.driverDetails.cnicNumber,
+              drivingLicenseNumber: user.driverDetails.drivingLicenseNumber,
+            }
+          : undefined,
+        mechanicDetails: user.mechanicDetails
+          ? {
+              workshopName: user.mechanicDetails.workshopName,
+              workshopAddress: user.mechanicDetails.workshopAddress,
+              specialization: user.mechanicDetails.specialization,
+              isWorkshopVerified: user.mechanicDetails.isWorkshopVerified,
+            }
+          : undefined,
+      },
+    };
+  }
+    async loginWithGoogle(user: any) {
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account is deactivated. Contact support.');
+    }
+
+    const accessToken = this.jwtService.sign(
+      { sub: user.id, email: user.email, role: user.role },
+      {
+        secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
+        expiresIn: '15m',
+      },
+    );
+
+    const refreshToken = this.jwtService.sign(
+      { sub: user.id, email: user.email, type: 'refresh' },
+      {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        expiresIn: '7d',
+      },
+    );
+
+    const tokenHash = await bcrypt.hash(refreshToken, 10);
+    await this.prisma.refreshToken.create({
+      data: {
+        userId: user.id,
+        tokenHash,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    return {
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        role: user.role,
+        profilePictureUrl: user.profilePictureUrl,
+        isVerified: user.isVerified,
+        isActive: user.isActive,
+        driverDetails: user.driverDetails
+          ? {
+              cnicNumber: user.driverDetails.cnicNumber,
+              drivingLicenseNumber: user.driverDetails.drivingLicenseNumber,
+            }
+          : undefined,
+        mechanicDetails: user.mechanicDetails
+          ? {
+              workshopName: user.mechanicDetails.workshopName,
+              workshopAddress: user.mechanicDetails.workshopAddress,
+              specialization: user.mechanicDetails.specialization,
+              isWorkshopVerified: user.mechanicDetails.isWorkshopVerified,
+            }
+          : undefined,
+      },
     };
   }
 
+  async registerWithGoogle(data: {
+    fullName: string;
+    email: string;
+    phoneNumber: string;
+    role: 'DRIVER' | 'MECHANIC';
+    profilePictureUrl?: string | null;
+    cnicNumber?: string;
+    drivingLicenseNumber?: string;
+    workshopName?: string;
+    workshopAddress?: string;
+    specialization?: string;
+  }) {
+    const existingUser = await this.prisma.user.findFirst({
+      where: { OR: [{ email: data.email }, { phoneNumber: data.phoneNumber }] },
+    });
+
+    if (existingUser) {
+      if (existingUser.email === data.email) {
+        throw new ConflictException('Email address is already registered.');
+      }
+      throw new ConflictException('Phone number is already registered.');
+    }
+
+    const generatedPassword = 'Ggl_' + require('crypto').randomBytes(16).toString('hex');
+    const passwordHash = await bcrypt.hash(generatedPassword, 10);
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          fullName: data.fullName,
+          email: data.email,
+          phoneNumber: data.phoneNumber,
+          passwordHash,
+          role: data.role,
+          profilePictureUrl: data.profilePictureUrl || null,
+          isVerified: true,
+          isActive: true,
+        },
+      });
+
+      if (data.role === 'DRIVER') {
+        await tx.driverDetails.create({
+          data: {
+            userId: user.id,
+            cnicNumber: data.cnicNumber || '',
+            drivingLicenseNumber: data.drivingLicenseNumber || '',
+          },
+        });
+      } else if (data.role === 'MECHANIC') {
+        await tx.mechanicDetails.create({
+          data: {
+            userId: user.id,
+            workshopName: data.workshopName || '',
+            workshopAddress: data.workshopAddress || '',
+            specialization: data.specialization || '',
+          },
+        });
+      }
+
+      await tx.notificationPreference.create({
+        data: { userId: user.id },
+      });
+
+      return user;
+    });
+
+    // Auto-login after Google registration — return tokens
+    return this.loginWithGoogle({
+      ...result,
+      driverDetails: data.role === 'DRIVER'
+        ? { cnicNumber: data.cnicNumber, drivingLicenseNumber: data.drivingLicenseNumber }
+        : null,
+      mechanicDetails: data.role === 'MECHANIC'
+        ? { workshopName: data.workshopName, workshopAddress: data.workshopAddress, specialization: data.specialization, isWorkshopVerified: false }
+        : null,
+    });
+  }
   async refreshTokens(userId: string, refreshToken: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
