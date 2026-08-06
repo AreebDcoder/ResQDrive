@@ -18,8 +18,14 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { registerSchema, RegisterInput } from '../schemas/validation';
 import api from '../api/axios';
+import { useDispatch } from 'react-redux';
+import { loginSuccess } from '../store/slices/authSlice';
+import { setItemAsync } from '../utils/secureStorage';
 
-export default function RegisterScreen({ navigation }: { navigation: any }) {
+export default function RegisterScreen({ route, navigation }: { route: any; navigation: any }) {
+  const dispatch = useDispatch();
+  const googleData = route?.params?.googleData || null;
+  const isGoogleUser = !!googleData;
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'DRIVER' | 'MECHANIC'>('DRIVER');
@@ -70,13 +76,13 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
     setValue,
     formState: { errors },
   } = useForm<RegisterInput>({
-    resolver: zodResolver(registerSchema),
+       resolver: isGoogleUser ? (undefined as any) : zodResolver(registerSchema),
     defaultValues: {
-      fullName: '',
-      email: '',
+         fullName: googleData?.fullName || '',
+      email: googleData?.email || '',
       phoneNumber: '',
-      password: '',
-      confirmPassword: '',
+            password: isGoogleUser ? 'GoogleAuth@123' : '',
+      confirmPassword: isGoogleUser ? 'GoogleAuth@123' : '',
       role: 'DRIVER',
       cnicNumber: '',
       drivingLicenseNumber: '',
@@ -90,16 +96,34 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
     setSelectedRole(role);
     setValue('role', role);
   };
-
   const onSubmit = async (data: RegisterInput) => {
+    if (isGoogleUser) {
+      if (!data.fullName?.trim()) { setErrorMsg('Full name is required.'); return; }
+      if (!data.phoneNumber?.trim()) { setErrorMsg('Phone number is required.'); return; }
+      if (selectedRole === 'DRIVER') {
+        if (!data.cnicNumber?.trim()) { setErrorMsg('CNIC number is required.'); return; }
+        if (!data.drivingLicenseNumber?.trim()) { setErrorMsg('License number is required.'); return; }
+      }
+      if (selectedRole === 'MECHANIC') {
+        if (!data.workshopName?.trim()) { setErrorMsg('Workshop name is required.'); return; }
+        if (!data.workshopAddress?.trim()) { setErrorMsg('Workshop address is required.'); return; }
+        if (!data.specialization?.trim()) { setErrorMsg('Specialization is required.'); return; }
+      }
+    }
     setIsLoading(true);
     setErrorMsg(null);
     try {
-      // Strip confirmPassword since the backend DTO forbids non-whitelisted properties
-      const { confirmPassword, ...registerPayload } = data;
-      await api.post('/auth/register', registerPayload);
-      // Navigate to email verification screen with the registered email context
-      navigation.navigate('EmailVerification', { email: data.email });
+      if (isGoogleUser) {
+        const { password, confirmPassword, ...registerPayload } = data;
+        const response = await api.post('/auth/google/register', { ...registerPayload, profilePictureUrl: googleData?.profilePictureUrl });
+        const { accessToken, refreshToken, user } = response.data;
+        await setItemAsync('refreshToken', refreshToken);
+        dispatch(loginSuccess({ accessToken, user }));
+      } else {
+        const { confirmPassword, ...registerPayload } = data;
+        await api.post('/auth/register', registerPayload);
+        navigation.navigate('EmailVerification', { email: data.email });
+      }
     } catch (err: any) {
       setErrorMsg(err.response?.data?.message || 'Registration failed. Please check details.');
     } finally {
@@ -207,9 +231,10 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
                   render={({ field: { onChange, onBlur, value } }) => (
                     <View style={[styles.inputWrapper, focusedField === 'email' && styles.inputFocused, errors.email && styles.inputError]}>
                       <Text style={styles.inputIcon}>✉</Text>
-                      <TextInput
-                        style={styles.input}
+                                           <TextInput
+                        style={[styles.input, isGoogleUser && { opacity: 0.6 }]}
                         placeholder="john@example.com"
+                        editable={!isGoogleUser}
                         placeholderTextColor="#6B6B80"
                         keyboardType="email-address"
                         autoCapitalize="none"
@@ -366,8 +391,13 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
                   </View>
                 )}
 
+                                {!isGoogleUser && (<>
                 <Text style={styles.label}>Password</Text>
+                ...all password fields...
+                {errors.confirmPassword && <Text style={styles.errorHelper}>{errors.confirmPassword.message}</Text>}
+                </>)}
                 <Controller
+
                   control={control}
                   name="password"
                   render={({ field: { onChange, onBlur, value } }) => (
@@ -438,6 +468,7 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
               </View>
             </Animated.View>
 
+                    {!isGoogleUser && (<>
             {/* Footer */}
             <View style={styles.footer}>
               <Text style={styles.footerText}>Already have an account? </Text>
@@ -445,6 +476,7 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
                 <Text style={styles.loginText}>Log In</Text>
               </TouchableOpacity>
             </View>
+            </>)}
           </ScrollView>
         </KeyboardAvoidingView>
       </View>
