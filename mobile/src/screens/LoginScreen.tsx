@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   Easing,
   Keyboard,
@@ -27,6 +29,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
   const dispatch = useDispatch();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
@@ -35,6 +38,14 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
   const cardOpacity = useRef(new Animated.Value(0)).current;
   const headerOpacity = useRef(new Animated.Value(0)).current;
   const headerTranslateY = useRef(new Animated.Value(16)).current;
+
+  // Google Sign-In config
+  useEffect(() => {
+    GoogleSignin.configure({
+      webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '', // ← REPLACE with your actual Web Client ID from Google Cloud Console
+      offlineAccess: false,
+    });
+  }, []);
 
   useEffect(() => {
     Animated.sequence([
@@ -95,6 +106,55 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
       setIsLoading(false);
     }
   };
+
+  // ─── Google Sign-In Handler ───────────────────────────────
+  const onGoogleSignIn = async () => {
+  try {
+    setIsGoogleLoading(true);
+    setErrorMsg(null);
+   
+
+    await GoogleSignin.hasPlayServices();
+    
+
+    const userInfo = await GoogleSignin.signIn();
+    
+
+    const idToken = userInfo.data?.idToken;
+
+    if (!idToken) {
+      Alert.alert('Error', 'Failed to get Google ID token');
+      return;
+    }
+ 
+
+    const res = await api.post('/auth/google', { idToken });
+    console.log('✅ Backend response:', JSON.stringify(res.data));
+
+         if (res.data?.accessToken) {
+        const { accessToken, refreshToken, user } = res.data;
+        await setItemAsync('refreshToken', refreshToken);
+        dispatch(loginSuccess({ accessToken, user }));
+    } else if (res.data?.newUser) {
+      navigation.navigate('Register', {
+        googleData: {
+          fullName: userInfo.data?.user?.name || '',
+          email: userInfo.data?.user?.email || '',
+          profilePictureUrl: userInfo.data?.user?.photo || '',
+        },
+      });
+    }
+  } catch (error: any) {
+    console.log('❌ Google Sign-In error:', error.code, error.message, error.response?.data);
+    if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+      // User cancelled
+    } else {
+      Alert.alert('Google Sign-In Error', error.message || 'Something went wrong');
+    }
+  } finally {
+    setIsGoogleLoading(false);
+  }
+};
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -255,9 +315,20 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
 
             {/* Social buttons */}
             <View style={styles.socialRow}>
-              <TouchableOpacity style={styles.socialBtn} activeOpacity={0.7}>
-                <Text style={styles.socialIcon}>G</Text>
-                <Text style={styles.socialLabel}>Google</Text>
+              <TouchableOpacity
+                style={[styles.socialBtn, isGoogleLoading && styles.socialBtnDisabled]}
+                onPress={onGoogleSignIn}
+                disabled={isGoogleLoading}
+                activeOpacity={0.7}
+              >
+                {isGoogleLoading ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.socialIcon}>G</Text>
+                )}
+                <Text style={styles.socialLabel}>
+                  {isGoogleLoading ? 'Signing in...' : 'Google'}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.socialBtn} activeOpacity={0.7}>
                 <Text style={styles.socialIcon}>🍎</Text>
@@ -495,6 +566,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
     gap: 8,
+  },
+  socialBtnDisabled: {
+    opacity: 0.5,
   },
   socialIcon: {
     fontSize: 18,
