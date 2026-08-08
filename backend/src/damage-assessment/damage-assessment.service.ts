@@ -1,4 +1,4 @@
-import { Injectable, Logger, HttpException, HttpStatus, ServiceUnavailableException } from '@nestjs/common';
+import { Injectable, Logger, HttpException, HttpStatus, ServiceUnavailableException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { ConfigService } from '@nestjs/config';
@@ -45,11 +45,18 @@ export class DamageAssessmentService {
       });
       predictData = response.data;
     } catch (err: any) {
+      // 3b. Handle 400 rejection from FastAPI (Car-Verification Gate Rejection)
+      if (err.response && err.response.status === 400) {
+        const detail = err.response.data?.detail || err.response.data?.message;
+        this.logger.warn(`FastAPI Car Verification Gate rejected photo: ${detail}`);
+        throw new BadRequestException(detail || "This doesn't appear to be a photo of a car or car part.");
+      }
+
       this.logger.error(`Failed to connect to FastAPI microservice at ${this.fastApiUrl}/predict: ${err.message}`);
       throw new ServiceUnavailableException('Damage assessment inference service is temporarily unavailable.');
     }
 
-    // 4. Save metadata in PostgreSQL database using Prisma
+    // 4. Save metadata in PostgreSQL database using Prisma (only reached if photo was verified as a car)
     try {
       const assessment = await this.prisma.damageAssessment.create({
         data: {
@@ -69,6 +76,7 @@ export class DamageAssessmentService {
       return {
         ...assessment,
         allScores: predictData.all_scores,
+        lowConfidenceWarning: predictData.low_confidence_warning ?? false,
       };
     } catch (err: any) {
       this.logger.error(`Database save failed for damage assessment: ${err.message}`);

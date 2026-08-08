@@ -72,6 +72,7 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisStage, setAnalysisStage] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isCarRejection, setIsCarRejection] = useState(false);
 
   // Prediction result
   const [prediction, setPrediction] = useState<any>(null);
@@ -107,6 +108,7 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
 
   const handlePickImage = async (useCamera: boolean) => {
     setErrorMsg(null);
+    setIsCarRejection(false);
     setPrediction(null);
 
     const hasPermission = await checkPermissions();
@@ -151,6 +153,7 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
     setIsAnalyzing(true);
     setAnalysisStage('Uploading image...');
     setErrorMsg(null);
+    setIsCarRejection(false);
 
     const formData = new FormData();
     formData.append('file', imageFile as any);
@@ -176,8 +179,17 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
       setPrediction(response.data);
     } catch (err: any) {
       console.log('Damage Assessment Error:', err);
-      const serverMsg = err.response?.data?.message;
-      setErrorMsg(serverMsg || 'Failed to complete damage assessment. Please verify connection to the backend and microservice.');
+      const status = err.response?.status;
+      const serverMsg = err.response?.data?.message || err.response?.data?.detail;
+
+      // Handle 400 rejection from Car-Verification Gate
+      if (status === 400 || (serverMsg && (serverMsg.includes("car") || serverMsg.includes("vehicle")))) {
+        setIsCarRejection(true);
+        setErrorMsg(serverMsg || "This doesn't appear to be a photo of a car or car part. Please upload a clear photo of the damaged vehicle.");
+      } else {
+        setIsCarRejection(false);
+        setErrorMsg(serverMsg || 'Failed to complete damage assessment. Please verify connection to the backend and microservice.');
+      }
     } finally {
       setIsAnalyzing(false);
       setAnalysisStage('');
@@ -358,12 +370,51 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
 
   // Render entry selector or prediction view
   const renderNewAssessmentTab = () => {
+    // 1. Car-Verification Rejection State (HTTP 400 response from gate)
+    if (isCarRejection) {
+      return (
+        <ScrollView style={styles.tabContent} contentContainerStyle={{ paddingBottom: 40 }}>
+          <View style={styles.carRejectionCard}>
+            <Text style={styles.carRejectionIcon}>🚗❌</Text>
+            <Text style={styles.carRejectionTitle}>Vehicle Verification Failed</Text>
+            <Text style={styles.carRejectionMessage}>{errorMsg}</Text>
+
+            <TouchableOpacity
+              style={styles.actionBtnPrimary}
+              onPress={() => {
+                setErrorMsg(null);
+                setIsCarRejection(false);
+                setSelectedImage(null);
+                setImageFile(null);
+              }}
+            >
+              <Text style={styles.actionBtnText}>📸 Retake Photo</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      );
+    }
+
+    // 2. Successful Prediction View (with optional Low-Confidence Warning Banner)
     if (prediction) {
       const resultPhoto = prediction.photoUrl.startsWith('http') ? prediction.photoUrl : `${API_URL}${prediction.photoUrl}`;
+      const isLowConfidence = prediction.lowConfidenceWarning || prediction.low_confidence_warning || prediction.confidenceScore < 0.30;
+      
       return (
         <ScrollView style={styles.tabContent} contentContainerStyle={{ paddingBottom: 40 }}>
           <View style={styles.card}>
             <Text style={styles.cardHeaderTitle}>📊 ASSESSMENT RESULTS</Text>
+
+            {/* Low-Confidence Warning Banner */}
+            {isLowConfidence && (
+              <View style={styles.lowConfidenceBanner}>
+                <Ionicons name="warning" size={22} color="#FFD600" style={{ marginRight: 10 }} />
+                <Text style={styles.lowConfidenceText}>
+                  Low confidence result — consider retaking the photo with better lighting or a closer, clearer angle of the damage.
+                </Text>
+              </View>
+            )}
+
             <Image source={{ uri: resultPhoto }} style={styles.resultImage} />
 
             <View style={styles.resultsContainer}>
@@ -400,6 +451,7 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
                   setSelectedImage(null);
                   setImageFile(null);
                   setSelectedPartTag('other');
+                  setIsCarRejection(false);
                 }}
               >
                 <Text style={styles.actionBtnText}>➕ Add Another Damaged Area</Text>
@@ -419,6 +471,7 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
       );
     }
 
+    // 3. Photo Capture & Entry View
     return (
       <ScrollView style={styles.tabContent} contentContainerStyle={{ paddingBottom: 40 }}>
         {/* ── Photo Selection Card ── */}
@@ -491,6 +544,13 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
               <Ionicons name="image" size={24} color="#FFFFFF" />
               <Text style={styles.pickerBtnText}>🖼️ Gallery</Text>
             </TouchableOpacity>
+          </View>
+
+          {/* User Photo Capture Guidance Tip (Requirement 10) */}
+          <View style={styles.photoTipCard}>
+            <Text style={styles.photoTipText}>
+              💡 <Text style={{ fontWeight: '700' }}>Tip:</Text> Include some recognizable part of the car (wheel, mirror, body shape) in frame, not just an extreme close-up of the damage.
+            </Text>
           </View>
 
           {selectedImage && (
@@ -793,4 +853,60 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   historyCostText: { color: '#E53935', fontSize: 14, fontWeight: '700', marginTop: 2 },
+  lowConfidenceBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 214, 0, 0.12)',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 214, 0, 0.4)',
+    marginBottom: 16,
+  },
+  lowConfidenceText: {
+    color: '#FFD600',
+    fontSize: 13,
+    flex: 1,
+    lineHeight: 18,
+    fontWeight: '600',
+  },
+  carRejectionCard: {
+    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    borderRadius: 20,
+    padding: 24,
+    marginVertical: 16,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 23, 68, 0.4)',
+    alignItems: 'center',
+  },
+  carRejectionIcon: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+  carRejectionTitle: {
+    color: '#FF1744',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  carRejectionMessage: {
+    color: '#D0D0E0',
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 19,
+    marginBottom: 20,
+  },
+  photoTipCard: {
+    backgroundColor: 'rgba(41, 121, 255, 0.1)',
+    borderRadius: 12,
+    padding: 12,
+    marginVertical: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(41, 121, 255, 0.25)',
+  },
+  photoTipText: {
+    color: '#82B1FF',
+    fontSize: 12,
+    lineHeight: 17,
+  },
 });
