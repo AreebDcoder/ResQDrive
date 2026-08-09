@@ -508,6 +508,23 @@ model FallbackPartsPrice {
   @@map("fallback_parts_prices")
 }
 
+model PartsScrapeLog {
+  id                    String   @id @default(uuid()) @db.Uuid
+  searchQuery           String   @map("search_query") @db.VarChar(200)
+  source                String   @db.VarChar(20)
+  resultsFound          Int      @map("results_found")
+  resultsAfterFiltering Int      @map("results_after_filtering")
+  computedMinPricePkr   Int?     @map("computed_min_price_pkr")
+  computedMaxPricePkr   Int?     @map("computed_max_price_pkr")
+  rawListingUrls        Json?    @map("raw_listing_urls")
+  scrapeDurationMs      Int      @map("scrape_duration_ms")
+  success               Boolean
+  errorMessage          String?  @map("error_message") @db.Text
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  @@map("parts_scrape_logs")
+}
+
 model RepairCostReport {
   id              String   @id @default(uuid()) @db.Uuid
   userId          String   @map("user_id") @db.Uuid

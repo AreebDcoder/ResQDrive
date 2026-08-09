@@ -1,6 +1,7 @@
 import { Injectable, Logger, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GeminiPricingService } from './gemini-pricing.service';
+import { PartsPriceScraperService } from './parts-price-scraper.service';
 import { PartTag, RepairAction, DamageSeverity } from '@prisma/client';
 
 @Injectable()
@@ -10,6 +11,7 @@ export class RepairCostService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly geminiPricing: GeminiPricingService,
+    private readonly partsPriceScraper: PartsPriceScraperService,
   ) {}
 
   async generateReport(userId: string, incidentId?: string) {
@@ -58,12 +60,18 @@ export class RepairCostService {
 
     for (const assessment of assessments) {
       // Repair vs Replace decision rules
-      const action = assessment.derivedSeverity === DamageSeverity.minor 
-        ? RepairAction.repair 
-        : RepairAction.replace;
+      let action: RepairAction = RepairAction.repair;
 
-      // a. Get labor cost rate
-      let laborRate = await this.prisma.laborCostRate.findUnique({
+      if (assessment.predictedDamageType === 'glass_shatter' || assessment.predictedDamageType === 'tire_flat') {
+        action = RepairAction.replace;
+      } else if (assessment.derivedSeverity === DamageSeverity.severe) {
+        action = RepairAction.replace;
+      } else {
+        action = RepairAction.repair;
+      }
+
+      // a. Get labor cost from static DB table (LaborCostRate)
+      const laborRate = await this.prisma.laborCostRate.findUnique({
         where: {
           partTag_action: {
             partTag: assessment.partTag,
@@ -73,24 +81,15 @@ export class RepairCostService {
       });
 
       if (!laborRate) {
-        // Fallback to 'other' labor tag
-        laborRate = await this.prisma.laborCostRate.findUnique({
-          where: {
-            partTag_action: {
-              partTag: PartTag.other,
-              action,
-            },
-          },
-        }) || {
-          id: '',
-          partTag: PartTag.other,
-          action,
-          minCostPkr: 1000,
-          maxCostPkr: 2000,
-        };
+        this.logger.warn(`Missing labor rate for ${assessment.partTag} - ${action}. Using fallback labor rate.`);
       }
 
-      // b. Get parts cost (3-tier engine: Cache -> Gemini -> Default Fallback)
+      const effectiveLaborRate = laborRate || {
+        minCostPkr: 1500,
+        maxCostPkr: 3500,
+      };
+
+      // b. Get parts cost (4-TIER ENGINE: Cache -> Scraper [PakWheels/OLX] -> Gemini AI Fallback -> Static Fallback)
       let partsMin = 0;
       let partsMax = 0;
       let partsSource = 'cache';
@@ -103,6 +102,7 @@ export class RepairCostService {
         action,
       };
 
+      // TIER 1: Check parts_price_cache table
       const cached = await this.prisma.partsPriceCache.findUnique({
         where: {
           vehicleMake_vehicleModel_vehicleYear_partTag_action: cacheKey,
@@ -112,58 +112,97 @@ export class RepairCostService {
       if (cached) {
         partsMin = cached.minPricePkr;
         partsMax = cached.maxPricePkr;
-        partsSource = 'gemini_ai'; // sourced originally from Gemini
+        partsSource = cached.source; // 'pakwheels_scrape' | 'olx_scrape' | 'gemini_ai_fallback'
       } else {
-        // Cache Miss: Query Gemini API
-        const geminiEstimate = await this.geminiPricing.estimatePartsPrice(
+        // TIER 2: Live Marketplace Scraper (PakWheels AutoStore -> OLX Pakistan)
+        const scrapeResult = await this.partsPriceScraper.scrapeMarketplacePrice(
           make,
           model,
-          year,
           assessment.partTag,
           action,
         );
 
-        if (geminiEstimate) {
-          partsMin = geminiEstimate.minPricePkr;
-          partsMax = geminiEstimate.maxPricePkr;
-          partsSource = 'gemini_ai';
+        if (scrapeResult) {
+          partsMin = scrapeResult.minPricePkr;
+          partsMax = scrapeResult.maxPricePkr;
+          partsSource = scrapeResult.source; // 'pakwheels_scrape' or 'olx_scrape'
 
-          // Cache the response
-          await this.prisma.partsPriceCache.create({
-            data: {
-              ...cacheKey,
-              minPricePkr: partsMin,
-              maxPricePkr: partsMax,
-              source: 'gemini_ai',
-            },
-          }).catch((err) => {
-            this.logger.warn(`Failed to write to parts price cache: ${err.message}`);
-          });
-        } else {
-          // Gemini Call Failed: Retrieve Generic Static Fallback Price
-          const fallback = await this.prisma.fallbackPartsPrice.findUnique({
-            where: {
-              partTag_action: {
-                partTag: assessment.partTag,
-                action,
+          // Cache successful scrape result
+          await this.prisma.partsPriceCache
+            .create({
+              data: {
+                ...cacheKey,
+                minPricePkr: partsMin,
+                maxPricePkr: partsMax,
+                source: partsSource,
               },
-            },
-          });
+            })
+            .catch((err) => {
+              this.logger.warn(`Failed to write scrape result to parts price cache: ${err.message}`);
+            });
+        } else {
+          // TIER 3: Gemini AI Fallback (demoted from primary, retained as 3rd-tier fallback)
+          this.logger.warn(
+            `Live marketplace scraper yielded no listings for ${make} ${model} ${assessment.partTag}. Attempting Tier 3 Gemini AI fallback...`,
+          );
 
-          if (fallback) {
-            partsMin = fallback.minPricePkr;
-            partsMax = fallback.maxPricePkr;
+          const geminiEstimate = await this.geminiPricing.estimatePartsPrice(
+            make,
+            model,
+            year,
+            assessment.partTag,
+            action,
+          );
+
+          if (geminiEstimate) {
+            partsMin = geminiEstimate.minPricePkr;
+            partsMax = geminiEstimate.maxPricePkr;
+            partsSource = 'gemini_ai_fallback';
+
+            // Cache Gemini AI fallback response with updated source tag
+            await this.prisma.partsPriceCache
+              .create({
+                data: {
+                  ...cacheKey,
+                  minPricePkr: partsMin,
+                  maxPricePkr: partsMax,
+                  source: 'gemini_ai_fallback',
+                },
+              })
+              .catch((err) => {
+                this.logger.warn(`Failed to write Gemini fallback to parts price cache: ${err.message}`);
+              });
           } else {
-            // Hard fallback if seed data is missing
-            partsMin = 2000;
-            partsMax = 5000;
+            // TIER 4: Hardcoded Static Safety Net (FallbackPartsPrice)
+            this.logger.warn(
+              `Gemini AI fallback also failed/unreachable. Using Tier 4 hardcoded static fallback table for ${assessment.partTag}.`,
+            );
+
+            const fallback = await this.prisma.fallbackPartsPrice.findUnique({
+              where: {
+                partTag_action: {
+                  partTag: assessment.partTag,
+                  action,
+                },
+              },
+            });
+
+            if (fallback) {
+              partsMin = fallback.minPricePkr;
+              partsMax = fallback.maxPricePkr;
+            } else {
+              // Emergency default if database table is missing seed rows
+              partsMin = 2000;
+              partsMax = 5000;
+            }
+            partsSource = 'fallback_default';
+            // Note: Tier 4 fallback results are NOT cached, so future queries retry higher tiers.
           }
-          partsSource = 'fallback_default';
         }
       }
 
-      const minLineTotal = laborRate.minCostPkr + partsMin;
-      const maxLineTotal = laborRate.maxCostPkr + partsMax;
+      const minLineTotal = effectiveLaborRate.minCostPkr + partsMin;
+      const maxLineTotal = effectiveLaborRate.maxCostPkr + partsMax;
 
       totalMinCostPkr += minLineTotal;
       totalMaxCostPkr += maxLineTotal;

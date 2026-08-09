@@ -210,6 +210,24 @@ export default function RepairCostScreen({ route, navigation }: any) {
       );
     }
 
+    // Helper to format source label for parts pricing transparency
+    const getPartsSourceLabel = (source: string) => {
+      switch (source) {
+        case 'pakwheels_scrape':
+        case 'pakwheels':
+          return '🟢 Live PakWheels AutoStore Listings';
+        case 'olx_scrape':
+        case 'olx':
+          return '🟢 Live OLX Pakistan Listings';
+        case 'gemini_ai_fallback':
+        case 'gemini_ai':
+          return '🤖 AI-Estimated (No Live Listings Found)';
+        case 'fallback_default':
+        default:
+          return '⚙️ Generic Static Fallback Table';
+      }
+    };
+
     // Check if fallback default values were used in any line items
     const hasFallbackItems = report.lineItems.some(item => item.partsSource === 'fallback_default');
 
@@ -233,7 +251,7 @@ export default function RepairCostScreen({ route, navigation }: any) {
           <View style={styles.warningBanner}>
             <Text style={styles.warningEmoji}>⚡</Text>
             <Text style={styles.warningText}>
-              Note: Certain parts are priced matching flat generic fallback averages because the Gemini AI pricing engine timed out.
+              Note: Certain parts are priced using static default averages because live marketplace listings and Gemini AI fallback were unreachable.
             </Text>
           </View>
         )}
@@ -262,14 +280,15 @@ export default function RepairCostScreen({ route, navigation }: any) {
             <View style={styles.costDetailsBox}>
               <View style={styles.costRow}>
                 <Text style={styles.costLabel}>🔧 Workshop Labor Cost</Text>
-                <Text style={styles.costVal}>PKR {item.laborCost.min} - {item.laborCost.max}</Text>
+                <Text style={styles.costVal}>PKR {item.laborCost.min.toLocaleString()} - {item.laborCost.max.toLocaleString()}</Text>
               </View>
 
               <View style={styles.costRow}>
-                <Text style={styles.costLabel}>
-                  📦 Parts Price ({item.partsSource === 'gemini_ai' ? 'Gemini AI' : 'Fallback Defaults'})
-                </Text>
-                <Text style={styles.costVal}>PKR {item.partsCost.min} - {item.partsCost.max}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.costLabel}>📦 Spare Parts Price</Text>
+                  <Text style={styles.partsSourceSubtext}>{getPartsSourceLabel(item.partsSource)}</Text>
+                </View>
+                <Text style={styles.costVal}>PKR {item.partsCost.min.toLocaleString()} - {item.partsCost.max.toLocaleString()}</Text>
               </View>
 
               <View style={[styles.costRow, styles.totalRow]}>
@@ -649,6 +668,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 4,
+  },
+  partsSourceSubtext: {
+    color: '#82B1FF',
+    fontSize: 11,
+    marginTop: 2,
+    fontWeight: '500',
   },
   historyItemsText: {
     color: '#A0A0B8',
