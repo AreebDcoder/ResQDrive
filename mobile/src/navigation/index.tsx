@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Linking, Switch, Platform, StatusBar, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Linking, Switch, Platform, StatusBar } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useSelector, useDispatch } from 'react-redux';
@@ -10,7 +10,7 @@ import * as Notifications from 'expo-notifications';
 import { dispatchEmergencyAlert } from '../utils/emergencyFallback';
 import { registerForPushNotificationsAsync } from '../utils/registerPushToken';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { logoutAction } from '../store/slices/authSlice';
+import { logoutAction, setTokens } from '../store/slices/authSlice';
 
 import SplashScreen from '../screens/SplashScreen';
 import LoginScreen from '../screens/LoginScreen';
@@ -27,14 +27,12 @@ import CreateIncidentScreen from '../screens/CreateIncidentScreen';
 import LocationSharingScreen from '../screens/LocationSharingScreen';
 import EmergencyNotificationScreen from '../screens/EmergencyNotificationScreen';
 import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
-import AdminEmergencyNumbersScreen from '../screens/admin/AdminEmergencyNumbersScreen';
 import SOSScreen from '../screens/SOSScreen';
 import MyVehiclesScreen from '../screens/MyVehiclesScreen';
 import AddEditVehicleScreen from '../screens/AddEditVehicleScreen';
 import VehicleInsuranceScreen from '../screens/VehicleInsuranceScreen';
 import EmergencyContactsScreen from '../screens/EmergencyContactsScreen';
 import AddEditContactScreen from '../screens/AddEditContactScreen';
-import CustomEmergencyNumbersScreen from '../screens/CustomEmergencyNumbersScreen';
 import NotificationPreferencesScreen from '../screens/NotificationPreferencesScreen';
 import NotificationHistoryScreen from '../screens/NotificationHistoryScreen';
 import CrashSoundDemoScreen from '../screens/CrashSoundDemoScreen';
@@ -44,10 +42,8 @@ import RepairCostScreen from '../screens/RepairCostScreen';
 import { FCMService } from '../services/fcmService';
 import CountdownScreen from '../screens/CountdownScreen';
 import { CrashSoundDetectionService } from '../services/crashSoundDetectionService';
-import { VoiceCommandService } from '../services/voiceCommandService';
 import BleSensorDemoScreen from '../screens/BleSensorDemoScreen';
 import { sensorSourceManager } from '../services/sensorSourceManager';
-import { DrivingNotificationService } from '../services/drivingNotificationService';
 
 const Stack = createStackNavigator();
 
@@ -98,56 +94,6 @@ function DriverHome({ navigation }: any) {
     const unsubscribe = FCMService.setupFCMListeners();
     return unsubscribe;
   }, [dispatch]);
-
-  React.useEffect(() => {
-    // Subscribe to VoiceCommandService SOS callback globally
-    VoiceCommandService.subscribeToCallbacks(
-      () => {
-        console.log('Voice Abort Callback Fired');
-      },
-      async () => {
-        console.log('Voice SOS Callback Fired! Dialing immediately.');
-        try {
-          const { status } = await Location.requestForegroundPermissionsAsync();
-          if (status !== 'granted') {
-            console.log('Location permission denied, dialing default.');
-            Linking.openURL('tel:1122');
-            return;
-          }
-          const location = await Promise.race([
-            Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
-            new Promise<any>((resolve) => setTimeout(() => resolve(null), 3000))
-          ]);
-          const latitude = location?.coords?.latitude ?? 33.6844;
-          const longitude = location?.coords?.longitude ?? 73.0479;
-
-          const response = await api.get('/emergency-sos/numbers', {
-            params: { lat: latitude, lng: longitude },
-          });
-
-          const regional = response.data.regionalNumbers || [];
-          const custom = response.data.customNumbers || [];
-          const target = regional[0] || custom[0];
-
-          if (target) {
-            await api.post('/emergency-sos/log-call', {
-              serviceName: target.serviceName || target.label || 'Rescue',
-              autoDialed: false,
-            });
-            Linking.openURL(`tel:${target.phoneNumber}`);
-          } else {
-            Linking.openURL('tel:1122');
-          }
-        } catch (err) {
-          console.log('Voice SOS execution failed:', err);
-          Linking.openURL('tel:1122');
-        }
-      },
-      () => {},
-      () => {},
-      () => {}
-    );
-  }, []);
 
   React.useEffect(() => {
     CrashSoundDetectionService.subscribeToCrashEvents((confidence, topClass) => {
@@ -340,47 +286,6 @@ function DriverHome({ navigation }: any) {
     } else {
       setActiveTab(tabName);
     }
-  };
-
-  const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to log out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Log Out',
-          style: 'destructive',
-          onPress: () => {
-            dispatch(logoutAction());
-          },
-        },
-      ]
-    );
-  };
-
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      'Delete Account',
-      'Are you absolutely sure you want to permanently delete your account? This action is irreversible and all your vehicles, incidents, and data will be deleted forever.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete Permanently',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await api.delete('/users/me');
-              dispatch(logoutAction());
-              Alert.alert('Account Deleted', 'Your account has been deleted successfully.');
-            } catch (err: any) {
-              console.log('Failed to delete account:', err);
-              Alert.alert('Error', 'Failed to delete your account. Please try again.');
-            }
-          },
-        },
-      ]
-    );
   };
 
   // Render content based on activeTab
@@ -615,17 +520,6 @@ function DriverHome({ navigation }: any) {
                 style={styles.menuItem}
                 onPress={() => {
                   setIsDrawerOpen(false);
-                  navigation.navigate('CustomEmergencyNumbers');
-                }}
-              >
-                <Text style={styles.menuItemText}>➕ Custom Override Numbers</Text>
-                <Text style={styles.menuItemArrow}>›</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => {
-                  setIsDrawerOpen(false);
                   navigation.navigate('NotificationHistory');
                 }}
               >
@@ -760,30 +654,6 @@ function DriverHome({ navigation }: any) {
                 <Text style={[styles.menuItemText, { color: '#fff' }]}>💥 Simulate Crash (Test Countdown)</Text>
                 <Text style={[styles.menuItemArrow, { color: '#fff' }]}>›</Text>
               </TouchableOpacity>
-
-              {/* Logout Button */}
-              <TouchableOpacity
-                style={[styles.menuItem, { marginTop: 12, borderTopWidth: 1, borderTopColor: '#2e2e2e', paddingTop: 16 }]}
-                onPress={() => {
-                  setIsDrawerOpen(false);
-                  handleLogout();
-                }}
-              >
-                <Text style={[styles.menuItemText, { color: '#ff9800', fontWeight: 'bold' }]}>🔓 Log Out</Text>
-                <Text style={[styles.menuItemArrow, { color: '#ff9800' }]}>›</Text>
-              </TouchableOpacity>
-
-              {/* Delete Account Button */}
-              <TouchableOpacity
-                style={[styles.menuItem, { backgroundColor: '#2c1212', borderColor: '#d32f2f', borderWidth: 1 }]}
-                onPress={() => {
-                  setIsDrawerOpen(false);
-                  handleDeleteAccount();
-                }}
-              >
-                <Text style={[styles.menuItemText, { color: '#ff1744', fontWeight: 'bold' }]}>🗑️ Delete Account</Text>
-                <Text style={[styles.menuItemArrow, { color: '#ff1744' }]}>›</Text>
-              </TouchableOpacity>
             </ScrollView>
           </View>
         </View>
@@ -791,24 +661,136 @@ function DriverHome({ navigation }: any) {
     </View>
   );
 }
-
 function MechanicHome({ navigation }: any) {
+  const { user } = useSelector((state: RootState) => state.auth);
+  const dispatch = useDispatch();
+
   return (
-    <View style={{ flex: 1, backgroundColor: '#121212' }}>
+    <View style={{ flex: 1, backgroundColor: '#0A0A0F' }}>
+      <StatusBar barStyle="light-content" backgroundColor="#0A0A0F" />
       <View style={styles.customHeader}>
         <View style={{ width: 28 }} />
         <Text style={styles.customHeaderTitle}>Workshop Dashboard</Text>
         <View style={{ width: 28 }} />
       </View>
-      <View style={styles.container}>
-        <Text style={styles.subtitle}>Receive roadside rescue referrals here 🔧</Text>
-        <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('Profile')}>
-          <Text style={styles.navBtnText}>Go to Profile</Text>
+      <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }}>
+        <View style={mS.workshopCard}>
+          <Text style={mS.workshopLabel}>Workshop</Text>
+          <Text style={mS.workshopName}>{user?.mechanicDetails?.workshopName || 'My Workshop'}</Text>
+          <Text style={mS.workshopSpec}>{user?.mechanicDetails?.specialization || 'General Repair'}</Text>
+        </View>
+        <TouchableOpacity style={mS.menuItem} onPress={() => navigation.navigate('Profile')}>
+          <Ionicons name="person-circle-outline" size={22} color="#aaa" />
+          <Text style={mS.menuLabel}>My Profile</Text>
+          <Ionicons name="chevron-forward" size={18} color="#555" />
         </TouchableOpacity>
-      </View>
+        <TouchableOpacity style={mS.menuItem} onPress={() => navigation.navigate('IncidentsList')}>
+          <Ionicons name="document-text-outline" size={22} color="#aaa" />
+          <Text style={mS.menuLabel}>Incident History</Text>
+          <Ionicons name="chevron-forward" size={18} color="#555" />
+        </TouchableOpacity>
+        <TouchableOpacity style={mS.menuItem} onPress={() => navigation.navigate('NotificationHistory')}>
+          <Ionicons name="notifications-outline" size={22} color="#aaa" />
+          <Text style={mS.menuLabel}>Notifications</Text>
+          <Ionicons name="chevron-forward" size={18} color="#555" />
+        </TouchableOpacity>
+        <TouchableOpacity style={mS.menuItem} onPress={() => navigation.navigate('Hospitals')}>
+          <Ionicons name="medkit-outline" size={22} color="#aaa" />
+          <Text style={mS.menuLabel}>Nearby Hospitals</Text>
+          <Ionicons name="chevron-forward" size={18} color="#555" />
+        </TouchableOpacity>
+        <TouchableOpacity style={mS.logoutBtn} onPress={() => dispatch(logoutAction())}>
+          <Text style={mS.logoutText}>Logout</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </View>
   );
 }
+
+const mS = StyleSheet.create({
+  workshopCard: {
+    backgroundColor: 'rgba(28,28,46,0.6)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 10,
+  },
+  workshopLabel: { fontSize: 12, color: '#888', fontWeight: '500', textTransform: 'uppercase', letterSpacing: 1 },
+  workshopName: { fontSize: 20, fontWeight: '600', color: '#fff', marginTop: 4 },
+  workshopSpec: { fontSize: 14, color: '#d32f2f', marginTop: 2 },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(28,28,46,0.6)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 14,
+    padding: 16,
+    gap: 14,
+  },
+  menuLabel: { flex: 1, fontSize: 15, color: '#e0e0e0' },
+  logoutBtn: {
+    backgroundColor: 'rgba(211,47,47,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(211,47,47,0.3)',
+    borderRadius: 14,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  logoutText: { color: '#ef4444', fontSize: 15, fontWeight: '600' },
+});
+
+// ADD THIS SEPARATE StyleSheet (NOT inside the existing one)
+const mechStyles = StyleSheet.create({
+  drawerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1000, elevation: 1000 },
+  drawerTouchable: { flex: 1, justifyContent: 'flex-start' },
+  drawerPanel: { width: 280, height: '100%', backgroundColor: '#12121A', paddingTop: 60, paddingBottom: 40, position: 'absolute', left: 0, top: 0, bottom: 0 },
+  drawerHeader: { paddingHorizontal: 24, paddingBottom: 24, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)', marginBottom: 8 },
+  drawerAvatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#d32f2f', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+  drawerAvatarText: { fontSize: 26, fontWeight: 'bold', color: '#fff' },
+  drawerName: { fontSize: 18, fontWeight: '600', color: '#fff', marginBottom: 4 },
+  drawerEmail: { fontSize: 13, color: '#888', marginBottom: 8 },
+  verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  verifiedBadgeText: { fontSize: 12, fontWeight: '500' },
+  drawerMenu: { flex: 1, paddingTop: 8 },
+  drawerMenuItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 14 },
+  drawerMenuIcon: { width: 28 },
+  drawerMenuLabel: { fontSize: 15, color: '#ccc', marginLeft: 4 },
+  mechWorkshopCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(28,28,46,0.6)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', borderRadius: 16, padding: 16, marginHorizontal: 16, marginTop: 12, gap: 14 },
+  mechWorkshopIcon: { width: 52, height: 52, borderRadius: 14, backgroundColor: 'rgba(211,47,47,0.15)', justifyContent: 'center', alignItems: 'center' },
+  mechWorkshopInfo: { flex: 1 },
+  mechWorkshopName: { fontSize: 16, fontWeight: '600', color: '#fff', marginBottom: 2 },
+  mechWorkshopSpec: { fontSize: 13, color: '#d32f2f', fontWeight: '500', marginBottom: 2 },
+  mechWorkshopAddr: { fontSize: 12, color: '#888' },
+  mechStatsRow: { flexDirection: 'row', marginHorizontal: 16, marginTop: 16, gap: 10 },
+  mechStatCard: { flex: 1, backgroundColor: 'rgba(28,28,46,0.6)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', borderRadius: 14, padding: 14, alignItems: 'center' },
+  mechStatNumber: { fontSize: 26, fontWeight: '700', color: '#fff' },
+  mechStatLabel: { fontSize: 11, color: '#888', marginTop: 4, fontWeight: '500' },
+  mechQuickActions: { flexDirection: 'row', marginHorizontal: 16, marginTop: 16, gap: 12 },
+  mechQuickActionBtn: { flex: 1, alignItems: 'center', gap: 8 },
+  mechQuickActionIcon: { width: 52, height: 52, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  mechQuickActionLabel: { fontSize: 11, color: '#aaa', fontWeight: '500' },
+  mechSection: { flex: 1, marginTop: 20, paddingHorizontal: 16, paddingBottom: 90 },
+  mechSectionTitle: { fontSize: 16, fontWeight: '600', color: '#fff', marginBottom: 12 },
+  mechEmptyState: { alignItems: 'center', marginTop: 30 },
+  mechEmptyText: { fontSize: 15, color: '#888', marginTop: 12, fontWeight: '500' },
+  mechEmptySubtext: { fontSize: 13, color: '#555', marginTop: 4 },
+  mechRequestCard: { backgroundColor: 'rgba(28,28,46,0.6)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', borderRadius: 14, padding: 14, marginBottom: 10 },
+  mechRequestHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 },
+  mechRequestTitle: { flex: 1, fontSize: 14, fontWeight: '600', color: '#fff' },
+  mechStatusBadge: { backgroundColor: 'rgba(211,47,47,0.15)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  mechStatusText: { fontSize: 10, color: '#ef4444', fontWeight: '600' },
+  mechRequestDesc: { fontSize: 13, color: '#aaa', lineHeight: 18, marginBottom: 8 },
+  mechRequestFooter: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  mechRequestTime: { fontSize: 12, color: '#666' },
+  mechBottomNav: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', backgroundColor: '#0E0E16', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)', paddingBottom: 8, paddingTop: 6 },
+  mechBottomNavItem: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 4, position: 'relative' },
+  mechBottomNavLabel: { fontSize: 10, color: '#666', marginTop: 2 },
+  mechBottomNavIndicator: { position: 'absolute', top: 0, width: 30, height: 3, borderRadius: 2, backgroundColor: '#d32f2f' },
+});
+
 
 function AdminHome({ navigation }: any) {
   const [pendingMechanics, setPendingMechanics] = React.useState<any[]>([]);
@@ -936,6 +918,15 @@ function AppStack({ role }: { role: string }) {
     registerForPushNotificationsAsync().catch((err) => {
       console.log('Push notification registration failed:', err);
     });
+
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const mapsLink = response.notification.request.content.data?.mapsLink as string;
+      if (mapsLink) {
+        Linking.openURL(mapsLink);
+      }
+    });
+
+    return () => subscription.remove();
   }, []);
 
   return (
@@ -955,11 +946,9 @@ function AppStack({ role }: { role: string }) {
       <Stack.Screen name="IncidentDetail" component={IncidentDetailScreen} options={{ title: 'Incident Detail' }} />
       <Stack.Screen name="CreateIncident" component={CreateIncidentScreen} options={({ route }: any) => ({ title: route.params?.mode === 'edit' ? 'Edit Incident' : 'New Incident' })} />
       <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} options={{ title: 'Admin Dashboard' }} />
-      <Stack.Screen name="AdminEmergencyNumbers" component={AdminEmergencyNumbersScreen} options={{ title: 'Manage Regional Numbers' }} />
       <Stack.Screen name="LocationSharing" component={LocationSharingScreen} options={{ title: 'Live Location' }} />
       <Stack.Screen name="EmergencyNotification" component={EmergencyNotificationScreen} options={{ title: 'Emergency Alert' }} />
       <Stack.Screen name="SOS" component={SOSScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="CustomEmergencyNumbers" component={CustomEmergencyNumbersScreen} options={{ title: 'Custom Overrides' }} />
       <Stack.Screen name="MyVehicles" component={MyVehiclesScreen} options={{ title: 'My Vehicles' }} />
       <Stack.Screen name="AddEditVehicle" component={AddEditVehicleScreen} options={{ title: 'Vehicle Details' }} />
       <Stack.Screen name="VehicleInsurance" component={VehicleInsuranceScreen} options={{ title: 'Insurance Reference' }} />
