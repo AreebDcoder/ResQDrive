@@ -4,7 +4,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RepairCostService } from './repair-cost.service';
-import * as PDFDocument from 'pdfkit';
+const PDFDocument = require('pdfkit');
 
 @ApiTags('Repair Cost Estimation')
 @ApiBearerAuth()

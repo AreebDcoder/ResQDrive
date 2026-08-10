@@ -16,8 +16,11 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import api, { API_URL } from '../api/axios';
-import { documentDirectory, downloadAsync } from 'expo-file-system/legacy';
+import { documentDirectory, writeAsStringAsync } from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+
+
+
 
 interface LineItem {
   partTag: string;
@@ -121,38 +124,49 @@ export default function RepairCostScreen({ route, navigation }: any) {
       setHistoryLoading(false);
     }
   };
-
-  const handleShareReport = async () => {
-    if (!report) return;
-    setIsSharing(true);
-
-    try {
-      const pdfUri = `${API_URL}/repair-cost/report/${report.id}/pdf`;
-      const fileUri = `${documentDirectory}ResQDrive_Repair_Report_${report.id}.pdf`;
-
-      // Download the PDF stream from NestJS backend locally
-      const downloadResult = await downloadAsync(pdfUri, fileUri, {
-        headers: {
-          Authorization: api.defaults.headers.common['Authorization'] as string,
-        },
-      });
-
-      if (downloadResult.status === 200) {
-        // Trigger Native share sheet
-        await Sharing.shareAsync(downloadResult.uri, {
-          mimeType: 'application/pdf',
-          dialogTitle: 'Share Repair Cost Estimate',
-        });
-      } else {
-        throw new Error('Download request failed.');
-      }
-    } catch (err: any) {
-      Alert.alert('Sharing Failed', 'Could not fetch or share the breakdown report. Ensure permissions are allowed.');
-    } finally {
-      setIsSharing(false);
+const handleShareReport = async () => {
+  if (!report) return;
+  setIsSharing(true);
+  try {
+    const isAvailable = await Sharing.isAvailableAsync();
+    if (!isAvailable) {
+      Alert.alert('Not Supported', 'Sharing is not available on this device.');
+      return;
     }
-  };
 
+    // api.get triggers the auth interceptor automatically
+    const response = await api.get(
+      `/repair-cost/report/${report.id}/pdf`,
+      { responseType: 'arraybuffer' }
+    );
+
+    // Convert arraybuffer to base64
+    const bytes = new Uint8Array(response.data);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64Data = btoa(binary);
+
+    const fileUri = `${documentDirectory}ResQDrive_Report_${report.id}.pdf`;
+ await writeAsStringAsync(fileUri, base64Data, {
+  encoding: 'base64',
+});
+
+    await Sharing.shareAsync(fileUri, {
+      mimeType: 'application/pdf',
+      dialogTitle: 'Share Repair Cost Report',
+      UTI: 'com.adobe.pdf',
+    });
+  } catch (err: any) {
+    Alert.alert(
+      'Sharing Failed',
+      err.message || 'Could not share the report.'
+    );
+  } finally {
+    setIsSharing(false);
+  }
+};
   const getPartName = (tag: string) => {
     return tag.toUpperCase().replace('_', ' ');
   };

@@ -211,7 +211,7 @@ export class RepairCostService {
         partTag: assessment.partTag,
         damageType: assessment.predictedDamageType,
         action,
-        laborCost: { min: laborRate.minCostPkr, max: laborRate.maxCostPkr },
+        laborCost: { min: effectiveLaborRate.minCostPkr, max: effectiveLaborRate.maxCostPkr },
         partsCost: { min: partsMin, max: partsMax },
         partsSource,
         lineTotal: { min: minLineTotal, max: maxLineTotal },
