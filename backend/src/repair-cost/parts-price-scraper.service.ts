@@ -93,8 +93,10 @@ export class PartsPriceScraperService {
     partTag: string,
     action: string,
   ): Promise<ScrapedPartsPriceResult | null> {
+    const cleanMake = (make || '').trim();
+    const cleanModel = (model || '').trim();
     const partKeyword = this.getSearchKeyword(partTag);
-    const searchQuery = `${make} ${model} ${partKeyword}`.trim();
+    const searchQuery = `${cleanMake} ${cleanModel} ${partKeyword}`.replace(/\s+/g, ' ').trim();
     const startTime = Date.now();
 
     this.logger.log(`Initiating marketplace parts price scrape for query: "${searchQuery}"`);
