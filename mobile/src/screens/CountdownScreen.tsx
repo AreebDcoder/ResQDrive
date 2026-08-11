@@ -6,9 +6,9 @@ import {
   TouchableOpacity,
   Animated,
   Vibration,
-  SafeAreaView,
   BackHandler,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import api from '../api/axios';
@@ -21,11 +21,12 @@ import { CrashSoundDetectionService } from '../services/crashSoundDetectionServi
 const COUNTDOWN_SECONDS = 10;
 
 export default function CountdownScreen({ navigation, route }: any) {
-  const { latitude, longitude, severity = 'Moderate' } = route.params || {};
+  const { latitude, longitude, severity = 'Moderate', countdownSeconds } = route.params || {};
+  const initialCountdown = countdownSeconds || (severity === 'Severe' ? 10 : 20);
   const contacts = useSelector((state: RootState) => state.contacts.list);
   const user = useSelector((state: RootState) => state.auth.user);
 
-  const [secondsLeft, setSecondsLeft] = useState(COUNTDOWN_SECONDS);
+  const [secondsLeft, setSecondsLeft] = useState(initialCountdown);
   const [isDispatching, setIsDispatching] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -205,7 +206,7 @@ export default function CountdownScreen({ navigation, route }: any) {
 
   useEffect(() => {
     intervalRef.current = setInterval(() => {
-      setSecondsLeft((prev) => {
+      setSecondsLeft((prev: number) => {
         if (prev <= 1) {
           if (intervalRef.current) clearInterval(intervalRef.current);
           handleTimeout();
