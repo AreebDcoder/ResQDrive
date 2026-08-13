@@ -3,6 +3,7 @@ import * as Location from 'expo-location';
 import { store } from '../store/store';
 import { updateLatestReading } from '../store/slices/sensorSlice';
 import { SensorReading, SensorFusionService } from './sensorFusionInterface';
+import { classifyMotionSeverity } from '../config/motionSeverityConfig';
 
 export class PhoneSensorFallbackService implements SensorFusionService {
   private callbacks: ((reading: SensorReading) => void)[] = [];
@@ -155,10 +156,14 @@ export class PhoneSensorFallbackService implements SensorFusionService {
       gpsSpeedDropKmh = Math.max(0, maxSpeed - this.lastSpeedKmh);
     }
 
+    // 4. Classify motion sensor confluence severity tier ('none' | 'minor' | 'moderate' | 'severe')
+    const motionSeverity = classifyMotionSeverity(accelG, gyroDegPerSec);
+
     const reading: SensorReading = {
       accelG,
       gyroDegPerSec,
       gpsSpeedDropKmh,
+      motionSeverity,
       timestamp: Date.now(),
     };
 

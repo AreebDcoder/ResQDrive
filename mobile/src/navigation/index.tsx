@@ -11,6 +11,8 @@ import { dispatchEmergencyAlert } from '../utils/emergencyFallback';
 import { registerForPushNotificationsAsync } from '../utils/registerPushToken';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { logoutAction, setTokens } from '../store/slices/authSlice';
+import { classifyMotionSeverity } from '../config/motionSeverityConfig';
+import { MultiModalFusionService } from '../services/multiModalFusionService';
 
 import SplashScreen from '../screens/SplashScreen';
 import LoginScreen from '../screens/LoginScreen';
@@ -96,42 +98,37 @@ function DriverHome({ navigation }: any) {
   }, [dispatch]);
 
   React.useEffect(() => {
-    CrashSoundDetectionService.subscribeToCrashEvents((confidence, topClass) => {
-      const now = Date.now();
-      const COOLDOWN_PERIOD_MS = 3 * 60 * 1000; // 3 minutes lockout
-      if (now - CrashSoundDetectionService.lastCrashTriggerTime < COOLDOWN_PERIOD_MS) {
-        console.log('⏸️ Crash detected but in 3-minute lockout cooldown — ignoring duplicate trigger.');
-        return;
-      }
-
-      console.log('🚨 CRASH CALLBACK FIRED — confidence:', confidence, 'class:', topClass);
-      CrashSoundDetectionService.lastCrashTriggerTime = now;
+    // 1. Subscribe to multi-modal acoustic-motion coincidence triggers (10-second window)
+    MultiModalFusionService.subscribeToConfirmedAccidents((trigger) => {
+      console.log(`🚨 MULTI-MODAL ACCIDENT CONFIRMED! Acoustic ("${trigger.soundEvent.topClass}") & Motion (${trigger.motionEvent.severity.toUpperCase()}) co-occurred within 10s window!`);
 
       Location.requestForegroundPermissionsAsync()
         .then(({ status }) => {
           if (status !== 'granted') {
             console.log('❌ Location permission not granted, cannot navigate to Countdown.');
-            CrashSoundDetectionService.lastCrashTriggerTime = 0; // Reset on failure
             return;
           }
           return Location.getCurrentPositionAsync({});
         })
         .then((location) => {
-          if (!location) {
-            CrashSoundDetectionService.lastCrashTriggerTime = 0; // Reset on failure
-            return;
-          }
+          if (!location) return;
           console.log('📍 Got location, navigating to Countdown now...');
           navigation.navigate('Countdown', {
             latitude: location.coords.latitude,
             longitude: location.coords.longitude,
-            severity: confidence > 0.75 ? 'Severe' : 'Moderate',
+            severity: trigger.combinedSeverity,
+            countdownSeconds: trigger.combinedSeverity === 'Severe' ? 10 : 20,
           });
         })
         .catch((err) => {
-          console.log('❌ Location fetch failed:', err);
-          CrashSoundDetectionService.lastCrashTriggerTime = 0; // Reset on failure
+          console.log('❌ Multi-modal accident trigger location fetch failed:', err);
         });
+    });
+
+    // 2. Feed YAMNet acoustic crash events into MultiModalFusionService
+    CrashSoundDetectionService.subscribeToCrashEvents((confidence, topClass) => {
+      console.log('🔊 [Audio Monitor] Acoustic crash signature detected:', topClass, `${(confidence * 100).toFixed(1)}%`);
+      MultiModalFusionService.recordSoundEvent(confidence, topClass);
     });
 
     if (preferences?.drivingModeEnabled) {
@@ -150,21 +147,16 @@ function DriverHome({ navigation }: any) {
   React.useEffect(() => {
     if (preferences?.drivingModeEnabled) {
       console.log('Driving Mode Enabled: Starting sensor fusion source manager...');
-      
+
+      // 3. Feed Accelerometer/Gyroscope motion events into MultiModalFusionService
       sensorSourceManager.onSensorEvent((reading) => {
-        if (reading.accelG > 4.5 && reading.gyroDegPerSec > 150.0) {
-          console.log('🚨 Sensor Fusion detected high g-force impact! Navigating to countdown...');
-          Location.requestForegroundPermissionsAsync().then(({ status }) => {
-            if (status === 'granted') {
-              return Location.getCurrentPositionAsync({});
-            }
-          }).then((location) => {
-            navigation.navigate('Countdown', {
-              latitude: location?.coords.latitude || 0,
-              longitude: location?.coords.longitude || 0,
-              severity: 'Severe',
-            });
-          }).catch(err => console.log('Sensor accident trigger location failed:', err));
+        const severity = reading.motionSeverity || classifyMotionSeverity(reading.accelG, reading.gyroDegPerSec);
+
+        if (severity === 'severe' || severity === 'moderate') {
+          console.log(`🚗 [Motion Monitor] ${severity.toUpperCase()} impact signature detected (${reading.accelG.toFixed(2)}g / ${reading.gyroDegPerSec.toFixed(1)}°/s). Feeding into MultiModalFusionService...`);
+          MultiModalFusionService.recordMotionEvent(severity, reading.accelG, reading.gyroDegPerSec);
+        } else if (severity === 'minor') {
+          console.log(`ℹ️ [Motion Monitor] Logged MINOR jolt event (${reading.accelG.toFixed(2)}g, ${reading.gyroDegPerSec.toFixed(1)}°/s). Recorded for history review without triggering countdown.`);
         }
       });
 
@@ -177,7 +169,7 @@ function DriverHome({ navigation }: any) {
     return () => {
       sensorSourceManager.stop();
     };
-  }, [preferences?.drivingModeEnabled, navigation]);
+  }, [preferences?.drivingModeEnabled]);
 
   const handleQuickCall = () => {
     if (primaryContact) {

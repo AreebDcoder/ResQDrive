@@ -415,12 +415,12 @@ export class CrashSoundDetectionService {
 
               const explosionScore = Math.max(scoresArray[420] || 0, scoresArray[430] || 0); // Explosion / Boom
 
-              // Direct crash sounds require >= 35% confidence. Generic bangs (claps/thuds) require >= 60% confidence.
+              // Direct crash sounds require >= 35% confidence. Generic bangs (Explosion/Boom) require >= 45% confidence.
               if (maxDirectScore >= 0.35) {
                 isExceeded = true;
                 maxConfidence = maxDirectScore;
                 topClassName = directClassName;
-              } else if (explosionScore >= 0.60) {
+              } else if (explosionScore >= 0.45) {
                 isExceeded = true;
                 maxConfidence = explosionScore;
                 topClassName = (scoresArray[420] || 0) >= (scoresArray[430] || 0) ? 'Explosion' : 'Boom';

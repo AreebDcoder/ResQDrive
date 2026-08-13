@@ -1,6 +1,7 @@
 import { store } from '../store/store';
 import { setConnectionStatus, updateLatestReading } from '../store/slices/sensorSlice';
 import { SensorReading, SensorFusionService } from './sensorFusionInterface';
+import { classifyMotionSeverity } from '../config/motionSeverityConfig';
 
 let BleManagerClass: any = null;
 try {
@@ -182,10 +183,13 @@ export class BleSensorFusionService implements SensorFusionService {
         this.lastGpsSpeedDrop = gpsSpeedDropKmh;
       }
 
+      const motionSeverity = classifyMotionSeverity(accelG, gyroDegPerSec);
+
       const reading: SensorReading = {
         accelG,
         gyroDegPerSec,
         gpsSpeedDropKmh,
+        motionSeverity,
         timestamp: Date.now(), // Wall clock timestamp from phone
       };
 
