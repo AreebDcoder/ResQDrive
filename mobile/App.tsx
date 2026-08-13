@@ -13,6 +13,7 @@ import Navigation from './src/navigation';
 import NotificationBanner from './src/components/NotificationBanner';
 import { DrivingNotificationService } from './src/services/drivingNotificationService';
 
+
 // Configure how notifications appear when the app is in the foreground
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
