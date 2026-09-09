@@ -29,6 +29,7 @@ import CreateIncidentScreen from '../screens/CreateIncidentScreen';
 import LocationSharingScreen from '../screens/LocationSharingScreen';
 import EmergencyNotificationScreen from '../screens/EmergencyNotificationScreen';
 import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
+import AdminEmergencyNumbersScreen from '../screens/admin/AdminEmergencyNumbersScreen';
 import SOSScreen from '../screens/SOSScreen';
 import MyVehiclesScreen from '../screens/MyVehiclesScreen';
 import AddEditVehicleScreen from '../screens/AddEditVehicleScreen';
@@ -938,6 +939,7 @@ function AppStack({ role }: { role: string }) {
       <Stack.Screen name="IncidentDetail" component={IncidentDetailScreen} options={{ title: 'Incident Detail' }} />
       <Stack.Screen name="CreateIncident" component={CreateIncidentScreen} options={({ route }: any) => ({ title: route.params?.mode === 'edit' ? 'Edit Incident' : 'New Incident' })} />
       <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} options={{ title: 'Admin Dashboard' }} />
+            <Stack.Screen name="AdminEmergencyNumbers" component={AdminEmergencyNumbersScreen} options={{ title: 'Regional Emergency Numbers' }} />
       <Stack.Screen name="LocationSharing" component={LocationSharingScreen} options={{ title: 'Live Location' }} />
       <Stack.Screen name="EmergencyNotification" component={EmergencyNotificationScreen} options={{ title: 'Emergency Alert' }} />
       <Stack.Screen name="SOS" component={SOSScreen} options={{ headerShown: false }} />
