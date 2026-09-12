@@ -72,6 +72,61 @@ async function main() {
   } else {
     console.log('Regional emergency numbers already seeded.');
   }
+
+  // Seed default LaborCostRates if empty or missing
+  const partTags = [
+    'front_bumper', 'rear_bumper', 'bonnet', 'left_mirror', 'right_mirror',
+    'headlight', 'taillight', 'door', 'windshield', 'roof', 'tire', 'other'
+  ] as const;
+
+  const actions = ['repair', 'replace'] as const;
+
+  for (const partTag of partTags) {
+    for (const action of actions) {
+      await prisma.laborCostRate.upsert({
+        where: {
+          partTag_action: { partTag, action }
+        },
+        update: {},
+        create: {
+          partTag,
+          action,
+          minCostPkr: action === 'replace' ? 2500 : 1500,
+          maxCostPkr: action === 'replace' ? 6000 : 4000,
+        }
+      });
+    }
+  }
+  console.log('Successfully seeded LaborCostRates for all car parts.');
+
+  // Seed sample verified workshop mechanics
+  const mechanicEmail = 'mechanic@resqdrive.com';
+  const existingMechanic = await prisma.user.findUnique({ where: { email: mechanicEmail } });
+  if (!existingMechanic) {
+    const passwordHash = await bcrypt.hash('MechanicPassword123!', 10);
+    await prisma.user.create({
+      data: {
+        fullName: 'AutoCare Workshop (Islamabad)',
+        email: mechanicEmail,
+        phoneNumber: '+923001112233',
+        passwordHash,
+        role: UserRole.MECHANIC,
+        isVerified: true,
+        isActive: true,
+        mechanicDetails: {
+          create: {
+            workshopName: 'AutoCare Master Repairs',
+            workshopAddress: 'Blue Area, Islamabad, Pakistan',
+            workshopLatitude: 33.7182,
+            workshopLongitude: 73.0601,
+            isWorkshopVerified: true,
+            specialization: 'Bodywork, Denting & Painting',
+          }
+        }
+      }
+    });
+    console.log('Successfully seeded sample verified workshop mechanic.');
+  }
 }
 
 main()

@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+import * as Location from 'expo-location';
 import { store } from '../store/store';
 import { setConnectionStatus, updateLatestReading } from '../store/slices/sensorSlice';
 import { SensorReading, SensorFusionService } from './sensorFusionInterface';
@@ -23,6 +25,10 @@ export class BleSensorFusionService implements SensorFusionService {
   // Speed drop tracking
   private speedBuffer: number[] = [];
   private lastGpsSpeedDrop = 0;
+
+  // Phone GPS Fallback when BLE GPS fix is lost
+  private phoneLocationSubscription: Location.LocationSubscription | null = null;
+  private latestPhoneSpeedKmh = 0;
 
   // Reconnection state
   private isScanningOrConnecting = false;
@@ -54,6 +60,26 @@ export class BleSensorFusionService implements SensorFusionService {
       this.handleConnectionFailure();
       return;
     }
+
+    // Start background phone location watcher to act as backup speed source if BLE GPS loses lock
+    Location.requestForegroundPermissionsAsync().then(({ status }) => {
+      if (status === 'granted') {
+        Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.High,
+            timeInterval: 1000,
+            distanceInterval: 1,
+          },
+          location => {
+            this.latestPhoneSpeedKmh = Math.max(0, (location.coords.speed || 0) * 3.6);
+          }
+        ).then(sub => {
+          this.phoneLocationSubscription = sub;
+          console.log('BLE: Phone GPS backup watcher initialized.');
+        });
+      }
+    }).catch(err => console.log('BLE Fallback GPS error:', err.message));
+
     this.scanAndConnect();
   }
 
@@ -66,6 +92,12 @@ export class BleSensorFusionService implements SensorFusionService {
     if (this.manager) {
       this.manager.stopDeviceScan();
     }
+
+    if (this.phoneLocationSubscription) {
+      this.phoneLocationSubscription.remove();
+      this.phoneLocationSubscription = null;
+    }
+    this.latestPhoneSpeedKmh = 0;
 
     if (this.notificationSubscription) {
       this.notificationSubscription.remove();
@@ -121,6 +153,16 @@ export class BleSensorFusionService implements SensorFusionService {
       
       console.log('BLE: Discovering services and characteristics...');
       await connected.discoverAllServicesAndCharacteristics();
+
+      if (Platform.OS === 'android') {
+        try {
+          console.log('BLE: Requesting MTU size of 256 bytes for large sensor JSON payload...');
+          await connected.requestMTU(256);
+          console.log('BLE: MTU negotiation complete.');
+        } catch (mtuErr: any) {
+          console.log('BLE: MTU request rejected or failed:', mtuErr.message);
+        }
+      }
       
       console.log('BLE: Subscribing to characteristics notifications...');
       this.subscribeToNotifications(connected);
@@ -173,15 +215,18 @@ export class BleSensorFusionService implements SensorFusionService {
 
       // 3. Compute GPS Speed Drop over a 5-reading rolling buffer
       let gpsSpeedDropKmh = this.lastGpsSpeedDrop;
-      if (gpsFix) {
-        this.speedBuffer.push(speedKmh);
-        if (this.speedBuffer.length > 5) {
-          this.speedBuffer.shift();
-        }
-        const maxSpeed = Math.max(...this.speedBuffer);
-        gpsSpeedDropKmh = Math.max(0, maxSpeed - speedKmh);
-        this.lastGpsSpeedDrop = gpsSpeedDropKmh;
+      
+      // Fallback: If hardware Neo-6M GPS has no satellite fix (e.g. indoors/at home),
+      // use the phone's native A-GPS speed to calculate the speed drop.
+      const activeSpeed = gpsFix ? speedKmh : this.latestPhoneSpeedKmh;
+
+      this.speedBuffer.push(activeSpeed);
+      if (this.speedBuffer.length > 5) {
+        this.speedBuffer.shift();
       }
+      const maxSpeed = Math.max(...this.speedBuffer);
+      gpsSpeedDropKmh = Math.max(0, maxSpeed - activeSpeed);
+      this.lastGpsSpeedDrop = gpsSpeedDropKmh;
 
       const motionSeverity = classifyMotionSeverity(accelG, gyroDegPerSec);
 

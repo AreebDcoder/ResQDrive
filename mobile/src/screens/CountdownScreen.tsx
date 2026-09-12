@@ -97,23 +97,7 @@ export default function CountdownScreen({ navigation, route }: any) {
       email: c.email,
     }));
 
-    // 1. Try sending SMS directly from the phone (100% Free)
-    try {
-      const isAvailable = await Sms.isAvailableAsync();
-      if (isAvailable) {
-        const phoneNumbers = dispatchContacts.map(c => c.phoneNumber);
-        const messageBody = `ResQDrive ALERT: ${user?.fullName || 'Unknown'} may have been in a ${severity} accident. Location: https://www.google.com/maps?q=${latitude},${longitude}`;
-
-        await Sms.sendSMSAsync(phoneNumbers, messageBody);
-        console.log('SMS sent successfully via device SIM!');
-      } else {
-        console.log('SMS not available on this device');
-      }
-    } catch (err) {
-      console.log('Device SMS failed, relying on backend fallback:', err);
-    }
-
-    // 2. Also fire the backend API for Push, Email, and Database logging
+    // 1. Fire Backend Multi-Channel Alert Dispatch (Automated Push, Email, SMS Gateway)
     let result;
     try {
       result = await dispatchEmergencyAlert(
@@ -140,9 +124,10 @@ export default function CountdownScreen({ navigation, route }: any) {
       result = { mode: 'failed' };
     }
 
+    // 2. Log active incident in PostgreSQL
     const incident = await logIncident('ACTIVE', { dispatchMode: result.mode, smsSentViaDevice: true });
 
-    // Instantly present local Emergency Push Notification on device
+    // 3. Local emergency push notification popup
     try {
       await Notifications.scheduleNotificationAsync({
         content: {
@@ -157,10 +142,25 @@ export default function CountdownScreen({ navigation, route }: any) {
       console.log('Local emergency notification trigger failed:', e);
     }
 
+    // 4. Instantly transition to Emergency SOS Screen (Zero delay / blocking)
     navigation.replace('SOS', {
       severity: severity.toLowerCase(),
       incidentId: incident?.id || null,
     });
+
+    // 5. Fire Device SIM SMS composer non-blockingly (without stalling app navigation)
+    try {
+      const isAvailable = await Sms.isAvailableAsync();
+      if (isAvailable && dispatchContacts.length > 0) {
+        const phoneNumbers = dispatchContacts.map((c) => c.phoneNumber);
+        const messageBody = `ResQDrive ALERT: ${user?.fullName || 'Unknown'} may have been in a ${severity} accident. Location: https://www.google.com/maps?q=${latitude},${longitude}`;
+        Sms.sendSMSAsync(phoneNumbers, messageBody).catch((err) =>
+          console.log('Device SMS intent closed:', err),
+        );
+      }
+    } catch (err) {
+      console.log('Device SMS check failed:', err);
+    }
   }, [contacts, user, severity, latitude, longitude, logIncident, navigation]);
 
   const cancelCallbackRef = useRef(handleCancel);

@@ -12,6 +12,7 @@ import {
   Easing,
   StatusBar,
   Platform,
+  PermissionsAndroid,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
@@ -124,6 +125,15 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
       () => {}
     );
 
+    // Request CALL_PHONE permission early on screen mount for Android so auto-call is ready
+    if (Platform.OS === 'android') {
+      PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CALL_PHONE, {
+        title: 'Emergency Direct Call Permission',
+        message: 'ResQDrive requires permission to directly place emergency calls to Rescue 1122.',
+        buttonPositive: 'Allow',
+      }).catch((e) => console.log('Early CALL_PHONE permission check error:', e));
+    }
+
     return () => {
       // Stop listening when SOS Screen unmounts
       VoiceCommandService.stopListening();
@@ -198,6 +208,45 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
     };
   }, [isEscalationActive, escalationTimeLeft]);
 
+
+const makeDirectPhoneCall = async (phoneNumber: string) => {
+  let cleanNumber = phoneNumber.replace(/[^0-9+]/g, '');
+
+  // Format shortcode "1122" to E.164 full format "+921122"
+  // This bypasses Android TelecomManager shortcode interception and allows direct ACTION_CALL
+  if (cleanNumber === '1122') {
+    cleanNumber = '+921122';
+  }
+
+  if (Platform.OS === 'android') {
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.CALL_PHONE,
+        {
+          title: 'Emergency Direct Call Permission',
+          message: 'ResQDrive requires permission to directly place emergency calls to Rescue 1122.',
+          buttonPositive: 'Allow',
+          buttonNegative: 'Deny',
+        }
+      );
+
+      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+        console.log(`📞 [Direct Call]: Placing direct call to ${cleanNumber}...`);
+        // With CALL_PHONE granted + E.164 full number format,
+        // Linking.openURL triggers android.intent.action.CALL which places the call directly.
+        Linking.openURL(`tel:${cleanNumber}`);
+        return;
+      } else {
+        console.log('⚠️ CALL_PHONE permission denied. Falling back to dialer...');
+      }
+    } catch (err) {
+      console.log('Direct phone call execution error:', err);
+    }
+  }
+
+  Linking.openURL(`tel:${cleanNumber}`);
+};
+
   const triggerAutoEscalationCall = async () => {
     setIsEscalationActive(false);
     // Fetch top-priority number
@@ -215,8 +264,8 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
       console.log('Failed to log auto-dialed call:', err);
     }
 
-    // Launch native dialer
-    Linking.openURL(`tel:${phone}`);
+    // Launch direct phone call (ACTION_CALL) or fallback to dialer
+    makeDirectPhoneCall(phone);
   };
 
   const handleCallNumber = async (number: string, name: string) => {
@@ -244,7 +293,7 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
             } catch (err) {
               console.log('Failed to log emergency call:', err);
             }
-            Linking.openURL(`tel:${number}`);
+            makeDirectPhoneCall(number);
           },
         },
       ]

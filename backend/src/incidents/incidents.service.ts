@@ -4,8 +4,9 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { IncidentStatus } from '@prisma/client';
+import { IncidentStatus, NotificationCategory } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateIncidentDto } from './dto/create-incident.dto';
 import { UpdateIncidentDto } from './dto/update-incident.dto';
 import { QueryIncidentsDto } from './dto/query-incidents.dto';
@@ -14,7 +15,10 @@ import { QueryIncidentsDto } from './dto/query-incidents.dto';
 export class IncidentsService {
   private readonly logger = new Logger(IncidentsService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationsService: NotificationsService,
+  ) {}
 
   async create(userId: string, dto: CreateIncidentDto) {
     const occurredAt = new Date(dto.occurredAt);
@@ -40,6 +44,22 @@ export class IncidentsService {
     });
 
     this.logger.log(`Incident created: ${incident.id} for user ${userId}`);
+
+    // Dispatch push notification to user's registered devices when an active or severe incident is created
+    if (dto.status === IncidentStatus.ACTIVE || dto.severity === 'SEVERE' || dto.severity === 'MODERATE') {
+      await this.notificationsService
+        .send(
+          userId,
+          NotificationCategory.alert_delivery_confirmation,
+          `🚨 ResQDrive Alert: ${dto.severity} Incident Created`,
+          `An active ${dto.severity.toLowerCase()} incident has been recorded. Emergency contacts & location tracking activated.`,
+          { incidentId: incident.id, severity: dto.severity },
+        )
+        .catch((err) =>
+          this.logger.warn(`Failed to dispatch push notification for incident: ${err.message}`),
+        );
+    }
+
     return incident;
   }
 

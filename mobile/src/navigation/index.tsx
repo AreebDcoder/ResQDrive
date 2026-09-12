@@ -103,16 +103,24 @@ function DriverHome({ navigation }: any) {
       console.log(`🚨 MULTI-MODAL ACCIDENT CONFIRMED! Acoustic ("${trigger.soundEvent.topClass}") & Motion (${trigger.motionEvent.severity.toUpperCase()}) co-occurred within 10s window!`);
 
       Location.requestForegroundPermissionsAsync()
-        .then(({ status }) => {
+        .then(async ({ status }) => {
           if (status !== 'granted') {
             console.log('❌ Location permission not granted, cannot navigate to Countdown.');
-            return;
+            return null;
           }
-          return Location.getCurrentPositionAsync({});
+          try {
+            return await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          } catch (e) {
+            console.log('⚠️ High accuracy position failed, falling back to last known position...');
+            return await Location.getLastKnownPositionAsync();
+          }
         })
         .then((location) => {
-          if (!location) return;
-          console.log('📍 Got location, navigating to Countdown now...');
+          if (!location) {
+            console.log('❌ Could not acquire device GPS location.');
+            return;
+          }
+          console.log(`📍 Got precise location: Lat ${location.coords.latitude}, Lng ${location.coords.longitude}`);
           navigation.navigate('Countdown', {
             latitude: location.coords.latitude,
             longitude: location.coords.longitude,
