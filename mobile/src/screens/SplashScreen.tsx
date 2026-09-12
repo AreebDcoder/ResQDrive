@@ -6,12 +6,14 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  Image,
   View,
 } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { loginSuccess, logoutAction, setLoading } from '../store/slices/authSlice';
 import api from '../api/axios';
 import { getItemAsync, setItemAsync, deleteItemAsync } from '../utils/secureStorage';
+
 
 function AnimatedDot({ index }: { index: number }) {
   const offset = useRef(new Animated.Value(0)).current;
@@ -109,42 +111,44 @@ export default function SplashScreen() {
       }),
     ]).start();
   }, []);
-
-  // Ring pulse loop
+  // Ring pulse loop — starts AFTER entrance animation completes
   useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(ringScale, {
-          toValue: 1.15,
-          duration: 1500,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(ringScale, {
-          toValue: 0.95,
-          duration: 1500,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]),
-    ).start();
+    const timer = setTimeout(() => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(ringScale, {
+            toValue: 1.15,
+            duration: 1500,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(ringScale, {
+            toValue: 0.95,
+            duration: 1500,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ]),
+      ).start();
 
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(ringOpacity, {
-          toValue: 0.2,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(ringOpacity, {
-          toValue: 0.6,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-      ]),
-    ).start();
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(ringOpacity, {
+            toValue: 0.2,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(ringOpacity, {
+            toValue: 0.6,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+        ]),
+      ).start();
+    }, 3000);
+
+    return () => clearTimeout(timer);
   }, []);
-
   // Auth session check (unchanged logic)
   useEffect(() => {
     const checkSession = async () => {
@@ -211,9 +215,11 @@ export default function SplashScreen() {
           },
         ]}
       >
-        <View style={styles.logoInner}>
-          <Text style={styles.logoIcon}>🛡️</Text>
-        </View>
+             <Image
+          source={require('../../assets/splash.png')}
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
       </Animated.View>
 
       {/* Brand title */}
@@ -337,5 +343,10 @@ const styles = StyleSheet.create({
     height: 9,
     borderRadius: 5,
     backgroundColor: '#E53935',
+  },
+    logoImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 14,
   },
 });

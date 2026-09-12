@@ -5,6 +5,12 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#B71C1C"
+    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -17,7 +23,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#121212"
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#B71C1C"
       },
       "permissions": [
         "ACCESS_FINE_LOCATION",
