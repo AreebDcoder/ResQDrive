@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { Expo, ExpoPushMessage } from 'expo-server-sdk';
 import { Cron } from '@nestjs/schedule';
-
+import { WhatsAppService } from './whatsapp.service';
 export interface EmergencyContactTarget {
   name: string;
   phoneNumber: string;
@@ -33,6 +33,7 @@ export class AlertDispatchService {
   constructor(
     private prisma: PrismaService,
     private emailService: EmailService,
+    private whatsappService: WhatsAppService,
   ) {
     // Initialize Twilio Client using require to avoid TS/CommonJS interop issues
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -83,6 +84,7 @@ export class AlertDispatchService {
       push: { status: 'SENT' | 'FAILED'; detail: string; devMode: boolean };
       sms: { status: 'SENT' | 'FAILED'; detail: string; devMode: boolean };
       email: { status: 'SENT' | 'FAILED'; detail: string; devMode: boolean };
+      whatsapp: { status: 'SENT' | 'FAILED'; detail: string; devMode: boolean };
     };
     devMode: boolean;
   }> {
@@ -109,6 +111,31 @@ export class AlertDispatchService {
     const smsStatus: 'SENT' | 'FAILED' = smsResult.status === 'fulfilled' ? 'SENT' : 'FAILED';
     const emailStatus: 'SENT' | 'FAILED' = emailResult.status === 'fulfilled' ? 'SENT' : 'FAILED';
 
+        // NEW: Send WhatsApp messages to all contacts (in parallel)
+    const whatsappResults = await Promise.allSettled(
+      (payload.contacts || []).map(async (contact: any) => {
+        if (!contact.phoneNumber) return;
+        await this.whatsappService.sendEmergencyAlert(
+          contact.phoneNumber,
+          payload.userName,
+          payload.severity,
+          payload.latitude,
+          payload.longitude,
+          mapsLink,
+        );
+        // Also send a location pin for richer UX
+        await this.whatsappService.sendLocationPin(
+          contact.phoneNumber,
+          payload.latitude,
+          payload.longitude,
+          'Accident Location',
+        );
+      }),
+    );
+    const whatsappSentCount = whatsappResults.filter((r) => r.status === 'fulfilled').length;
+    const whatsappStatus: 'SENT' | 'FAILED' = whatsappSentCount > 0 ? 'SENT' : 'FAILED';
+    this.logger.log(`WhatsApp dispatch: ${whatsappSentCount}/${whatsappResults.length} contacts notified`);
+
     await this.prisma.alertDispatchLog.update({
       where: { id: log.id },
       data: { pushStatus, smsStatus, emailStatus },
@@ -117,9 +144,8 @@ export class AlertDispatchService {
     const isTwilioConfigured = Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER && !process.env.TWILIO_ACCOUNT_SID.startsWith('AC0000'));
     const isFirebaseConfigured = Boolean(process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY);
     const isSmtpConfigured = Boolean(process.env.SMTP_HOST && process.env.SMTP_PORT && process.env.SMTP_HOST !== 'localhost');
-
-    const devMode = !isTwilioConfigured || !isFirebaseConfigured || !isSmtpConfigured;
-
+    const isWhatsappConfigured = this.whatsappService.isReady();
+    const devMode = !isTwilioConfigured || !isFirebaseConfigured || !isSmtpConfigured || !isWhatsappConfigured;
     const channels = {
       push: {
         status: pushStatus,
@@ -141,6 +167,13 @@ export class AlertDispatchService {
           ? (emailStatus === 'SENT' ? 'Email sent via SMTP' : 'SMTP delivery failed')
           : 'SMTP not configured (dev mode) — see backend terminal log',
         devMode: !isSmtpConfigured,
+      },
+      whatsapp: {
+        status: whatsappStatus,
+        detail: isWhatsappConfigured
+          ? (whatsappStatus === 'SENT' ? `WhatsApp sent to ${whatsappSentCount}/${whatsappResults.length} contacts` : 'WhatsApp delivery failed')
+          : 'WhatsApp not configured (dev mode)',
+        devMode: !isWhatsappConfigured,
       },
     };
 

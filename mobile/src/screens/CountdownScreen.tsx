@@ -37,11 +37,12 @@ export default function CountdownScreen({ navigation, route }: any) {
     sms: 'pending' | 'sending' | 'sent' | 'sent-via-device' | 'failed';
     push: 'pending' | 'sent' | 'failed';
     email: 'pending' | 'sent' | 'failed';
+    whatsapp: 'pending' | 'sent' | 'failed';
     module68: 'pending' | 'triggered' | 'failed';
     incident: 'pending' | 'logged' | 'failed';
   }>({
     backend: 'pending', sms: 'pending', push: 'pending',
-    email: 'pending', module68: 'pending', incident: 'pending',
+    email: 'pending', whatsapp: 'pending', module68: 'pending', incident: 'pending',
   });
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -116,7 +117,7 @@ export default function CountdownScreen({ navigation, route }: any) {
 
     setDispatchStatus({
       backend: 'sending', sms: 'pending', push: 'pending',
-      email: 'pending', module68: 'pending', incident: 'pending',
+      email: 'pending', whatsapp: 'pending', module68: 'pending', incident: 'pending',
     });
 
     // ═══ STEP 1: Backend dispatch (Push + Twilio SMS + Email) — PRIMARY PATH ═══
@@ -139,7 +140,8 @@ export default function CountdownScreen({ navigation, route }: any) {
       const anySent = respChannels &&
         (respChannels.push.status === 'SENT' ||
          respChannels.sms.status === 'SENT' ||
-         respChannels.email.status === 'SENT');
+         respChannels.email.status === 'SENT' ||
+         respChannels.whatsapp?.status === 'SENT');
 
       if (anySent) {
         backendSucceeded = true;
@@ -149,6 +151,7 @@ export default function CountdownScreen({ navigation, route }: any) {
           push: respChannels.push.status === 'SENT' ? 'sent' : 'failed',
           sms: respChannels.sms.status === 'SENT' ? 'sent' : (respChannels.sms.devMode ? 'pending' : 'failed'),
           email: respChannels.email.status === 'SENT' ? 'sent' : (respChannels.email.devMode ? 'failed' : 'failed'),
+          whatsapp: respChannels.whatsapp.status === 'SENT' ? 'sent' : (respChannels.whatsapp.devMode ? 'pending' : 'failed'),
         }));
         console.log('[Countdown] Backend dispatch partial/total success:', respChannels);
       } else {
@@ -368,6 +371,9 @@ export default function CountdownScreen({ navigation, route }: any) {
             </Text>
             <Text style={styles.statusRow}>
               {statusIcon(dispatchStatus.sms)} SMS: {statusText(dispatchStatus.sms, backendChannels?.sms?.devMode)}
+            </Text>
+                        <Text style={styles.statusRow}>
+              {statusIcon(dispatchStatus.whatsapp)} WhatsApp: {statusText(dispatchStatus.whatsapp, backendChannels?.whatsapp?.devMode)}
             </Text>
             <Text style={styles.statusRow}>
               {statusIcon(dispatchStatus.email)} Email: {statusText(dispatchStatus.email, backendChannels?.email?.devMode)}
