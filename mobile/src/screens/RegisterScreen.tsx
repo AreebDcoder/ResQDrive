@@ -21,6 +21,7 @@ import api from '../api/axios';
 import { useDispatch } from 'react-redux';
 import { loginSuccess } from '../store/slices/authSlice';
 import { setItemAsync } from '../utils/secureStorage';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function RegisterScreen({ route, navigation }: { route: any; navigation: any }) {
   const dispatch = useDispatch();
@@ -173,7 +174,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
               {/* Error */}
               {errorMsg && (
                 <View style={styles.errorContainer}>
-                  <Text style={styles.errorIcon}>⚠</Text>
+                  <Ionicons name="alert-circle-outline" size={18} color="#FF5252" style={{ marginRight: 8 }} />
                   <Text style={styles.errorText}>{errorMsg}</Text>
                 </View>
               )}
@@ -185,7 +186,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                   onPress={() => handleRoleChange('DRIVER')}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.roleTabEmoji}>🚗</Text>
+                  <Ionicons name="car-outline" size={18} color={selectedRole === 'DRIVER' ? '#FFFFFF' : '#6B6B80'} />
                   <Text style={[styles.roleTabText, selectedRole === 'DRIVER' && styles.activeRoleTabText]}>
                     Driver
                   </Text>
@@ -195,7 +196,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                   onPress={() => handleRoleChange('MECHANIC')}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.roleTabEmoji}>🔧</Text>
+                  <Ionicons name="construct-outline" size={18} color={selectedRole === 'MECHANIC' ? '#FFFFFF' : '#6B6B80'} />
                   <Text style={[styles.roleTabText, selectedRole === 'MECHANIC' && styles.activeRoleTabText]}>
                     Mechanic
                   </Text>
@@ -209,7 +210,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                   name="fullName"
                   render={({ field: { onChange, onBlur, value } }) => (
                     <View style={[styles.inputWrapper, focusedField === 'fullName' && styles.inputFocused, errors.fullName && styles.inputError]}>
-                      <Text style={styles.inputIcon}>👤</Text>
+                      <Ionicons name="person-outline" size={20} color="#6B6B80" style={{ marginRight: 10 }} />
                       <TextInput
                         style={styles.input}
                         placeholder="John Doe"
@@ -230,8 +231,8 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                   name="email"
                   render={({ field: { onChange, onBlur, value } }) => (
                     <View style={[styles.inputWrapper, focusedField === 'email' && styles.inputFocused, errors.email && styles.inputError]}>
-                      <Text style={styles.inputIcon}>✉</Text>
-                                           <TextInput
+                      <Ionicons name="mail-outline" size={20} color="#6B6B80" style={{ marginRight: 10 }} />
+                      <TextInput
                         style={[styles.input, isGoogleUser && { opacity: 0.6 }]}
                         placeholder="john@example.com"
                         editable={!isGoogleUser}
@@ -254,7 +255,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                   name="phoneNumber"
                   render={({ field: { onChange, onBlur, value } }) => (
                     <View style={[styles.inputWrapper, focusedField === 'phone' && styles.inputFocused, errors.phoneNumber && styles.inputError]}>
-                      <Text style={styles.inputIcon}>📱</Text>
+                      <Ionicons name="call-outline" size={20} color="#6B6B80" style={{ marginRight: 10 }} />
                       <TextInput
                         style={styles.input}
                         placeholder="+923001234567"
@@ -274,7 +275,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                 {selectedRole === 'DRIVER' && (
                   <View style={styles.roleSection}>
                     <View style={styles.roleSectionHeader}>
-                      <Text style={styles.roleSectionIcon}>🆔</Text>
+                      <Ionicons name="card-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
                       <Text style={styles.roleSectionTitle}>Driver Details</Text>
                     </View>
 
@@ -324,7 +325,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                 {selectedRole === 'MECHANIC' && (
                   <View style={styles.roleSection}>
                     <View style={styles.roleSectionHeader}>
-                      <Text style={styles.roleSectionIcon}>🏭</Text>
+                      <Ionicons name="business-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
                       <Text style={styles.roleSectionTitle}>Workshop Details</Text>
                     </View>
 
@@ -391,65 +392,64 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                   </View>
                 )}
 
-                                {!isGoogleUser && (<>
-                <Text style={styles.label}>Password</Text>
-                ...all password fields...
-                {errors.confirmPassword && <Text style={styles.errorHelper}>{errors.confirmPassword.message}</Text>}
-                </>)}
-                <Controller
+                {!isGoogleUser && (
+                  <>
+                    <Text style={styles.label}>Password</Text>
+                    <Controller
+                      control={control}
+                      name="password"
+                      render={({ field: { onChange, onBlur, value } }) => (
+                        <View style={[styles.inputWrapper, focusedField === 'password' && styles.inputFocused, errors.password && styles.inputError]}>
+                          <Ionicons name="lock-closed-outline" size={20} color="#6B6B80" style={{ marginRight: 10 }} />
+                          <TextInput
+                            style={[styles.input, { flex: 1 }]}
+                            placeholder="At least 8 chars, 1 num, 1 spec"
+                            placeholderTextColor="#6B6B80"
+                            secureTextEntry={!showPassword}
+                            autoCapitalize="none"
+                            onBlur={() => { onBlur(); setFocusedField(null); }}
+                            onChangeText={onChange}
+                            onFocus={() => setFocusedField('password')}
+                            value={value}
+                          />
+                          <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(!showPassword)}>
+                            <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#6B6B80" />
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    />
+                    {errors.password && <Text style={styles.errorHelper}>{errors.password.message}</Text>}
 
-                  control={control}
-                  name="password"
-                  render={({ field: { onChange, onBlur, value } }) => (
-                    <View style={[styles.inputWrapper, focusedField === 'password' && styles.inputFocused, errors.password && styles.inputError]}>
-                      <Text style={styles.inputIcon}>🔒</Text>
-                      <TextInput
-                        style={[styles.input, { flex: 1 }]}
-                        placeholder="At least 8 chars, 1 num, 1 spec"
-                        placeholderTextColor="#6B6B80"
-                        secureTextEntry={!showPassword}
-                        autoCapitalize="none"
-                        onBlur={() => { onBlur(); setFocusedField(null); }}
-                        onChangeText={onChange}
-                        onFocus={() => setFocusedField('password')}
-                        value={value}
-                      />
-                      <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(!showPassword)}>
-                        <Text style={styles.eyeBtnText}>{showPassword ? '🙈' : '👁'}</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                />
-                {errors.password && <Text style={styles.errorHelper}>{errors.password.message}</Text>}
-
-                <Text style={styles.label}>Confirm Password</Text>
-                <Controller
-                  control={control}
-                  name="confirmPassword"
-                  render={({ field: { onChange, onBlur, value } }) => (
-                    <View style={[styles.inputWrapper, focusedField === 'confirmPassword' && styles.inputFocused, errors.confirmPassword && styles.inputError]}>
-                      <Text style={styles.inputIcon}>🔒</Text>
-                      <TextInput
-                        style={[styles.input, { flex: 1 }]}
-                        placeholder="Confirm your password"
-                        placeholderTextColor="#6B6B80"
-                        secureTextEntry={!showConfirmPassword}
-                        autoCapitalize="none"
-                        onBlur={() => { onBlur(); setFocusedField(null); }}
-                        onChangeText={onChange}
-                        onFocus={() => setFocusedField('confirmPassword')}
-                        value={value}
-                      />
-                      <TouchableOpacity
-                        style={styles.eyeBtn}
-                        onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                      >
-                        <Text style={styles.eyeBtnText}>{showConfirmPassword ? '🙈' : '👁'}</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                />
-                {errors.confirmPassword && <Text style={styles.errorHelper}>{errors.confirmPassword.message}</Text>}
+                    <Text style={styles.label}>Confirm Password</Text>
+                    <Controller
+                      control={control}
+                      name="confirmPassword"
+                      render={({ field: { onChange, onBlur, value } }) => (
+                        <View style={[styles.inputWrapper, focusedField === 'confirmPassword' && styles.inputFocused, errors.confirmPassword && styles.inputError]}>
+                          <Ionicons name="lock-closed-outline" size={20} color="#6B6B80" style={{ marginRight: 10 }} />
+                          <TextInput
+                            style={[styles.input, { flex: 1 }]}
+                            placeholder="Confirm your password"
+                            placeholderTextColor="#6B6B80"
+                            secureTextEntry={!showConfirmPassword}
+                            autoCapitalize="none"
+                            onBlur={() => { onBlur(); setFocusedField(null); }}
+                            onChangeText={onChange}
+                            onFocus={() => setFocusedField('confirmPassword')}
+                            value={value}
+                          />
+                          <TouchableOpacity
+                            style={styles.eyeBtn}
+                            onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                          >
+                            <Ionicons name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#6B6B80" />
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    />
+                    {errors.confirmPassword && <Text style={styles.errorHelper}>{errors.confirmPassword.message}</Text>}
+                  </>
+                )}
 
                 {/* CTA Button */}
                 <TouchableOpacity

@@ -305,7 +305,10 @@ function DriverHome({ navigation }: any) {
           <ScrollView style={styles.scrollContainer} contentContainerStyle={{ paddingBottom: 40 }}>
             {/* Paired Vehicle Widget */}
             <View style={styles.dashboardCard}>
-              <Text style={styles.cardHeaderTitle}>🚗 Paired Vehicle</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                <Ionicons name="car-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
+                <Text style={styles.cardHeaderTitle}>Paired Vehicle</Text>
+              </View>
               {activeVehicle ? (
                 <View style={styles.vehicleDetailsBlock}>
                   <Text style={styles.activeVehicleName}>
@@ -322,7 +325,8 @@ function DriverHome({ navigation }: any) {
                     style={styles.actionBtnSecondary}
                     onPress={() => navigation.navigate('MyVehicles')}
                   >
-                    <Text style={styles.actionBtnText}>+ Add Vehicle</Text>
+                    <Ionicons name="add" size={16} color="#FFF" style={{ marginRight: 4 }} />
+                    <Text style={styles.actionBtnText}>Add Vehicle</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -330,7 +334,10 @@ function DriverHome({ navigation }: any) {
 
             {/* Emergency Contact Quick Access Widget */}
             <View style={styles.dashboardCard}>
-              <Text style={styles.cardHeaderTitle}>🛡️ Quick-Access Contact</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                <Ionicons name="shield-checkmark-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
+                <Text style={styles.cardHeaderTitle}>Quick-Access Contact</Text>
+              </View>
               {primaryContact ? (
                 <View style={styles.contactDetailsBlock}>
                   <View style={{ flex: 1, marginRight: 12 }}>
@@ -340,7 +347,8 @@ function DriverHome({ navigation }: any) {
                     </Text>
                   </View>
                   <TouchableOpacity style={styles.callNowBtn} onPress={handleQuickCall}>
-                    <Text style={styles.callNowBtnText}>📞 CALL</Text>
+                    <Ionicons name="call" size={14} color="#FFF" style={{ marginRight: 4 }} />
+                    <Text style={styles.callNowBtnText}>CALL</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -350,7 +358,8 @@ function DriverHome({ navigation }: any) {
                     style={styles.actionBtnSecondary}
                     onPress={() => navigation.navigate('EmergencyContacts')}
                   >
-                    <Text style={styles.actionBtnText}>+ Add Contact</Text>
+                    <Ionicons name="add" size={16} color="#FFF" style={{ marginRight: 4 }} />
+                    <Text style={styles.actionBtnText}>Add Contact</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -358,13 +367,16 @@ function DriverHome({ navigation }: any) {
 
             {/* Live Telemetry Widget */}
             <View style={styles.dashboardCard}>
-              <Text style={styles.cardHeaderTitle}>📊 Live Telemetry</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                <Ionicons name="pulse-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
+                <Text style={styles.cardHeaderTitle}>Live Telemetry</Text>
+              </View>
               {preferences?.drivingModeEnabled ? (
                 <View>
                   <View style={styles.telemetryRow}>
                     <Text style={styles.telemetryLabel}>Source:</Text>
                     <Text style={styles.telemetryValueBold}>
-                      {activeSource === 'ble' ? '🔌 BLE Hardware' : '📱 Phone Sensors'}
+                      {activeSource === 'ble' ? 'BLE Hardware' : 'Phone Sensors'}
                     </Text>
                   </View>
                   <View style={styles.telemetryRow}>
@@ -501,7 +513,10 @@ function DriverHome({ navigation }: any) {
                   navigation.navigate('MyVehicles');
                 }}
               >
-                <Text style={styles.menuItemText}>🚗 My Vehicles</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="car-outline" size={20} color="#E53935" style={{ marginRight: 12 }} />
+                  <Text style={styles.menuItemText}>My Vehicles</Text>
+                </View>
                 <Text style={styles.menuItemArrow}>›</Text>
               </TouchableOpacity>
 
@@ -512,7 +527,10 @@ function DriverHome({ navigation }: any) {
                   navigation.navigate('EmergencyContacts');
                 }}
               >
-                <Text style={styles.menuItemText}>📞 Emergency Contacts</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="call-outline" size={20} color="#E53935" style={{ marginRight: 12 }} />
+                  <Text style={styles.menuItemText}>Emergency Contacts</Text>
+                </View>
                 <Text style={styles.menuItemArrow}>›</Text>
               </TouchableOpacity>
 
@@ -523,7 +541,10 @@ function DriverHome({ navigation }: any) {
                   navigation.navigate('NotificationHistory');
                 }}
               >
-                <Text style={styles.menuItemText}>🔔 Notification History</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="notifications-outline" size={20} color="#E53935" style={{ marginRight: 12 }} />
+                  <Text style={styles.menuItemText}>Notification History</Text>
+                </View>
                 <Text style={styles.menuItemArrow}>›</Text>
               </TouchableOpacity>
 
@@ -534,7 +555,10 @@ function DriverHome({ navigation }: any) {
                   navigation.navigate('NotificationPreferences');
                 }}
               >
-                <Text style={styles.menuItemText}>⚙️ Notification Preferences</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="settings-outline" size={20} color="#E53935" style={{ marginRight: 12 }} />
+                  <Text style={styles.menuItemText}>Notification Preferences</Text>
+                </View>
                 <Text style={styles.menuItemArrow}>›</Text>
               </TouchableOpacity>
 
@@ -545,9 +569,11 @@ function DriverHome({ navigation }: any) {
                   navigation.navigate('CrashSoundDemo');
                 }}
               >
-                <Text style={styles.menuItemText}>🎙️ Crash Sound Detection</Text>
-                <Text style={styles.menuItemArrow}>›
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="mic-outline" size={20} color="#E53935" style={{ marginRight: 12 }} />
+                  <Text style={styles.menuItemText}>Crash Sound Detection</Text>
+                </View>
+                <Text style={styles.menuItemArrow}>›</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -557,7 +583,10 @@ function DriverHome({ navigation }: any) {
                   navigation.navigate('BleSensorDemo');
                 }}
               >
-                <Text style={styles.menuItemText}>🔌 BLE Sensor Diagnostics</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="bluetooth-outline" size={20} color="#E53935" style={{ marginRight: 12 }} />
+                  <Text style={styles.menuItemText}>BLE Sensor Diagnostics</Text>
+                </View>
                 <Text style={styles.menuItemArrow}>›</Text>
               </TouchableOpacity>
 
@@ -568,7 +597,10 @@ function DriverHome({ navigation }: any) {
                   navigation.navigate('VoiceCommandDemo');
                 }}
               >
-                <Text style={styles.menuItemText}>🗣️ Voice Commands</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="volume-high-outline" size={20} color="#E53935" style={{ marginRight: 12 }} />
+                  <Text style={styles.menuItemText}>Voice Commands</Text>
+                </View>
                 <Text style={styles.menuItemArrow}>›</Text>
               </TouchableOpacity>
 
@@ -579,7 +611,10 @@ function DriverHome({ navigation }: any) {
                   navigation.navigate('Profile');
                 }}
               >
-                <Text style={styles.menuItemText}>👤 My Profile Details</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="person-outline" size={20} color="#E53935" style={{ marginRight: 12 }} />
+                  <Text style={styles.menuItemText}>My Profile Details</Text>
+                </View>
                 <Text style={styles.menuItemArrow}>›</Text>
               </TouchableOpacity>
 
@@ -590,7 +625,10 @@ function DriverHome({ navigation }: any) {
                   navigation.navigate('IncidentsList');
                 }}
               >
-                <Text style={styles.menuItemText}>📋 Incident History</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="document-text-outline" size={20} color="#E53935" style={{ marginRight: 12 }} />
+                  <Text style={styles.menuItemText}>Incident History</Text>
+                </View>
                 <Text style={styles.menuItemArrow}>›</Text>
               </TouchableOpacity>
 
@@ -601,7 +639,10 @@ function DriverHome({ navigation }: any) {
                   navigation.navigate('LocationSharing');
                 }}
               >
-                <Text style={styles.menuItemText}>📡 Share Live Location</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="location-outline" size={20} color="#E53935" style={{ marginRight: 12 }} />
+                  <Text style={styles.menuItemText}>Share Live Location</Text>
+                </View>
                 <Text style={styles.menuItemArrow}>›</Text>
               </TouchableOpacity>
 
@@ -612,7 +653,10 @@ function DriverHome({ navigation }: any) {
                   navigation.navigate('EmergencyNotification');
                 }}
               >
-                <Text style={styles.menuItemText}>🚨 Emergency Alert</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="warning-outline" size={20} color="#E53935" style={{ marginRight: 12 }} />
+                  <Text style={styles.menuItemText}>Emergency Alert</Text>
+                </View>
                 <Text style={styles.menuItemArrow}>›</Text>
               </TouchableOpacity>
 
@@ -623,7 +667,10 @@ function DriverHome({ navigation }: any) {
                   testEmergencyFallback();
                 }}
               >
-                <Text style={styles.menuItemText}>🧪 Test Emergency Fallback</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                  <Ionicons name="flask-outline" size={18} color="#aaa" />
+                  <Text style={styles.menuItemText}>Test Emergency Fallback</Text>
+                </View>
                 <Text style={styles.menuItemArrow}>›</Text>
               </TouchableOpacity>
 
@@ -634,7 +681,10 @@ function DriverHome({ navigation }: any) {
                   triggerRealEmergencyDispatch();
                 }}
               >
-                <Text style={[styles.menuItemText, { color: '#d32f2f', fontWeight: 'bold' }]}>🚨 Send Emergency Alert</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                  <Ionicons name="alert-circle-outline" size={18} color="#d32f2f" />
+                  <Text style={[styles.menuItemText, { color: '#d32f2f', fontWeight: 'bold' }]}>Send Emergency Alert</Text>
+                </View>
                 <Text style={[styles.menuItemArrow, { color: '#d32f2f' }]}>›</Text>
               </TouchableOpacity>
 
@@ -651,7 +701,10 @@ function DriverHome({ navigation }: any) {
                   });
                 }}
               >
-                <Text style={[styles.menuItemText, { color: '#fff' }]}>💥 Simulate Crash (Test Countdown)</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                  <Ionicons name="warning-outline" size={18} color="#fff" />
+                  <Text style={[styles.menuItemText, { color: '#fff' }]}>Simulate Crash (Test Countdown)</Text>
+                </View>
                 <Text style={[styles.menuItemArrow, { color: '#fff' }]}>›</Text>
               </TouchableOpacity>
             </ScrollView>
@@ -842,7 +895,7 @@ function AdminHome({ navigation }: any) {
           <Text style={styles.errorText}>{message}</Text>
         ) : pendingMechanics.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>🎉 All workshops are currently verified!</Text>
+            <Text style={styles.emptyText}>All workshops are currently verified!</Text>
           </View>
         ) : (
           <ScrollView style={styles.scrollList}>
@@ -865,7 +918,10 @@ function AdminHome({ navigation }: any) {
         )}
 
         <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('AdminDashboard')}>
-          <Text style={styles.navBtnText}>📊 Analytics Dashboard</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <Ionicons name="analytics-outline" size={18} color="#ffffff" />
+            <Text style={styles.navBtnText}>Analytics Dashboard</Text>
+          </View>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('Profile')}>
           <Text style={styles.navBtnText}>Go to My Profile</Text>

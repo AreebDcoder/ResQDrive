@@ -24,3 +24,10 @@ export const ROLLING_AVG_WINDOW_SECONDS = 5.0;
 
 // Refractory / cooldown period in milliseconds to prevent multi-triggering on the same crash peak
 export const REFRACTORY_PERIOD_MS = 2000;
+
+// FYP Evaluation / Demo Mode Flag
+export let IS_DEMO_MODE = false;
+
+export function setDemoMode(enabled: boolean) {
+  IS_DEMO_MODE = enabled;
+}

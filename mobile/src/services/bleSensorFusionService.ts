@@ -33,7 +33,7 @@ export class BleSensorFusionService implements SensorFusionService {
   // Reconnection state
   private isScanningOrConnecting = false;
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 10;
+  private maxReconnectAttempts = 2;
   private reconnectTimer: any = null;
 
   constructor() {
@@ -121,12 +121,22 @@ export class BleSensorFusionService implements SensorFusionService {
   }
 
   private scanAndConnect() {
-    console.log('BLE: Starting scan for ResQDrive Service...');
+    console.log('BLE: Starting 3s scan for ResQDrive Service...');
     
+    // Safety 3s timeout: if hardware isn't broadcasting, stop scan and trigger fallback
+    const scanTimeout = setTimeout(() => {
+      console.log('BLE: Scan timeout reached (3s). Stopping scan...');
+      if (this.manager) {
+        try { this.manager.stopDeviceScan(); } catch (e) {}
+      }
+      this.handleConnectionFailure();
+    }, 3000);
+
     this.manager.startDeviceScan(
       [SERVICE_UUID], 
       { allowDuplicates: false }, 
       async (error: any, device: any) => {
+        clearTimeout(scanTimeout);
         if (error) {
           console.log('BLE Scan error:', error.message);
           this.handleConnectionFailure();
@@ -258,7 +268,7 @@ export class BleSensorFusionService implements SensorFusionService {
   private handleConnectionFailure() {
     this.clearTimers();
     if (this.manager) {
-      this.manager.stopDeviceScan();
+      try { this.manager.stopDeviceScan(); } catch (e) {}
     } else {
       console.log('BLE: BleManager is missing. Skipping retries, marking as unavailable.');
       this.isScanningOrConnecting = false;
@@ -266,24 +276,17 @@ export class BleSensorFusionService implements SensorFusionService {
       return;
     }
 
-    if (this.reconnectAttempts === 0) {
-      // Attempt 1: Reconnect immediately
+    if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
-      console.log('BLE: Retrying connection immediately...');
-      store.dispatch(setConnectionStatus('connecting'));
-      this.scanAndConnect();
-    } else if (this.reconnectAttempts < this.maxReconnectAttempts) {
-      // Attempts 2-10: Reconnect every 3 seconds
-      this.reconnectAttempts++;
-      console.log(`BLE: Retrying connection in 3 seconds (Attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
+      console.log(`BLE: Retrying connection in 2 seconds (Attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
       store.dispatch(setConnectionStatus('connecting'));
       
       this.reconnectTimer = setTimeout(() => {
         this.scanAndConnect();
-      }, 3000);
+      }, 2000);
     } else {
-      // Retries exhausted: fail gracefully and surface "unavailable" status
-      console.log('BLE: Connection retries exhausted. BLE is unavailable.');
+      // Retries exhausted: fail gracefully and surface "unavailable" status for phone fallback
+      console.log('BLE: Hardware connection attempt completed. Switching to Phone sensors.');
       this.isScanningOrConnecting = false;
       store.dispatch(setConnectionStatus('unavailable'));
     }

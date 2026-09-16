@@ -18,6 +18,7 @@ import {
 import {
   createIncidentSchema, CreateIncidentInput, SEVERITY_OPTIONS, STATUS_OPTIONS,
 } from '../schemas/incidentValidation';
+import { Ionicons } from '@expo/vector-icons';
 
 const SEVERITY_COLORS: Record<string, string> = {
   NONE: '#6B6B80', MINOR: '#FFD600', MODERATE: '#FF9100', SEVERE: '#FF1744',
@@ -39,51 +40,51 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
     if (isEdit && id) {
       dispatch(fetchIncident(id)).unwrap().catch(() => setLoadError('Failed to load incident for editing'));
     }
-  }, [dispatch, id, isEdit]);
+  }, [isEdit, id]);
 
-  const { control, handleSubmit, setValue, watch, formState: { errors } } = useForm<CreateIncidentInput>({
+  const {
+    control, handleSubmit, reset,
+    formState: { errors },
+  } = useForm<CreateIncidentInput>({
     resolver: zodResolver(createIncidentSchema),
     defaultValues: {
-      severity: 'NONE', status: 'ACTIVE', occurredAt: nowISO(),
-      latitude: '', longitude: '', address: '', description: '',
+      severity: 'NONE',
+      status: 'ACTIVE',
+      occurredAt: nowISO(),
+      address: '',
+      description: '',
+      latitude: undefined,
+      longitude: undefined,
     },
   });
 
   useEffect(() => {
     if (isEdit && current) {
-      setValue('severity', current.severity);
-      setValue('status', current.status === 'ARCHIVED' ? 'RESOLVED' : current.status);
-      setValue('occurredAt', current.occurredAt.slice(0, 16));
-      setValue('latitude', current.latitude ? String(current.latitude) : '');
-      setValue('longitude', current.longitude ? String(current.longitude) : '');
-      setValue('address', current.address || '');
-      setValue('description', current.description || '');
+      const validStatus = (current.status && current.status !== 'ARCHIVED') ? current.status : 'ACTIVE';
+      reset({
+        severity: current.severity || 'NONE',
+        status: validStatus,
+        occurredAt: current.occurredAt ? current.occurredAt.slice(0, 16) : nowISO(),
+        address: current.address || '',
+        description: current.description || '',
+        latitude: current.latitude ?? undefined,
+        longitude: current.longitude ?? undefined,
+      });
     }
-  }, [isEdit, current, setValue]);
-
-  const watchSeverity = watch('severity');
-  const watchStatus = watch('status');
+  }, [current, isEdit]);
 
   const onSubmit = async (data: CreateIncidentInput) => {
-    const payload: any = {
-      ...data,
-      occurredAt: data.occurredAt.length === 16 ? data.occurredAt + ':00.000Z' : data.occurredAt,
-      latitude: data.latitude ? parseFloat(String(data.latitude)) : undefined,
-      longitude: data.longitude ? parseFloat(String(data.longitude)) : undefined,
-    };
-    Object.keys(payload).forEach((k) => (payload[k] === '' || payload[k] == null) && delete payload[k]);
-
     try {
       if (isEdit && id) {
-        await dispatch(updateIncident({ id, data: payload })).unwrap();
-        Alert.alert('Success', 'Incident updated.');
+        await dispatch(updateIncident({ id, data })).unwrap();
+        Alert.alert('Success', 'Incident updated successfully');
       } else {
-        await dispatch(createIncident(payload)).unwrap();
-        Alert.alert('Success', 'Incident created.');
+        await dispatch(createIncident(data)).unwrap();
+        Alert.alert('Success', 'Incident reported successfully');
       }
-      navigation.navigate('IncidentsList');
+      navigation.goBack();
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Something went wrong');
+      Alert.alert('Error', err.message || 'Failed to save incident');
     }
   };
 
@@ -101,7 +102,7 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
       style={styles.container}
     >
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
-        <Text style={styles.sectionTitle}>🏷️ Severity</Text>
+        <Text style={styles.sectionTitle}>Severity</Text>
         <Controller
           control={control}
           name="severity"
@@ -124,7 +125,7 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
         />
         {errors.severity && <Text style={styles.errorHelper}>{errors.severity.message}</Text>}
 
-        <Text style={styles.sectionTitle}>🚦 Status</Text>
+        <Text style={styles.sectionTitle}>Status</Text>
         <Controller
           control={control}
           name="status"
@@ -146,7 +147,7 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
           )}
         />
 
-        <Text style={styles.label}>📅 Date & Time (YYYY-MM-DDTHH:MM)</Text>
+        <Text style={styles.label}>Date & Time (YYYY-MM-DDTHH:MM)</Text>
         <Controller
           control={control}
           name="occurredAt"
@@ -162,7 +163,7 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
         />
         {errors.occurredAt && <Text style={styles.errorHelper}>{errors.occurredAt.message}</Text>}
 
-        <Text style={styles.label}>📍 Address (optional)</Text>
+        <Text style={styles.label}>Address (optional)</Text>
         <Controller
           control={control}
           name="address"
@@ -177,7 +178,7 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
           )}
         />
 
-        <Text style={styles.label}>📝 Description (optional)</Text>
+        <Text style={styles.label}>Description (optional)</Text>
         <Controller
           control={control}
           name="description"
@@ -197,14 +198,14 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
 
         <View style={styles.row}>
           <View style={{ flex: 1, marginRight: 8 }}>
-            <Text style={styles.label}>📍 Latitude</Text>
+            <Text style={styles.label}>Latitude</Text>
             <Controller
               control={control}
               name="latitude"
               render={({ field: { onChange, value } }) => (
                 <TextInput
                   style={styles.input}
-                  value={value ? String(value) : ''}
+                  value={value !== undefined && value !== null ? String(value) : ''}
                   onChangeText={onChange}
                   placeholder="24.8607"
                   placeholderTextColor="#6B6B80"
@@ -214,14 +215,14 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
             />
           </View>
           <View style={{ flex: 1, marginLeft: 8 }}>
-            <Text style={styles.label}>📍 Longitude</Text>
+            <Text style={styles.label}>Longitude</Text>
             <Controller
               control={control}
               name="longitude"
               render={({ field: { onChange, value } }) => (
                 <TextInput
                   style={styles.input}
-                  value={value ? String(value) : ''}
+                  value={value !== undefined && value !== null ? String(value) : ''}
                   onChangeText={onChange}
                   placeholder="67.0011"
                   placeholderTextColor="#6B6B80"
@@ -241,7 +242,10 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
           {isSubmitting ? (
             <ActivityIndicator color="#ffffff" />
           ) : (
-            <Text style={styles.submitBtnText}>{isEdit ? '💾 Update Incident' : '🚨 Save Incident'}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <Ionicons name={isEdit ? "save-outline" : "alert-circle-outline"} size={20} color="#fff" />
+              <Text style={styles.submitBtnText}>{isEdit ? 'Update Incident' : 'Save Incident'}</Text>
+            </View>
           )}
         </TouchableOpacity>
       </ScrollView>

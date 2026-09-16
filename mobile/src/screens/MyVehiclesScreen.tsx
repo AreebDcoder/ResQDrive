@@ -16,6 +16,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import { fetchVehiclesStart, fetchVehiclesSuccess, fetchVehiclesFailure, setPrimaryVehicleSuccess } from '../store/slices/vehiclesSlice';
 import api from '../api/axios';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function MyVehiclesScreen({ navigation }: any) {
   const dispatch = useDispatch();
@@ -52,7 +53,7 @@ export default function MyVehiclesScreen({ navigation }: any) {
     <View style={styles.container}>
       {/* ── Header ── */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>🚗 My Vehicles</Text>
+        <Text style={styles.headerTitle}>My Vehicles</Text>
         <Text style={styles.headerSub}>{vehicles.length} registered</Text>
       </View>
 
@@ -60,15 +61,15 @@ export default function MyVehiclesScreen({ navigation }: any) {
         <ActivityIndicator size="large" color="#E53935" style={styles.loader} />
       ) : error ? (
         <View style={styles.centerContainer}>
-          <Text style={styles.errorEmoji}>⚠️</Text>
+          <Ionicons name="alert-circle-outline" size={36} color="#FF5252" style={{ marginBottom: 8 }} />
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={fetchVehicles}>
-            <Text style={styles.retryText}>🔄 Retry</Text>
+            <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
       ) : vehicles.length === 0 ? (
         <View style={styles.centerContainer}>
-          <Text style={styles.emptyEmoji}>🚘</Text>
+          <Ionicons name="car-outline" size={48} color="#6B6B80" style={{ marginBottom: 12 }} />
           <Text style={styles.emptyText}>No vehicles registered yet.</Text>
           <Text style={styles.emptySubtitle}>Add a vehicle to enable automatic accident detection.</Text>
         </View>
@@ -91,7 +92,10 @@ export default function MyVehiclesScreen({ navigation }: any) {
                 </View>
                 {item.isPrimary && (
                   <View style={styles.primaryBadge}>
-                    <Text style={styles.primaryBadgeText}>⚡ Active</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Ionicons name="flash" size={12} color="#00E676" />
+                      <Text style={styles.primaryBadgeText}>Active</Text>
+                    </View>
                   </View>
                 )}
               </View>
@@ -105,13 +109,19 @@ export default function MyVehiclesScreen({ navigation }: any) {
               {/* Card Actions */}
               <View style={styles.cardActions}>
                 {item.isPrimary ? (
-                  <Text style={styles.activeLabel}>🛡️ Paired with crash sensor</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Ionicons name="shield-checkmark" size={14} color="#00E676" />
+                    <Text style={styles.activeLabel}>Paired with crash sensor</Text>
+                  </View>
                 ) : (
                   <TouchableOpacity
                     style={styles.setPrimaryBtn}
                     onPress={() => handleSetPrimary(item.id)}
                   >
-                    <Text style={styles.setPrimaryText}>⚡ Activate</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Ionicons name="flash-outline" size={14} color="#E53935" />
+                      <Text style={styles.setPrimaryText}>Activate</Text>
+                    </View>
                   </TouchableOpacity>
                 )}
                 
@@ -119,9 +129,12 @@ export default function MyVehiclesScreen({ navigation }: any) {
                   style={styles.insuranceIndicator}
                   onPress={() => navigation.navigate('VehicleInsurance', { vehicleId: item.id, insurance: item.insurance })}
                 >
-                  <Text style={item.insurance ? styles.insuranceYes : styles.insuranceNo}>
-                    {item.insurance ? '🛡️ Insured' : '+ Add Insurance'}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Ionicons name={item.insurance ? "shield-checkmark-outline" : "add-circle-outline"} size={14} color={item.insurance ? "#00E676" : "#E53935"} />
+                    <Text style={item.insurance ? styles.insuranceYes : styles.insuranceNo}>
+                      {item.insurance ? 'Insured' : 'Add Insurance'}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               </View>
             </TouchableOpacity>
@@ -135,7 +148,7 @@ export default function MyVehiclesScreen({ navigation }: any) {
         onPress={() => navigation.navigate('AddEditVehicle')}
         activeOpacity={0.8}
       >
-        <Text style={styles.fabText}>+</Text>
+        <Ionicons name="add" size={28} color="#FFFFFF" />
       </TouchableOpacity>
     </View>
   );

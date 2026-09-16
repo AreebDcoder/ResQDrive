@@ -16,6 +16,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import { fetchContactsStart, fetchContactsSuccess, fetchContactsFailure, reorderContactsSuccess } from '../store/slices/contactsSlice';
 import api from '../api/axios';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function EmergencyContactsScreen({ navigation }: any) {
   const dispatch = useDispatch();
@@ -28,35 +29,27 @@ export default function EmergencyContactsScreen({ navigation }: any) {
       const response = await api.get('/emergency-contacts');
       dispatch(fetchContactsSuccess(response.data));
     } catch (err: any) {
-      dispatch(fetchContactsFailure(err.response?.data?.message || 'Failed to fetch contacts.'));
+      dispatch(fetchContactsFailure(err.response?.data?.message || 'Failed to load emergency contacts.'));
     }
   };
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      fetchContacts();
-    });
-    return unsubscribe;
-  }, [navigation]);
+    fetchContacts();
+  }, []);
 
   const handleMove = async (index: number, direction: 'up' | 'down') => {
-    if (direction === 'up' && index === 0) return;
-    if (direction === 'down' && index === contacts.length - 1) return;
+    if (isUpdating) return;
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= contacts.length) return;
+
+    const newContacts = [...contacts];
+    const temp = newContacts[index];
+    newContacts[index] = newContacts[targetIndex];
+    newContacts[targetIndex] = temp;
+
+    const payload = newContacts.map((c, i) => ({ id: c.id, priorityOrder: i + 1 }));
 
     setIsUpdating(true);
-    const reorderedList = [...contacts];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-
-    // Swap items locally
-    const temp = reorderedList[index];
-    reorderedList[index] = reorderedList[targetIndex];
-    reorderedList[targetIndex] = temp;
-
-    // Map new priority values
-    const payload = reorderedList.map((contact, idx) => ({
-      contactId: contact.id,
-      priorityOrder: idx + 1,
-    }));
 
     try {
       const response = await api.patch('/emergency-contacts/reorder', { orders: payload });
@@ -72,7 +65,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
     <View style={styles.container}>
       {/* ── Info Banner ── */}
       <View style={styles.infoBox}>
-        <Text style={styles.infoEmoji}>⚠️</Text>
+        <Ionicons name="information-circle-outline" size={20} color="#E53935" style={{ marginRight: 8, marginTop: 2 }} />
         <Text style={styles.infoText}>
           Escalation Rules: In an emergency, your primary contact (Priority 1) is notified first. Secondary contacts are alerted at 30-second intervals if the previous one does not respond.
         </Text>
@@ -80,7 +73,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
 
       {/* ── Header ── */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>🆘 Emergency Contacts</Text>
+        <Text style={styles.headerTitle}>Emergency Contacts</Text>
         <Text style={styles.headerSub}>{contacts.length}/5 slots used</Text>
       </View>
 
@@ -88,15 +81,15 @@ export default function EmergencyContactsScreen({ navigation }: any) {
         <ActivityIndicator size="large" color="#E53935" style={styles.loader} />
       ) : error ? (
         <View style={styles.centerContainer}>
-          <Text style={styles.errorEmoji}>⚠️</Text>
+          <Ionicons name="alert-circle-outline" size={36} color="#FF5252" style={{ marginBottom: 8 }} />
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={fetchContacts}>
-            <Text style={styles.retryText}>🔄 Retry</Text>
+            <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
       ) : contacts.length === 0 ? (
         <View style={styles.centerContainer}>
-          <Text style={styles.emptyEmoji}>📇</Text>
+          <Ionicons name="people-outline" size={48} color="#6B6B80" style={{ marginBottom: 12 }} />
           <Text style={styles.emptyText}>No emergency contacts added yet.</Text>
           <Text style={styles.emptySubtitle}>
             Add up to 5 contacts (e.g. Spouse, Parents, Friends) to receive automatic crash alerts.
@@ -147,7 +140,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
                     onPress={() => handleMove(index, 'up')}
                     disabled={index === 0 || isUpdating}
                   >
-                    <Text style={styles.arrowText}>▲</Text>
+                    <Ionicons name="chevron-up" size={16} color={index === 0 ? "#444" : "#FFFFFF"} />
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -155,7 +148,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
                     onPress={() => handleMove(index, 'down')}
                     disabled={index === contacts.length - 1 || isUpdating}
                   >
-                    <Text style={styles.arrowText}>▼</Text>
+                    <Ionicons name="chevron-down" size={16} color={index === contacts.length - 1 ? "#444" : "#FFFFFF"} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -171,12 +164,16 @@ export default function EmergencyContactsScreen({ navigation }: any) {
           onPress={() => navigation.navigate('AddEditContact')}
           activeOpacity={0.8}
         >
-          <Text style={styles.addBtnText}>➕ Add Emergency Contact ({contacts.length}/5)</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <Ionicons name="person-add-outline" size={18} color="#FFFFFF" />
+            <Text style={styles.addBtnText}>Add Emergency Contact ({contacts.length}/5)</Text>
+          </View>
         </TouchableOpacity>
       ) : (
         <View style={styles.limitBanner}>
+          <Ionicons name="lock-closed-outline" size={16} color="#A0A0B8" style={{ marginRight: 6 }} />
           <Text style={styles.limitBannerText}>
-            🔒 Emergency contact limit reached (maximum 5). Remove or edit existing contacts if needed.
+            Emergency contact limit reached (maximum 5). Remove or edit existing contacts if needed.
           </Text>
         </View>
       )}

@@ -364,7 +364,7 @@ const makeDirectPhoneCall = async (phoneNumber: string) => {
       {!isLoading && errorMsg && (
         <View style={styles.centerContainer}>
           <View style={styles.errorBadge}>
-            <Text style={styles.errorEmoji}>⚠️</Text>
+            <Ionicons name="alert-circle-outline" size={24} color="#FF5252" />
           </View>
           <Text style={styles.errorText}>{errorMsg}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={fetchEmergencyNumbers}>
@@ -395,7 +395,7 @@ const makeDirectPhoneCall = async (phoneNumber: string) => {
                 activeOpacity={0.85}
               >
                 <View style={styles.callIconCircle}>
-                  <Text style={styles.callIcon}>📞</Text>
+                  <Ionicons name="call" size={20} color="#FF1744" />
                 </View>
                 <View style={styles.callCardText}>
                   <Text style={styles.callName}>{item.serviceName}</Text>
@@ -419,7 +419,7 @@ const makeDirectPhoneCall = async (phoneNumber: string) => {
                     activeOpacity={0.85}
                   >
                     <View style={[styles.callIconCircle, { backgroundColor: 'rgba(255,152,0,0.12)' }]}>
-                      <Text style={styles.callIcon}>👤</Text>
+                      <Ionicons name="person" size={20} color="#ff9800" />
                     </View>
                     <View style={styles.callCardText}>
                       <Text style={styles.callName}>{item.label}</Text>
@@ -439,13 +439,19 @@ const makeDirectPhoneCall = async (phoneNumber: string) => {
                   style={styles.devSimBtn}
                   onPress={() => VoiceCommandService.simulateSpeechInput('Cancel')}
                 >
-                  <Text style={styles.devSimText}>🗣️ Simulate Cancel</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Ionicons name="mic-outline" size={14} color="#A0A0B8" />
+                    <Text style={styles.devSimText}>Simulate Cancel</Text>
+                  </View>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.devSimBtn, { borderColor: '#d32f2f' }]}
                   onPress={() => VoiceCommandService.simulateSpeechInput('SOS')}
                 >
-                  <Text style={[styles.devSimText, { color: '#ff1744' }]}>🗣️ Simulate SOS</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Ionicons name="mic" size={14} color="#ff1744" />
+                    <Text style={[styles.devSimText, { color: '#ff1744' }]}>Simulate SOS</Text>
+                  </View>
                 </TouchableOpacity>
               </View>
             )}

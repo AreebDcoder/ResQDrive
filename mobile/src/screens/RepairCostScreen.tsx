@@ -218,7 +218,7 @@ const handleShareReport = async () => {
     if (!report) {
       return (
         <View style={styles.centerContainer}>
-          <Text style={styles.emptyEmoji}>🧾</Text>
+          <Ionicons name="receipt-outline" size={48} color="#6B6B80" style={{ marginBottom: 12 }} />
           <Text style={styles.emptyText}>No cost report loaded. Check history to open past estimates.</Text>
         </View>
       );
@@ -229,16 +229,16 @@ const handleShareReport = async () => {
       switch (source) {
         case 'pakwheels_scrape':
         case 'pakwheels':
-          return '🟢 Live PakWheels AutoStore Listings';
+          return 'Live PakWheels AutoStore Listings';
         case 'olx_scrape':
         case 'olx':
-          return '🟢 Live OLX Pakistan Listings';
+          return 'Live OLX Pakistan Listings';
         case 'gemini_ai_fallback':
         case 'gemini_ai':
-          return '🤖 AI-Estimated (No Live Listings Found)';
+          return 'AI-Estimated (No Live Listings Found)';
         case 'fallback_default':
         default:
-          return '⚙️ Generic Static Fallback Table';
+          return 'Generic Static Fallback Table';
       }
     };
 
@@ -249,21 +249,27 @@ const handleShareReport = async () => {
       <ScrollView style={styles.tabContent} contentContainerStyle={{ paddingBottom: 40 }}>
         {/* ── Total Estimate Card ── */}
         <View style={styles.totalCard}>
-          <Text style={styles.totalLabel}>💰 TOTAL ESTIMATED COST RANGE</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+            <Ionicons name="cash-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
+            <Text style={styles.totalLabel}>TOTAL ESTIMATED COST RANGE</Text>
+          </View>
           <Text style={styles.totalValue}>
             PKR {report.totalMinCostPkr.toLocaleString()} - {report.totalMaxCostPkr.toLocaleString()}
           </Text>
           {report.vehicle && (
-            <Text style={styles.vehicleSubText}>
-              🚗 {report.vehicle.year} {report.vehicle.make} {report.vehicle.model} ({report.vehicle.licensePlate.toUpperCase()})
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+              <Ionicons name="car-outline" size={16} color="#A0A0B0" style={{ marginRight: 6 }} />
+              <Text style={styles.vehicleSubText}>
+                {report.vehicle.year} {report.vehicle.make} {report.vehicle.model} ({report.vehicle.licensePlate.toUpperCase()})
+              </Text>
+            </View>
           )}
         </View>
 
         {/* ── Warning banner for Fallback estimates ── */}
         {hasFallbackItems && (
           <View style={styles.warningBanner}>
-            <Text style={styles.warningEmoji}>⚡</Text>
+            <Ionicons name="information-circle-outline" size={20} color="#FF9100" style={{ marginRight: 8 }} />
             <Text style={styles.warningText}>
               Note: Certain parts are priced using static default averages because live marketplace listings and Gemini AI fallback were unreachable.
             </Text>
@@ -271,7 +277,10 @@ const handleShareReport = async () => {
         )}
 
         {/* ── Line Items ── */}
-        <Text style={styles.sectionHeaderTitle}>🔧 DAMAGED PARTS BREAKDOWN</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 24, marginBottom: 12 }}>
+          <Ionicons name="construct-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
+          <Text style={styles.sectionHeaderTitle}>DAMAGED PARTS BREAKDOWN</Text>
+        </View>
         {report.lineItems.map((item, index) => (
           <View key={index} style={styles.lineItemCard}>
             <View style={styles.itemHeader}>
@@ -289,17 +298,23 @@ const handleShareReport = async () => {
               </View>
             </View>
 
-            <Text style={styles.itemSubText}>💥 Damage: {item.damageType.toUpperCase().replace('_', ' ')}</Text>
+            <Text style={styles.itemSubText}>Damage: {item.damageType.toUpperCase().replace('_', ' ')}</Text>
 
             <View style={styles.costDetailsBox}>
               <View style={styles.costRow}>
-                <Text style={styles.costLabel}>🔧 Workshop Labor Cost</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="build-outline" size={15} color="#A0A0B0" style={{ marginRight: 6 }} />
+                  <Text style={styles.costLabel}>Workshop Labor Cost</Text>
+                </View>
                 <Text style={styles.costVal}>PKR {item.laborCost.min.toLocaleString()} - {item.laborCost.max.toLocaleString()}</Text>
               </View>
 
               <View style={styles.costRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.costLabel}>📦 Spare Parts Price</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name="cube-outline" size={15} color="#A0A0B0" style={{ marginRight: 6 }} />
+                    <Text style={styles.costLabel}>Spare Parts Price</Text>
+                  </View>
                   <Text style={styles.partsSourceSubtext}>{getPartsSourceLabel(item.partsSource)}</Text>
                 </View>
                 <Text style={styles.costVal}>PKR {item.partsCost.min.toLocaleString()} - {item.partsCost.max.toLocaleString()}</Text>
@@ -322,7 +337,10 @@ const handleShareReport = async () => {
           {isSharing ? (
             <ActivityIndicator size="small" color="#ffffff" />
           ) : (
-            <Text style={styles.shareBtnText}>📤 Share Breakdown Report (PDF)</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="share-social-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
+              <Text style={styles.shareBtnText}>Share Breakdown Report (PDF)</Text>
+            </View>
           )}
         </TouchableOpacity>
       </ScrollView>
@@ -337,7 +355,7 @@ const handleShareReport = async () => {
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerBarTitle}>🔧 Repair Estimation</Text>
+          <Text style={styles.headerBarTitle}>Repair Estimation</Text>
           <View style={{ width: 24 }} />
         </View>
       )}
@@ -348,8 +366,9 @@ const handleShareReport = async () => {
           style={[styles.segmentBtn, activeSegment === 'details' && styles.segmentBtnActive]}
           onPress={() => setActiveSegment('details')}
         >
+          <Ionicons name="document-text-outline" size={16} color={activeSegment === 'details' ? '#E53935' : '#888'} style={{ marginRight: 6 }} />
           <Text style={[styles.segmentBtnText, activeSegment === 'details' && styles.segmentBtnTextActive]}>
-            📋 Estimate Report
+            Estimate Report
           </Text>
         </TouchableOpacity>
 
@@ -357,8 +376,9 @@ const handleShareReport = async () => {
           style={[styles.segmentBtn, activeSegment === 'history' && styles.segmentBtnActive]}
           onPress={() => setActiveSegment('history')}
         >
+          <Ionicons name="folder-open-outline" size={16} color={activeSegment === 'history' ? '#E53935' : '#888'} style={{ marginRight: 6 }} />
           <Text style={[styles.segmentBtnText, activeSegment === 'history' && styles.segmentBtnTextActive]}>
-            📁 Reports History
+            Reports History
           </Text>
         </TouchableOpacity>
       </View>
@@ -366,7 +386,7 @@ const handleShareReport = async () => {
       {/* ── Error display ── */}
       {errorMsg && (
         <View style={styles.errorBanner}>
-          <Text style={styles.errorEmoji}>⚠️</Text>
+          <Ionicons name="warning-outline" size={20} color="#FF5252" style={{ marginRight: 8 }} />
           <Text style={styles.errorText}>{errorMsg}</Text>
         </View>
       )}
@@ -385,7 +405,7 @@ const handleShareReport = async () => {
           ListEmptyComponent={
             !historyLoading ? (
               <View style={styles.centerContainer}>
-                <Text style={styles.emptyEmoji}>📂</Text>
+                <Ionicons name="folder-open-outline" size={48} color="#6B6B80" style={{ marginBottom: 12 }} />
                 <Text style={styles.emptyText}>No repair estimates generated yet.</Text>
               </View>
             ) : null

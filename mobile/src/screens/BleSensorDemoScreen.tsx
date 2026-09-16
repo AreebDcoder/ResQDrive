@@ -88,13 +88,21 @@ export default function BleSensorDemoScreen() {
 
             <View style={styles.row}>
               <Text style={styles.label}>Active Data Source:</Text>
-              <Text style={styles.valueText}>
-                {activeSource === 'ble'
-                  ? '🔌 ESP32 BLE Hardware'
-                  : activeSource === 'phone'
-                  ? '📱 Phone Sensors (Fallback)'
-                  : '🧪 Mock Simulator'}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons
+                  name={activeSource === 'ble' ? 'hardware-chip-outline' : activeSource === 'phone' ? 'phone-portrait-outline' : 'flask-outline'}
+                  size={16}
+                  color="#00E676"
+                  style={{ marginRight: 6 }}
+                />
+                <Text style={styles.valueText}>
+                  {activeSource === 'ble'
+                    ? 'ESP32 BLE Hardware'
+                    : activeSource === 'phone'
+                    ? 'Phone Sensors (Fallback)'
+                    : 'Mock Simulator'}
+                </Text>
+              </View>
             </View>
 
             <TouchableOpacity style={styles.reconnectBtn} onPress={handleForceReconnect}>

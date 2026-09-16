@@ -95,9 +95,10 @@ export class SensorSourceManager implements SensorFusionService {
   }
 
   /**
-   * Switch the active sensor source to phone fallback sensors and start background scanning
+   * Switch the active sensor source to phone fallback sensors
    */
   private switchToPhone() {
+    this.clearBackgroundScan();
     if (this.currentActiveService) {
       this.currentActiveService.stop();
     }
@@ -112,57 +113,7 @@ export class SensorSourceManager implements SensorFusionService {
     this.callbacks.forEach(cb => phoneSensorFallbackService.onSensorEvent(cb));
 
     phoneSensorFallbackService.start();
-
-    // Start background scanning to restore BLE if it comes back in range
-    this.startBackgroundBleScanning();
-  }
-
-  /**
-   * Periodically scans for ResQDrive BLE service in background to auto-restore connection
-   */
-  private startBackgroundBleScanning() {
-    this.clearBackgroundScan();
-
-    this.backgroundScanInterval = setInterval(() => {
-      const state = store.getState().sensor;
-      if (state.activeSource !== 'phone') {
-        this.clearBackgroundScan();
-        return;
-      }
-
-      if (!BleManagerClass) return;
-
-      console.log('SensorManager: Running background scan to locate BLE hardware...');
-      const bleManager = new BleManagerClass();
-
-      bleManager.startDeviceScan(
-        ['4fafc201-1fb5-459e-8fcc-c5c9c331914b'],
-        null,
-        (error: any, device: any) => {
-          if (device) {
-            console.log('SensorManager: Located BLE hardware in background! Restoring BLE connection...');
-            bleManager.stopDeviceScan();
-            bleManager.destroy();
-
-            // Hardware found: switch active service back to BLE
-            this.switchToBle();
-          }
-          if (error) {
-            bleManager.stopDeviceScan();
-            bleManager.destroy();
-          }
-        }
-      );
-
-      // Stop scan after 5 seconds to conserve battery
-      setTimeout(() => {
-        try {
-          bleManager.stopDeviceScan();
-          bleManager.destroy();
-        } catch (e) {}
-      }, 5000);
-
-    }, 30000); // Scan every 30 seconds
+    console.log('SensorManager: Operating on Phone Fallback. Background auto-scan disabled.');
   }
 
   /**

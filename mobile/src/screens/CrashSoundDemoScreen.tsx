@@ -8,8 +8,9 @@ import {
   Animated,
 } from 'react-native';
 import { useSelector } from 'react-redux';
+import { Switch } from 'react-native';
 import { RootState } from '../store/store';
-import { CrashSoundDetectionService } from '../services/crashSoundDetectionService';
+import { CrashSoundDetectionService, setDemoMode, IS_DEMO_MODE } from '../services/crashSoundDetectionService';
 import {
   CRASH_CONFIDENCE_THRESHOLD,
   CRASH_RELEVANT_CLASS_NAMES,
@@ -21,6 +22,7 @@ export default function CrashSoundDemoScreen() {
   const drivingModeEnabled = !!preferences?.drivingModeEnabled;
 
   const [isMonitoring, setIsMonitoring] = useState(drivingModeEnabled);
+  const [demoModeActive, setDemoModeActive] = useState(IS_DEMO_MODE);
   const [currentConfidence, setCurrentConfidence] = useState(0);
   const [currentClass, setCurrentClass] = useState<string | null>(null);
   const [lastAlert, setLastAlert] = useState<{ confidence: number; className: string; timestamp: Date } | null>(null);
@@ -167,6 +169,27 @@ export default function CrashSoundDemoScreen() {
                 {isMonitoring ? 'Stop Audio Capture' : 'Start Audio Capture'}
               </Text>
             </TouchableOpacity>
+          </View>
+
+          {/* FYP Video Presentation Mode Toggle */}
+          <View style={styles.card}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flex: 1, marginRight: 12 }}>
+                <Text style={styles.cardLabel}>FYP Video Evaluation Mode</Text>
+                <Text style={{ fontSize: 13, color: '#A0A0B8', marginTop: 4, lineHeight: 18 }}>
+                  Enables acoustic speaker compensation & continuous video playback detection for video presentations.
+                </Text>
+              </View>
+              <Switch
+                value={demoModeActive}
+                onValueChange={(val) => {
+                  setDemoMode(val);
+                  setDemoModeActive(val);
+                }}
+                trackColor={{ false: 'rgba(255, 255, 255, 0.08)', true: '#E53935' }}
+                thumbColor={demoModeActive ? '#FFFFFF' : '#6B6B80'}
+              />
+            </View>
           </View>
 
           <View style={styles.card}>

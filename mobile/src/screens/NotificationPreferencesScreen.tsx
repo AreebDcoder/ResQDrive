@@ -1,8 +1,3 @@
-// ═══════════════════════════════════════════════════════════════
-// ResQDrive v2 — NOTIFICATION PREFERENCES SCREEN (Modernized)
-// All imports, logic, state, handlers preserved identically.
-// Only JSX structure + StyleSheet updated: dark glassmorphism theme.
-// ═══════════════════════════════════════════════════════════════
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -21,31 +16,37 @@ import {
   updatePreferenceOptimistic,
 } from '../store/slices/notificationsSlice';
 import api from '../api/axios';
+import { Ionicons } from '@expo/vector-icons';
 
-const CATEGORIES = [
+const CATEGORIES: Array<{
+  key: string;
+  title: string;
+  description: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}> = [
   {
     key: 'alertDeliveryEnabled',
     title: 'Alert Confirmations',
     description: 'Notifications confirming emergency dispatch delivery status.',
-    emoji: '🛡️',
+    icon: 'shield-checkmark-outline',
   },
   {
     key: 'falseAlarmLogEnabled',
     title: 'False Alarm Logging',
     description: 'Reports logged when alerts are canceled or false alarm flags are set.',
-    emoji: '⚠️',
+    icon: 'alert-circle-outline',
   },
   {
     key: 'systemStatusEnabled',
     title: 'System Status Reports',
     description: 'App status audits, connection reports, and settings configurations.',
-    emoji: '⚙️',
+    icon: 'settings-outline',
   },
   {
     key: 'generalEnabled',
     title: 'General Alerts',
     description: 'General system reports, updates, and community alerts.',
-    emoji: '🔔',
+    icon: 'notifications-outline',
   },
 ];
 
@@ -101,7 +102,10 @@ export default function NotificationPreferencesScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       {/* ── Header ── */}
       <View style={styles.header}>
-        <Text style={styles.title}>⚙️ Notification Preferences</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Ionicons name="settings-outline" size={26} color="#E53935" />
+          <Text style={styles.title}>Notification Preferences</Text>
+        </View>
         <Text style={styles.subtitle}>
           Configure which categories of push notifications you want to receive on your device
         </Text>
@@ -132,7 +136,7 @@ export default function NotificationPreferencesScreen() {
                 isEnabled && styles.preferenceRowActive,
               ]}>
                 <View style={styles.textContainer}>
-                  <Text style={styles.emojiLabel}>{category.emoji}</Text>
+                  <Ionicons name={category.icon} size={22} color="#E53935" style={{ marginRight: 12 }} />
                   <View style={styles.textInner}>
                     <Text style={styles.preferenceTitle}>{category.title}</Text>
                     <Text style={styles.preferenceDesc}>{category.description}</Text>

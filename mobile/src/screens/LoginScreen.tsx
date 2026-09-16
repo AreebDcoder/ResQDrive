@@ -24,6 +24,7 @@ import { loginSchema, LoginInput } from '../schemas/validation';
 import { loginSuccess } from '../store/slices/authSlice';
 import api from '../api/axios';
 import { setItemAsync } from '../utils/secureStorage';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function LoginScreen({ navigation }: { navigation: any }) {
   const dispatch = useDispatch();
@@ -185,7 +186,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
               {/* Logo mark */}
               <View style={styles.logoRow}>
                 <View style={styles.logoBadge}>
-                  <Text style={styles.logoEmoji}>🛡️</Text>
+                  <Ionicons name="shield-checkmark" size={24} color="#E53935" />
                 </View>
                 <Text style={styles.brandText}>
                   ResQ<Text style={styles.brandAccent}>Drive</Text>
@@ -208,7 +209,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
               {/* Error */}
               {errorMsg && (
                 <View style={styles.errorContainer}>
-                  <Text style={styles.errorIcon}>⚠</Text>
+                  <Ionicons name="alert-circle-outline" size={18} color="#FF5252" style={{ marginRight: 6 }} />
                   <Text style={styles.errorText}>{errorMsg}</Text>
                 </View>
               )}
@@ -225,7 +226,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
                       errors.emailOrPhone && styles.inputError,
                     ]}
                   >
-                    <Text style={styles.inputIcon}>✉</Text>
+                    <Ionicons name="mail-outline" size={18} color="#6B6B80" style={{ marginRight: 10 }} />
                     <TextInput
                       style={styles.input}
                       placeholder="Enter email or phone number"
@@ -256,7 +257,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
                       errors.password && styles.inputError,
                     ]}
                   >
-                    <Text style={styles.inputIcon}>🔒</Text>
+                    <Ionicons name="lock-closed-outline" size={18} color="#6B6B80" style={{ marginRight: 10 }} />
                     <TextInput
                       style={[styles.input, { flex: 1 }]}
                       placeholder="Enter your password"
@@ -272,9 +273,11 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
                       style={styles.eyeBtn}
                       onPress={() => setShowPassword(!showPassword)}
                     >
-                      <Text style={styles.eyeBtnText}>
-                        {showPassword ? '🙈' : '👁'}
-                      </Text>
+                      <Ionicons
+                        name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                        size={20}
+                        color="#888899"
+                      />
                     </TouchableOpacity>
                   </View>
                 )}

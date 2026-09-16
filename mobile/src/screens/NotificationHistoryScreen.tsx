@@ -3,7 +3,7 @@
 // All imports, logic, state, handlers preserved identically.
 // Only JSX structure + StyleSheet updated: dark glassmorphism theme.
 // ═══════════════════════════════════════════════════════════════
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -23,30 +23,30 @@ import {
   NotificationLog,
 } from '../store/slices/notificationsSlice';
 import api from '../api/axios';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function NotificationHistoryScreen() {
   const dispatch = useDispatch();
-  const { history: logs, isHistoryLoading, pagination, error } = useSelector(
+  const { history: logs, pagination, isHistoryLoading, error } = useSelector(
     (state: RootState) => state.notifications
   );
-  const [page, setPage] = useState(1);
+  const page = pagination?.page || 1;
+  const hasMore = pagination ? pagination.page < pagination.totalPages : false;
 
-  const fetchHistory = async (pageNum = 1, append = false) => {
-    if (pageNum === 1) {
-      dispatch(fetchHistoryStart());
-    }
+  const fetchHistory = async (pageToFetch = 1, append = false) => {
+    dispatch(fetchHistoryStart());
     try {
-      const response = await api.get(`/notifications/history?page=${pageNum}&limit=15`);
+      const response = await api.get(`/notifications/history?page=${pageToFetch}&limit=20`);
       dispatch(
         fetchHistorySuccess({
-          logs: response.data.logs,
-          pagination: response.data.pagination,
+          logs: response.data.data,
+          pagination: response.data.meta,
           append,
         })
       );
     } catch (err: any) {
       dispatch(
-        fetchHistoryFailure(err.response?.data?.message || 'Failed to fetch notification history.')
+        fetchHistoryFailure(err.response?.data?.message || 'Failed to fetch notification logs.')
       );
     }
   };
@@ -56,17 +56,15 @@ export default function NotificationHistoryScreen() {
   }, []);
 
   const handleLoadMore = () => {
-    if (page < pagination.totalPages && !isHistoryLoading) {
-      const nextPage = page + 1;
-      setPage(nextPage);
-      fetchHistory(nextPage, true);
+    if (hasMore && !isHistoryLoading) {
+      fetchHistory(page + 1, true);
     }
   };
 
-  const handleMarkRead = async (logId: string, isRead: boolean) => {
-    if (isRead) return;
+  const handleMarkRead = async (logId: string, currentReadState: boolean) => {
+    if (currentReadState) return;
     try {
-      await api.patch(`/notifications/${logId}/read`);
+      await api.patch(`/notifications/history/${logId}/read`);
       dispatch(markReadSuccess(logId));
     } catch (err) {
       console.log('Failed to mark notification read:', err);
@@ -82,19 +80,23 @@ export default function NotificationHistoryScreen() {
     }
   };
 
-  const getCategoryEmoji = (category: string) => {
+  const renderCategoryIcon = (category: string) => {
+    let iconName: keyof typeof Ionicons.glyphMap = 'notifications-outline';
     switch (category) {
       case 'driving_mode':
-        return '🚗';
+        iconName = 'car-outline';
+        break;
       case 'alert_delivery_confirmation':
-        return '🛡️';
+        iconName = 'shield-checkmark-outline';
+        break;
       case 'false_alarm_log':
-        return '⚠️';
+        iconName = 'alert-circle-outline';
+        break;
       case 'system_status':
-        return '⚙️';
-      default:
-        return '🔔';
+        iconName = 'settings-outline';
+        break;
     }
+    return <Ionicons name={iconName} size={20} color="#E53935" style={{ marginRight: 10 }} />;
   };
 
   const formatDate = (dateStr: string) => {
@@ -111,10 +113,16 @@ export default function NotificationHistoryScreen() {
     <View style={styles.container}>
       {/* ── Header ── */}
       <View style={styles.header}>
-        <Text style={styles.title}>📬 History Inbox</Text>
-        {logs.some((l) => !l.isRead) && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Ionicons name="mail-unread-outline" size={24} color="#E53935" />
+          <Text style={styles.title}>History Inbox</Text>
+        </View>
+        {logs.some((l: NotificationLog) => !l.isRead) && (
           <TouchableOpacity style={styles.markAllBtn} onPress={handleMarkAllRead}>
-            <Text style={styles.markAllText}>✅ Mark all read</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons name="checkmark-done" size={16} color="#00E676" />
+              <Text style={styles.markAllText}>Mark all read</Text>
+            </View>
           </TouchableOpacity>
         )}
       </View>
@@ -123,15 +131,15 @@ export default function NotificationHistoryScreen() {
         <ActivityIndicator size="large" color="#E53935" style={styles.loader} />
       ) : error ? (
         <View style={styles.centerContainer}>
-          <Text style={styles.errorEmoji}>⚠️</Text>
+          <Ionicons name="alert-circle-outline" size={36} color="#FF5252" style={{ marginBottom: 8 }} />
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={() => fetchHistory(1, false)}>
-            <Text style={styles.retryText}>🔄 Retry</Text>
+            <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
       ) : logs.length === 0 ? (
         <View style={styles.centerContainer}>
-          <Text style={styles.emptyEmoji}>📭</Text>
+          <Ionicons name="mail-open-outline" size={48} color="#6B6B80" style={{ marginBottom: 12 }} />
           <Text style={styles.emptyText}>Your inbox is empty.</Text>
           <Text style={styles.emptySubtitle}>Pushes and logs will show up here.</Text>
         </View>
@@ -152,7 +160,7 @@ export default function NotificationHistoryScreen() {
               activeOpacity={0.7}
             >
               <View style={styles.cardHeader}>
-                <Text style={styles.categoryEmoji}>{getCategoryEmoji(item.category)}</Text>
+                {renderCategoryIcon(item.category)}
                 <View style={styles.cardInfo}>
                   <Text style={styles.cardTitleText}>{item.title}</Text>
                   <Text style={styles.cardBodyText}>{item.body}</Text>

@@ -41,11 +41,14 @@ export function isTransientDetected(
 }
 
 /**
- * Exponential Moving Average (EMA) update function for smooth rolling RMS calculation.
+ * Asymmetric Exponential Moving Average (EMA) update function.
+ * Uses slow upward adaptation (0.002) so continuous 30+ second crash sounds don't artificially
+ * inflate the background noise floor baseline, and fast downward adaptation (0.05) so quiet periods recover quickly.
  */
-export function updateRollingAverage(currentAvg: number, newRms: number, alpha = 0.05): number {
+export function updateRollingAverage(currentAvg: number, newRms: number, alpha = 0.01): number {
   if (currentAvg === 0) return newRms;
-  return alpha * newRms + (1 - alpha) * currentAvg;
+  const effectiveAlpha = newRms > currentAvg ? 0.002 : 0.05;
+  return effectiveAlpha * newRms + (1 - effectiveAlpha) * currentAvg;
 }
 
 /**

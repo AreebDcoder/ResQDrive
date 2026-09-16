@@ -174,6 +174,7 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        timeout: 45000, // 45 seconds timeout for PyTorch YOLO model inference & upload
       });
 
       setPrediction(response.data);
@@ -375,7 +376,7 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
       return (
         <ScrollView style={styles.tabContent} contentContainerStyle={{ paddingBottom: 40 }}>
           <View style={styles.carRejectionCard}>
-            <Text style={styles.carRejectionIcon}>🚗❌</Text>
+            <Ionicons name="car-outline" size={48} color="#FF5252" style={{ marginBottom: 12, alignSelf: 'center' }} />
             <Text style={styles.carRejectionTitle}>Vehicle Verification Failed</Text>
             <Text style={styles.carRejectionMessage}>{errorMsg}</Text>
 
@@ -388,7 +389,8 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
                 setImageFile(null);
               }}
             >
-              <Text style={styles.actionBtnText}>📸 Retake Photo</Text>
+              <Ionicons name="camera-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
+              <Text style={styles.actionBtnText}>Retake Photo</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -403,7 +405,10 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
       return (
         <ScrollView style={styles.tabContent} contentContainerStyle={{ paddingBottom: 40 }}>
           <View style={styles.card}>
-            <Text style={styles.cardHeaderTitle}>📊 ASSESSMENT RESULTS</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <Ionicons name="analytics-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
+              <Text style={styles.cardHeaderTitle}>ASSESSMENT RESULTS</Text>
+            </View>
 
             {/* Low-Confidence Warning Banner */}
             {isLowConfidence && (
@@ -454,7 +459,8 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
                   setIsCarRejection(false);
                 }}
               >
-                <Text style={styles.actionBtnText}>➕ Add Another Damaged Area</Text>
+                <Ionicons name="add-circle-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
+                <Text style={styles.actionBtnText}>Add Another Damaged Area</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -463,7 +469,8 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
                   navigation.navigate('RepairCost', { incidentId: incidentId || null, generate: true });
                 }}
               >
-                <Text style={styles.actionBtnText}>💰 Finish & View Repair Cost</Text>
+                <Ionicons name="cash-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
+                <Text style={styles.actionBtnText}>Finish & View Repair Cost</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -476,7 +483,10 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
       <ScrollView style={styles.tabContent} contentContainerStyle={{ paddingBottom: 40 }}>
         {/* ── Photo Selection Card ── */}
         <View style={styles.card}>
-          <Text style={styles.cardHeaderTitle}>📷 Upload Damage Image</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+            <Ionicons name="camera-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
+            <Text style={styles.cardHeaderTitle}>Upload Damage Image</Text>
+          </View>
           <Text style={styles.cardDescription}>
             Select the vehicle part tag, then capture/choose a photo of the damage.
           </Text>
@@ -506,7 +516,7 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
             <Image source={{ uri: selectedImage }} style={styles.previewImage} />
           ) : (
             <View style={styles.placeholderContainer}>
-              <Text style={styles.placeholderEmoji}>🖼️</Text>
+              <Ionicons name="image-outline" size={42} color="#6B6B80" style={{ marginBottom: 8 }} />
               <Text style={styles.placeholderText}>No image selected</Text>
             </View>
           )}
@@ -536,32 +546,34 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
 
           <View style={styles.pickerRow}>
             <TouchableOpacity style={styles.pickerBtn} onPress={() => handlePickImage(true)}>
-              <Ionicons name="camera" size={24} color="#FFFFFF" />
-              <Text style={styles.pickerBtnText}>📸 Camera</Text>
+              <Ionicons name="camera-outline" size={20} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Text style={styles.pickerBtnText}>Camera</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.pickerBtn} onPress={() => handlePickImage(false)}>
-              <Ionicons name="image" size={24} color="#FFFFFF" />
-              <Text style={styles.pickerBtnText}>🖼️ Gallery</Text>
+              <Ionicons name="images-outline" size={20} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Text style={styles.pickerBtnText}>Gallery</Text>
             </TouchableOpacity>
           </View>
 
-          {/* User Photo Capture Guidance Tip (Requirement 10) */}
+          {/* User Photo Capture Guidance Tip */}
           <View style={styles.photoTipCard}>
+            <Ionicons name="information-circle-outline" size={18} color="#FF9100" style={{ marginRight: 8, marginTop: 2 }} />
             <Text style={styles.photoTipText}>
-              💡 <Text style={{ fontWeight: '700' }}>Tip:</Text> Include some recognizable part of the car (wheel, mirror, body shape) in frame, not just an extreme close-up of the damage.
+              <Text style={{ fontWeight: '700' }}>Tip:</Text> Include some recognizable part of the car (wheel, mirror, body shape) in frame, not just an extreme close-up of the damage.
             </Text>
           </View>
 
           {selectedImage && (
             <TouchableOpacity style={styles.actionBtnPrimary} onPress={handleAnalyze}>
-              <Text style={styles.actionBtnText}>🧠 Analyze Damage</Text>
+              <Ionicons name="hardware-chip-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
+              <Text style={styles.actionBtnText}>Analyze Damage</Text>
             </TouchableOpacity>
           )}
         </View>
 
         <Text style={styles.scopeNoticeText}>
-          ℹ️ Note: Damage area localization has been evaluated and deferred to future releases due to insufficient COCO dataset limits.
+          Note: Damage area localization has been evaluated and deferred to future releases due to insufficient COCO dataset limits.
         </Text>
       </ScrollView>
     );
@@ -575,8 +587,9 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
           style={[styles.segmentBtn, activeSegment === 'new' && styles.segmentBtnActive]}
           onPress={() => setActiveSegment('new')}
         >
+          <Ionicons name="camera-outline" size={16} color={activeSegment === 'new' ? '#E53935' : '#888'} style={{ marginRight: 6 }} />
           <Text style={[styles.segmentBtnText, activeSegment === 'new' && styles.segmentBtnTextActive]}>
-            📷 New
+            New
           </Text>
         </TouchableOpacity>
 
@@ -584,8 +597,9 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
           style={[styles.segmentBtn, activeSegment === 'history' && styles.segmentBtnActive]}
           onPress={() => setActiveSegment('history')}
         >
+          <Ionicons name="time-outline" size={16} color={activeSegment === 'history' ? '#E53935' : '#888'} style={{ marginRight: 6 }} />
           <Text style={[styles.segmentBtnText, activeSegment === 'history' && styles.segmentBtnTextActive]}>
-            📋 History
+            History
           </Text>
         </TouchableOpacity>
 
@@ -593,8 +607,9 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
           style={[styles.segmentBtn, activeSegment === 'cost_history' && styles.segmentBtnActive]}
           onPress={() => setActiveSegment('cost_history')}
         >
+          <Ionicons name="receipt-outline" size={16} color={activeSegment === 'cost_history' ? '#E53935' : '#888'} style={{ marginRight: 6 }} />
           <Text style={[styles.segmentBtnText, activeSegment === 'cost_history' && styles.segmentBtnTextActive]}>
-            💰 Costs
+            Costs
           </Text>
         </TouchableOpacity>
       </View>
@@ -602,7 +617,7 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
       {/* ── Error Banner ── */}
       {errorMsg && (
         <View style={styles.errorBanner}>
-          <Text style={styles.errorEmoji}>⚠️</Text>
+          <Ionicons name="alert-circle-outline" size={18} color="#FF5252" style={{ marginRight: 8 }} />
           <Text style={styles.errorText} numberOfLines={3}>{errorMsg}</Text>
         </View>
       )}
@@ -640,7 +655,7 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
           ListEmptyComponent={
             !historyLoading ? (
               <View style={styles.emptyContainer}>
-                <Text style={styles.emptyEmoji}>📂</Text>
+                <Ionicons name="folder-open-outline" size={44} color="#6B6B80" style={{ marginBottom: 12 }} />
                 <Text style={styles.emptyText}>No damage logs recorded yet.</Text>
               </View>
             ) : null
@@ -659,7 +674,7 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
           ListEmptyComponent={
             !costHistoryLoading ? (
               <View style={styles.emptyContainer}>
-                <Text style={styles.emptyEmoji}>🧾</Text>
+                <Ionicons name="receipt-outline" size={44} color="#6B6B80" style={{ marginBottom: 12 }} />
                 <Text style={styles.emptyText}>No repair cost reports saved yet.</Text>
               </View>
             ) : null

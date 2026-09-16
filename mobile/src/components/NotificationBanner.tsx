@@ -9,6 +9,7 @@ import {
   Dimensions,
 } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function NotificationBanner() {
   const [notification, setNotification] = useState<{
@@ -77,7 +78,7 @@ export default function NotificationBanner() {
       ]}
     >
       <View style={styles.contentRow}>
-        <Text style={styles.icon}>🚨</Text>
+        <Ionicons name="warning" size={28} color="#FF1744" style={{ marginRight: 12, marginTop: 2 }} />
         <View style={styles.textColumn}>
           <Text style={styles.title}>{notification.title}</Text>
           <Text style={styles.body} numberOfLines={2}>
@@ -85,14 +86,17 @@ export default function NotificationBanner() {
           </Text>
         </View>
         <TouchableOpacity style={styles.closeBtn} onPress={hideBanner}>
-          <Text style={styles.closeBtnText}>✕</Text>
+          <Ionicons name="close" size={20} color="#A0A0B8" />
         </TouchableOpacity>
       </View>
 
       <View style={styles.btnRow}>
         {notification.mapsLink && (
           <TouchableOpacity style={styles.actionBtn} onPress={handleOpenMap}>
-            <Text style={styles.actionBtnText}>📍 View Location Map</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="location" size={16} color="#FFF" style={{ marginRight: 6 }} />
+              <Text style={styles.actionBtnText}>View Location Map</Text>
+            </View>
           </TouchableOpacity>
         )}
         <TouchableOpacity style={styles.dismissBtn} onPress={hideBanner}>
