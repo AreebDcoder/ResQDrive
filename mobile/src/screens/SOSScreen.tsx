@@ -18,6 +18,7 @@ import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../api/axios';
 import { VoiceCommandService } from '../services/voiceCommandService';
+import { useSelector } from 'react-redux';
 
 interface EmergencyNumberItem {
   id: string;
@@ -34,6 +35,7 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
   const incidentId = route?.params?.incidentId || null;
 
   const [regionalNumbers, setRegionalNumbers] = useState<EmergencyNumberItem[]>([]);
+    const personalContacts = useSelector((state: any) => state.contacts?.list || []);
   const [customNumbers, setCustomNumbers] = useState<EmergencyNumberItem[]>([]);
   const [regionName, setRegionName] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
@@ -200,13 +202,26 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
 
   const triggerAutoEscalationCall = async () => {
     setIsEscalationActive(false);
-    // Fetch top-priority number
-    const targetService = regionalNumbers[0];
-    const phone = targetService?.phoneNumber || '1122';
-    const name = targetService?.serviceName || 'Rescue 1122';
+
+    // PRIORITY ORDER: Personal contacts first (in priority order), then regional emergency
+    const sortedContacts = [...personalContacts].sort((a: any, b: any) => a.priorityOrder - b.priorityOrder);
+    const firstPersonal = sortedContacts[0];
+
+    let phone: string;
+    let name: string;
+
+    if (firstPersonal) {
+      phone = firstPersonal.phoneNumber;
+      name = firstPersonal.name;
+      console.log(`[SOS Auto-Escalation] Calling personal contact: ${name} (${phone})`);
+    } else {
+      const targetService = regionalNumbers[0];
+      phone = targetService?.phoneNumber || '1122';
+      name = targetService?.serviceName || 'Rescue 1122';
+      console.log(`[SOS Auto-Escalation] No personal contacts — calling regional: ${name} (${phone})`);
+    }
 
     try {
-      // Log the auto-escalated call to backend
       await api.post('/emergency-sos/log-call', {
         serviceName: name,
         autoDialed: true,
@@ -215,7 +230,12 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
       console.log('Failed to log auto-dialed call:', err);
     }
 
-    // Launch native dialer
+    Alert.alert(
+      `Calling ${name}...`,
+      `The phone dialer is opening. Tap Call to confirm.\n\nIf no answer, the next contact will be called in 60 seconds.`,
+      [{ text: 'OK' }]
+    );
+
     Linking.openURL(`tel:${phone}`);
   };
 

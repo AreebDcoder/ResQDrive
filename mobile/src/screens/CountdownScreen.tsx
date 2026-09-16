@@ -30,6 +30,8 @@ export default function CountdownScreen({ navigation, route }: any) {
   const [isDispatching, setIsDispatching] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
   const [dispatchComplete, setDispatchComplete] = useState(false);
+  const [isDevMode, setIsDevMode] = useState(false);
+  const [backendChannels, setBackendChannels] = useState<any>(null);
   const [dispatchStatus, setDispatchStatus] = useState<{
     backend: 'pending' | 'sending' | 'sent' | 'failed';
     sms: 'pending' | 'sending' | 'sent' | 'sent-via-device' | 'failed';
@@ -120,7 +122,7 @@ export default function CountdownScreen({ navigation, route }: any) {
     // ═══ STEP 1: Backend dispatch (Push + Twilio SMS + Email) — PRIMARY PATH ═══
     let backendSucceeded = false;
     try {
-      await api.post('/alert-dispatch', {
+      const response = await api.post('/alert-dispatch', {
         userId: user?.id,
         userName: user?.fullName,
         latitude,
@@ -128,11 +130,34 @@ export default function CountdownScreen({ navigation, route }: any) {
         severity,
         contacts: dispatchContacts,
       });
-      backendSucceeded = true;
-      setDispatchStatus(prev => ({
-        ...prev, backend: 'sent', push: 'sent', sms: 'sent', email: 'sent',
-      }));
-      console.log('[Countdown] Backend dispatch succeeded (Push + Twilio SMS + Email sent).');
+      setBackendChannels(response.data?.channels);
+      setIsDevMode(response.data?.devMode ?? true);
+      const respChannels = response.data?.channels;
+      const respDevMode = response.data?.devMode ?? true;
+
+      // "Succeeded" = at least ONE channel actually delivered
+      const anySent = respChannels &&
+        (respChannels.push.status === 'SENT' ||
+         respChannels.sms.status === 'SENT' ||
+         respChannels.email.status === 'SENT');
+
+      if (anySent) {
+        backendSucceeded = true;
+        setDispatchStatus(prev => ({
+          ...prev,
+          backend: 'sent',
+          push: respChannels.push.status === 'SENT' ? 'sent' : 'failed',
+          sms: respChannels.sms.status === 'SENT' ? 'sent' : (respChannels.sms.devMode ? 'pending' : 'failed'),
+          email: respChannels.email.status === 'SENT' ? 'sent' : (respChannels.email.devMode ? 'failed' : 'failed'),
+        }));
+        console.log('[Countdown] Backend dispatch partial/total success:', respChannels);
+      } else {
+        // All channels failed — fall back to device SMS
+        setDispatchStatus(prev => ({
+          ...prev, backend: 'failed', push: 'failed', email: 'failed', sms: 'pending',
+        }));
+        console.log('[Countdown] All backend channels failed. Falling back to device SMS.');
+      }
     } catch (err) {
       console.log('[Countdown] Backend dispatch failed — will fall back to device SMS:', err);
       setDispatchStatus(prev => ({
@@ -308,13 +333,13 @@ export default function CountdownScreen({ navigation, route }: any) {
       if (s === 'failed') return '❌';
       return '⏸️';
     };
-    const statusText = (s: string) => {
+    const statusText = (s: string, devMode?: boolean) => {
       if (s === 'sent') return 'Sent';
       if (s === 'sent-via-device') return 'App opened — tap Send';
       if (s === 'triggered') return 'Escalation started';
       if (s === 'logged') return 'Logged';
       if (s === 'sending') return 'Sending...';
-      if (s === 'failed') return 'Failed';
+      if (s === 'failed') return devMode ? 'Dev mode (not configured)' : 'Failed';
       return 'Pending';
     };
 
@@ -328,13 +353,24 @@ export default function CountdownScreen({ navigation, route }: any) {
         <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', opacity: fadeAnim, paddingHorizontal: 24 }}>
           <Text style={styles.dispatchingIcon}>🚨</Text>
           <Text style={styles.dispatchingText}>Dispatching Emergency Alert</Text>
+                    {isDevMode && (
+            <Text style={styles.devModeBanner}>
+              ⚠️ DEV MODE: Some channels not configured. Real delivery limited.
+            </Text>
+          )}
 
           <View style={styles.statusList}>
             <Text style={styles.statusRow}>
-              {statusIcon(dispatchStatus.backend)} Backend (Push + SMS + Email): {statusText(dispatchStatus.backend)}
+              {statusIcon(dispatchStatus.backend)} Backend Dispatch: {statusText(dispatchStatus.backend)}
             </Text>
             <Text style={styles.statusRow}>
-              {statusIcon(dispatchStatus.sms)} SMS: {statusText(dispatchStatus.sms)}
+              {statusIcon(dispatchStatus.push)} Push Notification: {statusText(dispatchStatus.push, backendChannels?.push?.devMode)}
+            </Text>
+            <Text style={styles.statusRow}>
+              {statusIcon(dispatchStatus.sms)} SMS: {statusText(dispatchStatus.sms, backendChannels?.sms?.devMode)}
+            </Text>
+            <Text style={styles.statusRow}>
+              {statusIcon(dispatchStatus.email)} Email: {statusText(dispatchStatus.email, backendChannels?.email?.devMode)}
             </Text>
             <Text style={styles.statusRow}>
               {statusIcon(dispatchStatus.incident)} Incident Log: {statusText(dispatchStatus.incident)}
@@ -589,5 +625,13 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 12,
     fontWeight: 'bold',
+  },
+    devModeBanner: {
+    color: '#FFB74D',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 16,
+    paddingHorizontal: 20,
   },
 });

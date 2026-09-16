@@ -47,6 +47,7 @@ import CountdownScreen from '../screens/CountdownScreen';
 import { CrashSoundDetectionService } from '../services/crashSoundDetectionService';
 import BleSensorDemoScreen from '../screens/BleSensorDemoScreen';
 import { sensorSourceManager } from '../services/sensorSourceManager';
+import DevModeBanner from '../components/DevModeBanner'; 
 
 const Stack = createStackNavigator();
 
@@ -296,6 +297,7 @@ function DriverHome({ navigation }: any) {
       default:
         return (
           <ScrollView style={styles.scrollContainer} contentContainerStyle={{ paddingBottom: 40 }}>
+          <DevModeBanner />
             {/* Paired Vehicle Widget */}
             <View style={styles.dashboardCard}>
               <Text style={styles.cardHeaderTitle}>🚗 Paired Vehicle</Text>

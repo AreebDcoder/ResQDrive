@@ -33,31 +33,27 @@ export class EmergencyNotificationService {
     private notificationsService: NotificationsService,
   ) {}
 
-  private getTestContacts(): TestContact[] {
-    this.logger.warn('Using hardcoded test contacts — EmergencyContact model not on this branch. Will use real contacts after team merge.');
-    return [
-      {
-        id: 'test-contact-1',
-        name: 'Test Contact (Primary)',
-        phoneNumber: '+923000000001',
-        email: 'test1@example.com',
-        priorityOrder: 1,
-      },
-      {
-        id: 'test-contact-2',
-        name: 'Test Contact (Secondary)',
-        phoneNumber: '+923000000002',
-        email: 'test2@example.com',
-        priorityOrder: 2,
-      },
-      {
-        id: 'test-contact-3',
-        name: 'Test Contact (Tertiary)',
-        phoneNumber: '+923000000003',
-        email: null,
-        priorityOrder: 3,
-      },
-    ];
+  private async getContacts(userId: string): Promise<TestContact[]> {
+    const dbContacts = await this.prisma.emergencyContact.findMany({
+      where: { userId },
+      orderBy: { priorityOrder: 'asc' },
+    });
+
+    if (dbContacts.length === 0) {
+      this.logger.warn(`User ${userId} has no emergency contacts. Using fallback test contacts.`);
+      return [
+        { id: 'fallback-1', name: 'Emergency Contact (Primary)', phoneNumber: '15', email: null, priorityOrder: 1 },
+        { id: 'fallback-2', name: 'Rescue 1122', phoneNumber: '1122', email: null, priorityOrder: 2 },
+      ];
+    }
+
+    return dbContacts.map((c) => ({
+      id: c.id,
+      name: c.name,
+      phoneNumber: c.phoneNumber,
+      email: c.email || null,
+      priorityOrder: c.priorityOrder,
+    }));
   }
 
   async trigger(userId: string, dto: TriggerNotificationDto) {
@@ -68,7 +64,7 @@ export class EmergencyNotificationService {
       throw new BadRequestException('You already have an active emergency notification session. Cancel it first.');
     }
 
-    const contacts = this.getTestContacts();
+    const contacts = await this.getContacts(userId);
     if (contacts.length === 0) {
       throw new BadRequestException('No emergency contacts found.');
     }
@@ -335,7 +331,7 @@ export class EmergencyNotificationService {
           continue;
         }
 
-        const contacts = this.getTestContacts();
+        const contacts = await this.getContacts(session.userId);
         const nextPriority = session.currentPriority + 1;
         const nextContact = contacts.find((c) => c.priorityOrder === nextPriority);
 
