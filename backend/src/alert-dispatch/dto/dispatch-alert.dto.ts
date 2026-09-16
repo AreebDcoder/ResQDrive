@@ -1,7 +1,7 @@
-import { IsString, IsNumber, IsArray, IsOptional, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsArray, IsLatitude, IsLongitude, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
 
-class ContactTargetDto {
+export class DispatchContactDto {
   @IsString()
   name: string;
 
@@ -11,40 +11,50 @@ class ContactTargetDto {
   @IsOptional()
   @IsString()
   email?: string;
-
-  @IsOptional()
-  @IsString()
-  pushToken?: string;
 }
 
 export class DispatchAlertDto {
-  @IsString()
-  userId: string;
-
+  @ApiPropertyOptional()
   @IsOptional()
-  @IsString()
+  @IsUUID()
+  userId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
   incidentId?: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
-  userName: string;
+  userName?: string;
 
+  @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   vehicleInfo?: string;
 
-  @Type(() => Number)
+  @ApiProperty()
   @IsNumber()
+  @IsLatitude()
   latitude: number;
 
-  @Type(() => Number)
+  @ApiProperty()
   @IsNumber()
+  @IsLongitude()
   longitude: number;
 
+  @ApiProperty()
   @IsString()
   severity: string;
 
+  @ApiPropertyOptional({ type: [DispatchContactDto] })
+  @IsOptional()
   @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => ContactTargetDto)
-  contacts: ContactTargetDto[];
+  contacts?: DispatchContactDto[];
+
+  @ApiPropertyOptional({ description: 'Acknowledge URL from Module 6.8 (for WhatsApp message)' })
+  @IsOptional()
+  @IsString()
+  acknowledgeUrl?: string;
 }

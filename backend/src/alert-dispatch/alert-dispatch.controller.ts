@@ -17,6 +17,7 @@ export class AlertDispatchController {
       longitude: dto.longitude,
       severity: dto.severity,
       contacts: dto.contacts,
+      acknowledgeUrl: dto.acknowledgeUrl,
     };
     return this.service.dispatchAlert(payload);
   }

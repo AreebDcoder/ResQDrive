@@ -120,12 +120,51 @@ export default function CountdownScreen({ navigation, route }: any) {
       email: 'pending', whatsapp: 'pending', module68: 'pending', incident: 'pending',
     });
 
-    // ═══ STEP 1: Backend dispatch (Push + Twilio SMS + Email) — PRIMARY PATH ═══
+    // ═══ STEP 1 (REORDERED): Log incident FIRST so we have the incidentId ═══
+    let incident = null;
+    try {
+      const response = await api.post('/incidents', {
+        type: 'AUTO',
+        severity: severity.toUpperCase(),
+        status: 'ACTIVE',
+        occurredAt: new Date().toISOString(),
+        latitude,
+        longitude,
+        description: 'Countdown reached zero — emergency alert dispatched',
+      });
+      incident = response.data;
+      setDispatchStatus(prev => ({ ...prev, incident: 'logged' }));
+      console.log('[Countdown] Incident logged:', incident?.id);
+    } catch (err) {
+      console.log('[Countdown] Failed to log incident:', err);
+      setDispatchStatus(prev => ({ ...prev, incident: 'failed' }));
+    }
+
+    // ═══ STEP 2 (REORDERED): Trigger Module 6.8 — get acknowledge URL ═══
+    let acknowledgeUrl: string | undefined;
+    try {
+      const response = await api.post('/emergency-notification/trigger', {
+        incidentId: incident?.id,
+        message: `Auto-triggered from countdown. Severity: ${severity}`,
+        latitude,
+        longitude,
+      });
+      acknowledgeUrl = response.data?.acknowledgeUrl;
+      setDispatchStatus(prev => ({ ...prev, module68: 'triggered' }));
+      console.log('[Countdown] Module 6.8 triggered. Acknowledge URL:', acknowledgeUrl);
+    } catch (err: any) {
+      console.log('[Countdown] Module 6.8 trigger failed (non-fatal):', err?.response?.data?.message || err?.message);
+      setDispatchStatus(prev => ({ ...prev, module68: 'failed' }));
+    }
+
+    // ═══ STEP 3 (REORDERED): Backend dispatch WITH acknowledge URL ═══
     let backendSucceeded = false;
     try {
       const response = await api.post('/alert-dispatch', {
         userId: user?.id,
         userName: user?.fullName,
+        incidentId: incident?.id,
+        acknowledgeUrl,  // ← NEW: pass the acknowledge URL
         latitude,
         longitude,
         severity,
@@ -136,7 +175,6 @@ export default function CountdownScreen({ navigation, route }: any) {
       const respChannels = response.data?.channels;
       const respDevMode = response.data?.devMode ?? true;
 
-      // "Succeeded" = at least ONE channel actually delivered
       const anySent = respChannels &&
         (respChannels.push.status === 'SENT' ||
          respChannels.sms.status === 'SENT' ||
@@ -151,84 +189,37 @@ export default function CountdownScreen({ navigation, route }: any) {
           push: respChannels.push.status === 'SENT' ? 'sent' : 'failed',
           sms: respChannels.sms.status === 'SENT' ? 'sent' : (respChannels.sms.devMode ? 'pending' : 'failed'),
           email: respChannels.email.status === 'SENT' ? 'sent' : (respChannels.email.devMode ? 'failed' : 'failed'),
-          whatsapp: respChannels.whatsapp.status === 'SENT' ? 'sent' : (respChannels.whatsapp.devMode ? 'pending' : 'failed'),
+          whatsapp: respChannels.whatsapp?.status === 'SENT' ? 'sent' : (respChannels.whatsapp?.devMode ? 'pending' : 'failed'),
         }));
-        console.log('[Countdown] Backend dispatch partial/total success:', respChannels);
+        console.log('[Countdown] Backend dispatch succeeded:', respChannels);
       } else {
-        // All channels failed — fall back to device SMS
         setDispatchStatus(prev => ({
-          ...prev, backend: 'failed', push: 'failed', email: 'failed', sms: 'pending',
+          ...prev, backend: 'failed', push: 'failed', email: 'failed', sms: 'pending', whatsapp: 'failed',
         }));
-        console.log('[Countdown] All backend channels failed. Falling back to device SMS.');
       }
     } catch (err) {
       console.log('[Countdown] Backend dispatch failed — will fall back to device SMS:', err);
       setDispatchStatus(prev => ({
-        ...prev, backend: 'failed', push: 'failed', email: 'failed', sms: 'pending',
+        ...prev, backend: 'failed', push: 'failed', email: 'failed', sms: 'pending', whatsapp: 'failed',
       }));
     }
 
-    // ═══ STEP 2: Device SMS fallback (ONLY if backend failed) ═══
-    // This prevents double SMS — if Twilio already sent it, we skip device SMS
+    // ═══ STEP 4: Device SMS fallback (only if backend failed) ═══
     if (!backendSucceeded) {
       try {
         const isAvailable = await Sms.isAvailableAsync();
         if (isAvailable && dispatchContacts.length > 0) {
           setDispatchStatus(prev => ({ ...prev, sms: 'sending' }));
-
           const phoneNumbers = dispatchContacts.map(c => c.phoneNumber);
-          const messageBody = `ResQDrive ALERT: ${user?.fullName || 'Unknown'} may have been in a ${severity} accident. Location: ${mapsLink}`;
-
+          const messageBody = `ResQDrive ALERT: ${user?.fullName || 'Unknown'} may have been in a ${severity} accident. Location: https://www.google.com/maps?q=${latitude},${longitude}`;
           await Sms.sendSMSAsync(phoneNumbers, messageBody);
           setDispatchStatus(prev => ({ ...prev, sms: 'sent-via-device' }));
-          console.log('[Countdown] Device SMS app opened — user must tap Send.');
         } else {
           setDispatchStatus(prev => ({ ...prev, sms: 'failed' }));
         }
       } catch (err) {
-        console.log('[Countdown] Device SMS fallback failed:', err);
         setDispatchStatus(prev => ({ ...prev, sms: 'failed' }));
       }
-    }
-
-    // ═══ STEP 3: Log incident in database ═══
-    let incident = null;
-    try {
-      const response = await api.post('/incidents', {
-        type: 'AUTO',
-        severity: severity.toUpperCase(),
-        status: 'ACTIVE',
-        occurredAt: new Date().toISOString(),
-        latitude,
-        longitude,
-        description: 'Countdown reached zero — emergency alert dispatched',
-        alertDispatchStatus: {
-          backendMode: backendSucceeded ? 'online' : 'failed',
-          deviceSmsUsed: !backendSucceeded,
-        },
-      });
-      incident = response.data;
-      setDispatchStatus(prev => ({ ...prev, incident: 'logged' }));
-      console.log('[Countdown] Incident logged:', incident?.id);
-    } catch (err) {
-      console.log('[Countdown] Failed to log incident:', err);
-      setDispatchStatus(prev => ({ ...prev, incident: 'failed' }));
-    }
-
-    // ═══ STEP 4: Trigger Module 6.8 — Emergency Contact Notification ═══
-    // This starts priority-based escalation + acknowledge link + auto live location session
-    try {
-      await api.post('/emergency-notification/trigger', {
-        incidentId: incident?.id,
-        message: `Auto-triggered from countdown. Severity: ${severity}`,
-        latitude,
-        longitude,
-      });
-      setDispatchStatus(prev => ({ ...prev, module68: 'triggered' }));
-      console.log('[Countdown] Module 6.8 emergency notification triggered — escalation started.');
-    } catch (err: any) {
-      console.log('[Countdown] Module 6.8 trigger failed (non-fatal):', err?.response?.data?.message || err?.message);
-      setDispatchStatus(prev => ({ ...prev, module68: 'failed' }));
     }
 
     // ═══ STEP 5: Show local push notification on device ═══

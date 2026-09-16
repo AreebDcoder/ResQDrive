@@ -35,18 +35,34 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
   const incidentId = route?.params?.incidentId || null;
 
   const [regionalNumbers, setRegionalNumbers] = useState<EmergencyNumberItem[]>([]);
-    const personalContacts = useSelector((state: any) => state.contacts?.list || []);
+  const personalContacts = useSelector((state: any) => state.contacts?.list || []);
   const [customNumbers, setCustomNumbers] = useState<EmergencyNumberItem[]>([]);
   const [regionName, setRegionName] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Auto-escalation 60-second timer state
+  // Auto-escalation state & cycling
   const [escalationTimeLeft, setEscalationTimeLeft] = useState<number>(60);
+  const [pendingCallTarget, setPendingCallTarget] = useState<{ name: string; phone: string } | null>(null);
+  const [currentContactIndex, setCurrentContactIndex] = useState<number>(0);
+  const [hasCycledThroughAll, setHasCycledThroughAll] = useState<boolean>(false);
   const [isEscalationActive, setIsEscalationActive] = useState<boolean>(
     !!incidentId && (severity === 'moderate' || severity === 'severe')
   );
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Keep target contact updated as personalContacts load
+  useEffect(() => {
+    if (personalContacts.length > 0 && !pendingCallTarget) {
+      const sorted = [...personalContacts].sort((a: any, b: any) => (a.priorityOrder ?? 0) - (b.priorityOrder ?? 0));
+      setPendingCallTarget({ name: sorted[0].name, phone: sorted[0].phoneNumber });
+    } else if (personalContacts.length === 0 && regionalNumbers.length > 0 && !pendingCallTarget) {
+      setPendingCallTarget({
+        name: regionalNumbers[0]?.serviceName || 'Rescue 1122',
+        phone: regionalNumbers[0]?.phoneNumber || '1122',
+      });
+    }
+  }, [personalContacts, regionalNumbers]);
 
   // Animations
   const headerOpacity = useRef(new Animated.Value(0)).current;
@@ -160,7 +176,7 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
 
       const location = await Promise.race([
         Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
-        new Promise<any>((resolve) => setTimeout(() => resolve(null), 3000))
+        new Promise<any>((resolve) => setTimeout(() => resolve(null), 3000)),
       ]);
       const latitude = location?.coords?.latitude ?? 33.6844;
       const longitude = location?.coords?.longitude ?? 73.0479;
@@ -184,7 +200,7 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
     fetchEmergencyNumbers();
   }, [fetchEmergencyNumbers]);
 
-  // Handle 60s Escalation timer countdown tick
+  // Handle Escalation timer countdown tick
   useEffect(() => {
     if (isEscalationActive && escalationTimeLeft > 0) {
       timerRef.current = setTimeout(() => {
@@ -203,22 +219,28 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
   const triggerAutoEscalationCall = async () => {
     setIsEscalationActive(false);
 
-    // PRIORITY ORDER: Personal contacts first (in priority order), then regional emergency
-    const sortedContacts = [...personalContacts].sort((a: any, b: any) => a.priorityOrder - b.priorityOrder);
-    const firstPersonal = sortedContacts[0];
+    const sortedContacts = [...personalContacts].sort(
+      (a: any, b: any) => (a.priorityOrder ?? 0) - (b.priorityOrder ?? 0)
+    );
 
     let phone: string;
     let name: string;
 
-    if (firstPersonal) {
-      phone = firstPersonal.phoneNumber;
-      name = firstPersonal.name;
-      console.log(`[SOS Auto-Escalation] Calling personal contact: ${name} (${phone})`);
+    if (currentContactIndex < sortedContacts.length) {
+      // Still cycling through personal contacts
+      const contact = sortedContacts[currentContactIndex];
+      phone = contact.phoneNumber;
+      name = contact.name;
+      console.log(
+        `[SOS Auto-Escalation] Calling personal contact ${currentContactIndex + 1}/${sortedContacts.length}: ${name} (${phone})`
+      );
     } else {
+      // All personal contacts exhausted — call regional emergency service
       const targetService = regionalNumbers[0];
       phone = targetService?.phoneNumber || '1122';
       name = targetService?.serviceName || 'Rescue 1122';
-      console.log(`[SOS Auto-Escalation] No personal contacts — calling regional: ${name} (${phone})`);
+      console.log(`[SOS Auto-Escalation] All personal contacts exhausted — calling regional: ${name} (${phone})`);
+      setHasCycledThroughAll(true);
     }
 
     try {
@@ -237,6 +259,26 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
     );
 
     Linking.openURL(`tel:${phone}`);
+
+    // Cycle to next contact if more exist
+    if (!hasCycledThroughAll && currentContactIndex + 1 < sortedContacts.length) {
+      const nextIndex = currentContactIndex + 1;
+      const nextContact = sortedContacts[nextIndex];
+      setCurrentContactIndex(nextIndex);
+      setPendingCallTarget({ name: nextContact.name, phone: nextContact.phoneNumber });
+      setEscalationTimeLeft(60);
+      setIsEscalationActive(true); // restart timer for next contact
+    } else if (!hasCycledThroughAll && sortedContacts.length > 0 && currentContactIndex + 1 === sortedContacts.length) {
+      // Final cycle fallback: Prepare regional Rescue 1122 next
+      setCurrentContactIndex(sortedContacts.length);
+      const regional = regionalNumbers[0];
+      setPendingCallTarget({
+        name: regional?.serviceName || 'Rescue 1122',
+        phone: regional?.phoneNumber || '1122',
+      });
+      setEscalationTimeLeft(60);
+      setIsEscalationActive(true);
+    }
   };
 
   const handleCallNumber = async (number: string, name: string) => {
@@ -316,7 +358,7 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
         <View style={styles.countdownBanner}>
           <Ionicons name="warning" size={24} color="#ff9800" style={{ marginRight: 8 }} />
           <Text style={styles.countdownText}>
-            Auto-dialing rescue in {escalationTimeLeft}s if no contact response...
+            Auto-dialing {pendingCallTarget?.name || 'rescue'} in {escalationTimeLeft}s if no response...
           </Text>
         </View>
       )}

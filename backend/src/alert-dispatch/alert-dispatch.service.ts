@@ -12,14 +12,15 @@ export interface EmergencyContactTarget {
 }
 
 export interface AlertPayload {
-  userId: string;
+  userId?: string;
   incidentId?: string;
-  userName: string;
+  userName?: string;
   vehicleInfo?: string;
   latitude: number;
   longitude: number;
   severity: string;
-  contacts: EmergencyContactTarget[];
+  contacts?: { name: string; phoneNumber: string; email?: string }[];
+  acknowledgeUrl?: string;
 }
 
 @Injectable()
@@ -121,9 +122,8 @@ export class AlertDispatchService {
           payload.severity,
           payload.latitude,
           payload.longitude,
-          mapsLink,
+          payload.acknowledgeUrl,  // ← pass the real acknowledge URL
         );
-        // Also send a location pin for richer UX
         await this.whatsappService.sendLocationPin(
           contact.phoneNumber,
           payload.latitude,
