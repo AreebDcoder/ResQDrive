@@ -41,6 +41,12 @@ export class WhatsAppService {
     longitude: number,
     acknowledgeUrl?: string,
   ): Promise<WhatsAppMessageResult> {
+        // Convert relative acknowledge URL to full URL for WhatsApp clickability
+    let fullAcknowledgeUrl = acknowledgeUrl;
+    if (acknowledgeUrl && acknowledgeUrl.startsWith('/')) {
+      const baseUrl = process.env.BACKEND_PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
+      fullAcknowledgeUrl = `${baseUrl}${acknowledgeUrl}`;
+    }
     if (!this.isConfigured) {
       return { status: 'FAILED', error: 'WhatsApp not configured' };
     }
@@ -51,7 +57,7 @@ export class WhatsAppService {
     }
 
     const mapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
-    const messageBody = `🚨 ResQDrive EMERGENCY ALERT\n\n${userName} may have been in a ${severity} accident.\n\nLocation: ${mapsLink}\n\n${acknowledgeUrl ? `Track live: ${acknowledgeUrl}\n\n` : ''}Please respond immediately.`;
+    const messageBody = `🚨 ResQDrive EMERGENCY ALERT\n\n${userName} may have been in a ${severity} accident.\n\nLocation: ${mapsLink}\n\n${fullAcknowledgeUrl ? `Track live: ${fullAcknowledgeUrl}\n\n` : ''}Please respond immediately.`;
 
     try {
       const response = await axios.post(
