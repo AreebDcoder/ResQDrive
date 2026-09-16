@@ -11,6 +11,8 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import { sensorSourceManager } from '../services/sensorSourceManager';
 import { Ionicons } from '@expo/vector-icons';
+import { CrashSoundDetectionService } from '../services/crashSoundDetectionService';
+import { MultiModalFusionService } from '../services/multiModalFusionService';
 
 export default function BleSensorDemoScreen() {
   const { connectionStatus, activeSource, latestReading } = useSelector(
@@ -128,6 +130,23 @@ export default function BleSensorDemoScreen() {
             </View>
           </View>
 
+          {/* 🧪 DEV SIMULATION TRIGGER BUTTON */}
+          <TouchableOpacity
+            style={styles.simCrashBtn}
+            onPress={() => {
+              // Step 1: Fire a fake crash sound event (85% confidence)
+              CrashSoundDetectionService.simulateManualCrash('Crash', 0.85);
+              
+              // Step 2: Fire a fake severe motion event 1 second later (within 10s window)
+              setTimeout(() => {
+                MultiModalFusionService.recordMotionEvent('severe', 5.0, 300);
+              }, 1000);
+            }}
+          >
+            <Ionicons name="flash" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+            <Text style={styles.simCrashBtnText}>🧪 DEV: Trigger Confirmed Accident</Text>
+          </TouchableOpacity>
+
           <View style={styles.card}>
             <Text style={styles.cardHeader}>Raw BLE JSON Broadcast Payload</Text>
             <View style={styles.codeBlock}>
@@ -168,6 +187,13 @@ const styles = StyleSheet.create({
     shadowColor: '#E53935', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 3,
   },
   reconnectBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: 'bold' },
+  simCrashBtn: {
+    backgroundColor: '#d32f2f', flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
+    paddingVertical: 16, borderRadius: 20, marginBottom: 20,
+    shadowColor: '#d32f2f', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 6,
+    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  simCrashBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: 'bold' },
   codeBlock: {
     backgroundColor: 'rgba(10, 10, 15, 0.8)', borderRadius: 14, padding: 14,
     borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.04)',

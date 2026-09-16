@@ -29,6 +29,18 @@ export default function CountdownScreen({ navigation, route }: any) {
   const [secondsLeft, setSecondsLeft] = useState(initialCountdown);
   const [isDispatching, setIsDispatching] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
+  const [dispatchComplete, setDispatchComplete] = useState(false);
+  const [dispatchStatus, setDispatchStatus] = useState<{
+    backend: 'pending' | 'sending' | 'sent' | 'failed';
+    sms: 'pending' | 'sending' | 'sent' | 'sent-via-device' | 'failed';
+    push: 'pending' | 'sent' | 'failed';
+    email: 'pending' | 'sent' | 'failed';
+    module68: 'pending' | 'triggered' | 'failed';
+    incident: 'pending' | 'logged' | 'failed';
+  }>({
+    backend: 'pending', sms: 'pending', push: 'pending',
+    email: 'pending', module68: 'pending', incident: 'pending',
+  });
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -97,71 +109,124 @@ export default function CountdownScreen({ navigation, route }: any) {
       email: c.email,
     }));
 
-    // 1. Try sending SMS directly from the phone (100% Free)
-    try {
-      const isAvailable = await Sms.isAvailableAsync();
-      if (isAvailable) {
-        const phoneNumbers = dispatchContacts.map(c => c.phoneNumber);
-        const messageBody = `ResQDrive ALERT: ${user?.fullName || 'Unknown'} may have been in a ${severity} accident. Location: https://www.google.com/maps?q=${latitude},${longitude}`;
+    const mapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
+    console.log('[Countdown] Countdown ended. Starting multi-channel dispatch...');
 
-        await Sms.sendSMSAsync(phoneNumbers, messageBody);
-        console.log('SMS sent successfully via device SIM!');
-      } else {
-        console.log('SMS not available on this device');
+    setDispatchStatus({
+      backend: 'sending', sms: 'pending', push: 'pending',
+      email: 'pending', module68: 'pending', incident: 'pending',
+    });
+
+    // ═══ STEP 1: Backend dispatch (Push + Twilio SMS + Email) — PRIMARY PATH ═══
+    let backendSucceeded = false;
+    try {
+      await api.post('/alert-dispatch', {
+        userId: user?.id,
+        userName: user?.fullName,
+        latitude,
+        longitude,
+        severity,
+        contacts: dispatchContacts,
+      });
+      backendSucceeded = true;
+      setDispatchStatus(prev => ({
+        ...prev, backend: 'sent', push: 'sent', sms: 'sent', email: 'sent',
+      }));
+      console.log('[Countdown] Backend dispatch succeeded (Push + Twilio SMS + Email sent).');
+    } catch (err) {
+      console.log('[Countdown] Backend dispatch failed — will fall back to device SMS:', err);
+      setDispatchStatus(prev => ({
+        ...prev, backend: 'failed', push: 'failed', email: 'failed', sms: 'pending',
+      }));
+    }
+
+    // ═══ STEP 2: Device SMS fallback (ONLY if backend failed) ═══
+    // This prevents double SMS — if Twilio already sent it, we skip device SMS
+    if (!backendSucceeded) {
+      try {
+        const isAvailable = await Sms.isAvailableAsync();
+        if (isAvailable && dispatchContacts.length > 0) {
+          setDispatchStatus(prev => ({ ...prev, sms: 'sending' }));
+
+          const phoneNumbers = dispatchContacts.map(c => c.phoneNumber);
+          const messageBody = `ResQDrive ALERT: ${user?.fullName || 'Unknown'} may have been in a ${severity} accident. Location: ${mapsLink}`;
+
+          await Sms.sendSMSAsync(phoneNumbers, messageBody);
+          setDispatchStatus(prev => ({ ...prev, sms: 'sent-via-device' }));
+          console.log('[Countdown] Device SMS app opened — user must tap Send.');
+        } else {
+          setDispatchStatus(prev => ({ ...prev, sms: 'failed' }));
+        }
+      } catch (err) {
+        console.log('[Countdown] Device SMS fallback failed:', err);
+        setDispatchStatus(prev => ({ ...prev, sms: 'failed' }));
       }
-    } catch (err) {
-      console.log('Device SMS failed, relying on backend fallback:', err);
     }
 
-    // 2. Also fire the backend API for Push, Email, and Database logging
-    let result;
+    // ═══ STEP 3: Log incident in database ═══
+    let incident = null;
     try {
-      result = await dispatchEmergencyAlert(
-        dispatchContacts,
-        {
-          userName: user?.fullName || 'Unknown Driver',
-          userPhone: user?.phoneNumber || '',
-          severity,
-          latitude,
-          longitude,
+      const response = await api.post('/incidents', {
+        type: 'AUTO',
+        severity: severity.toUpperCase(),
+        status: 'ACTIVE',
+        occurredAt: new Date().toISOString(),
+        latitude,
+        longitude,
+        description: 'Countdown reached zero — emergency alert dispatched',
+        alertDispatchStatus: {
+          backendMode: backendSucceeded ? 'online' : 'failed',
+          deviceSmsUsed: !backendSucceeded,
         },
-        async () => {
-          await api.post('/alert-dispatch', {
-            userId: user?.id,
-            userName: user?.fullName,
-            latitude,
-            longitude,
-            severity,
-            contacts: dispatchContacts,
-          });
-        },
-      );
+      });
+      incident = response.data;
+      setDispatchStatus(prev => ({ ...prev, incident: 'logged' }));
+      console.log('[Countdown] Incident logged:', incident?.id);
     } catch (err) {
-      result = { mode: 'failed' };
+      console.log('[Countdown] Failed to log incident:', err);
+      setDispatchStatus(prev => ({ ...prev, incident: 'failed' }));
     }
 
-    const incident = await logIncident('ACTIVE', { dispatchMode: result.mode, smsSentViaDevice: true });
+    // ═══ STEP 4: Trigger Module 6.8 — Emergency Contact Notification ═══
+    // This starts priority-based escalation + acknowledge link + auto live location session
+    try {
+      await api.post('/emergency-notification/trigger', {
+        incidentId: incident?.id,
+        message: `Auto-triggered from countdown. Severity: ${severity}`,
+        latitude,
+        longitude,
+      });
+      setDispatchStatus(prev => ({ ...prev, module68: 'triggered' }));
+      console.log('[Countdown] Module 6.8 emergency notification triggered — escalation started.');
+    } catch (err: any) {
+      console.log('[Countdown] Module 6.8 trigger failed (non-fatal):', err?.response?.data?.message || err?.message);
+      setDispatchStatus(prev => ({ ...prev, module68: 'failed' }));
+    }
 
-    // Instantly present local Emergency Push Notification on device
+    // ═══ STEP 5: Show local push notification on device ═══
     try {
       await Notifications.scheduleNotificationAsync({
         content: {
           title: '🚨 ResQDrive Emergency Alert',
-          body: `Multi-channel emergency alert dispatched to contacts! Live GPS tracking active.`,
+          body: `Emergency alert dispatched! Live GPS tracking active. Acknowledgement link sent to contacts.`,
           sound: true,
-          data: { mapsLink: `https://www.google.com/maps?q=${latitude},${longitude}`, severity },
+          data: { mapsLink, severity },
         },
         trigger: null,
       });
     } catch (e) {
-      console.log('Local emergency notification trigger failed:', e);
+      console.log('[Countdown] Local notification failed:', e);
     }
 
-    navigation.replace('SOS', {
-      severity: severity.toLowerCase(),
-      incidentId: incident?.id || null,
-    });
-  }, [contacts, user, severity, latitude, longitude, logIncident, navigation]);
+    // ═══ STEP 6: Show dispatch summary for 3 seconds, then navigate to SOS ═══
+    setDispatchComplete(true);
+    setTimeout(() => {
+      navigation.replace('SOS', {
+        severity: severity.toLowerCase(),
+        incidentId: incident?.id || null,
+      });
+    }, 3000);
+  }, [contacts, user, severity, latitude, longitude, navigation]);
 
   const cancelCallbackRef = useRef(handleCancel);
   const timeoutCallbackRef = useRef(handleTimeout);
@@ -236,7 +301,23 @@ export default function CountdownScreen({ navigation, route }: any) {
     );
   }
 
-  if (isDispatching) {
+  if (isDispatching && !dispatchComplete) {
+    const statusIcon = (s: string) => {
+      if (s === 'sent' || s === 'sent-via-device' || s === 'triggered' || s === 'logged') return '✅';
+      if (s === 'sending') return '⏳';
+      if (s === 'failed') return '❌';
+      return '⏸️';
+    };
+    const statusText = (s: string) => {
+      if (s === 'sent') return 'Sent';
+      if (s === 'sent-via-device') return 'App opened — tap Send';
+      if (s === 'triggered') return 'Escalation started';
+      if (s === 'logged') return 'Logged';
+      if (s === 'sending') return 'Sending...';
+      if (s === 'failed') return 'Failed';
+      return 'Pending';
+    };
+
     return (
       <SafeAreaView style={styles.container}>
         <View style={StyleSheet.absoluteFillObject}>
@@ -244,9 +325,54 @@ export default function CountdownScreen({ navigation, route }: any) {
           <View style={[StyleSheet.absoluteFillObject, styles.gradTop]} />
           <View style={[StyleSheet.absoluteFillObject, styles.gradBottom]} />
         </View>
-        <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', opacity: fadeAnim }}>
-          <Text style={styles.dispatchingIcon}></Text>
-          <Text style={styles.dispatchingText}>Sending emergency alert...</Text>
+        <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', opacity: fadeAnim, paddingHorizontal: 24 }}>
+          <Text style={styles.dispatchingIcon}>🚨</Text>
+          <Text style={styles.dispatchingText}>Dispatching Emergency Alert</Text>
+
+          <View style={styles.statusList}>
+            <Text style={styles.statusRow}>
+              {statusIcon(dispatchStatus.backend)} Backend (Push + SMS + Email): {statusText(dispatchStatus.backend)}
+            </Text>
+            <Text style={styles.statusRow}>
+              {statusIcon(dispatchStatus.sms)} SMS: {statusText(dispatchStatus.sms)}
+            </Text>
+            <Text style={styles.statusRow}>
+              {statusIcon(dispatchStatus.incident)} Incident Log: {statusText(dispatchStatus.incident)}
+            </Text>
+            <Text style={styles.statusRow}>
+              {statusIcon(dispatchStatus.module68)} Contact Escalation: {statusText(dispatchStatus.module68)}
+            </Text>
+          </View>
+
+          {dispatchStatus.sms === 'sent-via-device' && (
+            <Text style={styles.smsHint}>
+              📱 Your SMS app opened. Tap "Send" to deliver the alert to your contacts.
+            </Text>
+          )}
+        </Animated.View>
+      </SafeAreaView>
+    );
+  }
+
+  if (isDispatching && dispatchComplete) {
+    const allGood = dispatchStatus.backend === 'sent' || dispatchStatus.sms === 'sent-via-device';
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={StyleSheet.absoluteFillObject}>
+          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0A0F' }]} />
+          <View style={[StyleSheet.absoluteFillObject, styles.gradBottom]} />
+        </View>
+        <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', opacity: fadeAnim, paddingHorizontal: 24 }}>
+          <Text style={styles.completeIcon}>{allGood ? '✅' : '⚠️'}</Text>
+          <Text style={styles.completeTitle}>
+            {allGood ? 'Alert Dispatched' : 'Partially Dispatched'}
+          </Text>
+          <Text style={styles.completeSubtext}>
+            {allGood
+              ? 'Emergency contacts have been notified. Live GPS tracking is active. Escalation started.'
+              : 'Some channels failed. Your contacts may still receive the alert via other channels.'}
+          </Text>
+          <Text style={styles.redirectHint}>Redirecting to SOS screen...</Text>
         </Animated.View>
       </SafeAreaView>
     );
@@ -385,6 +511,51 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '600',
+  },
+    statusList: {
+    marginTop: 32,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    width: '100%',
+  },
+  statusRow: {
+    color: '#E0E0E0',
+    fontSize: 14,
+    paddingVertical: 6,
+    fontFamily: 'monospace',
+  },
+  smsHint: {
+    color: '#FFB74D',
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: 20,
+    paddingHorizontal: 20,
+    lineHeight: 20,
+  },
+  completeIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  completeTitle: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  completeSubtext: {
+    color: '#A0A0B8',
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  redirectHint: {
+    color: '#666680',
+    fontSize: 12,
   },
   cancelledContainer: {
     flex: 1,
