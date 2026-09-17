@@ -57,7 +57,7 @@ export class WhatsAppService {
     }
 
     const mapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
-    const messageBody = `🚨 ResQDrive EMERGENCY ALERT\n\n${userName} may have been in a ${severity} accident.\n\nLocation: ${mapsLink}\n\n${fullAcknowledgeUrl ? `Track live: ${fullAcknowledgeUrl}\n\n` : ''}Please respond immediately.`;
+    const messageBody = `🚨 ResQDrive EMERGENCY ALERT\n\n${userName} may have been in a ${severity} accident.\n\nLocation:\n${mapsLink}\n\n${fullAcknowledgeUrl ? `Track live location:\n${fullAcknowledgeUrl}\n\n` : ''}Please respond immediately.`;
 
     try {
       const response = await axios.post(
