@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import api from '../api/axios';
 import { VoiceCommandService } from '../services/voiceCommandService';
 import { useSelector } from 'react-redux';
+import { makeDirectPhoneCall, isAutoDialable } from '../utils/directCall';
 
 interface EmergencyNumberItem {
   id: string;
@@ -130,11 +131,11 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
               autoDialed: false,
             });
           } catch (err) {
-            console.log('Failed to log voice call on SOSScreen:', err);
+            console.log('Failed to log voice call:', err);
           }
-          Linking.openURL(`tel:${target.phoneNumber}`);
+          makeDirectPhoneCall(target.phoneNumber);
         } else {
-          Linking.openURL('tel:1122');
+          makeDirectPhoneCall('1122');
         }
       },
       () => {},
@@ -216,7 +217,7 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
     };
   }, [isEscalationActive, escalationTimeLeft]);
 
-  const triggerAutoEscalationCall = async () => {
+const triggerAutoEscalationCall = async () => {
     setIsEscalationActive(false);
 
     const sortedContacts = [...personalContacts].sort(
@@ -225,59 +226,71 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
 
     let phone: string;
     let name: string;
+    let autoDialed = false;
 
     if (currentContactIndex < sortedContacts.length) {
-      // Still cycling through personal contacts
+      // 1. Calling personal contact
       const contact = sortedContacts[currentContactIndex];
       phone = contact.phoneNumber;
       name = contact.name;
-      console.log(
-        `[SOS Auto-Escalation] Calling personal contact ${currentContactIndex + 1}/${sortedContacts.length}: ${name} (${phone})`
-      );
+      console.log(`[SOS Auto-Escalation] Calling personal contact ${currentContactIndex + 1}/${sortedContacts.length}: ${name} (${phone})`);
+      autoDialed = true;
     } else {
-      // All personal contacts exhausted — call regional emergency service
-      const targetService = regionalNumbers[0];
-      phone = targetService?.phoneNumber || '1122';
-      name = targetService?.serviceName || 'Rescue 1122';
+      // 2. All personal contacts exhausted — call regional emergency service (prefer 11-digit landline)
+      const targetService = regionalNumbers.find((r) => r.phoneNumber.length >= 5) || regionalNumbers[0];
+      phone = targetService?.phoneNumber || '0519290002';
+      name = targetService?.serviceName || 'Rescue 1122 HQ (Auto-Dial)';
       console.log(`[SOS Auto-Escalation] All personal contacts exhausted — calling regional: ${name} (${phone})`);
       setHasCycledThroughAll(true);
+      autoDialed = isAutoDialable(phone);
     }
 
     try {
       await api.post('/emergency-sos/log-call', {
         serviceName: name,
-        autoDialed: true,
+        autoDialed,
       });
     } catch (err) {
       console.log('Failed to log auto-dialed call:', err);
     }
 
-    Alert.alert(
-      `Calling ${name}...`,
-      `The phone dialer is opening. Tap Call to confirm.\n\nIf no answer, the next contact will be called in 60 seconds.`,
-      [{ text: 'OK' }]
-    );
+    // Place the direct call
+    const dialed = await makeDirectPhoneCall(phone);
 
-    Linking.openURL(`tel:${phone}`);
+    if (dialed) {
+      console.log(`[SOS] Auto-call placed to ${name} (${phone}) — no user interaction needed`);
+    } else if (!isAutoDialable(phone)) {
+      console.log(`[SOS] ${phone} is a 4-digit shortcode — opened dialer (user must tap Call)`);
+      Alert.alert(
+        `Call ${name}`,
+        `${phone} is an emergency shortcode. Tap the green Call button to dial.`,
+        [{ text: 'OK' }]
+      );
+    }
 
-    // Cycle to next contact if more exist
-    if (!hasCycledThroughAll && currentContactIndex + 1 < sortedContacts.length) {
+    // 🔄 SCHEDULE NEXT ESCALATION (FIXED LOGIC)
+    if (!hasCycledThroughAll) {
       const nextIndex = currentContactIndex + 1;
-      const nextContact = sortedContacts[nextIndex];
       setCurrentContactIndex(nextIndex);
-      setPendingCallTarget({ name: nextContact.name, phone: nextContact.phoneNumber });
-      setEscalationTimeLeft(60);
-      setIsEscalationActive(true); // restart timer for next contact
-    } else if (!hasCycledThroughAll && sortedContacts.length > 0 && currentContactIndex + 1 === sortedContacts.length) {
-      // Final cycle fallback: Prepare regional Rescue 1122 next
-      setCurrentContactIndex(sortedContacts.length);
-      const regional = regionalNumbers[0];
-      setPendingCallTarget({
-        name: regional?.serviceName || 'Rescue 1122',
-        phone: regional?.phoneNumber || '1122',
-      });
-      setEscalationTimeLeft(60);
-      setIsEscalationActive(true);
+
+      if (nextIndex < sortedContacts.length) {
+        // Next is another personal contact
+        const nextContact = sortedContacts[nextIndex];
+        setPendingCallTarget({ name: nextContact.name, phone: nextContact.phoneNumber });
+        setEscalationTimeLeft(60);
+        setIsEscalationActive(true);
+        console.log(`[SOS] Next escalation scheduled in 60s: Personal contact ${nextContact.name}`);
+      } else {
+        // Next is Regional Rescue 1122 Landline!
+        const regional = regionalNumbers.find((r) => r.phoneNumber.length >= 5) || regionalNumbers[0];
+        setPendingCallTarget({
+          name: regional?.serviceName || 'Rescue 1122 HQ (Auto-Dial)',
+          phone: regional?.phoneNumber || '0519290002',
+        });
+        setEscalationTimeLeft(60);
+        setIsEscalationActive(true);
+        console.log(`[SOS] Next escalation scheduled in 60s: Regional emergency service ${regional?.serviceName || 'Rescue 1122'}`);
+      }
     }
   };
 
@@ -306,7 +319,7 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
             } catch (err) {
               console.log('Failed to log emergency call:', err);
             }
-            Linking.openURL(`tel:${number}`);
+            await makeDirectPhoneCall(number);
           },
         },
       ]

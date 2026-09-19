@@ -48,6 +48,7 @@ import { CrashSoundDetectionService } from '../services/crashSoundDetectionServi
 import BleSensorDemoScreen from '../screens/BleSensorDemoScreen';
 import { sensorSourceManager } from '../services/sensorSourceManager';
 import DevModeBanner from '../components/DevModeBanner'; 
+import { makeDirectPhoneCall } from '../utils/directCall';
 
 const Stack = createStackNavigator();
 
@@ -175,7 +176,7 @@ function DriverHome({ navigation }: any) {
 
   const handleQuickCall = () => {
     if (primaryContact) {
-      Linking.openURL(`tel:${primaryContact.phoneNumber}`);
+      makeDirectPhoneCall(primaryContact.phoneNumber);
     }
   };
 
