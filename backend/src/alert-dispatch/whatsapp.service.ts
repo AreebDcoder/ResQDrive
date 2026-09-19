@@ -41,12 +41,6 @@ export class WhatsAppService {
     longitude: number,
     acknowledgeUrl?: string,
   ): Promise<WhatsAppMessageResult> {
-        // Convert relative acknowledge URL to full URL for WhatsApp clickability
-    let fullAcknowledgeUrl = acknowledgeUrl;
-    if (acknowledgeUrl && acknowledgeUrl.startsWith('/')) {
-      const baseUrl = process.env.BACKEND_PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
-      fullAcknowledgeUrl = `${baseUrl}${acknowledgeUrl}`;
-    }
     if (!this.isConfigured) {
       return { status: 'FAILED', error: 'WhatsApp not configured' };
     }
@@ -56,8 +50,41 @@ export class WhatsAppService {
       return { status: 'FAILED', error: `Invalid phone: ${toPhoneNumber}` };
     }
 
+    // Convert relative acknowledge URL to full URL
+    let fullAcknowledgeUrl = acknowledgeUrl;
+    if (acknowledgeUrl && acknowledgeUrl.startsWith('/')) {
+      const baseUrl = process.env.BACKEND_PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
+      fullAcknowledgeUrl = `${baseUrl}${acknowledgeUrl}`;
+    }
+
+    // Shorten the URL via is.gd (free, no API key) so WhatsApp linkifies it
+    let shortUrl = fullAcknowledgeUrl;
+    if (fullAcknowledgeUrl) {
+      try {
+        const shortenRes = await axios.get(`https://is.gd/create.php?format=simple&url=${encodeURIComponent(fullAcknowledgeUrl)}`);
+        if (shortenRes.status === 200 && shortenRes.data && shortenRes.data.startsWith('http')) {
+          shortUrl = shortenRes.data.trim();
+          this.logger.log(`URL shortened: ${fullAcknowledgeUrl} → ${shortUrl}`);
+        }
+      } catch (err: any) {
+        this.logger.warn(`URL shortening failed, using original URL: ${err.message}`);
+      }
+    }
+
     const mapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
-    const messageBody = `🚨 ResQDrive EMERGENCY ALERT\n\n${userName} may have been in a ${severity} accident.\n\nLocation:\n${mapsLink}\n\n${fullAcknowledgeUrl ? `Track live location:\n${fullAcknowledgeUrl}\n\n` : ''}Please respond immediately.`;
+
+    // Send plain text message with URLs on their own lines (WhatsApp linkifies short URLs)
+    const messageBody = `🚨 ResQDrive EMERGENCY ALERT
+
+ ${userName} may have been in a ${severity} accident.
+
+📍 Location:
+ ${mapsLink}
+
+🔗 Track Live Location:
+ ${shortUrl}
+
+Please respond immediately.`;
 
     try {
       const response = await axios.post(
