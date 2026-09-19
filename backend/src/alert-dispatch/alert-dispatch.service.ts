@@ -122,13 +122,18 @@ export class AlertDispatchService {
           payload.severity,
           payload.latitude,
           payload.longitude,
-          payload.acknowledgeUrl,  // ← pass the real acknowledge URL
+          payload.acknowledgeUrl,
         );
         await this.whatsappService.sendLocationPin(
           contact.phoneNumber,
           payload.latitude,
           payload.longitude,
           'Accident Location',
+        );
+        await this.whatsappService.sendVoiceAlert(
+          contact.phoneNumber,
+          payload.userName,
+          payload.severity,
         );
       }),
     );
