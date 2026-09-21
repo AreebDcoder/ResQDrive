@@ -265,6 +265,8 @@ const makeDirectPhoneCall = async (phoneNumber: string) => {
 
 console.log('[AutoCall] Automatically calling emergency rescue service:', phone);
 Linking.openURL(`tel:${phone}`);
+  };
+
   const handleCallNumber = async (number: string, name: string) => {
     // Stop local countdown if active
     if (isEscalationActive) {
