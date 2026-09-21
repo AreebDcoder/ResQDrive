@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -60,17 +61,33 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this vehicle?')) return;
-    setIsLoading(true);
-    setErrorMsg(null);
-    try {
-      await api.delete(`/vehicles/${vehicle.id}`);
-      dispatch(deleteVehicleSuccess(vehicle.id));
-      navigation.goBack();
-    } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Failed to delete vehicle.');
-      setIsLoading(false);
+  const handleDelete = () => {
+    const doDelete = async () => {
+      setIsLoading(true);
+      setErrorMsg(null);
+      try {
+        await api.delete(`/vehicles/${vehicle.id}`);
+        dispatch(deleteVehicleSuccess(vehicle.id));
+        navigation.goBack();
+      } catch (err: any) {
+        setErrorMsg(err.response?.data?.message || 'Failed to delete vehicle.');
+        setIsLoading(false);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(`Are you sure you want to delete ${vehicle.make} ${vehicle.model}?`)) {
+        doDelete();
+      }
+    } else {
+      Alert.alert(
+        'Delete Vehicle',
+        `Are you sure you want to delete ${vehicle.make} ${vehicle.model} (${vehicle.licensePlate})?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', style: 'destructive', onPress: doDelete },
+        ],
+      );
     }
   };
 

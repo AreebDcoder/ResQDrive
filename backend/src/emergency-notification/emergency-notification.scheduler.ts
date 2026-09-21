@@ -7,6 +7,7 @@ const TICK_INTERVAL_MS = 5 * 1000;
 export class EmergencyNotificationScheduler implements OnModuleInit {
   private readonly logger = new Logger(EmergencyNotificationScheduler.name);
   private intervalId: ReturnType<typeof setInterval> | null = null;
+  private isProcessing = false;
 
   constructor(private notificationService: EmergencyNotificationService) {}
 
@@ -27,6 +28,12 @@ export class EmergencyNotificationScheduler implements OnModuleInit {
   }
 
   private async tick() {
-    await this.notificationService.processEscalations();
+    if (this.isProcessing) return;
+    this.isProcessing = true;
+    try {
+      await this.notificationService.processEscalations();
+    } finally {
+      this.isProcessing = false;
+    }
   }
 }

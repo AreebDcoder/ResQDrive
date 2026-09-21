@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -62,17 +63,33 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm('Are you sure you want to remove these insurance details?')) return;
-    setIsLoading(true);
-    setErrorMsg(null);
-    try {
-      await api.delete(`/vehicles/${vehicleId}/insurance`);
-      dispatch(deleteInsuranceSuccess(vehicleId));
-      navigation.goBack();
-    } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Failed to remove insurance details.');
-      setIsLoading(false);
+  const handleDelete = () => {
+    const doDelete = async () => {
+      setIsLoading(true);
+      setErrorMsg(null);
+      try {
+        await api.delete(`/vehicles/${vehicleId}/insurance`);
+        dispatch(deleteInsuranceSuccess(vehicleId));
+        navigation.goBack();
+      } catch (err: any) {
+        setErrorMsg(err.response?.data?.message || 'Failed to remove insurance details.');
+        setIsLoading(false);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm('Are you sure you want to remove these insurance details?')) {
+        doDelete();
+      }
+    } else {
+      Alert.alert(
+        'Remove Insurance Details',
+        'Are you sure you want to remove these insurance details?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Remove', style: 'destructive', onPress: doDelete },
+        ],
+      );
     }
   };
 

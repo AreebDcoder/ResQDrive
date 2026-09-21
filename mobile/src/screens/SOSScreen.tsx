@@ -106,19 +106,20 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
         if (timerRef.current) clearTimeout(timerRef.current);
 
         const target = regionalNumbersRef.current[0] || customNumbersRef.current[0];
-        if (target) {
-          try {
-            await api.post('/emergency-sos/log-call', {
-              serviceName: target.serviceName || target.label || 'Rescue',
-              autoDialed: false,
-            });
-          } catch (err) {
-            console.log('Failed to log voice call on SOSScreen:', err);
-          }
-          Linking.openURL(`tel:${target.phoneNumber}`);
-        } else {
-          Linking.openURL('tel:1122');
+        const phone = target?.phoneNumber || '1122';
+        const name = target?.serviceName || target?.label || 'Rescue 1122';
+
+        try {
+          await api.post('/emergency-sos/log-call', {
+            serviceName: name,
+            autoDialed: false,
+          });
+        } catch (err) {
+          console.log('Failed to log voice call on SOSScreen:', err);
         }
+
+        // Open emergency services dialer
+        Linking.openURL(`tel:${phone}`);
       },
       () => {},
       () => {},
@@ -249,13 +250,11 @@ const makeDirectPhoneCall = async (phoneNumber: string) => {
 
   const triggerAutoEscalationCall = async () => {
     setIsEscalationActive(false);
-    // Fetch top-priority number
-    const targetService = regionalNumbers[0];
+    const targetService = customNumbers[0] || regionalNumbers[0];
     const phone = targetService?.phoneNumber || '1122';
-    const name = targetService?.serviceName || 'Rescue 1122';
+    const name = targetService?.serviceName || targetService?.label || 'Rescue 1122';
 
     try {
-      // Log the auto-escalated call to backend
       await api.post('/emergency-sos/log-call', {
         serviceName: name,
         autoDialed: true,
@@ -264,10 +263,8 @@ const makeDirectPhoneCall = async (phoneNumber: string) => {
       console.log('Failed to log auto-dialed call:', err);
     }
 
-    // Launch direct phone call (ACTION_CALL) or fallback to dialer
-    makeDirectPhoneCall(phone);
-  };
-
+console.log('[AutoCall] Automatically calling emergency rescue service:', phone);
+Linking.openURL(`tel:${phone}`);
   const handleCallNumber = async (number: string, name: string) => {
     // Stop local countdown if active
     if (isEscalationActive) {

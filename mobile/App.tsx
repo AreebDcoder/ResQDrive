@@ -7,7 +7,8 @@ import { Provider, useSelector } from 'react-redux';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
+import { Platform, PermissionsAndroid } from 'react-native';
+
 import { store, RootState } from './src/store/store';
 import Navigation from './src/navigation';
 import NotificationBanner from './src/components/NotificationBanner';

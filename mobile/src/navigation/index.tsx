@@ -41,6 +41,7 @@ import CrashSoundDemoScreen from '../screens/CrashSoundDemoScreen';
 import VoiceCommandDemoScreen from '../screens/VoiceCommandDemoScreen';
 import DamageAssessmentScreen from '../screens/DamageAssessmentScreen';
 import RepairCostScreen from '../screens/RepairCostScreen';
+import CustomEmergencyNumbersScreen from '../screens/CustomEmergencyNumbersScreen';
 import { FCMService } from '../services/fcmService';
 import CountdownScreen from '../screens/CountdownScreen';
 import { CrashSoundDetectionService } from '../services/crashSoundDetectionService';
@@ -538,6 +539,17 @@ function DriverHome({ navigation }: any) {
                 style={styles.menuItem}
                 onPress={() => {
                   setIsDrawerOpen(false);
+                  navigation.navigate('CustomEmergencyNumbers');
+                }}
+              >
+                <Text style={styles.menuItemText}>⚙️ Custom Override Numbers</Text>
+                <Text style={styles.menuItemArrow}>›</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => {
+                  setIsDrawerOpen(false);
                   navigation.navigate('NotificationHistory');
                 }}
               >
@@ -692,11 +704,27 @@ function DriverHome({ navigation }: any) {
 
               <TouchableOpacity
                 style={[styles.menuItem, { backgroundColor: '#8b0000' }]}
-                onPress={() => {
+                onPress={async () => {
                   setIsDrawerOpen(false);
+                  let lat = 33.6844;
+                  let lng = 73.0479;
+                  try {
+                    const { status } = await Location.requestForegroundPermissionsAsync();
+                    if (status === 'granted') {
+                      const pos = await Location.getCurrentPositionAsync({
+                        accuracy: Location.Accuracy.High,
+                      });
+                      if (pos?.coords) {
+                        lat = pos.coords.latitude;
+                        lng = pos.coords.longitude;
+                      }
+                    }
+                  } catch (err) {
+                    console.log('Could not get live GPS for test, using fallback:', err);
+                  }
                   navigation.navigate('Countdown', {
-                    latitude: 33.6844,
-                    longitude: 73.0479,
+                    latitude: lat,
+                    longitude: lng,
                     severity: 'Moderate',
                   });
                 }}
@@ -1009,6 +1037,7 @@ function AppStack({ role }: { role: string }) {
       <Stack.Screen name="AddEditVehicle" component={AddEditVehicleScreen} options={{ title: 'Vehicle Details' }} />
       <Stack.Screen name="VehicleInsurance" component={VehicleInsuranceScreen} options={{ title: 'Insurance Reference' }} />
       <Stack.Screen name="EmergencyContacts" component={EmergencyContactsScreen} options={{ title: 'Emergency Contacts' }} />
+      <Stack.Screen name="CustomEmergencyNumbers" component={CustomEmergencyNumbersScreen} options={{ title: 'Custom Emergency Numbers' }} />
       <Stack.Screen name="AddEditContact" component={AddEditContactScreen} options={{ title: 'Contact Details' }} />
       <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} options={{ title: 'Preferences' }} />
       <Stack.Screen name="NotificationHistory" component={NotificationHistoryScreen} options={{ title: 'Notifications' }} />

@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -78,17 +79,33 @@ export default function AddEditContactScreen({ route, navigation }: any) {
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm('Are you sure you want to remove this emergency contact?')) return;
-    setIsLoading(true);
-    setErrorMsg(null);
-    try {
-      await api.delete(`/emergency-contacts/${contact.id}`);
-      dispatch(deleteContactSuccess({ id: contact.id }));
-      navigation.goBack();
-    } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Failed to delete contact.');
-      setIsLoading(false);
+  const handleDelete = () => {
+    const doDelete = async () => {
+      setIsLoading(true);
+      setErrorMsg(null);
+      try {
+        await api.delete(`/emergency-contacts/${contact.id}`);
+        dispatch(deleteContactSuccess({ id: contact.id }));
+        navigation.goBack();
+      } catch (err: any) {
+        setErrorMsg(err.response?.data?.message || 'Failed to delete contact.');
+        setIsLoading(false);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(`Are you sure you want to remove ${contact.name}?`)) {
+        doDelete();
+      }
+    } else {
+      Alert.alert(
+        'Remove Emergency Contact',
+        `Are you sure you want to remove ${contact.name} from your emergency contacts?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Remove', style: 'destructive', onPress: doDelete },
+        ],
+      );
     }
   };
 

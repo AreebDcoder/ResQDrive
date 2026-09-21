@@ -26,16 +26,14 @@
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#B71C1C"
       },
-      "permissions": [
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION",
-        "RECORD_AUDIO",
-        "android.permission.RECORD_AUDIO",
-        "CALL_PHONE",
-        "android.permission.CALL_PHONE"
-      ],
+     "permissions": [
+  "RECORD_AUDIO",
+  "android.permission.RECORD_AUDIO",
+  "CALL_PHONE",
+  "android.permission.CALL_PHONE",
+  "SEND_SMS",
+  "android.permission.SEND_SMS"
+],
       "googleServicesFile": "./google-services.json",
       "package": "com.basit_009.resqdrivemobile"
     },

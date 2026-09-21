@@ -21,7 +21,8 @@ admin-web/dist/
 backend/coverage/
 
 # Firebase / sensitive config
-mobile/.json
+mobile/google-services.json
+mobile/fcm-key.json
 
 # Logs
 *.log

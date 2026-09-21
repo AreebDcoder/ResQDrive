@@ -15,6 +15,7 @@ import api from '../api/axios';
 import * as Notifications from 'expo-notifications';
 import { dispatchEmergencyAlert } from '../utils/emergencyFallback';
 import * as Sms from 'expo-sms';
+import * as Location from 'expo-location';
 import { VoiceCommandService } from '../services/voiceCommandService';
 import { CrashSoundDetectionService } from '../services/crashSoundDetectionService';
 
@@ -97,37 +98,66 @@ export default function CountdownScreen({ navigation, route }: any) {
       email: c.email,
     }));
 
-    // 1. Fire Backend Multi-Channel Alert Dispatch (Automated Push, Email, SMS Gateway)
-    let result;
+    // 0. Ensure high-accuracy current GPS location before dispatch
+    let realLat = latitude;
+    let realLng = longitude;
     try {
-      result = await dispatchEmergencyAlert(
-        dispatchContacts,
-        {
-          userName: user?.fullName || 'Unknown Driver',
-          userPhone: user?.phoneNumber || '',
-          severity,
-          latitude,
-          longitude,
-        },
-        async () => {
-          await api.post('/alert-dispatch', {
-            userId: user?.id,
-            userName: user?.fullName,
-            latitude,
-            longitude,
-            severity,
-            contacts: dispatchContacts,
-          });
-        },
-      );
-    } catch (err) {
-      result = { mode: 'failed' };
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      if (pos?.coords?.latitude && pos?.coords?.longitude) {
+        realLat = pos.coords.latitude;
+        realLng = pos.coords.longitude;
+      }
+    } catch (locErr) {
+      console.log('Using initial coordinates:', locErr);
     }
 
-    // 2. Log active incident in PostgreSQL
-    const incident = await logIncident('ACTIVE', { dispatchMode: result.mode, smsSentViaDevice: true });
+    // 1. Try sending SMS directly from the phone (100% Free)
+    try {
+      const isAvailable = await Sms.isAvailableAsync();
+      if (isAvailable) {
+        const phoneNumbers = dispatchContacts.map(c => c.phoneNumber);
+        const messageBody = `ResQDrive ALERT: ${user?.fullName || 'Unknown'} may have been in a ${severity} accident. Location: https://www.google.com/maps?q=${realLat},${realLng}`;
 
-    // 3. Local emergency push notification popup
+        await Sms.sendSMSAsync(phoneNumbers, messageBody);
+        console.log('SMS sent successfully via device SIM!');
+      } else {
+        console.log('SMS not available on this device');
+      }
+    } catch (err) {
+      console.log('Device SMS failed, relying on backend fallback:', err);
+    }
+
+    // 2. Log incident in database
+    const incident = await logIncident('ACTIVE', { smsSentViaDevice: true });
+
+    // 3. Trigger backend Emergency Notification (RoboCall voice call to P1 + RoboSMS + Email + Push)
+    let emergencyNotificationResult: any = null;
+    try {
+      const response = await api.post('/emergency-notification/trigger', {
+        incidentId: incident?.id,
+        latitude: realLat,
+        longitude: realLng,
+        message: `Accident detected (${severity})`,
+      });
+      emergencyNotificationResult = response.data;
+      console.log('✅ Emergency notification triggered with RoboCall & RoboSMS! Session ID:', emergencyNotificationResult?.sessionId);
+    } catch (err: any) {
+      console.log('Emergency notification trigger failed, attempting alert-dispatch fallback:', err?.response?.data || err.message);
+      try {
+        await api.post('/alert-dispatch', {
+          userId: user?.id,
+          userName: user?.fullName,
+          latitude: realLat,
+          longitude: realLng,
+          severity,
+          contacts: dispatchContacts,
+        });
+      } catch (fallbackErr) {
+        console.log('Fallback alert-dispatch also failed:', fallbackErr);
+      }
+    }
+
+    // 4. Instantly present local Emergency Push Notification on device
     try {
       await Notifications.scheduleNotificationAsync({
         content: {
@@ -142,25 +172,11 @@ export default function CountdownScreen({ navigation, route }: any) {
       console.log('Local emergency notification trigger failed:', e);
     }
 
-    // 4. Instantly transition to Emergency SOS Screen (Zero delay / blocking)
     navigation.replace('SOS', {
       severity: severity.toLowerCase(),
       incidentId: incident?.id || null,
+      sessionId: emergencyNotificationResult?.sessionId || null,
     });
-
-    // 5. Fire Device SIM SMS composer non-blockingly (without stalling app navigation)
-    try {
-      const isAvailable = await Sms.isAvailableAsync();
-      if (isAvailable && dispatchContacts.length > 0) {
-        const phoneNumbers = dispatchContacts.map((c) => c.phoneNumber);
-        const messageBody = `ResQDrive ALERT: ${user?.fullName || 'Unknown'} may have been in a ${severity} accident. Location: https://www.google.com/maps?q=${latitude},${longitude}`;
-        Sms.sendSMSAsync(phoneNumbers, messageBody).catch((err) =>
-          console.log('Device SMS intent closed:', err),
-        );
-      }
-    } catch (err) {
-      console.log('Device SMS check failed:', err);
-    }
   }, [contacts, user, severity, latitude, longitude, logIncident, navigation]);
 
   const cancelCallbackRef = useRef(handleCancel);
