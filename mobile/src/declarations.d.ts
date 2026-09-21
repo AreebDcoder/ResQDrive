@@ -4,3 +4,10 @@ declare module 'react-native-immediate-phone-call' {
   };
   export default RNImmediatePhoneCall;
 }
+
+declare module 'react-native-direct-sms' {
+  const DirectSms: {
+    sendDirectSms: (phoneNumber: string, message: string) => Promise<void>;
+  };
+  export default DirectSms;
+}

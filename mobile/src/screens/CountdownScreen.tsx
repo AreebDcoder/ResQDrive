@@ -17,6 +17,7 @@ import { dispatchEmergencyAlert } from '../utils/emergencyFallback';
 import * as Sms from 'expo-sms';
 import { VoiceCommandService } from '../services/voiceCommandService';
 import { CrashSoundDetectionService } from '../services/crashSoundDetectionService';
+import { sendBulkBackgroundSMS } from '../utils/directSms';
 
 const COUNTDOWN_SECONDS = 10;
 
@@ -203,21 +204,42 @@ export default function CountdownScreen({ navigation, route }: any) {
         ...prev, backend: 'failed', push: 'failed', email: 'failed', sms: 'pending', whatsapp: 'failed',
       }));
     }
+    // ═══ STEP 3.5: Auto-SMS (background, no popup) + fallback to expo-sms ═══
+    let autoSmsSent = false;
+    if (dispatchContacts.length > 0) {
+      const smsMessage = `ResQDrive ALERT: ${user?.fullName || 'Unknown'} may have been in a ${severity} accident. Location: https://www.google.com/maps?q=${latitude},${longitude}`;
 
-    // ═══ STEP 4: Device SMS fallback (only if backend failed) ═══
-    if (!backendSucceeded) {
+      // Try background auto-SMS first (react-native-direct-sms)
       try {
-        const isAvailable = await Sms.isAvailableAsync();
-        if (isAvailable && dispatchContacts.length > 0) {
-          setDispatchStatus(prev => ({ ...prev, sms: 'sending' }));
-          const phoneNumbers = dispatchContacts.map(c => c.phoneNumber);
-          const messageBody = `ResQDrive ALERT: ${user?.fullName || 'Unknown'} may have been in a ${severity} accident. Location: https://www.google.com/maps?q=${latitude},${longitude}`;
-          await Sms.sendSMSAsync(phoneNumbers, messageBody);
-          setDispatchStatus(prev => ({ ...prev, sms: 'sent-via-device' }));
-        } else {
-          setDispatchStatus(prev => ({ ...prev, sms: 'failed' }));
+        const smsResult = await sendBulkBackgroundSMS(dispatchContacts, smsMessage);
+        autoSmsSent = smsResult.sent > 0;
+        if (autoSmsSent) {
+          setDispatchStatus(prev => ({ ...prev, sms: 'sent' }));
+          console.log('[Countdown] Auto-SMS (background) sent to', smsResult.sent, 'contacts');
         }
       } catch (err) {
+        console.log('[Countdown] Auto-SMS error:', err);
+      }
+
+      // If auto-SMS failed AND backend also failed → open SMS app as last resort
+      if (!autoSmsSent && !backendSucceeded) {
+        try {
+          const isAvailable = await Sms.isAvailableAsync();
+          if (isAvailable && dispatchContacts.length > 0) {
+            setDispatchStatus(prev => ({ ...prev, sms: 'sending' }));
+            const phoneNumbers = dispatchContacts.map(c => c.phoneNumber);
+            await Sms.sendSMSAsync(phoneNumbers, smsMessage);
+            setDispatchStatus(prev => ({ ...prev, sms: 'sent-via-device' }));
+            console.log('[Countdown] Device SMS app opened — user must tap Send.');
+          } else {
+            setDispatchStatus(prev => ({ ...prev, sms: 'failed' }));
+          }
+        } catch (err) {
+          console.log('[Countdown] Device SMS fallback also failed:', err);
+          setDispatchStatus(prev => ({ ...prev, sms: 'failed' }));
+        }
+      } else if (!autoSmsSent && backendSucceeded) {
+        // Backend succeeded (WhatsApp sent), but auto-SMS failed — that's OK
         setDispatchStatus(prev => ({ ...prev, sms: 'failed' }));
       }
     }
