@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { Expo, ExpoPushMessage } from 'expo-server-sdk';
 import { Cron } from '@nestjs/schedule';
-
+import { WhatsAppService } from './whatsapp.service';
 export interface EmergencyContactTarget {
   name: string;
   phoneNumber: string;
@@ -12,14 +12,15 @@ export interface EmergencyContactTarget {
 }
 
 export interface AlertPayload {
-  userId: string;
+  userId?: string;
   incidentId?: string;
-  userName: string;
+  userName?: string;
   vehicleInfo?: string;
   latitude: number;
   longitude: number;
   severity: string;
-  contacts: EmergencyContactTarget[];
+  contacts?: { name: string; phoneNumber: string; email?: string }[];
+  acknowledgeUrl?: string;
 }
 
 function normalizePkPhone(phone: string): string {
@@ -46,6 +47,7 @@ export class AlertDispatchService {
   constructor(
     private prisma: PrismaService,
     private emailService: EmailService,
+    private whatsappService: WhatsAppService,
   ) {
 
     // Initialize Firebase Admin SDK
@@ -79,10 +81,18 @@ export class AlertDispatchService {
     return `https://www.google.com/maps?q=${lat},${lng}`;
   }
 
-  async dispatchAlert(payload: AlertPayload): Promise<{ logId: string }> {
+  async dispatchAlert(payload: AlertPayload): Promise<{
+    logId: string;
+    channels: {
+      push: { status: 'SENT' | 'FAILED'; detail: string; devMode: boolean };
+      sms: { status: 'SENT' | 'FAILED'; detail: string; devMode: boolean };
+      email: { status: 'SENT' | 'FAILED'; detail: string; devMode: boolean };
+      whatsapp: { status: 'SENT' | 'FAILED'; detail: string; devMode: boolean };
+    };
+    devMode: boolean;
+  }> {
     const mapsLink = this.buildMapsLink(payload.latitude, payload.longitude);
 
-    // 1. Create the initial log
     const log = await this.prisma.alertDispatchLog.create({
       data: {
         incidentId: payload.incidentId,
@@ -94,28 +104,91 @@ export class AlertDispatchService {
       },
     });
 
-    // PARALLEL EXECUTION: Fire Push, SMS, and Email at the exact same time
     const [pushResult, smsResult, emailResult] = await Promise.allSettled([
       this.sendPushChannel(payload, mapsLink),
       this.sendSmsChannel(payload, mapsLink),
       this.sendEmailChannel(payload, mapsLink),
     ]);
 
-    // 5. Update the database log with final statuses
+    const pushStatus: 'SENT' | 'FAILED' = pushResult.status === 'fulfilled' ? 'SENT' : 'FAILED';
+    const smsStatus: 'SENT' | 'FAILED' = smsResult.status === 'fulfilled' ? 'SENT' : 'FAILED';
+    const emailStatus: 'SENT' | 'FAILED' = emailResult.status === 'fulfilled' ? 'SENT' : 'FAILED';
+
+        // NEW: Send WhatsApp messages to all contacts (in parallel)
+    const whatsappResults = await Promise.allSettled(
+      (payload.contacts || []).map(async (contact: any) => {
+        if (!contact.phoneNumber) return;
+        await this.whatsappService.sendEmergencyAlert(
+          contact.phoneNumber,
+          payload.userName,
+          payload.severity,
+          payload.latitude,
+          payload.longitude,
+          payload.acknowledgeUrl,
+        );
+        await this.whatsappService.sendLocationPin(
+          contact.phoneNumber,
+          payload.latitude,
+          payload.longitude,
+          'Accident Location',
+        );
+        await this.whatsappService.sendVoiceAlert(
+          contact.phoneNumber,
+          payload.userName,
+          payload.severity,
+        );
+      }),
+    );
+    const whatsappSentCount = whatsappResults.filter((r) => r.status === 'fulfilled').length;
+    const whatsappStatus: 'SENT' | 'FAILED' = whatsappSentCount > 0 ? 'SENT' : 'FAILED';
+    this.logger.log(`WhatsApp dispatch: ${whatsappSentCount}/${whatsappResults.length} contacts notified`);
+
     await this.prisma.alertDispatchLog.update({
       where: { id: log.id },
-      data: {
-        pushStatus: pushResult.status === 'fulfilled' ? 'SENT' : 'FAILED',
-        smsStatus: smsResult.status === 'fulfilled' ? 'SENT' : 'FAILED',
-        emailStatus: emailResult.status === 'fulfilled' ? 'SENT' : 'FAILED',
-      },
+      data: { pushStatus, smsStatus, emailStatus },
     });
 
+    const isTwilioConfigured = Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER && !process.env.TWILIO_ACCOUNT_SID.startsWith('AC0000'));
+    const isFirebaseConfigured = Boolean(process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY);
+    const isSmtpConfigured = Boolean(process.env.SMTP_HOST && process.env.SMTP_PORT && process.env.SMTP_HOST !== 'localhost');
+    const isWhatsappConfigured = this.whatsappService.isReady();
+    const devMode = !isTwilioConfigured || !isFirebaseConfigured || !isSmtpConfigured || !isWhatsappConfigured;
+    const channels = {
+      push: {
+        status: pushStatus,
+        detail: isFirebaseConfigured
+          ? (pushStatus === 'SENT' ? 'Push notification delivered via FCM' : 'FCM delivery failed')
+          : 'Firebase not configured (dev mode)',
+        devMode: !isFirebaseConfigured,
+      },
+      sms: {
+        status: smsStatus,
+        detail: isTwilioConfigured
+          ? (smsStatus === 'SENT' ? 'SMS sent via Twilio' : 'Twilio delivery failed')
+          : 'Twilio not configured (dev mode) — open SMS app on phone',
+        devMode: !isTwilioConfigured,
+      },
+      email: {
+        status: emailStatus,
+        detail: isSmtpConfigured
+          ? (emailStatus === 'SENT' ? 'Email sent via SMTP' : 'SMTP delivery failed')
+          : 'SMTP not configured (dev mode) — see backend terminal log',
+        devMode: !isSmtpConfigured,
+      },
+      whatsapp: {
+        status: whatsappStatus,
+        detail: isWhatsappConfigured
+          ? (whatsappStatus === 'SENT' ? `WhatsApp sent to ${whatsappSentCount}/${whatsappResults.length} contacts` : 'WhatsApp delivery failed')
+          : 'WhatsApp not configured (dev mode)',
+        devMode: !isWhatsappConfigured,
+      },
+    };
+
     this.logger.log(
-      `Alert dispatched for user ${payload.userId} — push:${pushResult.status}, sms:${smsResult.status}, email:${emailResult.status}`,
+      `Alert dispatched for user ${payload.userId} — push:${pushStatus}, sms:${smsStatus}, email:${emailStatus} (devMode: ${devMode})`,
     );
 
-    return { logId: log.id };
+    return { logId: log.id, channels, devMode };
   }
 
   /**

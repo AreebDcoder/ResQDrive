@@ -18,6 +18,7 @@ import * as Sms from 'expo-sms';
 import * as Location from 'expo-location';
 import { VoiceCommandService } from '../services/voiceCommandService';
 import { CrashSoundDetectionService } from '../services/crashSoundDetectionService';
+import { sendBulkBackgroundSMS } from '../utils/directSms';
 
 const COUNTDOWN_SECONDS = 10;
 
@@ -30,6 +31,21 @@ export default function CountdownScreen({ navigation, route }: any) {
   const [secondsLeft, setSecondsLeft] = useState(initialCountdown);
   const [isDispatching, setIsDispatching] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
+  const [dispatchComplete, setDispatchComplete] = useState(false);
+  const [isDevMode, setIsDevMode] = useState(false);
+  const [backendChannels, setBackendChannels] = useState<any>(null);
+  const [dispatchStatus, setDispatchStatus] = useState<{
+    backend: 'pending' | 'sending' | 'sent' | 'failed';
+    sms: 'pending' | 'sending' | 'sent' | 'sent-via-device' | 'failed';
+    push: 'pending' | 'sent' | 'failed';
+    email: 'pending' | 'sent' | 'failed';
+    whatsapp: 'pending' | 'sent' | 'failed';
+    module68: 'pending' | 'triggered' | 'failed';
+    incident: 'pending' | 'logged' | 'failed';
+  }>({
+    backend: 'pending', sms: 'pending', push: 'pending',
+    email: 'pending', whatsapp: 'pending', module68: 'pending', incident: 'pending',
+  });
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -88,7 +104,7 @@ export default function CountdownScreen({ navigation, route }: any) {
     [logIncident, navigation],
   );
 
-  const handleTimeout = useCallback(async () => {
+const handleTimeout = useCallback(async () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     setIsDispatching(true);
 
@@ -108,76 +124,167 @@ export default function CountdownScreen({ navigation, route }: any) {
         realLng = pos.coords.longitude;
       }
     } catch (locErr) {
-      console.log('Using initial coordinates:', locErr);
+      console.log('[Countdown] Using initial coordinates:', locErr);
     }
 
-    // 1. Try sending SMS directly from the phone (100% Free)
+    const mapsLink = `https://www.google.com/maps?q=${realLat},${realLng}`;
+    console.log('[Countdown] Countdown ended. Starting multi-channel dispatch...');
+
+    setDispatchStatus({
+      backend: 'sending', sms: 'pending', push: 'pending',
+      email: 'pending', whatsapp: 'pending', module68: 'pending', incident: 'pending',
+    });
+
+    // ═══ STEP 1: Log incident in database ═══
+    let incident = null;
     try {
-      const isAvailable = await Sms.isAvailableAsync();
-      if (isAvailable) {
-        const phoneNumbers = dispatchContacts.map(c => c.phoneNumber);
-        const messageBody = `ResQDrive ALERT: ${user?.fullName || 'Unknown'} may have been in a ${severity} accident. Location: https://www.google.com/maps?q=${realLat},${realLng}`;
-
-        await Sms.sendSMSAsync(phoneNumbers, messageBody);
-        console.log('SMS sent successfully via device SIM!');
-      } else {
-        console.log('SMS not available on this device');
-      }
+      const response = await api.post('/incidents', {
+        type: 'AUTO',
+        severity: severity.toUpperCase(),
+        status: 'ACTIVE',
+        occurredAt: new Date().toISOString(),
+        latitude: realLat,
+        longitude: realLng,
+        description: 'Countdown reached zero — emergency alert dispatched',
+      });
+      incident = response.data;
+      setDispatchStatus(prev => ({ ...prev, incident: 'logged' }));
+      console.log('[Countdown] Incident logged:', incident?.id);
     } catch (err) {
-      console.log('Device SMS failed, relying on backend fallback:', err);
+      console.log('[Countdown] Failed to log incident:', err);
+      setDispatchStatus(prev => ({ ...prev, incident: 'failed' }));
     }
 
-    // 2. Log incident in database
-    const incident = await logIncident('ACTIVE', { smsSentViaDevice: true });
-
-    // 3. Trigger backend Emergency Notification (RoboCall voice call to P1 + RoboSMS + Email + Push)
+    // ═══ STEP 2: Trigger Module 6.8 (RoboCall voice call + RoboSMS) ═══
+    let acknowledgeUrl: string | undefined;
     let emergencyNotificationResult: any = null;
     try {
       const response = await api.post('/emergency-notification/trigger', {
         incidentId: incident?.id,
+        message: `Accident detected (${severity})`,
         latitude: realLat,
         longitude: realLng,
-        message: `Accident detected (${severity})`,
       });
       emergencyNotificationResult = response.data;
-      console.log('✅ Emergency notification triggered with RoboCall & RoboSMS! Session ID:', emergencyNotificationResult?.sessionId);
+      acknowledgeUrl = response.data?.acknowledgeUrl;
+      setDispatchStatus(prev => ({ ...prev, module68: 'triggered' }));
+      console.log('✅ [Countdown] RoboCall & RoboSMS triggered! Session ID:', emergencyNotificationResult?.sessionId);
     } catch (err: any) {
-      console.log('Emergency notification trigger failed, attempting alert-dispatch fallback:', err?.response?.data || err.message);
+      console.log('[Countdown] Module 6.8 trigger failed (non-fatal):', err?.response?.data?.message || err?.message);
+      setDispatchStatus(prev => ({ ...prev, module68: 'failed' }));
+    }
+
+    // ═══ STEP 3: Multi-channel dispatch (WhatsApp Cloud API + Email + Push) ═══
+    let backendSucceeded = false;
+    try {
+      const response = await api.post('/alert-dispatch', {
+        userId: user?.id,
+        userName: user?.fullName,
+        incidentId: incident?.id,
+        acknowledgeUrl,
+        latitude: realLat,
+        longitude: realLng,
+        severity,
+        contacts: dispatchContacts,
+      });
+      setBackendChannels(response.data?.channels);
+      setIsDevMode(response.data?.devMode ?? true);
+      const respChannels = response.data?.channels;
+
+      const anySent = respChannels &&
+        (respChannels.push.status === 'SENT' ||
+         respChannels.sms.status === 'SENT' ||
+         respChannels.email.status === 'SENT' ||
+         respChannels.whatsapp?.status === 'SENT');
+
+      if (anySent) {
+        backendSucceeded = true;
+        setDispatchStatus(prev => ({
+          ...prev,
+          backend: 'sent',
+          push: respChannels.push.status === 'SENT' ? 'sent' : 'failed',
+          sms: respChannels.sms.status === 'SENT' ? 'sent' : (respChannels.sms.devMode ? 'pending' : 'failed'),
+          email: respChannels.email.status === 'SENT' ? 'sent' : (respChannels.email.devMode ? 'failed' : 'failed'),
+          whatsapp: respChannels.whatsapp?.status === 'SENT' ? 'sent' : (respChannels.whatsapp?.devMode ? 'pending' : 'failed'),
+        }));
+        console.log('[Countdown] Backend dispatch succeeded:', respChannels);
+      } else {
+        setDispatchStatus(prev => ({
+          ...prev, backend: 'failed', push: 'failed', email: 'failed', sms: 'pending', whatsapp: 'failed',
+        }));
+      }
+    } catch (err) {
+      console.log('[Countdown] Backend dispatch failed — will fall back to device SMS:', err);
+      setDispatchStatus(prev => ({
+        ...prev, backend: 'failed', push: 'failed', email: 'failed', sms: 'pending', whatsapp: 'failed',
+      }));
+    }
+
+    // ═══ STEP 4: Direct background SMS (device-side fallback) ═══
+    let autoSmsSent = false;
+    if (dispatchContacts.length > 0) {
+      const smsMessage = `ResQDrive ALERT: ${user?.fullName || 'Unknown'} may have been in a ${severity} accident. Location: https://www.google.com/maps?q=${realLat},${realLng}`;
+
+      // Try background auto-SMS first (react-native-direct-sms)
       try {
-        await api.post('/alert-dispatch', {
-          userId: user?.id,
-          userName: user?.fullName,
-          latitude: realLat,
-          longitude: realLng,
-          severity,
-          contacts: dispatchContacts,
-        });
-      } catch (fallbackErr) {
-        console.log('Fallback alert-dispatch also failed:', fallbackErr);
+        const smsResult = await sendBulkBackgroundSMS(dispatchContacts, smsMessage);
+        autoSmsSent = smsResult.sent > 0;
+        if (autoSmsSent) {
+          setDispatchStatus(prev => ({ ...prev, sms: 'sent' }));
+          console.log('[Countdown] Auto-SMS (background) sent to', smsResult.sent, 'contacts');
+        }
+      } catch (err) {
+        console.log('[Countdown] Auto-SMS error:', err);
+      }
+
+      // If auto-SMS failed AND backend also failed → open SMS app as last resort
+      if (!autoSmsSent && !backendSucceeded) {
+        try {
+          const isAvailable = await Sms.isAvailableAsync();
+          if (isAvailable && dispatchContacts.length > 0) {
+            setDispatchStatus(prev => ({ ...prev, sms: 'sending' }));
+            const phoneNumbers = dispatchContacts.map(c => c.phoneNumber);
+            await Sms.sendSMSAsync(phoneNumbers, smsMessage);
+            setDispatchStatus(prev => ({ ...prev, sms: 'sent-via-device' }));
+            console.log('[Countdown] Device SMS app opened — user must tap Send.');
+          } else {
+            setDispatchStatus(prev => ({ ...prev, sms: 'failed' }));
+          }
+        } catch (err) {
+          console.log('[Countdown] Device SMS fallback also failed:', err);
+          setDispatchStatus(prev => ({ ...prev, sms: 'failed' }));
+        }
+      } else if (!autoSmsSent && backendSucceeded) {
+        setDispatchStatus(prev => ({ ...prev, sms: 'failed' }));
       }
     }
 
-    // 4. Instantly present local Emergency Push Notification on device
+    // ═══ STEP 5: Local push notification on device ═══
     try {
       await Notifications.scheduleNotificationAsync({
         content: {
           title: '🚨 ResQDrive Emergency Alert',
-          body: `Multi-channel emergency alert dispatched to contacts! Live GPS tracking active.`,
+          body: `Emergency alert dispatched! Live GPS tracking active. Acknowledgement link sent to contacts.`,
           sound: true,
-          data: { mapsLink: `https://www.google.com/maps?q=${latitude},${longitude}`, severity },
+          data: { mapsLink, severity },
         },
         trigger: null,
       });
     } catch (e) {
-      console.log('Local emergency notification trigger failed:', e);
+      console.log('[Countdown] Local notification failed:', e);
     }
 
-    navigation.replace('SOS', {
-      severity: severity.toLowerCase(),
-      incidentId: incident?.id || null,
-      sessionId: emergencyNotificationResult?.sessionId || null,
-    });
-  }, [contacts, user, severity, latitude, longitude, logIncident, navigation]);
+    // ═══ STEP 6: Show dispatch summary for 3 seconds, then navigate to SOS ═══
+    setDispatchComplete(true);
+    setTimeout(() => {
+      navigation.replace('SOS', {
+        severity: severity.toLowerCase(),
+        incidentId: incident?.id || null,
+        sessionId: emergencyNotificationResult?.sessionId || null,
+      });
+    }, 3000);
+  }, [contacts, user, severity, latitude, longitude, navigation]);
+
 
   const cancelCallbackRef = useRef(handleCancel);
   const timeoutCallbackRef = useRef(handleTimeout);
@@ -252,7 +359,23 @@ export default function CountdownScreen({ navigation, route }: any) {
     );
   }
 
-  if (isDispatching) {
+  if (isDispatching && !dispatchComplete) {
+    const statusIcon = (s: string) => {
+      if (s === 'sent' || s === 'sent-via-device' || s === 'triggered' || s === 'logged') return '✅';
+      if (s === 'sending') return '⏳';
+      if (s === 'failed') return '❌';
+      return '⏸️';
+    };
+    const statusText = (s: string, devMode?: boolean) => {
+      if (s === 'sent') return 'Sent';
+      if (s === 'sent-via-device') return 'App opened — tap Send';
+      if (s === 'triggered') return 'Escalation started';
+      if (s === 'logged') return 'Logged';
+      if (s === 'sending') return 'Sending...';
+      if (s === 'failed') return devMode ? 'Dev mode (not configured)' : 'Failed';
+      return 'Pending';
+    };
+
     return (
       <SafeAreaView style={styles.container}>
         <View style={StyleSheet.absoluteFillObject}>
@@ -260,9 +383,68 @@ export default function CountdownScreen({ navigation, route }: any) {
           <View style={[StyleSheet.absoluteFillObject, styles.gradTop]} />
           <View style={[StyleSheet.absoluteFillObject, styles.gradBottom]} />
         </View>
-        <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', opacity: fadeAnim }}>
-          <Text style={styles.dispatchingIcon}></Text>
-          <Text style={styles.dispatchingText}>Sending emergency alert...</Text>
+        <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', opacity: fadeAnim, paddingHorizontal: 24 }}>
+          <Text style={styles.dispatchingIcon}>🚨</Text>
+          <Text style={styles.dispatchingText}>Dispatching Emergency Alert</Text>
+                    {isDevMode && (
+            <Text style={styles.devModeBanner}>
+              ⚠️ DEV MODE: Some channels not configured. Real delivery limited.
+            </Text>
+          )}
+
+          <View style={styles.statusList}>
+            <Text style={styles.statusRow}>
+              {statusIcon(dispatchStatus.backend)} Backend Dispatch: {statusText(dispatchStatus.backend)}
+            </Text>
+            <Text style={styles.statusRow}>
+              {statusIcon(dispatchStatus.push)} Push Notification: {statusText(dispatchStatus.push, backendChannels?.push?.devMode)}
+            </Text>
+            <Text style={styles.statusRow}>
+              {statusIcon(dispatchStatus.sms)} SMS: {statusText(dispatchStatus.sms, backendChannels?.sms?.devMode)}
+            </Text>
+                        <Text style={styles.statusRow}>
+              {statusIcon(dispatchStatus.whatsapp)} WhatsApp: {statusText(dispatchStatus.whatsapp, backendChannels?.whatsapp?.devMode)}
+            </Text>
+            <Text style={styles.statusRow}>
+              {statusIcon(dispatchStatus.email)} Email: {statusText(dispatchStatus.email, backendChannels?.email?.devMode)}
+            </Text>
+            <Text style={styles.statusRow}>
+              {statusIcon(dispatchStatus.incident)} Incident Log: {statusText(dispatchStatus.incident)}
+            </Text>
+            <Text style={styles.statusRow}>
+              {statusIcon(dispatchStatus.module68)} Contact Escalation: {statusText(dispatchStatus.module68)}
+            </Text>
+          </View>
+
+          {dispatchStatus.sms === 'sent-via-device' && (
+            <Text style={styles.smsHint}>
+              📱 Your SMS app opened. Tap "Send" to deliver the alert to your contacts.
+            </Text>
+          )}
+        </Animated.View>
+      </SafeAreaView>
+    );
+  }
+
+  if (isDispatching && dispatchComplete) {
+    const allGood = dispatchStatus.backend === 'sent' || dispatchStatus.sms === 'sent-via-device';
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={StyleSheet.absoluteFillObject}>
+          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0A0F' }]} />
+          <View style={[StyleSheet.absoluteFillObject, styles.gradBottom]} />
+        </View>
+        <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', opacity: fadeAnim, paddingHorizontal: 24 }}>
+          <Text style={styles.completeIcon}>{allGood ? '✅' : '⚠️'}</Text>
+          <Text style={styles.completeTitle}>
+            {allGood ? 'Alert Dispatched' : 'Partially Dispatched'}
+          </Text>
+          <Text style={styles.completeSubtext}>
+            {allGood
+              ? 'Emergency contacts have been notified. Live GPS tracking is active. Escalation started.'
+              : 'Some channels failed. Your contacts may still receive the alert via other channels.'}
+          </Text>
+          <Text style={styles.redirectHint}>Redirecting to SOS screen...</Text>
         </Animated.View>
       </SafeAreaView>
     );
@@ -402,6 +584,51 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
+    statusList: {
+    marginTop: 32,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    width: '100%',
+  },
+  statusRow: {
+    color: '#E0E0E0',
+    fontSize: 14,
+    paddingVertical: 6,
+    fontFamily: 'monospace',
+  },
+  smsHint: {
+    color: '#FFB74D',
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: 20,
+    paddingHorizontal: 20,
+    lineHeight: 20,
+  },
+  completeIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  completeTitle: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  completeSubtext: {
+    color: '#A0A0B8',
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  redirectHint: {
+    color: '#666680',
+    fontSize: 12,
+  },
   cancelledContainer: {
     flex: 1,
     backgroundColor: '#0A0A0F',
@@ -434,5 +661,13 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 12,
     fontWeight: 'bold',
+  },
+    devModeBanner: {
+    color: '#FFB74D',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 16,
+    paddingHorizontal: 20,
   },
 });

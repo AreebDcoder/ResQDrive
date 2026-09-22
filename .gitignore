@@ -47,3 +47,6 @@ backend/uploads/
 # Python virtual environments
 venv/
 damage-assessment-service/venv/
+
+# EAS build config — each developer uses their own EAS account
+mobile/eas.json

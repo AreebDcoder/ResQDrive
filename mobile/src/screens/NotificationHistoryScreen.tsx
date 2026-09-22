@@ -27,9 +27,10 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function NotificationHistoryScreen() {
   const dispatch = useDispatch();
-  const { history: logs, pagination, isHistoryLoading, error } = useSelector(
+const { history = [], pagination, isHistoryLoading, error } = useSelector(
     (state: RootState) => state.notifications
   );
+  const logs = history || [];
   const page = pagination?.page || 1;
   const hasMore = pagination ? pagination.page < pagination.totalPages : false;
 
@@ -117,7 +118,7 @@ export default function NotificationHistoryScreen() {
           <Ionicons name="mail-unread-outline" size={24} color="#E53935" />
           <Text style={styles.title}>History Inbox</Text>
         </View>
-        {logs.some((l: NotificationLog) => !l.isRead) && (
+        {logs?.some((l: NotificationLog) => !l.isRead) && (
           <TouchableOpacity style={styles.markAllBtn} onPress={handleMarkAllRead}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <Ionicons name="checkmark-done" size={16} color="#00E676" />
