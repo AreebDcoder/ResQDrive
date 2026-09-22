@@ -29,6 +29,7 @@ import CreateIncidentScreen from '../screens/CreateIncidentScreen';
 import LocationSharingScreen from '../screens/LocationSharingScreen';
 import EmergencyNotificationScreen from '../screens/EmergencyNotificationScreen';
 import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
+import AdminEmergencyNumbersScreen from '../screens/admin/AdminEmergencyNumbersScreen';
 import SOSScreen from '../screens/SOSScreen';
 import MyVehiclesScreen from '../screens/MyVehiclesScreen';
 import AddEditVehicleScreen from '../screens/AddEditVehicleScreen';
@@ -47,6 +48,8 @@ import CountdownScreen from '../screens/CountdownScreen';
 import { CrashSoundDetectionService } from '../services/crashSoundDetectionService';
 import BleSensorDemoScreen from '../screens/BleSensorDemoScreen';
 import { sensorSourceManager } from '../services/sensorSourceManager';
+import DevModeBanner from '../components/DevModeBanner'; 
+import { makeDirectPhoneCall } from '../utils/directCall';
 
 const Stack = createStackNavigator();
 
@@ -182,7 +185,7 @@ function DriverHome({ navigation }: any) {
 
   const handleQuickCall = () => {
     if (primaryContact) {
-      Linking.openURL(`tel:${primaryContact.phoneNumber}`);
+      makeDirectPhoneCall(primaryContact.phoneNumber);
     }
   };
 
@@ -304,6 +307,7 @@ function DriverHome({ navigation }: any) {
       default:
         return (
           <ScrollView style={styles.scrollContainer} contentContainerStyle={{ paddingBottom: 40 }}>
+          <DevModeBanner />
             {/* Paired Vehicle Widget */}
             <View style={styles.dashboardCard}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
@@ -1030,6 +1034,7 @@ function AppStack({ role }: { role: string }) {
       <Stack.Screen name="IncidentDetail" component={IncidentDetailScreen} options={{ title: 'Incident Detail' }} />
       <Stack.Screen name="CreateIncident" component={CreateIncidentScreen} options={({ route }: any) => ({ title: route.params?.mode === 'edit' ? 'Edit Incident' : 'New Incident' })} />
       <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} options={{ title: 'Admin Dashboard' }} />
+            <Stack.Screen name="AdminEmergencyNumbers" component={AdminEmergencyNumbersScreen} options={{ title: 'Regional Emergency Numbers' }} />
       <Stack.Screen name="LocationSharing" component={LocationSharingScreen} options={{ title: 'Live Location' }} />
       <Stack.Screen name="EmergencyNotification" component={EmergencyNotificationScreen} options={{ title: 'Emergency Alert' }} />
       <Stack.Screen name="SOS" component={SOSScreen} options={{ headerShown: false }} />

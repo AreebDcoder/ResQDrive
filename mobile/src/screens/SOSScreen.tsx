@@ -12,13 +12,14 @@ import {
   Easing,
   StatusBar,
   Platform,
-  PermissionsAndroid,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../api/axios';
 import { VoiceCommandService } from '../services/voiceCommandService';
+import { useSelector } from 'react-redux';
+import { makeDirectPhoneCall, isAutoDialable } from '../utils/directCall';
 
 interface EmergencyNumberItem {
   id: string;
@@ -35,17 +36,34 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
   const incidentId = route?.params?.incidentId || null;
 
   const [regionalNumbers, setRegionalNumbers] = useState<EmergencyNumberItem[]>([]);
+  const personalContacts = useSelector((state: any) => state.contacts?.list || []);
   const [customNumbers, setCustomNumbers] = useState<EmergencyNumberItem[]>([]);
   const [regionName, setRegionName] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Auto-escalation 60-second timer state
+  // Auto-escalation state & cycling
   const [escalationTimeLeft, setEscalationTimeLeft] = useState<number>(60);
+  const [pendingCallTarget, setPendingCallTarget] = useState<{ name: string; phone: string } | null>(null);
+  const [currentContactIndex, setCurrentContactIndex] = useState<number>(0);
+  const [hasCycledThroughAll, setHasCycledThroughAll] = useState<boolean>(false);
   const [isEscalationActive, setIsEscalationActive] = useState<boolean>(
     !!incidentId && (severity === 'moderate' || severity === 'severe')
   );
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Keep target contact updated as personalContacts load
+  useEffect(() => {
+    if (personalContacts.length > 0 && !pendingCallTarget) {
+      const sorted = [...personalContacts].sort((a: any, b: any) => (a.priorityOrder ?? 0) - (b.priorityOrder ?? 0));
+      setPendingCallTarget({ name: sorted[0].name, phone: sorted[0].phoneNumber });
+    } else if (personalContacts.length === 0 && regionalNumbers.length > 0 && !pendingCallTarget) {
+      setPendingCallTarget({
+        name: regionalNumbers[0]?.serviceName || 'Rescue 1122',
+        phone: regionalNumbers[0]?.phoneNumber || '1122',
+      });
+    }
+  }, [personalContacts, regionalNumbers]);
 
   // Animations
   const headerOpacity = useRef(new Animated.Value(0)).current;
@@ -106,34 +124,24 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
         if (timerRef.current) clearTimeout(timerRef.current);
 
         const target = regionalNumbersRef.current[0] || customNumbersRef.current[0];
-        const phone = target?.phoneNumber || '1122';
-        const name = target?.serviceName || target?.label || 'Rescue 1122';
-
-        try {
-          await api.post('/emergency-sos/log-call', {
-            serviceName: name,
-            autoDialed: false,
-          });
-        } catch (err) {
-          console.log('Failed to log voice call on SOSScreen:', err);
+        if (target) {
+          try {
+            await api.post('/emergency-sos/log-call', {
+              serviceName: target.serviceName || target.label || 'Rescue',
+              autoDialed: false,
+            });
+          } catch (err) {
+            console.log('Failed to log voice call:', err);
+          }
+          makeDirectPhoneCall(target.phoneNumber);
+        } else {
+          makeDirectPhoneCall('1122');
         }
-
-        // Open emergency services dialer
-        Linking.openURL(`tel:${phone}`);
       },
       () => {},
       () => {},
       () => {}
     );
-
-    // Request CALL_PHONE permission early on screen mount for Android so auto-call is ready
-    if (Platform.OS === 'android') {
-      PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CALL_PHONE, {
-        title: 'Emergency Direct Call Permission',
-        message: 'ResQDrive requires permission to directly place emergency calls to Rescue 1122.',
-        buttonPositive: 'Allow',
-      }).catch((e) => console.log('Early CALL_PHONE permission check error:', e));
-    }
 
     return () => {
       // Stop listening when SOS Screen unmounts
@@ -169,7 +177,7 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
 
       const location = await Promise.race([
         Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
-        new Promise<any>((resolve) => setTimeout(() => resolve(null), 3000))
+        new Promise<any>((resolve) => setTimeout(() => resolve(null), 3000)),
       ]);
       const latitude = location?.coords?.latitude ?? 33.6844;
       const longitude = location?.coords?.longitude ?? 73.0479;
@@ -193,7 +201,7 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
     fetchEmergencyNumbers();
   }, [fetchEmergencyNumbers]);
 
-  // Handle 60s Escalation timer countdown tick
+  // Handle Escalation timer countdown tick
   useEffect(() => {
     if (isEscalationActive && escalationTimeLeft > 0) {
       timerRef.current = setTimeout(() => {
@@ -209,62 +217,81 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
     };
   }, [isEscalationActive, escalationTimeLeft]);
 
-
-const makeDirectPhoneCall = async (phoneNumber: string) => {
-  let cleanNumber = phoneNumber.replace(/[^0-9+]/g, '');
-
-  // Format shortcode "1122" to E.164 full format "+921122"
-  // This bypasses Android TelecomManager shortcode interception and allows direct ACTION_CALL
-  if (cleanNumber === '1122') {
-    cleanNumber = '+921122';
-  }
-
-  if (Platform.OS === 'android') {
-    try {
-      const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.CALL_PHONE,
-        {
-          title: 'Emergency Direct Call Permission',
-          message: 'ResQDrive requires permission to directly place emergency calls to Rescue 1122.',
-          buttonPositive: 'Allow',
-          buttonNegative: 'Deny',
-        }
-      );
-
-      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-        console.log(`📞 [Direct Call]: Placing direct call to ${cleanNumber}...`);
-        // With CALL_PHONE granted + E.164 full number format,
-        // Linking.openURL triggers android.intent.action.CALL which places the call directly.
-        Linking.openURL(`tel:${cleanNumber}`);
-        return;
-      } else {
-        console.log('⚠️ CALL_PHONE permission denied. Falling back to dialer...');
-      }
-    } catch (err) {
-      console.log('Direct phone call execution error:', err);
-    }
-  }
-
-  Linking.openURL(`tel:${cleanNumber}`);
-};
-
-  const triggerAutoEscalationCall = async () => {
+const triggerAutoEscalationCall = async () => {
     setIsEscalationActive(false);
-    const targetService = customNumbers[0] || regionalNumbers[0];
-    const phone = targetService?.phoneNumber || '1122';
-    const name = targetService?.serviceName || targetService?.label || 'Rescue 1122';
+
+    const sortedContacts = [...personalContacts].sort(
+      (a: any, b: any) => (a.priorityOrder ?? 0) - (b.priorityOrder ?? 0)
+    );
+
+    let phone: string;
+    let name: string;
+    let autoDialed = false;
+
+    if (currentContactIndex < sortedContacts.length) {
+      // 1. Calling personal contact
+      const contact = sortedContacts[currentContactIndex];
+      phone = contact.phoneNumber;
+      name = contact.name;
+      console.log(`[SOS Auto-Escalation] Calling personal contact ${currentContactIndex + 1}/${sortedContacts.length}: ${name} (${phone})`);
+      autoDialed = true;
+    } else {
+      // 2. All personal contacts exhausted — call regional emergency service (prefer 11-digit landline)
+      const targetService = regionalNumbers.find((r) => r.phoneNumber.length >= 5) || regionalNumbers[0];
+      phone = targetService?.phoneNumber || '0519290002';
+      name = targetService?.serviceName || 'Rescue 1122 HQ (Auto-Dial)';
+      console.log(`[SOS Auto-Escalation] All personal contacts exhausted — calling regional: ${name} (${phone})`);
+      setHasCycledThroughAll(true);
+      autoDialed = isAutoDialable(phone);
+    }
 
     try {
       await api.post('/emergency-sos/log-call', {
         serviceName: name,
-        autoDialed: true,
+        autoDialed,
       });
     } catch (err) {
       console.log('Failed to log auto-dialed call:', err);
     }
 
-console.log('[AutoCall] Automatically calling emergency rescue service:', phone);
-Linking.openURL(`tel:${phone}`);
+    // Place the direct call
+    const dialed = await makeDirectPhoneCall(phone);
+
+    if (dialed) {
+      console.log(`[SOS] Auto-call placed to ${name} (${phone}) — no user interaction needed`);
+    } else if (!isAutoDialable(phone)) {
+      console.log(`[SOS] ${phone} is a 4-digit shortcode — opened dialer (user must tap Call)`);
+      Alert.alert(
+        `Call ${name}`,
+        `${phone} is an emergency shortcode. Tap the green Call button to dial.`,
+        [{ text: 'OK' }]
+      );
+    }
+
+    // 🔄 SCHEDULE NEXT ESCALATION (FIXED LOGIC)
+    if (!hasCycledThroughAll) {
+      const nextIndex = currentContactIndex + 1;
+      setCurrentContactIndex(nextIndex);
+
+      if (nextIndex < sortedContacts.length) {
+        // Next is another personal contact
+        const nextContact = sortedContacts[nextIndex];
+        setPendingCallTarget({ name: nextContact.name, phone: nextContact.phoneNumber });
+        setEscalationTimeLeft(60);
+        setIsEscalationActive(true);
+        console.log(`[SOS] Next escalation scheduled in 60s: Personal contact ${nextContact.name}`);
+      } else {
+        // Next is Regional Rescue 1122 Landline!
+        const regional = regionalNumbers.find((r) => r.phoneNumber.length >= 5) || regionalNumbers[0];
+        setPendingCallTarget({
+          name: regional?.serviceName || 'Rescue 1122 HQ (Auto-Dial)',
+          phone: regional?.phoneNumber || '0519290002',
+        });
+        setEscalationTimeLeft(60);
+        setIsEscalationActive(true);
+        console.log(`[SOS] Next escalation scheduled in 60s: Regional emergency service ${regional?.serviceName || 'Rescue 1122'}`);
+      }
+    }
   };
 
   const handleCallNumber = async (number: string, name: string) => {
@@ -292,7 +319,7 @@ Linking.openURL(`tel:${phone}`);
             } catch (err) {
               console.log('Failed to log emergency call:', err);
             }
-            makeDirectPhoneCall(number);
+            await makeDirectPhoneCall(number);
           },
         },
       ]
@@ -344,7 +371,7 @@ Linking.openURL(`tel:${phone}`);
         <View style={styles.countdownBanner}>
           <Ionicons name="warning" size={24} color="#ff9800" style={{ marginRight: 8 }} />
           <Text style={styles.countdownText}>
-            Auto-dialing rescue in {escalationTimeLeft}s if no contact response...
+            Auto-dialing {pendingCallTarget?.name || 'rescue'} in {escalationTimeLeft}s if no response...
           </Text>
         </View>
       )}
@@ -363,7 +390,7 @@ Linking.openURL(`tel:${phone}`);
       {!isLoading && errorMsg && (
         <View style={styles.centerContainer}>
           <View style={styles.errorBadge}>
-            <Ionicons name="alert-circle-outline" size={24} color="#FF5252" />
+            <Text style={styles.errorEmoji}>⚠️</Text>
           </View>
           <Text style={styles.errorText}>{errorMsg}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={fetchEmergencyNumbers}>
@@ -394,7 +421,7 @@ Linking.openURL(`tel:${phone}`);
                 activeOpacity={0.85}
               >
                 <View style={styles.callIconCircle}>
-                  <Ionicons name="call" size={20} color="#FF1744" />
+                  <Text style={styles.callIcon}>📞</Text>
                 </View>
                 <View style={styles.callCardText}>
                   <Text style={styles.callName}>{item.serviceName}</Text>
@@ -418,7 +445,7 @@ Linking.openURL(`tel:${phone}`);
                     activeOpacity={0.85}
                   >
                     <View style={[styles.callIconCircle, { backgroundColor: 'rgba(255,152,0,0.12)' }]}>
-                      <Ionicons name="person" size={20} color="#ff9800" />
+                      <Text style={styles.callIcon}>👤</Text>
                     </View>
                     <View style={styles.callCardText}>
                       <Text style={styles.callName}>{item.label}</Text>
@@ -438,19 +465,13 @@ Linking.openURL(`tel:${phone}`);
                   style={styles.devSimBtn}
                   onPress={() => VoiceCommandService.simulateSpeechInput('Cancel')}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <Ionicons name="mic-outline" size={14} color="#A0A0B8" />
-                    <Text style={styles.devSimText}>Simulate Cancel</Text>
-                  </View>
+                  <Text style={styles.devSimText}>🗣️ Simulate Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.devSimBtn, { borderColor: '#d32f2f' }]}
                   onPress={() => VoiceCommandService.simulateSpeechInput('SOS')}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <Ionicons name="mic" size={14} color="#ff1744" />
-                    <Text style={[styles.devSimText, { color: '#ff1744' }]}>Simulate SOS</Text>
-                  </View>
+                  <Text style={[styles.devSimText, { color: '#ff1744' }]}>🗣️ Simulate SOS</Text>
                 </TouchableOpacity>
               </View>
             )}

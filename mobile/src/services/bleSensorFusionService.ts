@@ -36,9 +36,14 @@ export class BleSensorFusionService implements SensorFusionService {
   private maxReconnectAttempts = 2;
   private reconnectTimer: any = null;
 
-  constructor() {
+constructor() {
     if (BleManagerClass) {
-      this.manager = new BleManagerClass();
+      try {
+        this.manager = new BleManagerClass();
+      } catch (err: any) {
+        console.log('BLE: Native BleClient not available in current APK build, using Phone sensors:', err?.message);
+        this.manager = null;
+      }
     }
   }
 
