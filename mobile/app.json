@@ -32,10 +32,12 @@
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
         "RECORD_AUDIO",
+        "android.permission.CALL_PHONE",
+        "android.permission.SEND_SMS",
         "android.permission.RECORD_AUDIO"
       ],
       "googleServicesFile": "./google-services.json",
-      "package": "com.basit_009.resqdrivemobile"
+      "package": "com.resqdrive.app"
     },
     "plugins": [
       "./plugins/withManifestFix",
@@ -59,9 +61,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "8f305b36-7ae5-4a0c-be6d-ffb44c306565"
+        "projectId": "24eb6ea0-8f61-4e5b-9756-9444639a92ba"
       }
     },
-    "owner": "resqdrive"
+    "owner": "kamrankami313"
   }
 }
