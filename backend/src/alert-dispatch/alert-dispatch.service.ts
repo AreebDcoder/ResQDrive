@@ -23,30 +23,32 @@ export interface AlertPayload {
   acknowledgeUrl?: string;
 }
 
+function normalizePkPhone(phone: string): string {
+  const p = phone.replace(/[\s\-\(\)]/g, '');
+  if (p.startsWith('+92')) return p.substring(1);
+  if (p.startsWith('0092')) return p.substring(2);
+  if (p.startsWith('92') && p.length === 12) return p;
+  if (p.startsWith('0')) return '92' + p.substring(1);
+  if (p.length === 10) return '92' + p;
+  return p;
+}
+
 @Injectable()
 export class AlertDispatchService {
   private readonly logger = new Logger(AlertDispatchService.name);
   private readonly expo = new Expo();
   private readonly MAX_ATTEMPTS = 3;
-  private twilioClient: any;
   private firebaseAdmin: any;
+
+  private robosmsApiKey = (process.env.ROBOSMS_API_KEY || '').trim();
+  private robosmsEmail = (process.env.ROBOSMS_EMAIL || '').trim();
+  private robosmsMask = (process.env.ROBOSMS_MASK || 'INFO SHARE').trim();
 
   constructor(
     private prisma: PrismaService,
     private emailService: EmailService,
     private whatsappService: WhatsAppService,
   ) {
-    // Initialize Twilio Client using require to avoid TS/CommonJS interop issues
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-    
-    if (accountSid && authToken) {
-      const Twilio = require('twilio');
-      this.twilioClient = Twilio(accountSid, authToken);
-      this.logger.log('Twilio SMS client initialized successfully.');
-    } else {
-      this.logger.warn('Twilio credentials missing. SMS will fail.');
-    }
 
     // Initialize Firebase Admin SDK
     const projectId = process.env.FIREBASE_PROJECT_ID;
@@ -312,42 +314,60 @@ export class AlertDispatchService {
 
 
   /**
-   * Sends real SMS via Twilio silently from the backend server.
+   * Sends real SMS via RoboSMS silently from the backend server.
    */
   private async sendSmsChannel(payload: AlertPayload, mapsLink: string): Promise<void> {
-    if (!this.twilioClient) {
-      throw new Error('Twilio client is not initialized.');
+    if (!this.robosmsApiKey || !this.robosmsEmail) {
+      throw new Error('RoboSMS credentials missing (ROBOSMS_API_KEY / ROBOSMS_EMAIL).');
     }
 
-    const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
-    if (!twilioPhoneNumber) throw new Error('TWILIO_PHONE_NUMBER is missing in .env');
-
-    const messageBody =
-      `ResQDrive ALERT: ${payload.userName} may have been in a ${payload.severity} accident. ` +
-      `Location: ${mapsLink}`;
+    const cleanName = (payload.userName || 'Driver').replace(/[^\x20-\x7E]/g, '').trim();
+    const messageBody = `ResQDrive ALERT: ${cleanName} crash near Map: ${mapsLink}`.slice(0, 160);
 
     // Send SMS to all contacts in parallel
     const results = await Promise.allSettled(
-      payload.contacts.map((c) =>
-        this.twilioClient.messages.create({
-          body: messageBody,
-          from: twilioPhoneNumber,
-          to: c.phoneNumber, // Must be E.164 format (e.g. +923001234567)
-        }),
-      ),
+      payload.contacts.map(async (c) => {
+        const to = normalizePkPhone(c.phoneNumber);
+        const url =
+          `https://portal.robosms.pk/api/send-message?email=${encodeURIComponent(this.robosmsEmail)}` +
+          `&key=${encodeURIComponent(this.robosmsApiKey)}` +
+          `&mask=${encodeURIComponent(this.robosmsMask)}` +
+          `&to=${to}` +
+          `&message=${encodeURIComponent(messageBody)}` +
+          `&unicode=0`;
+
+        const res = await fetch(url);
+        const data = (await res.json()) as any;
+        const rawCode = data.sms?.code ?? data.code;
+        const isSuccess =
+          data.status === 'success' ||
+          rawCode === '000' ||
+          rawCode === 200 ||
+          rawCode === '200' ||
+          rawCode === 100 ||
+          rawCode === '100' ||
+          rawCode === 102 ||
+          rawCode === '102';
+
+        if (!isSuccess) {
+          throw new Error(`RoboSMS error: ${JSON.stringify(data)}`);
+        }
+        return data;
+      }),
     );
 
     // If all SMS fail, throw an error so the system logs it as FAILED
     const anySuccess = results.some((r) => r.status === 'fulfilled');
     if (!anySuccess) {
-      const failedReason = results[0].status === 'rejected' 
-        ? (results[0] as any).reason?.message 
-        : 'Unknown error';
-      this.logger.error(`Twilio SMS delivery failed: ${failedReason}`);
-      throw new Error(`Twilio SMS delivery failed: ${failedReason}`);
+      const failedReason =
+        results[0].status === 'rejected'
+          ? (results[0] as any).reason?.message
+          : 'Unknown error';
+      this.logger.error(`RoboSMS SMS delivery failed: ${failedReason}`);
+      throw new Error(`RoboSMS SMS delivery failed: ${failedReason}`);
     }
-    
-    this.logger.log('✅ SMS successfully sent via Twilio!');
+
+    this.logger.log('✅ SMS successfully sent via RoboSMS!');
   }
 
   private async sendEmailChannel(payload: AlertPayload, mapsLink: string): Promise<void> {

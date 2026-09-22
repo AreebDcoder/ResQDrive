@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -21,15 +22,16 @@ import { useDispatch } from 'react-redux';
 import { contactSchema, ContactInput } from '../schemas/validation';
 import { addContactSuccess, updateContactSuccess, deleteContactSuccess } from '../store/slices/contactsSlice';
 import api from '../api/axios';
+import { Ionicons } from '@expo/vector-icons';
 
 const RELATIONSHIPS = ['Spouse', 'Parent', 'Sibling', 'Friend', 'Other'];
 
-const RELATIONSHIP_EMOJIS: Record<string, string> = {
-  Spouse: '💑',
-  Parent: '👨‍👩‍👧',
-  Sibling: '👫',
-  Friend: '🤝',
-  Other: '👤',
+const RELATIONSHIP_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  Spouse: 'heart-outline',
+  Parent: 'people-outline',
+  Sibling: 'people-circle-outline',
+  Friend: 'person-outline',
+  Other: 'options-outline',
 };
 
 export default function AddEditContactScreen({ route, navigation }: any) {
@@ -77,17 +79,33 @@ export default function AddEditContactScreen({ route, navigation }: any) {
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm('Are you sure you want to remove this emergency contact?')) return;
-    setIsLoading(true);
-    setErrorMsg(null);
-    try {
-      await api.delete(`/emergency-contacts/${contact.id}`);
-      dispatch(deleteContactSuccess({ id: contact.id }));
-      navigation.goBack();
-    } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Failed to delete contact.');
-      setIsLoading(false);
+  const handleDelete = () => {
+    const doDelete = async () => {
+      setIsLoading(true);
+      setErrorMsg(null);
+      try {
+        await api.delete(`/emergency-contacts/${contact.id}`);
+        dispatch(deleteContactSuccess({ id: contact.id }));
+        navigation.goBack();
+      } catch (err: any) {
+        setErrorMsg(err.response?.data?.message || 'Failed to delete contact.');
+        setIsLoading(false);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(`Are you sure you want to remove ${contact.name}?`)) {
+        doDelete();
+      }
+    } else {
+      Alert.alert(
+        'Remove Emergency Contact',
+        `Are you sure you want to remove ${contact.name} from your emergency contacts?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Remove', style: 'destructive', onPress: doDelete },
+        ],
+      );
     }
   };
 
@@ -99,9 +117,12 @@ export default function AddEditContactScreen({ route, navigation }: any) {
       <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
         {/* ── Header ── */}
         <View style={styles.header}>
-          <Text style={styles.title}>
-            {isEditing ? '✏️ Edit Contact' : '➕ Add Contact'}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Ionicons name={isEditing ? 'pencil-outline' : 'person-add-outline'} size={26} color="#E53935" />
+            <Text style={styles.title}>
+              {isEditing ? 'Edit Contact' : 'Add Contact'}
+            </Text>
+          </View>
           <Text style={styles.subtitle}>
             {isEditing ? 'Update emergency contact parameters' : 'Register a contact for crash alerts notification'}
           </Text>
@@ -110,13 +131,13 @@ export default function AddEditContactScreen({ route, navigation }: any) {
         {/* ── Error ── */}
         {errorMsg && (
           <View style={styles.errorContainer}>
-            <Text style={styles.errorEmoji}>⚠️</Text>
+            <Ionicons name="alert-circle-outline" size={18} color="#FF8A80" style={{ marginRight: 8 }} />
             <Text style={styles.errorText}>{errorMsg}</Text>
           </View>
         )}
 
         <View style={styles.form}>
-          <Text style={styles.label}>🏷️ Contact Name</Text>
+          <Text style={styles.label}>Contact Name</Text>
           <Controller
             control={control}
             name="name"
@@ -133,7 +154,7 @@ export default function AddEditContactScreen({ route, navigation }: any) {
           />
           {errors.name && <Text style={styles.errorHelper}>{errors.name.message}</Text>}
 
-          <Text style={styles.label}>📱 Phone Number</Text>
+          <Text style={styles.label}>Phone Number</Text>
           <Controller
             control={control}
             name="phoneNumber"
@@ -151,7 +172,7 @@ export default function AddEditContactScreen({ route, navigation }: any) {
           />
           {errors.phoneNumber && <Text style={styles.errorHelper}>{errors.phoneNumber.message}</Text>}
 
-          <Text style={styles.label}>📧 Email Address</Text>
+          <Text style={styles.label}>Email Address</Text>
           <Controller
             control={control}
             name="email"
@@ -171,7 +192,7 @@ export default function AddEditContactScreen({ route, navigation }: any) {
           {errors.email && <Text style={styles.errorHelper}>{errors.email.message}</Text>}
 
           {/* ── Relationship Tags ── */}
-          <Text style={styles.label}>💔 Relationship</Text>
+          <Text style={styles.label}>Relationship</Text>
           <View style={styles.relationshipTags}>
             {RELATIONSHIPS.map((rel) => (
               <TouchableOpacity
@@ -183,13 +204,12 @@ export default function AddEditContactScreen({ route, navigation }: any) {
                 onPress={() => setValue('relationship', rel)}
                 activeOpacity={0.7}
               >
-                <Text
-                  style={[
-                    styles.tagEmoji,
-                  ]}
-                >
-                  {RELATIONSHIP_EMOJIS[rel]}
-                </Text>
+                <Ionicons
+                  name={RELATIONSHIP_ICONS[rel]}
+                  size={16}
+                  color={selectedRelationship === rel ? '#FFFFFF' : '#6B6B80'}
+                  style={{ marginRight: 6 }}
+                />
                 <Text
                   style={[
                     styles.tagText,
@@ -212,7 +232,7 @@ export default function AddEditContactScreen({ route, navigation }: any) {
               <ActivityIndicator color="#fff" />
             ) : (
               <Text style={styles.saveBtnText}>
-                {isEditing ? '💾 Save Changes' : '➕ Add Contact'}
+                {isEditing ? 'Save Changes' : 'Add Contact'}
               </Text>
             )}
           </TouchableOpacity>
@@ -224,7 +244,10 @@ export default function AddEditContactScreen({ route, navigation }: any) {
               onPress={handleDelete}
               disabled={isLoading}
             >
-              <Text style={styles.deleteBtnText}>🗑️ Remove Contact</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                <Ionicons name="trash-outline" size={18} color="#FF5252" />
+                <Text style={styles.deleteBtnText}>Remove Contact</Text>
+              </View>
             </TouchableOpacity>
           )}
         </View>

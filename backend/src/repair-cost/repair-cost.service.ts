@@ -54,11 +54,21 @@ export class RepairCostService {
     const model = vehicle?.model || 'Corolla';
     const year = vehicle?.year || 2018;
 
+    // Deduplicate assessments by partTag (keeping the latest scan per partTag if duplicate scans occurred)
+    const uniqueAssessmentsMap = new Map<string, typeof assessments[0]>();
+    for (const assessment of assessments) {
+      const key = `${assessment.partTag}`;
+      if (!uniqueAssessmentsMap.has(key)) {
+        uniqueAssessmentsMap.set(key, assessment);
+      }
+    }
+    const targetAssessments = Array.from(uniqueAssessmentsMap.values());
+
     const lineItems: any[] = [];
     let totalMinCostPkr = 0;
     let totalMaxCostPkr = 0;
 
-    for (const assessment of assessments) {
+    for (const assessment of targetAssessments) {
       // Repair vs Replace decision rules
       let action: RepairAction = RepairAction.repair;
 

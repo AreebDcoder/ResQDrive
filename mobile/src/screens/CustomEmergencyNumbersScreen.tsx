@@ -110,7 +110,7 @@ export default function CustomEmergencyNumbersScreen({ navigation }: any) {
 
         {/* Input Form Card */}
         <View style={styles.formCard}>
-          <Text style={styles.formTitle}>➕ Add New Override Number</Text>
+          <Text style={styles.formTitle}>Add New Override Number</Text>
           <TextInput
             placeholder="Label (e.g. Local Rescue / Private Doctor)"
             placeholderTextColor="#888"
@@ -148,7 +148,7 @@ export default function CustomEmergencyNumbersScreen({ navigation }: any) {
         </View>
 
         {/* Numbers List */}
-        <Text style={styles.listSectionTitle}>📱 YOUR CURRENT OVERRIDES</Text>
+        <Text style={styles.listSectionTitle}>YOUR CURRENT OVERRIDES</Text>
         {isLoading ? (
           <View style={styles.center}>
             <ActivityIndicator size="large" color="#d32f2f" />

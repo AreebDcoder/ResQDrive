@@ -1,11 +1,7 @@
-// ═══════════════════════════════════════════════════════════════
-// ResQDrive v2 — ADD/EDIT VEHICLE SCREEN (Modernized)
-// All imports, logic, state, handlers preserved identically.
-// Only JSX structure + StyleSheet updated: dark glassmorphism theme.
-// ═══════════════════════════════════════════════════════════════
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -21,6 +17,7 @@ import { useDispatch } from 'react-redux';
 import { vehicleSchema, VehicleInput } from '../schemas/validation';
 import { addVehicleSuccess, updateVehicleSuccess, deleteVehicleSuccess } from '../store/slices/vehiclesSlice';
 import api from '../api/axios';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function AddEditVehicleScreen({ route, navigation }: any) {
   const dispatch = useDispatch();
@@ -64,17 +61,33 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this vehicle?')) return;
-    setIsLoading(true);
-    setErrorMsg(null);
-    try {
-      await api.delete(`/vehicles/${vehicle.id}`);
-      dispatch(deleteVehicleSuccess(vehicle.id));
-      navigation.goBack();
-    } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Failed to delete vehicle.');
-      setIsLoading(false);
+  const handleDelete = () => {
+    const doDelete = async () => {
+      setIsLoading(true);
+      setErrorMsg(null);
+      try {
+        await api.delete(`/vehicles/${vehicle.id}`);
+        dispatch(deleteVehicleSuccess(vehicle.id));
+        navigation.goBack();
+      } catch (err: any) {
+        setErrorMsg(err.response?.data?.message || 'Failed to delete vehicle.');
+        setIsLoading(false);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(`Are you sure you want to delete ${vehicle.make} ${vehicle.model}?`)) {
+        doDelete();
+      }
+    } else {
+      Alert.alert(
+        'Delete Vehicle',
+        `Are you sure you want to delete ${vehicle.make} ${vehicle.model} (${vehicle.licensePlate})?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', style: 'destructive', onPress: doDelete },
+        ],
+      );
     }
   };
 
@@ -86,9 +99,12 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
       <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
         {/* ── Header ── */}
         <View style={styles.header}>
-          <Text style={styles.title}>
-            {isEditing ? '✏️ Edit Vehicle' : '🚗 Add Vehicle'}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Ionicons name={isEditing ? 'pencil-outline' : 'car-outline'} size={26} color="#E53935" />
+            <Text style={styles.title}>
+              {isEditing ? 'Edit Vehicle' : 'Add Vehicle'}
+            </Text>
+          </View>
           <Text style={styles.subtitle}>
             {isEditing ? 'Update your registered vehicle details' : 'Register a vehicle for accident detection'}
           </Text>
@@ -97,13 +113,13 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
         {/* ── Error ── */}
         {errorMsg && (
           <View style={styles.errorContainer}>
-            <Text style={styles.errorEmoji}>⚠️</Text>
+            <Ionicons name="alert-circle-outline" size={18} color="#FF8A80" style={{ marginRight: 8 }} />
             <Text style={styles.errorText}>{errorMsg}</Text>
           </View>
         )}
 
         <View style={styles.form}>
-          <Text style={styles.label}>🏭 Make / Manufacturer</Text>
+          <Text style={styles.label}>Make / Manufacturer</Text>
           <Controller
             control={control}
             name="make"
@@ -120,7 +136,7 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
           />
           {errors.make && <Text style={styles.errorHelper}>{errors.make.message}</Text>}
 
-          <Text style={styles.label}>🏎️ Model</Text>
+          <Text style={styles.label}>Model</Text>
           <Controller
             control={control}
             name="model"
@@ -139,7 +155,7 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
 
           <View style={styles.row}>
             <View style={styles.rowCol}>
-              <Text style={styles.label}>📅 Year</Text>
+              <Text style={styles.label}>Year</Text>
               <Controller
                 control={control}
                 name="year"
@@ -159,7 +175,7 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
             </View>
 
             <View style={styles.rowCol}>
-              <Text style={styles.label}>🎨 Color</Text>
+              <Text style={styles.label}>Color</Text>
               <Controller
                 control={control}
                 name="color"
@@ -178,7 +194,7 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
             </View>
           </View>
 
-          <Text style={styles.label}>🔢 License Plate Number</Text>
+          <Text style={styles.label}>License Plate Number</Text>
           <Controller
             control={control}
             name="licensePlate"
@@ -206,7 +222,7 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
               <ActivityIndicator color="#fff" />
             ) : (
               <Text style={styles.saveBtnText}>
-                {isEditing ? '💾 Save Changes' : '🚗 Register Vehicle'}
+                {isEditing ? 'Save Changes' : 'Register Vehicle'}
               </Text>
             )}
           </TouchableOpacity>
@@ -223,9 +239,12 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
                   })
                 }
               >
-                <Text style={styles.insuranceBtnText}>
-                  {vehicle.insurance ? '🛡️ View/Edit Insurance Details' : '➕ Add Vehicle Insurance (Optional)'}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  <Ionicons name="shield-checkmark-outline" size={18} color="#E53935" />
+                  <Text style={styles.insuranceBtnText}>
+                    {vehicle.insurance ? 'View/Edit Insurance Details' : 'Add Vehicle Insurance (Optional)'}
+                  </Text>
+                </View>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -233,7 +252,10 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
                 onPress={handleDelete}
                 disabled={isLoading}
               >
-                <Text style={styles.deleteBtnText}>🗑️ Remove Vehicle</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  <Ionicons name="trash-outline" size={18} color="#FF5252" />
+                  <Text style={styles.deleteBtnText}>Remove Vehicle</Text>
+                </View>
               </TouchableOpacity>
             </View>
           )}

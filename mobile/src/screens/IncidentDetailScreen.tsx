@@ -6,6 +6,7 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import { fetchIncident, deleteIncident } from '../store/slices/incidentsSlice';
+import { Ionicons } from '@expo/vector-icons';
 
 const SEVERITY_COLORS: Record<string, string> = {
   NONE: '#6B6B80', MINOR: '#FFD600', MODERATE: '#FF9100', SEVERE: '#FF1744',
@@ -24,57 +25,55 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
   }, [dispatch, id]);
 
   const handleDelete = () => {
-    Alert.alert(
-      'Delete Incident',
-      'Are you sure you want to delete this incident? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            await dispatch(deleteIncident(id));
-            navigation.navigate('IncidentsList');
-          },
+    Alert.alert('Delete Incident', 'Are you sure you want to delete this incident record?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await dispatch(deleteIncident(id)).unwrap();
+            navigation.goBack();
+          } catch (err: any) {
+            Alert.alert('Error', err.message || 'Failed to delete incident');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const openInMaps = () => {
-    if (current?.latitude && current?.longitude) {
-      const url = `https://www.google.com/maps/search/?api=1&query=${current.latitude},${current.longitude}`;
-      Linking.openURL(url);
-    }
+    if (!current?.latitude || !current?.longitude) return;
+    const url = `https://www.google.com/maps/search/?api=1&query=${current.latitude},${current.longitude}`;
+    Linking.openURL(url);
   };
 
-  if (isLoading || !current) {
+  const fmtDate = (d?: string) => {
+    if (!d) return '—';
+    return new Date(d).toLocaleString();
+  };
+
+  if (isLoading) {
     return (
       <View style={styles.center}>
-        <StatusBar barStyle="light-content" backgroundColor="#0A0A0F" />
-        <View style={styles.loadingRing}>
-          <ActivityIndicator color="#E53935" size="large" />
-        </View>
-        <Text style={styles.loadingLabel}>Loading incident...</Text>
+        <ActivityIndicator size="large" color="#E53935" />
       </View>
     );
   }
 
-  const fmtDate = (iso: string) => new Date(iso).toLocaleString();
+  if (!current) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorText}>Incident record not found.</Text>
+      </View>
+    );
+  }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={{ paddingBottom: 80 }}
-      showsVerticalScrollIndicator={false}
-    >
-      <StatusBar barStyle="light-content" backgroundColor="#0A0A0F" />
-
-      {/* Background glow */}
-      <View style={styles.bgGlow} />
-
-      {/* Badges Section */}
-      <View style={styles.badgesCard}>
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingBottom: 60 }}>
+      {/* Top Banner */}
+      <View style={styles.heroCard}>
+        <Text style={styles.heroId}>Incident #{current.id.slice(0, 8)}</Text>
         <View style={styles.badgesRow}>
           <View style={[styles.badge, { backgroundColor: SEVERITY_COLORS[current.severity] || '#6B6B80' }]}>
             <View style={[styles.badgeDot, { backgroundColor: '#FFFFFF' }]} />
@@ -84,7 +83,7 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
             <Text style={styles.badgeText}>{current.status.replace('_', ' ')}</Text>
           </View>
           <Text style={styles.typeText}>
-            {current.type === 'AUTO' ? '🤖 Auto-detected' : '✍️ Manually logged'}
+            {current.type === 'AUTO' ? 'Auto-detected' : 'Manually logged'}
           </Text>
         </View>
       </View>
@@ -92,7 +91,7 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
       {/* Occurred At */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionIcon}>🕐</Text>
+          <Ionicons name="time-outline" size={18} color="#E53935" style={{ marginRight: 8 }} />
           <Text style={styles.label}>Occurred At</Text>
         </View>
         <Text style={styles.value}>{fmtDate(current.occurredAt)}</Text>
@@ -102,13 +101,13 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
       {current.address ? (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionIcon}>📍</Text>
+            <Ionicons name="location-outline" size={18} color="#E53935" style={{ marginRight: 8 }} />
             <Text style={styles.label}>Address</Text>
           </View>
           <Text style={styles.value}>{current.address}</Text>
           {current.latitude && current.longitude ? (
             <TouchableOpacity style={styles.mapsBtn} onPress={openInMaps} activeOpacity={0.7}>
-              <Text style={styles.mapsBtnIcon}>🗺️</Text>
+              <Ionicons name="map-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
               <Text style={styles.mapsBtnText}>Open in Google Maps</Text>
             </TouchableOpacity>
           ) : null}
@@ -119,7 +118,7 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
       {current.latitude != null && current.longitude != null ? (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionIcon}>🌐</Text>
+            <Ionicons name="globe-outline" size={18} color="#E53935" style={{ marginRight: 8 }} />
             <Text style={styles.label}>Coordinates</Text>
           </View>
           <Text style={styles.value}>{current.latitude.toFixed(6)}, {current.longitude.toFixed(6)}</Text>
@@ -130,7 +129,7 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
       {current.description ? (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionIcon}>📝</Text>
+            <Ionicons name="document-text-outline" size={18} color="#E53935" style={{ marginRight: 8 }} />
             <Text style={styles.label}>Description</Text>
           </View>
           <Text style={styles.value}>{current.description}</Text>
@@ -141,7 +140,7 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
       {current.sensorSnapshot ? (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionIcon}>📡</Text>
+            <Ionicons name="hardware-chip-outline" size={18} color="#E53935" style={{ marginRight: 8 }} />
             <Text style={styles.label}>Sensor Snapshot</Text>
           </View>
           <View style={styles.jsonBox}>
@@ -154,7 +153,7 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
       {current.alertDispatchStatus ? (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionIcon}>🚨</Text>
+            <Ionicons name="alert-circle-outline" size={18} color="#E53935" style={{ marginRight: 8 }} />
             <Text style={styles.label}>Alert Dispatch Status</Text>
           </View>
           <View style={styles.jsonBox}>
@@ -167,7 +166,7 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
       {current.damageAssessmentResult ? (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionIcon}>🔍</Text>
+            <Ionicons name="search-outline" size={18} color="#E53935" style={{ marginRight: 8 }} />
             <Text style={styles.label}>Damage Assessment</Text>
           </View>
           <View style={styles.jsonBox}>
@@ -179,7 +178,7 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
       {/* Timestamps */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionIcon}>📊</Text>
+          <Ionicons name="calendar-outline" size={18} color="#E53935" style={{ marginRight: 8 }} />
           <Text style={styles.label}>Record Timeline</Text>
         </View>
         <View style={styles.timelineRow}>
@@ -201,8 +200,10 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
           disabled={isSubmitting}
           activeOpacity={0.7}
         >
-          <Text style={styles.editBtnIcon}>✏️</Text>
-          <Text style={styles.actionBtnText}>Edit</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <Ionicons name="pencil-outline" size={18} color="#FFFFFF" />
+            <Text style={styles.actionBtnText}>Edit</Text>
+          </View>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.deleteBtn}
@@ -210,8 +211,10 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
           disabled={isSubmitting}
           activeOpacity={0.7}
         >
-          <Text style={styles.deleteBtnIcon}>🗑️</Text>
-          <Text style={styles.actionBtnText}>Delete</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <Ionicons name="trash-outline" size={18} color="#FF5252" />
+            <Text style={styles.actionBtnText}>Delete</Text>
+          </View>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -221,6 +224,21 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0A0A0F', paddingHorizontal: 20, paddingTop: 16 },
   center: { flex: 1, backgroundColor: '#0A0A0F', justifyContent: 'center', alignItems: 'center' },
+  errorText: { color: '#FF5252', fontSize: 16, textAlign: 'center' },
+  heroCard: {
+    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  heroId: { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 12 },
   loadingRing: {
     width: 72,
     height: 72,

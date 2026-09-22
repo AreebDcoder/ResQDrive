@@ -268,47 +268,51 @@ export class PartsPriceScraperService {
     partKeyword: string,
   ) {
     await this.enforceRateLimit();
-    const url = `https://www.olx.com.pk/items/q-${encodeURIComponent(searchQuery)}`;
+    const url = `https://www.olx.com.pk/auto-parts-accessories_c838?q=${encodeURIComponent(searchQuery)}`;
 
-    const response = await axios.get(url, {
-      headers: { 'User-Agent': this.USER_AGENT },
-      timeout: 10000,
-    });
+    try {
+      const response = await axios.get(url, {
+        headers: { 'User-Agent': this.USER_AGENT },
+        timeout: 8000,
+      });
 
-    const $ = cheerio.load(response.data);
-    const rawListings: { title: string; price: number; url: string }[] = [];
+      const $ = cheerio.load(response.data);
+      const rawListings: { title: string; price: number; url: string }[] = [];
 
-    $('a').each((_, el) => {
-      const href = $(el).attr('href') || '';
-      const title = $(el).attr('title') || $(el).text().trim();
-      const parentText = $(el).closest('li, article, div').text().trim();
+      $('a').each((_, el) => {
+        const href = $(el).attr('href') || '';
+        const title = $(el).attr('title') || $(el).text().trim();
+        const parentText = $(el).closest('li, article, div').text().trim();
 
-      if (href && (href.includes('/item/') || href.includes('/d/')) && title && title.length > 5) {
-        const numericPrice = this.parsePriceInteger(parentText);
-        if (numericPrice > 0) {
-          const fullUrl = href.startsWith('http') ? href : `https://www.olx.com.pk${href}`;
-          rawListings.push({ title, price: numericPrice, url: fullUrl });
+        if (href && (href.includes('/item/') || href.includes('/d/')) && title && title.length > 5) {
+          const numericPrice = this.parsePriceInteger(parentText);
+          if (numericPrice > 0) {
+            const fullUrl = href.startsWith('http') ? href : `https://www.olx.com.pk${href}`;
+            rawListings.push({ title, price: numericPrice, url: fullUrl });
+          }
         }
-      }
-    });
+      });
 
-    const filtered = rawListings.filter((item) => {
-      const lowerTitle = item.title.toLowerCase();
-      const lowerMake = make.toLowerCase();
-      const lowerModel = model.toLowerCase();
-      const mainPartToken = partKeyword.split(' ')[0].toLowerCase();
+      const filtered = rawListings.filter((item) => {
+        const lowerTitle = item.title.toLowerCase();
+        const lowerMake = make.toLowerCase();
+        const lowerModel = model.toLowerCase();
+        const mainPartToken = partKeyword.split(' ')[0].toLowerCase();
 
-      const hasPartMatch = lowerTitle.includes(mainPartToken);
-      const hasVehicleMatch = lowerTitle.includes(lowerMake) || lowerTitle.includes(lowerModel);
+        const hasPartMatch = lowerTitle.includes(mainPartToken);
+        const hasVehicleMatch = lowerTitle.includes(lowerMake) || lowerTitle.includes(lowerModel);
 
-      return hasPartMatch && hasVehicleMatch && item.price >= 300 && item.price <= 300000;
-    });
+        return hasPartMatch && hasVehicleMatch && item.price >= 300 && item.price <= 300000;
+      });
 
-    return {
-      totalFound: rawListings.length,
-      filteredPrices: filtered.map((f) => f.price),
-      urls: filtered.map((f) => f.url).slice(0, 10),
-    };
+      return {
+        totalFound: rawListings.length,
+        filteredPrices: filtered.map((f) => f.price),
+        urls: filtered.map((f) => f.url).slice(0, 10),
+      };
+    } catch {
+      return { totalFound: 0, filteredPrices: [], urls: [] };
+    }
   }
 
   /**

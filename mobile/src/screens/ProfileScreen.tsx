@@ -23,6 +23,7 @@ import { updateUserProfile, logoutAction } from '../store/slices/authSlice';
 import { updateProfileSchema, changePasswordSchema, UpdateProfileInput, ChangePasswordInput } from '../schemas/validation';
 import { FCMService } from '../services/fcmService';
 import api from '../api/axios';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function ProfileScreen() {
   const dispatch = useDispatch();
@@ -154,7 +155,7 @@ export default function ProfileScreen() {
             />
           </View>
           <View style={styles.editBadge}>
-            <Text style={styles.editBadgeText}>📷</Text>
+            <Ionicons name="camera" size={14} color="#FFF" />
           </View>
         </TouchableOpacity>
         <Text style={styles.profileName}>{user.fullName}</Text>
@@ -167,7 +168,7 @@ export default function ProfileScreen() {
         {user.role === 'MECHANIC' && (
           <View style={styles.verificationRow}>
             <Text style={styles.verificationText}>
-              Workshop Verified: {user.mechanicDetails?.isWorkshopVerified ? '✅ Yes' : '⏳ Pending Approval'}
+              Workshop Verified: {user.mechanicDetails?.isWorkshopVerified ? 'Yes' : 'Pending Approval'}
             </Text>
           </View>
         )}
@@ -185,7 +186,10 @@ export default function ProfileScreen() {
       {/* ── Account Details Card ── */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>👤 Account Details</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Ionicons name="person-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
+            <Text style={styles.cardTitle}>Account Details</Text>
+          </View>
           <TouchableOpacity onPress={() => { setIsEditing(!isEditing); setProfileMessage(null); }}>
             <View style={isEditing ? styles.cancelBtn : styles.editBtn}>
               <Text style={isEditing ? styles.cancelBtnText : styles.editBtnText}>{isEditing ? 'Cancel' : 'Edit'}</Text>
@@ -193,10 +197,10 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.label}>📧 Email Address (Read-only)</Text>
+        <Text style={styles.label}>Email Address (Read-only)</Text>
         <TextInput style={[styles.input, styles.inputDisabled]} value={user.email} editable={false} />
 
-        <Text style={styles.label}>🏷️ Full Name</Text>
+        <Text style={styles.label}>Full Name</Text>
         <Controller
           control={profileControl}
           name="fullName"
@@ -212,7 +216,7 @@ export default function ProfileScreen() {
         />
         {profileErrors.fullName && <Text style={styles.errorHelper}>{profileErrors.fullName.message}</Text>}
 
-        <Text style={styles.label}>📱 Phone Number</Text>
+        <Text style={styles.label}>Phone Number</Text>
         <Controller
           control={profileControl}
           name="phoneNumber"
@@ -231,7 +235,7 @@ export default function ProfileScreen() {
         {/* Dynamic Driver Fields */}
         {user.role === 'DRIVER' && (
           <View>
-            <Text style={styles.label}>🪪 CNIC Number</Text>
+            <Text style={styles.label}>CNIC Number</Text>
             <Controller
               control={profileControl}
               name="cnicNumber"
@@ -247,7 +251,7 @@ export default function ProfileScreen() {
             />
             {profileErrors.cnicNumber && <Text style={styles.errorHelper}>{profileErrors.cnicNumber.message}</Text>}
 
-            <Text style={styles.label}>🪪 Driving License Number</Text>
+            <Text style={styles.label}>Driving License Number</Text>
             <Controller
               control={profileControl}
               name="drivingLicenseNumber"
@@ -270,7 +274,7 @@ export default function ProfileScreen() {
         {/* Dynamic Mechanic Fields */}
         {user.role === 'MECHANIC' && (
           <View>
-            <Text style={styles.label}>🔧 Workshop Name</Text>
+            <Text style={styles.label}>Workshop Name</Text>
             <Controller
               control={profileControl}
               name="workshopName"
@@ -286,7 +290,7 @@ export default function ProfileScreen() {
             />
             {profileErrors.workshopName && <Text style={styles.errorHelper}>{profileErrors.workshopName.message}</Text>}
 
-            <Text style={styles.label}>📍 Workshop Address</Text>
+            <Text style={styles.label}>Workshop Address</Text>
             <Controller
               control={profileControl}
               name="workshopAddress"
@@ -304,7 +308,7 @@ export default function ProfileScreen() {
               <Text style={styles.errorHelper}>{profileErrors.workshopAddress.message}</Text>
             )}
 
-            <Text style={styles.label}>🛠️ Specialization</Text>
+            <Text style={styles.label}>Specialization</Text>
             <Controller
               control={profileControl}
               name="specialization"
@@ -326,7 +330,12 @@ export default function ProfileScreen() {
 
         {isEditing && (
           <TouchableOpacity style={styles.saveBtn} onPress={handleProfileSubmit(onUpdateProfile)} disabled={isLoading}>
-            {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>💾 Save Profile</Text>}
+            {isLoading ? <ActivityIndicator color="#fff" /> : (
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="save-outline" size={18} color="#FFF" style={{ marginRight: 6 }} />
+                <Text style={styles.saveBtnText}>Save Profile</Text>
+              </View>
+            )}
           </TouchableOpacity>
         )}
       </View>
@@ -334,8 +343,11 @@ export default function ProfileScreen() {
       {/* ── Change Password Card ── */}
       <View style={styles.card}>
         <TouchableOpacity style={styles.cardHeader} onPress={() => { setIsChangingPassword(!isChangingPassword); setPwMessage(null); }}>
-          <Text style={styles.cardTitle}>🔒 Security & Password</Text>
-          <Text style={styles.expandIcon}>{isChangingPassword ? '▲' : '▼'}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Ionicons name="lock-closed-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
+            <Text style={styles.cardTitle}>Security & Password</Text>
+          </View>
+          <Ionicons name={isChangingPassword ? 'chevron-up-outline' : 'chevron-down-outline'} size={20} color="#888899" />
         </TouchableOpacity>
 
         {isChangingPassword && (
@@ -348,7 +360,7 @@ export default function ProfileScreen() {
               </View>
             )}
 
-            <Text style={styles.label}>🔑 Current Password</Text>
+            <Text style={styles.label}>Current Password</Text>
             <Controller
               control={pwControl}
               name="currentPassword"
@@ -368,14 +380,14 @@ export default function ProfileScreen() {
                     style={styles.eyeBtn}
                     onPress={() => setShowCurrentPassword(!showCurrentPassword)}
                   >
-                    <Text style={styles.eyeBtnText}>{showCurrentPassword ? '🙈' : '👁️'}</Text>
+                    <Ionicons name={showCurrentPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color="#888899" />
                   </TouchableOpacity>
                 </View>
               )}
             />
             {pwErrors.currentPassword && <Text style={styles.errorHelper}>{pwErrors.currentPassword.message}</Text>}
 
-            <Text style={styles.label}>🔑 New Password</Text>
+            <Text style={styles.label}>New Password</Text>
             <Controller
               control={pwControl}
               name="newPassword"
@@ -392,14 +404,14 @@ export default function ProfileScreen() {
                     value={value}
                   />
                   <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowNewPassword(!showNewPassword)}>
-                    <Text style={styles.eyeBtnText}>{showNewPassword ? '🙈' : '👁️'}</Text>
+                    <Ionicons name={showNewPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color="#888899" />
                   </TouchableOpacity>
                 </View>
               )}
             />
             {pwErrors.newPassword && <Text style={styles.errorHelper}>{pwErrors.newPassword.message}</Text>}
 
-            <Text style={styles.label}>🔑 Confirm New Password</Text>
+            <Text style={styles.label}>Confirm New Password</Text>
             <Controller
               control={pwControl}
               name="confirmNewPassword"
@@ -419,7 +431,7 @@ export default function ProfileScreen() {
                     style={styles.eyeBtn}
                     onPress={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
                   >
-                    <Text style={styles.eyeBtnText}>{showConfirmNewPassword ? '🙈' : '👁️'}</Text>
+                    <Ionicons name={showConfirmNewPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color="#888899" />
                   </TouchableOpacity>
                 </View>
               )}
@@ -429,7 +441,12 @@ export default function ProfileScreen() {
             )}
 
             <TouchableOpacity style={styles.pwSubmitBtn} onPress={handlePwSubmit(onChangePassword)} disabled={isPwLoading}>
-              {isPwLoading ? <ActivityIndicator color="#E53935" /> : <Text style={styles.pwSubmitBtnText}>🔄 Update Password</Text>}
+              {isPwLoading ? <ActivityIndicator color="#E53935" /> : (
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="refresh-outline" size={16} color="#E53935" style={{ marginRight: 6 }} />
+                  <Text style={styles.pwSubmitBtnText}>Update Password</Text>
+                </View>
+              )}
             </TouchableOpacity>
           </View>
         )}
@@ -437,7 +454,10 @@ export default function ProfileScreen() {
 
       {/* ── Logout ── */}
       <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-        <Text style={styles.logoutBtnText}>🚪 Log Out</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Ionicons name="log-out-outline" size={20} color="#FF5252" style={{ marginRight: 8 }} />
+          <Text style={styles.logoutBtnText}>Log Out</Text>
+        </View>
       </TouchableOpacity>
     </ScrollView>
   );

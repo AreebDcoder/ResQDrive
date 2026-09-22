@@ -10,14 +10,15 @@ import {
   triggerEmergency, cancelEmergency, fetchEmergencyStatus, clearEmergency,
 } from '../store/slices/emergencySlice';
 import { connectSocket, disconnectSocket, emitLocationUpdate } from '../services/socketService';
+import { Ionicons } from '@expo/vector-icons';
 
 const POLL_INTERVAL_MS = 5000;
 
-const CHANNEL_ICONS: Record<string, string> = {
-  PUSH: '📱',
-  SMS: '💬',
-  EMAIL: '📧',
-  PHONE_CALL: '📞',
+const CHANNEL_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  PUSH: 'phone-portrait-outline',
+  SMS: 'chatbubble-outline',
+  EMAIL: 'mail-outline',
+  PHONE_CALL: 'call-outline',
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -245,9 +246,9 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
 
   const gpsStatusText = {
     idle: '',
-    connecting: '🟡 Connecting GPS…',
-    active: '🟢 GPS active — location sharing',
-    error: '🔴 GPS error — location not sharing',
+    connecting: 'Connecting GPS…',
+    active: 'GPS active — location sharing',
+    error: 'GPS error — location not sharing',
   }[gpsStatus];
 
   return (
@@ -277,6 +278,7 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
 
           {emergency.error && (
             <View style={styles.errorBox}>
+              <Ionicons name="alert-circle-outline" size={18} color="#FF5252" style={{ marginRight: 8 }} />
               <Text style={styles.errorText}>{emergency.error}</Text>
             </View>
           )}
@@ -291,7 +293,7 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
                 <ActivityIndicator color="#FFFFFF" size="large" />
               ) : (
                 <>
-                  <Text style={styles.triggerBtnIcon}>🚨</Text>
+                  <Ionicons name="alert-circle" size={36} color="#FFFFFF" style={{ marginBottom: 4 }} />
                   <Text style={styles.triggerBtnText}>TRIGGER EMERGENCY ALERT</Text>
                   <Text style={styles.triggerBtnSubtext}>Tap to notify all contacts</Text>
                 </>
@@ -322,10 +324,16 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
 
               <View style={styles.actionsRow}>
                 <TouchableOpacity style={styles.linkBtn} onPress={copyAcknowledgeLink}>
-                  <Text style={styles.linkBtnText}>📋 Copy Link</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name="copy-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                    <Text style={styles.linkBtnText}>Copy Link</Text>
+                  </View>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.linkBtn} onPress={openAcknowledgePage}>
-                  <Text style={styles.linkBtnText}>🌐 Open Page</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name="globe-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                    <Text style={styles.linkBtnText}>Open Page</Text>
+                  </View>
                 </TouchableOpacity>
               </View>
 
@@ -345,7 +353,7 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
 
           {emergency.status === 'ACKNOWLEDGED' && (
             <View style={styles.acknowledgedCard}>
-              <Text style={styles.acknowledgedIcon}>✓</Text>
+              <Ionicons name="checkmark-circle-outline" size={40} color="#00E676" style={{ marginBottom: 8 }} />
               <Text style={styles.acknowledgedTitle}>Alert Acknowledged</Text>
               <Text style={styles.acknowledgedText}>
                 Your emergency contact has acknowledged the alert. Escalation has stopped.
@@ -362,7 +370,7 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
 
           {emergency.status === 'CANCELLED' && (
             <View style={styles.cancelledCard}>
-              <Text style={styles.cancelledIcon}>✓</Text>
+              <Ionicons name="checkmark-circle-outline" size={40} color="#00E676" style={{ marginBottom: 8 }} />
               <Text style={styles.cancelledTitle}>Alert Cancelled</Text>
               <Text style={styles.cancelledText}>
                 The emergency alert has been cancelled. Your contacts have been notified.
@@ -393,11 +401,14 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
                       <Text style={styles.priorityName}>{firstAttempt.contactName}</Text>
                       {isCurrent && <Text style={styles.currentBadge}>● CURRENT</Text>}
                     </View>
-                    <Text style={styles.priorityPhone}>📞 {firstAttempt.contactPhone}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                      <Ionicons name="call-outline" size={14} color="#A0A0B8" style={{ marginRight: 4 }} />
+                      <Text style={styles.priorityPhone}>{firstAttempt.contactPhone}</Text>
+                    </View>
                     <View style={styles.channelsRow}>
                       {attempts.map((a: any, i: number) => (
                         <View key={i} style={styles.channelChip}>
-                          <Text style={styles.channelIcon}>{CHANNEL_ICONS[a.channel] || '📨'}</Text>
+                          <Ionicons name={CHANNEL_ICONS[a.channel] || "mail-outline"} size={14} color="#A0A0B8" style={{ marginRight: 4 }} />
                           <Text style={[styles.channelStatus, { color: STATUS_COLORS[a.status] || '#6B6B80' }]}>
                             {a.status}
                           </Text>

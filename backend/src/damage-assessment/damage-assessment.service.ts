@@ -41,7 +41,7 @@ export class DamageAssessmentService {
         headers: {
           ...formData.getHeaders(),
         },
-        timeout: 10000, // 10 seconds timeout
+        timeout: 30000, // 30 seconds timeout for PyTorch YOLO inference & cold starts
       });
       predictData = response.data;
     } catch (err: any) {

@@ -16,6 +16,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import * as Location from 'expo-location';
+import { Ionicons } from '@expo/vector-icons';
 import api from '../api/axios';
 
 interface Hospital {
@@ -85,13 +86,13 @@ export default function HospitalsScreen({ navigation, isInline }: { navigation: 
     <View style={[styles.card, index === 0 && styles.cardNearest]}>
       {index === 0 && (
         <View style={styles.nearestBadge}>
-          <Text style={styles.nearestBadgeText}>⚡ NEAREST</Text>
+          <Text style={styles.nearestBadgeText}>NEAREST</Text>
         </View>
       )}
 
       <View style={styles.cardHeader}>
         <View style={styles.iconCircle}>
-          <Text style={styles.iconText}>🏥</Text>
+          <Ionicons name="medical-outline" size={24} color="#E53935" />
         </View>
         <View style={styles.cardHeaderText}>
           <Text style={styles.hospitalName} numberOfLines={2}>
@@ -120,8 +121,10 @@ export default function HospitalsScreen({ navigation, isInline }: { navigation: 
         onPress={() => openNavigation(item)}
         activeOpacity={0.8}
       >
-        <Text style={styles.navigateBtnText}>🧭 Navigate</Text>
-        <Text style={styles.navigateBtnArrow}>→</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Ionicons name="navigate-outline" size={16} color="#FFF" style={{ marginRight: 6 }} />
+          <Text style={styles.navigateBtnText}>Navigate</Text>
+        </View>
       </TouchableOpacity>
     </View>
   );
@@ -132,11 +135,11 @@ export default function HospitalsScreen({ navigation, isInline }: { navigation: 
       <View style={styles.header}>
         {!isInline && (
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>←</Text>
+            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
         )}
         <View>
-          <Text style={styles.title}>🏥 Nearest Hospitals</Text>
+          <Text style={styles.title}>Nearest Hospitals</Text>
           <Text style={styles.subtitle}>Emergency medical care near you</Text>
         </View>
       </View>
@@ -150,17 +153,20 @@ export default function HospitalsScreen({ navigation, isInline }: { navigation: 
 
       {!isLoading && errorMsg && (
         <View style={styles.centerContainer}>
-          <Text style={styles.errorIcon}>⚠️</Text>
+          <Ionicons name="warning-outline" size={48} color="#FF5252" style={{ marginBottom: 12 }} />
           <Text style={styles.errorText}>{errorMsg}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={() => fetchHospitals()}>
-            <Text style={styles.retryBtnText}>🔄 Try Again</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="refresh-outline" size={16} color="#FFF" style={{ marginRight: 6 }} />
+              <Text style={styles.retryBtnText}>Try Again</Text>
+            </View>
           </TouchableOpacity>
         </View>
       )}
 
       {!isLoading && !errorMsg && hospitals.length === 0 && (
         <View style={styles.centerContainer}>
-          <Text style={styles.errorIcon}>🔍</Text>
+          <Ionicons name="search-outline" size={48} color="#6B6B80" style={{ marginBottom: 12 }} />
           <Text style={styles.errorText}>No hospitals found nearby.</Text>
         </View>
       )}

@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+import * as Location from 'expo-location';
 import { store } from '../store/store';
 import { setConnectionStatus, updateLatestReading } from '../store/slices/sensorSlice';
 import { SensorReading, SensorFusionService } from './sensorFusionInterface';
@@ -24,10 +26,14 @@ export class BleSensorFusionService implements SensorFusionService {
   private speedBuffer: number[] = [];
   private lastGpsSpeedDrop = 0;
 
+  // Phone GPS Fallback when BLE GPS fix is lost
+  private phoneLocationSubscription: Location.LocationSubscription | null = null;
+  private latestPhoneSpeedKmh = 0;
+
   // Reconnection state
   private isScanningOrConnecting = false;
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 10;
+  private maxReconnectAttempts = 2;
   private reconnectTimer: any = null;
 
   constructor() {
@@ -54,6 +60,26 @@ export class BleSensorFusionService implements SensorFusionService {
       this.handleConnectionFailure();
       return;
     }
+
+    // Start background phone location watcher to act as backup speed source if BLE GPS loses lock
+    Location.requestForegroundPermissionsAsync().then(({ status }) => {
+      if (status === 'granted') {
+        Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.High,
+            timeInterval: 1000,
+            distanceInterval: 1,
+          },
+          location => {
+            this.latestPhoneSpeedKmh = Math.max(0, (location.coords.speed || 0) * 3.6);
+          }
+        ).then(sub => {
+          this.phoneLocationSubscription = sub;
+          console.log('BLE: Phone GPS backup watcher initialized.');
+        });
+      }
+    }).catch(err => console.log('BLE Fallback GPS error:', err.message));
+
     this.scanAndConnect();
   }
 
@@ -66,6 +92,12 @@ export class BleSensorFusionService implements SensorFusionService {
     if (this.manager) {
       this.manager.stopDeviceScan();
     }
+
+    if (this.phoneLocationSubscription) {
+      this.phoneLocationSubscription.remove();
+      this.phoneLocationSubscription = null;
+    }
+    this.latestPhoneSpeedKmh = 0;
 
     if (this.notificationSubscription) {
       this.notificationSubscription.remove();
@@ -89,12 +121,22 @@ export class BleSensorFusionService implements SensorFusionService {
   }
 
   private scanAndConnect() {
-    console.log('BLE: Starting scan for ResQDrive Service...');
+    console.log('BLE: Starting 3s scan for ResQDrive Service...');
     
+    // Safety 3s timeout: if hardware isn't broadcasting, stop scan and trigger fallback
+    const scanTimeout = setTimeout(() => {
+      console.log('BLE: Scan timeout reached (3s). Stopping scan...');
+      if (this.manager) {
+        try { this.manager.stopDeviceScan(); } catch (e) {}
+      }
+      this.handleConnectionFailure();
+    }, 3000);
+
     this.manager.startDeviceScan(
       [SERVICE_UUID], 
       { allowDuplicates: false }, 
       async (error: any, device: any) => {
+        clearTimeout(scanTimeout);
         if (error) {
           console.log('BLE Scan error:', error.message);
           this.handleConnectionFailure();
@@ -121,6 +163,16 @@ export class BleSensorFusionService implements SensorFusionService {
       
       console.log('BLE: Discovering services and characteristics...');
       await connected.discoverAllServicesAndCharacteristics();
+
+      if (Platform.OS === 'android') {
+        try {
+          console.log('BLE: Requesting MTU size of 256 bytes for large sensor JSON payload...');
+          await connected.requestMTU(256);
+          console.log('BLE: MTU negotiation complete.');
+        } catch (mtuErr: any) {
+          console.log('BLE: MTU request rejected or failed:', mtuErr.message);
+        }
+      }
       
       console.log('BLE: Subscribing to characteristics notifications...');
       this.subscribeToNotifications(connected);
@@ -173,15 +225,18 @@ export class BleSensorFusionService implements SensorFusionService {
 
       // 3. Compute GPS Speed Drop over a 5-reading rolling buffer
       let gpsSpeedDropKmh = this.lastGpsSpeedDrop;
-      if (gpsFix) {
-        this.speedBuffer.push(speedKmh);
-        if (this.speedBuffer.length > 5) {
-          this.speedBuffer.shift();
-        }
-        const maxSpeed = Math.max(...this.speedBuffer);
-        gpsSpeedDropKmh = Math.max(0, maxSpeed - speedKmh);
-        this.lastGpsSpeedDrop = gpsSpeedDropKmh;
+      
+      // Fallback: If hardware Neo-6M GPS has no satellite fix (e.g. indoors/at home),
+      // use the phone's native A-GPS speed to calculate the speed drop.
+      const activeSpeed = gpsFix ? speedKmh : this.latestPhoneSpeedKmh;
+
+      this.speedBuffer.push(activeSpeed);
+      if (this.speedBuffer.length > 5) {
+        this.speedBuffer.shift();
       }
+      const maxSpeed = Math.max(...this.speedBuffer);
+      gpsSpeedDropKmh = Math.max(0, maxSpeed - activeSpeed);
+      this.lastGpsSpeedDrop = gpsSpeedDropKmh;
 
       const motionSeverity = classifyMotionSeverity(accelG, gyroDegPerSec);
 
@@ -213,7 +268,7 @@ export class BleSensorFusionService implements SensorFusionService {
   private handleConnectionFailure() {
     this.clearTimers();
     if (this.manager) {
-      this.manager.stopDeviceScan();
+      try { this.manager.stopDeviceScan(); } catch (e) {}
     } else {
       console.log('BLE: BleManager is missing. Skipping retries, marking as unavailable.');
       this.isScanningOrConnecting = false;
@@ -221,24 +276,17 @@ export class BleSensorFusionService implements SensorFusionService {
       return;
     }
 
-    if (this.reconnectAttempts === 0) {
-      // Attempt 1: Reconnect immediately
+    if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
-      console.log('BLE: Retrying connection immediately...');
-      store.dispatch(setConnectionStatus('connecting'));
-      this.scanAndConnect();
-    } else if (this.reconnectAttempts < this.maxReconnectAttempts) {
-      // Attempts 2-10: Reconnect every 3 seconds
-      this.reconnectAttempts++;
-      console.log(`BLE: Retrying connection in 3 seconds (Attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
+      console.log(`BLE: Retrying connection in 2 seconds (Attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
       store.dispatch(setConnectionStatus('connecting'));
       
       this.reconnectTimer = setTimeout(() => {
         this.scanAndConnect();
-      }, 3000);
+      }, 2000);
     } else {
-      // Retries exhausted: fail gracefully and surface "unavailable" status
-      console.log('BLE: Connection retries exhausted. BLE is unavailable.');
+      // Retries exhausted: fail gracefully and surface "unavailable" status for phone fallback
+      console.log('BLE: Hardware connection attempt completed. Switching to Phone sensors.');
       this.isScanningOrConnecting = false;
       store.dispatch(setConnectionStatus('unavailable'));
     }

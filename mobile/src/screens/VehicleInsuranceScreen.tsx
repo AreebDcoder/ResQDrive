@@ -1,11 +1,7 @@
-// ═══════════════════════════════════════════════════════════════
-// ResQDrive v2 — VEHICLE INSURANCE SCREEN (Modernized)
-// All imports, logic, state, handlers preserved identically.
-// Only JSX structure + StyleSheet updated: dark glassmorphism theme.
-// ═══════════════════════════════════════════════════════════════
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -21,6 +17,7 @@ import { useDispatch } from 'react-redux';
 import { insuranceSchema, InsuranceInput } from '../schemas/validation';
 import { upsertInsuranceSuccess, deleteInsuranceSuccess } from '../store/slices/vehiclesSlice';
 import api from '../api/axios';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function VehicleInsuranceScreen({ route, navigation }: any) {
   const dispatch = useDispatch();
@@ -66,17 +63,33 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm('Are you sure you want to remove these insurance details?')) return;
-    setIsLoading(true);
-    setErrorMsg(null);
-    try {
-      await api.delete(`/vehicles/${vehicleId}/insurance`);
-      dispatch(deleteInsuranceSuccess(vehicleId));
-      navigation.goBack();
-    } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Failed to remove insurance details.');
-      setIsLoading(false);
+  const handleDelete = () => {
+    const doDelete = async () => {
+      setIsLoading(true);
+      setErrorMsg(null);
+      try {
+        await api.delete(`/vehicles/${vehicleId}/insurance`);
+        dispatch(deleteInsuranceSuccess(vehicleId));
+        navigation.goBack();
+      } catch (err: any) {
+        setErrorMsg(err.response?.data?.message || 'Failed to remove insurance details.');
+        setIsLoading(false);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm('Are you sure you want to remove these insurance details?')) {
+        doDelete();
+      }
+    } else {
+      Alert.alert(
+        'Remove Insurance Details',
+        'Are you sure you want to remove these insurance details?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Remove', style: 'destructive', onPress: doDelete },
+        ],
+      );
     }
   };
 
@@ -88,7 +101,10 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
       <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
         {/* ── Header ── */}
         <View style={styles.header}>
-          <Text style={styles.title}>🛡️ Insurance Details</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Ionicons name="shield-checkmark-outline" size={26} color="#E53935" />
+            <Text style={styles.title}>Insurance Details</Text>
+          </View>
           <Text style={styles.subtitle}>
             Optional reference details shown on crash screens and auto-filled in accident exports
           </Text>
@@ -97,13 +113,13 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
         {/* ── Error ── */}
         {errorMsg && (
           <View style={styles.errorContainer}>
-            <Text style={styles.errorEmoji}>⚠️</Text>
+            <Ionicons name="alert-circle-outline" size={18} color="#FF8A80" style={{ marginRight: 8 }} />
             <Text style={styles.errorText}>{errorMsg}</Text>
           </View>
         )}
 
         <View style={styles.form}>
-          <Text style={styles.label}>🏢 Insurance Provider Name</Text>
+          <Text style={styles.label}>Insurance Provider Name</Text>
           <Controller
             control={control}
             name="providerName"
@@ -119,7 +135,7 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
             )}
           />
 
-          <Text style={styles.label}>📄 Policy Number</Text>
+          <Text style={styles.label}>Policy Number</Text>
           <Controller
             control={control}
             name="policyNumber"
@@ -137,7 +153,7 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
 
           <View style={styles.row}>
             <View style={styles.rowCol}>
-              <Text style={styles.label}>📋 Coverage Type</Text>
+              <Text style={styles.label}>Coverage Type</Text>
               <Controller
                 control={control}
                 name="coverageType"
@@ -155,7 +171,7 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
             </View>
 
             <View style={styles.rowCol}>
-              <Text style={styles.label}>📅 Expiry (YYYY-MM-DD)</Text>
+              <Text style={styles.label}>Expiry (YYYY-MM-DD)</Text>
               <Controller
                 control={control}
                 name="expiryDate"
@@ -173,7 +189,7 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
             </View>
           </View>
 
-          <Text style={styles.label}>📞 Emergency Helpline Number</Text>
+          <Text style={styles.label}>Emergency Helpline Number</Text>
           <Controller
             control={control}
             name="emergencyHelpline"
@@ -199,7 +215,7 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
             {isLoading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.saveBtnText}>💾 Save Insurance Details</Text>
+              <Text style={styles.saveBtnText}>Save Insurance Details</Text>
             )}
           </TouchableOpacity>
 
@@ -210,7 +226,10 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
               onPress={handleDelete}
               disabled={isLoading}
             >
-              <Text style={styles.deleteBtnText}>🗑️ Remove Insurance Details</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                <Ionicons name="trash-outline" size={18} color="#FF5252" />
+                <Text style={styles.deleteBtnText}>Remove Insurance Details</Text>
+              </View>
             </TouchableOpacity>
           )}
         </View>

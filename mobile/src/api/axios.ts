@@ -4,10 +4,26 @@ import { store } from '../store/store';
 import { logoutAction, setTokens } from '../store/slices/authSlice';
 import { getItemAsync, setItemAsync, deleteItemAsync } from '../utils/secureStorage';
 
-const LOCALHOST_API_URL = 'http://localhost:3000';
-const MOBILE_API_URL = process.env.EXPO_PUBLIC_API_URL || LOCALHOST_API_URL;
+import Constants from 'expo-constants';
 
-export const API_URL = Platform.OS === 'web' ? LOCALHOST_API_URL : MOBILE_API_URL;
+const LOCALHOST_API_URL = 'http://localhost:3000';
+
+export const getDynamicApiUrl = (): string => {
+  if (Platform.OS === 'web') return LOCALHOST_API_URL;
+
+  // Infer Metro Host IP dynamically when connected via Expo Go / Dev Client
+  const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest2?.extra?.expoGo?.developer?.tool;
+  if (hostUri) {
+    const hostIp = hostUri.split(':')[0];
+    if (hostIp && hostIp !== 'localhost' && hostIp !== '127.0.0.1') {
+      return `http://${hostIp}:3000`;
+    }
+  }
+
+  return process.env.EXPO_PUBLIC_API_URL || 'http://192.168.100.13:3000';
+};
+
+export const API_URL = getDynamicApiUrl();
 
 const api = axios.create({
   baseURL: API_URL,

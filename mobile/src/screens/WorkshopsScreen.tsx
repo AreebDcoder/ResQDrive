@@ -16,6 +16,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import * as Location from 'expo-location';
+import { Ionicons } from '@expo/vector-icons';
 import api from '../api/axios';
 
 interface Workshop {
@@ -90,13 +91,13 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
     <View style={[styles.card, index === 0 && styles.cardNearest]}>
       {index === 0 && (
         <View style={styles.nearestBadge}>
-          <Text style={styles.nearestBadgeText}>⚡ NEAREST</Text>
+          <Text style={styles.nearestBadgeText}>NEAREST</Text>
         </View>
       )}
 
       <View style={styles.cardHeader}>
         <View style={styles.iconCircle}>
-          <Text style={styles.iconText}>🔧</Text>
+          <Ionicons name="construct-outline" size={24} color="#E53935" />
         </View>
         <View style={styles.cardHeaderText}>
           <Text style={styles.workshopName} numberOfLines={2}>
@@ -129,15 +130,20 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
           onPress={() => callWorkshop(item.phoneNumber)}
           activeOpacity={0.8}
         >
-          <Text style={styles.callBtnText}>📞 Call</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Ionicons name="call-outline" size={16} color="#FFF" style={{ marginRight: 6 }} />
+            <Text style={styles.callBtnText}>Call</Text>
+          </View>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navigateBtn}
           onPress={() => openNavigation(item)}
           activeOpacity={0.8}
         >
-          <Text style={styles.navigateBtnText}>Navigate</Text>
-          <Text style={styles.navigateBtnArrow}>→</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Ionicons name="navigate-outline" size={16} color="#E53935" style={{ marginRight: 6 }} />
+            <Text style={styles.navigateBtnText}>Navigate</Text>
+          </View>
         </TouchableOpacity>
       </View>
     </View>
@@ -149,11 +155,11 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
       <View style={styles.header}>
         {!isInline && (
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>←</Text>
+            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
         )}
         <View>
-          <Text style={styles.title}>🔧 Nearby Workshops</Text>
+          <Text style={styles.title}>Nearby Workshops</Text>
           <Text style={styles.subtitle}>Verified mechanics near you</Text>
         </View>
       </View>
@@ -167,17 +173,20 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
 
       {!isLoading && errorMsg && (
         <View style={styles.centerContainer}>
-          <Text style={styles.errorIcon}>⚠️</Text>
+          <Ionicons name="warning-outline" size={48} color="#FF5252" style={{ marginBottom: 12 }} />
           <Text style={styles.errorText}>{errorMsg}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={() => fetchWorkshops()}>
-            <Text style={styles.retryBtnText}>🔄 Try Again</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="refresh-outline" size={16} color="#FFF" style={{ marginRight: 6 }} />
+              <Text style={styles.retryBtnText}>Try Again</Text>
+            </View>
           </TouchableOpacity>
         </View>
       )}
 
       {!isLoading && !errorMsg && workshops.length === 0 && (
         <View style={styles.centerContainer}>
-          <Text style={styles.errorIcon}>🔍</Text>
+          <Ionicons name="search-outline" size={48} color="#6B6B80" style={{ marginBottom: 12 }} />
           <Text style={styles.errorText}>No verified workshops found nearby yet.</Text>
         </View>
       )}

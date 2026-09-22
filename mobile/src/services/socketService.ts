@@ -1,9 +1,9 @@
 import { io, Socket } from 'socket.io-client';
 import { Platform } from 'react-native';
+import { getDynamicApiUrl } from '../api/axios';
 
 const getSocketUrl = () => {
-  if (Platform.OS === 'web') return 'http://localhost:3000';
-  return process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+  return getDynamicApiUrl();
 };
 
 let socket: Socket | null = null;

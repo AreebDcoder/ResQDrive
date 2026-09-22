@@ -15,6 +15,7 @@ import api from '../api/axios';
 import * as Notifications from 'expo-notifications';
 import { dispatchEmergencyAlert } from '../utils/emergencyFallback';
 import * as Sms from 'expo-sms';
+import * as Location from 'expo-location';
 import { VoiceCommandService } from '../services/voiceCommandService';
 import { CrashSoundDetectionService } from '../services/crashSoundDetectionService';
 import { sendBulkBackgroundSMS } from '../utils/directSms';
@@ -103,7 +104,7 @@ export default function CountdownScreen({ navigation, route }: any) {
     [logIncident, navigation],
   );
 
-  const handleTimeout = useCallback(async () => {
+const handleTimeout = useCallback(async () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     setIsDispatching(true);
 
@@ -113,7 +114,20 @@ export default function CountdownScreen({ navigation, route }: any) {
       email: c.email,
     }));
 
-    const mapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
+    // 0. Ensure high-accuracy current GPS location before dispatch
+    let realLat = latitude;
+    let realLng = longitude;
+    try {
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      if (pos?.coords?.latitude && pos?.coords?.longitude) {
+        realLat = pos.coords.latitude;
+        realLng = pos.coords.longitude;
+      }
+    } catch (locErr) {
+      console.log('[Countdown] Using initial coordinates:', locErr);
+    }
+
+    const mapsLink = `https://www.google.com/maps?q=${realLat},${realLng}`;
     console.log('[Countdown] Countdown ended. Starting multi-channel dispatch...');
 
     setDispatchStatus({
@@ -121,7 +135,7 @@ export default function CountdownScreen({ navigation, route }: any) {
       email: 'pending', whatsapp: 'pending', module68: 'pending', incident: 'pending',
     });
 
-    // ═══ STEP 1 (REORDERED): Log incident FIRST so we have the incidentId ═══
+    // ═══ STEP 1: Log incident in database ═══
     let incident = null;
     try {
       const response = await api.post('/incidents', {
@@ -129,8 +143,8 @@ export default function CountdownScreen({ navigation, route }: any) {
         severity: severity.toUpperCase(),
         status: 'ACTIVE',
         occurredAt: new Date().toISOString(),
-        latitude,
-        longitude,
+        latitude: realLat,
+        longitude: realLng,
         description: 'Countdown reached zero — emergency alert dispatched',
       });
       incident = response.data;
@@ -141,40 +155,41 @@ export default function CountdownScreen({ navigation, route }: any) {
       setDispatchStatus(prev => ({ ...prev, incident: 'failed' }));
     }
 
-    // ═══ STEP 2 (REORDERED): Trigger Module 6.8 — get acknowledge URL ═══
+    // ═══ STEP 2: Trigger Module 6.8 (RoboCall voice call + RoboSMS) ═══
     let acknowledgeUrl: string | undefined;
+    let emergencyNotificationResult: any = null;
     try {
       const response = await api.post('/emergency-notification/trigger', {
         incidentId: incident?.id,
-        message: `Auto-triggered from countdown. Severity: ${severity}`,
-        latitude,
-        longitude,
+        message: `Accident detected (${severity})`,
+        latitude: realLat,
+        longitude: realLng,
       });
+      emergencyNotificationResult = response.data;
       acknowledgeUrl = response.data?.acknowledgeUrl;
       setDispatchStatus(prev => ({ ...prev, module68: 'triggered' }));
-      console.log('[Countdown] Module 6.8 triggered. Acknowledge URL:', acknowledgeUrl);
+      console.log('✅ [Countdown] RoboCall & RoboSMS triggered! Session ID:', emergencyNotificationResult?.sessionId);
     } catch (err: any) {
       console.log('[Countdown] Module 6.8 trigger failed (non-fatal):', err?.response?.data?.message || err?.message);
       setDispatchStatus(prev => ({ ...prev, module68: 'failed' }));
     }
 
-    // ═══ STEP 3 (REORDERED): Backend dispatch WITH acknowledge URL ═══
+    // ═══ STEP 3: Multi-channel dispatch (WhatsApp Cloud API + Email + Push) ═══
     let backendSucceeded = false;
     try {
       const response = await api.post('/alert-dispatch', {
         userId: user?.id,
         userName: user?.fullName,
         incidentId: incident?.id,
-        acknowledgeUrl,  // ← NEW: pass the acknowledge URL
-        latitude,
-        longitude,
+        acknowledgeUrl,
+        latitude: realLat,
+        longitude: realLng,
         severity,
         contacts: dispatchContacts,
       });
       setBackendChannels(response.data?.channels);
       setIsDevMode(response.data?.devMode ?? true);
       const respChannels = response.data?.channels;
-      const respDevMode = response.data?.devMode ?? true;
 
       const anySent = respChannels &&
         (respChannels.push.status === 'SENT' ||
@@ -204,10 +219,11 @@ export default function CountdownScreen({ navigation, route }: any) {
         ...prev, backend: 'failed', push: 'failed', email: 'failed', sms: 'pending', whatsapp: 'failed',
       }));
     }
-    // ═══ STEP 3.5: Auto-SMS (background, no popup) + fallback to expo-sms ═══
+
+    // ═══ STEP 4: Direct background SMS (device-side fallback) ═══
     let autoSmsSent = false;
     if (dispatchContacts.length > 0) {
-      const smsMessage = `ResQDrive ALERT: ${user?.fullName || 'Unknown'} may have been in a ${severity} accident. Location: https://www.google.com/maps?q=${latitude},${longitude}`;
+      const smsMessage = `ResQDrive ALERT: ${user?.fullName || 'Unknown'} may have been in a ${severity} accident. Location: https://www.google.com/maps?q=${realLat},${realLng}`;
 
       // Try background auto-SMS first (react-native-direct-sms)
       try {
@@ -239,12 +255,11 @@ export default function CountdownScreen({ navigation, route }: any) {
           setDispatchStatus(prev => ({ ...prev, sms: 'failed' }));
         }
       } else if (!autoSmsSent && backendSucceeded) {
-        // Backend succeeded (WhatsApp sent), but auto-SMS failed — that's OK
         setDispatchStatus(prev => ({ ...prev, sms: 'failed' }));
       }
     }
 
-    // ═══ STEP 5: Show local push notification on device ═══
+    // ═══ STEP 5: Local push notification on device ═══
     try {
       await Notifications.scheduleNotificationAsync({
         content: {
@@ -265,9 +280,11 @@ export default function CountdownScreen({ navigation, route }: any) {
       navigation.replace('SOS', {
         severity: severity.toLowerCase(),
         incidentId: incident?.id || null,
+        sessionId: emergencyNotificationResult?.sessionId || null,
       });
     }, 3000);
   }, [contacts, user, severity, latitude, longitude, navigation]);
+
 
   const cancelCallbackRef = useRef(handleCancel);
   const timeoutCallbackRef = useRef(handleTimeout);

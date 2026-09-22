@@ -57,7 +57,15 @@
         }
       ],
       "expo-font",
-      "expo-asset"
+      "expo-asset",
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": true,
+          "modes": ["peripheral", "central"],
+          "bluetoothAlwaysPermission": "ResQDrive needs Bluetooth access to receive accident sensor data from the ESP32 in real time."
+        }
+      ]
     ],
     "extra": {
       "eas": {
