@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "67462047048",
-    "project_id": "resqdrive-f55dd",
-    "storage_bucket": "resqdrive-f55dd.firebasestorage.app"
+    "project_number": "237021825199",
+    "project_id": "resqdrive-602fd",
+    "storage_bucket": "resqdrive-602fd.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:67462047048:android:94f6f038ca10fefd383f7d",
+        "mobilesdk_app_id": "1:237021825199:android:9d7bbab90534d2caf06c5a",
         "android_client_info": {
-          "package_name": "com.basit_009.resqdrivemobile"
+          "package_name": "com.resqdrive.app"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAMxau3GeWhobnsVumOG6iuC8r-3fELkNw"
+          "current_key": "AIzaSyBHw6lBLejxdXiF8_rJgG__AIi-n2PC8JA"
         }
       ],
       "services": {
