@@ -66,25 +66,27 @@ export class EmergencySosService {
   }
 
   /**
-   * Retrieves regional emergency numbers and user custom emergency numbers
+   * Retrieves regional emergency numbers
    */
   async getNumbersForLocation(lat: number, lng: number, userId: string) {
     const regionName = await this.detectRegion(lat, lng);
 
-    const regionalNumbers = await this.prisma.regionalEmergencyNumber.findMany({
+    let regionalNumbers = await this.prisma.regionalEmergencyNumber.findMany({
       where: { regionName, isActive: true },
       orderBy: { priorityOrder: 'asc' },
     });
 
-    const customNumbers = await this.prisma.userCustomEmergencyNumber.findMany({
-      where: { userId },
-      orderBy: { priorityOrder: 'asc' },
-    });
+    // Fallback: If no regional numbers matched for this specific region, fetch all active regional emergency numbers
+    if (regionalNumbers.length === 0) {
+      regionalNumbers = await this.prisma.regionalEmergencyNumber.findMany({
+        where: { isActive: true },
+        orderBy: { priorityOrder: 'asc' },
+      });
+    }
 
     return {
       regionName,
       regionalNumbers,
-      customNumbers,
     };
   }
 
@@ -123,47 +125,6 @@ export class EmergencySosService {
         calledAt: new Date(),
         autoDialed,
       },
-    });
-  }
-
-  /**
-   * Creates a user custom emergency number override
-   */
-  async createCustomNumber(userId: string, label: string, phoneNumber: string, priorityOrder = 1) {
-    return this.prisma.userCustomEmergencyNumber.create({
-      data: {
-        userId,
-        label,
-        phoneNumber,
-        priorityOrder,
-      },
-    });
-  }
-
-  /**
-   * Lists all custom emergency numbers for a user
-   */
-  async findCustomNumbers(userId: string) {
-    return this.prisma.userCustomEmergencyNumber.findMany({
-      where: { userId },
-      orderBy: { priorityOrder: 'asc' },
-    });
-  }
-
-  /**
-   * Removes a custom emergency number
-   */
-  async deleteCustomNumber(userId: string, id: string) {
-    const customNum = await this.prisma.userCustomEmergencyNumber.findFirst({
-      where: { id, userId },
-    });
-
-    if (!customNum) {
-      throw new NotFoundException('Custom emergency number not found.');
-    }
-
-    return this.prisma.userCustomEmergencyNumber.delete({
-      where: { id },
     });
   }
 

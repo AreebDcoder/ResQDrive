@@ -18,9 +18,9 @@
 // ════════════════════════════════════════════════════════════════════════════════
 
 export const MOTION_SEVERITY_THRESHOLDS = {
-  minor:    { accelG: 2.5, gyroDegPerSec: 60  },
-  moderate: { accelG: 3.5, gyroDegPerSec: 140 },
-  severe:   { accelG: 4.5, gyroDegPerSec: 250 }, // Preserved original severe baseline
+  minor:    { accelG: 2.2, gyroDegPerSec: 50  },
+  moderate: { accelG: 3.0, gyroDegPerSec: 120 },
+  severe:   { accelG: 4.2, gyroDegPerSec: 220 }, // Tightly tuned severe threshold
 } as const;
 
 export type MotionSeverity = 'none' | 'minor' | 'moderate' | 'severe';
@@ -32,15 +32,15 @@ export type MotionSeverity = 'none' | 'minor' | 'moderate' | 'severe';
 export function classifyMotionSeverity(accelG: number, gyroDegPerSec: number): MotionSeverity {
   // Check from Severe down to Minor (confluence required at every tier)
   if (
-    accelG >= MOTION_SEVERITY_THRESHOLDS.severe.accelG &&
-    gyroDegPerSec >= MOTION_SEVERITY_THRESHOLDS.severe.gyroDegPerSec
+    (accelG >= MOTION_SEVERITY_THRESHOLDS.severe.accelG && gyroDegPerSec >= MOTION_SEVERITY_THRESHOLDS.severe.gyroDegPerSec) ||
+    (accelG >= 3.8 && gyroDegPerSec >= 350)
   ) {
     return 'severe';
   }
 
   if (
-    accelG >= MOTION_SEVERITY_THRESHOLDS.moderate.accelG &&
-    gyroDegPerSec >= MOTION_SEVERITY_THRESHOLDS.moderate.gyroDegPerSec
+    (accelG >= MOTION_SEVERITY_THRESHOLDS.moderate.accelG && gyroDegPerSec >= MOTION_SEVERITY_THRESHOLDS.moderate.gyroDegPerSec) ||
+    (accelG >= 2.8 && gyroDegPerSec >= 300)
   ) {
     return 'moderate';
   }

@@ -28,7 +28,7 @@ export class WorkshopsService {
   }
 
   async findNearest(lat: number, lng: number): Promise<WorkshopResult[]> {
-    // Step 1: Get all verified workshops with coordinates from our own DB
+    // Get all verified workshop owners with coordinates registered in ResQDrive DB
     const verifiedMechanics = await this.prisma.user.findMany({
       where: {
         role: 'MECHANIC',
@@ -41,12 +41,6 @@ export class WorkshopsService {
       include: { mechanicDetails: true },
     });
 
-    if (verifiedMechanics.length === 0) {
-      this.logger.warn('No verified workshops with coordinates found in DB.');
-      return [];
-    }
-
-    // Step 2: Calculate driving distance/ETA for each via Geoapify Routing (fallback to haversine)
     const results: WorkshopResult[] = [];
 
     for (const mechanic of verifiedMechanics) {
@@ -74,14 +68,14 @@ export class WorkshopsService {
       } catch {
         distanceMeters = this.haversineDistance(lat, lng, workshopLat, workshopLng);
         durationSeconds = Math.round((distanceMeters / 1000) * 120);
-        durationText = 'Estimate unavailable';
+        durationText = `${Math.max(1, Math.round((distanceMeters / 1000) * 2))} min`;
       }
 
       results.push({
-        name: details.workshopName || 'Unnamed Workshop',
+        name: details.workshopName || mechanic.fullName || 'Registered Workshop',
         address: details.workshopAddress || 'Address unavailable',
         phoneNumber: mechanic.phoneNumber,
-        specialization: details.specialization || 'General',
+        specialization: details.specialization || 'Bodywork, Denting & Painting',
         lat: workshopLat,
         lng: workshopLng,
         distanceMeters,
@@ -90,8 +84,8 @@ export class WorkshopsService {
       });
     }
 
-    results.sort((a, b) => a.durationSeconds - b.durationSeconds);
-    return results.slice(0, 3);
+    results.sort((a, b) => a.distanceMeters - b.distanceMeters);
+    return results;
   }
 
   private formatDuration(seconds: number): string {

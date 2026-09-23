@@ -43,16 +43,26 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
     setErrorMsg(null);
 
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setErrorMsg('Location permission is required to find nearby workshops.');
-        return;
-      }
+      let latitude = 33.6844;
+      let longitude = 73.0479;
 
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-      const { latitude, longitude } = location.coords;
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          let loc = await Location.getLastKnownPositionAsync({});
+          if (!loc) {
+            loc = await Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.Balanced,
+            });
+          }
+          if (loc?.coords) {
+            latitude = loc.coords.latitude;
+            longitude = loc.coords.longitude;
+          }
+        }
+      } catch (locErr) {
+        console.log('Location acquisition fallback in WorkshopsScreen:', locErr);
+      }
 
       const response = await api.get('/workshops/nearest', {
         params: { lat: latitude, lng: longitude },

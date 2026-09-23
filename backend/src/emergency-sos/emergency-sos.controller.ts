@@ -18,7 +18,6 @@ import axios from 'axios';
 import { EmergencySosService } from './emergency-sos.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { CreateCustomNumberDto } from './dto/create-custom-number.dto';
 import { LogCallDto } from './dto/log-call.dto';
 import { CreateReportDto } from './dto/create-report.dto';
 
@@ -48,27 +47,6 @@ export class EmergencySosController {
   @ApiResponse({ status: 200, description: 'Call logged successfully.' })
   async logCall(@CurrentUser() user: { id: string }, @Body() logCallDto: LogCallDto) {
     return this.sosService.logCall(user.id, logCallDto.serviceName, logCallDto.autoDialed);
-  }
-
-  @Post('custom-numbers')
-  @ApiOperation({ summary: 'Add a custom emergency number override' })
-  @ApiResponse({ status: 201, description: 'Custom emergency number created.' })
-  async createCustomNumber(@CurrentUser() user: { id: string }, @Body() dto: CreateCustomNumberDto) {
-    return this.sosService.createCustomNumber(user.id, dto.label, dto.phoneNumber, dto.priorityOrder);
-  }
-
-  @Get('custom-numbers')
-  @ApiOperation({ summary: 'List user custom emergency numbers' })
-  @ApiResponse({ status: 200, description: 'List of custom emergency numbers.' })
-  async getCustomNumbers(@CurrentUser() user: { id: string }) {
-    return this.sosService.findCustomNumbers(user.id);
-  }
-
-  @Delete('custom-numbers/:id')
-  @ApiOperation({ summary: 'Delete a custom emergency number' })
-  @ApiResponse({ status: 200, description: 'Custom emergency number deleted.' })
-  async deleteCustomNumber(@CurrentUser() user: { id: string }, @Param('id') id: string) {
-    return this.sosService.deleteCustomNumber(user.id, id);
   }
 
   @Post('report')

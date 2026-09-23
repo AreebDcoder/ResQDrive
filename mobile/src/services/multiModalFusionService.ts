@@ -37,7 +37,7 @@ export interface ConfirmedAccidentTrigger {
 
 export class MultiModalFusionService {
   private static readonly COINCIDENCE_WINDOW_MS = 10000; // 10-second sliding window
-  private static readonly COOLDOWN_PERIOD_MS = 3 * 60 * 1000; // 3-minute lockout after trigger
+  private static readonly COOLDOWN_PERIOD_MS = 30 * 1000; // 30-second lockout after trigger
 
   private static lastSoundEvent: SoundEvent | null = null;
   private static lastMotionEvent: MotionEvent | null = null;
@@ -58,7 +58,7 @@ export class MultiModalFusionService {
   static recordSoundEvent(confidence: number, topClass: string): void {
     const now = Date.now();
     if (now - this.lastConfirmedTriggerTime < this.COOLDOWN_PERIOD_MS) {
-      console.log('⏸️ [MultiModalFusion] Acoustic crash event ignored due to 3-minute post-trigger cooldown lockout.');
+      console.log('⏸️ [MultiModalFusion] Acoustic crash event ignored due to 30-second post-trigger cooldown lockout.');
       return;
     }
 
@@ -71,17 +71,24 @@ export class MultiModalFusionService {
   /**
    * Called when motion sensor fusion detects a 'moderate' or 'severe' impact.
    */
-  static recordMotionEvent(severity: MotionSeverity, accelG: number, gyroDegPerSec: number): void {
+  static recordMotionEvent(
+    severity: MotionSeverity,
+    accelG: number,
+    gyroDegPerSec: number,
+    mlSeverity?: MotionSeverity,
+    mlConfidence?: number
+  ): void {
     if (severity === 'none' || severity === 'minor') return; // Ignore minor bumps
 
     const now = Date.now();
     if (now - this.lastConfirmedTriggerTime < this.COOLDOWN_PERIOD_MS) {
-      console.log('⏸️ [MultiModalFusion] Motion crash event ignored due to 3-minute post-trigger cooldown lockout.');
+      console.log('⏸️ [MultiModalFusion] Motion crash event ignored due to 30-second post-trigger cooldown lockout.');
       return;
     }
 
     this.lastMotionEvent = { severity, accelG, gyroDegPerSec, timestamp: now };
-    console.log(`🚗 [MultiModalFusion] Recorded Motion Signature: ${severity.toUpperCase()} (${accelG.toFixed(2)}g / ${gyroDegPerSec.toFixed(1)}°/s). Checking for acoustic coincidence...`);
+    const mlInfo = mlSeverity ? ` | ML Model: ${mlSeverity.toUpperCase()} (${((mlConfidence || 0) * 100).toFixed(1)}%)` : '';
+    console.log(`🚗 [MultiModalFusion] Recorded Motion Signature: ${severity.toUpperCase()} (${accelG.toFixed(2)}g / ${gyroDegPerSec.toFixed(1)}°/s)${mlInfo}. Checking for acoustic coincidence...`);
 
     this.evaluateCoincidence();
   }
