@@ -43,7 +43,7 @@ export class EmergencyNotificationService {
 
   // RoboCall.pk config (from .env)
   private robocallApiKey = (process.env.ROBOCALL_API_KEY || '').trim();
-  private robocallVoiceId = (process.env.ROBOCALL_VOICE_ID || '102').trim();
+  private robocallVoiceId = (process.env.ROBOCALL_VOICE_ID || '520').trim();
 
   // RoboSMS.pk config (from .env)
   private robosmsApiKey = (process.env.ROBOSMS_API_KEY || '').trim();
@@ -126,20 +126,30 @@ export class EmergencyNotificationService {
   }
 
   // ─── RoboCall.pk: Place automated voice call ────────────────────────────
+  // Voice ID 520 (FYP-Vehicle-Alert): text1 = driver-name, text2 = street-sector-city
   private async placeRoboCall(
     phoneNumber: string,
     driverName: string,
     locationText: string,
   ): Promise<{ callId: string; callTo: string }> {
     const callerId = normalizePkPhone(phoneNumber);
+    const cleanDriverName = (driverName || 'ResQDrive Driver')
+      .replace(/[^\w\s]/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const cleanLocation = (locationText || 'Islamabad Pakistan')
+      .replace(/[^\w\s,]/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
     const url = `${ROBOCALL_BASE}/calls?api_key=${encodeURIComponent(this.robocallApiKey)}`
       + `&caller_id=${callerId}`
       + `&voice_id=${this.robocallVoiceId}`
       + `&amount=0`
       + `&key1=0&key2=0`
-      + `&text1=${encodeURIComponent(driverName)}`
-      + `&text2=${encodeURIComponent(locationText)}`
-      + `&text3=ResQDrive&text4=0&text5=0`;
+      + `&text1=${encodeURIComponent(cleanDriverName)}`
+      + `&text2=${encodeURIComponent(cleanLocation)}`
+      + `&text3=0&text4=0&text5=0`;
 
     const response = await fetch(url);
     const data = await response.json() as any;
@@ -148,7 +158,7 @@ export class EmergencyNotificationService {
       throw new Error(`RoboCall API error: ${JSON.stringify(data)}`);
     }
 
-    this.logger.log(`[ROBOCALL] Call placed to ${callerId}. Location: "${locationText}". Call ID: ${data.data?.call_id}`);
+    this.logger.log(`[ROBOCALL] Call placed to ${callerId} (Voice ID: ${this.robocallVoiceId}, Driver: "${cleanDriverName}", Loc: "${cleanLocation}"). Call ID: ${data.data?.call_id}`);
     return { callId: data.data?.call_id, callTo: callerId };
   }
 
@@ -623,7 +633,6 @@ export class EmergencyNotificationService {
         if (smsMessage.length > 160) {
           smsMessage = smsMessage.substring(0, 160);
         }
-
         const smsResult = await this.sendRoboSms(contact.phoneNumber, smsMessage);
         this.logger.log(`[SMS] RoboSMS sent to ${contact.name} (${contact.phoneNumber}). Length: ${smsMessage.length}/160. ID: ${smsResult.messageId}`);
 

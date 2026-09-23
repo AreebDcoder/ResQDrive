@@ -1,6 +1,13 @@
 import { PermissionsAndroid, Platform, Linking, Alert } from 'react-native';
 
-import RNImmediatePhoneCall from 'react-native-immediate-phone-call';
+let RNImmediatePhoneCall: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const module = require('react-native-immediate-phone-call');
+  RNImmediatePhoneCall = module?.default || module;
+} catch (_) {
+  // Graceful fallback for environments without immediate phone call binary
+}
 
 export function isAutoDialable(phoneNumber: string): boolean {
   const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
@@ -30,12 +37,12 @@ export async function makeDirectPhoneCall(phoneNumber: string): Promise<boolean>
         }
       );
 
-      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+      if (granted === PermissionsAndroid.RESULTS.GRANTED && RNImmediatePhoneCall?.immediatePhoneCall) {
         console.log(`[DirectCall] Auto-dialing: ${cleanNumber} (no dialer popup)`);
         RNImmediatePhoneCall.immediatePhoneCall(cleanNumber);
         return true;
       } else {
-        console.log('[DirectCall] CALL_PHONE denied. Falling back to dialer.');
+        console.log('[DirectCall] CALL_PHONE denied or module not available. Falling back to dialer.');
         Linking.openURL(`tel:${cleanNumber}`);
         return false;
       }

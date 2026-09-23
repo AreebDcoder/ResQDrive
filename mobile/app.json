@@ -1,3 +1,4 @@
+
 {
   "expo": {
     "name": "ResQDrive Mobile",
@@ -29,15 +30,21 @@
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
         "RECORD_AUDIO",
+        "android.permission.RECORD_AUDIO",
+        "CALL_PHONE",
         "android.permission.CALL_PHONE",
+        "SEND_SMS",
         "android.permission.SEND_SMS",
-        "android.permission.RECORD_AUDIO"
+        "BLUETOOTH",
+        "BLUETOOTH_ADMIN",
+        "BLUETOOTH_SCAN",
+        "BLUETOOTH_CONNECT"
       ],
       "googleServicesFile": "./google-services.json",
-      "package": "com.resqdrive.app"
+      "package": "com.basit_009.resqdrivemobile"
     },
     "plugins": [
       "./plugins/withManifestFix",
@@ -62,16 +69,20 @@
         "react-native-ble-plx",
         {
           "isBackgroundEnabled": true,
-          "modes": ["peripheral", "central"],
+          "modes": [
+            "peripheral",
+            "central"
+          ],
           "bluetoothAlwaysPermission": "ResQDrive needs Bluetooth access to receive accident sensor data from the ESP32 in real time."
         }
       ]
     ],
     "extra": {
       "eas": {
-        "projectId": "24eb6ea0-8f61-4e5b-9756-9444639a92ba"
+        "projectId": "8f305b36-7ae5-4a0c-be6d-ffb44c306565"
       }
     },
-    "owner": "kamrankami313"
+    "owner": "resqdrive"
   }
 }
+
