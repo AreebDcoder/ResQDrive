@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Patch,Param, Query, Res, UseGuards, NotFoundException,
+  Controller, Get, Patch,Param, Query, Res, UseGuards, NotFoundException, BadRequestException,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
@@ -141,5 +141,65 @@ export class AdminAnalyticsController {
       limit ? parseInt(limit, 10) : 20,
       skip ? parseInt(skip, 10) : 0,
     );
+  }
+
+  // ───────────────────────────────────────────────────────────────────────
+  // BATCH 5 — Extended dashboard + CSV exports
+  // ───────────────────────────────────────────────────────────────────────
+
+  @Get('dashboard/extended-summary')
+  @ApiOperation({ summary: 'Extended KPI bundle for the enhanced admin dashboard (single call)' })
+  async getExtendedDashboardSummary() {
+    return this.analyticsService.getExtendedDashboardSummary();
+  }
+
+  @Get('export/:type')
+  @ApiOperation({ summary: 'Download a CSV export of any admin dataset (incidents, repair-costs, notifications, crash-logs, voice-logs, damage-assessments, dispatch-logs)' })
+  @ApiResponse({ status: 200, description: 'CSV file download.' })
+  @ApiResponse({ status: 400, description: 'Unsupported export type.' })
+  async exportCsv(@Param('type') type: string, @Res() res: Response) {
+    let csv: string;
+    let filename: string;
+
+    switch (type) {
+      case 'incidents':
+        csv = await this.analyticsService.exportIncidentsCsv();
+        filename = `incidents-${Date.now()}.csv`;
+        break;
+      case 'repair-costs':
+        csv = await this.analyticsService.exportRepairCostsCsv();
+        filename = `repair-costs-${Date.now()}.csv`;
+        break;
+      case 'notifications':
+        csv = await this.analyticsService.exportNotificationsCsv();
+        filename = `notifications-${Date.now()}.csv`;
+        break;
+      case 'crash-logs':
+        csv = await this.analyticsService.exportCrashLogsCsv();
+        filename = `crash-logs-${Date.now()}.csv`;
+        break;
+      case 'voice-logs':
+        csv = await this.analyticsService.exportVoiceLogsCsv();
+        filename = `voice-logs-${Date.now()}.csv`;
+        break;
+      case 'damage-assessments':
+        csv = await this.analyticsService.exportDamageAssessmentsCsv();
+        filename = `damage-assessments-${Date.now()}.csv`;
+        break;
+      case 'dispatch-logs':
+        csv = await this.analyticsService.exportDispatchLogsCsv();
+        filename = `dispatch-logs-${Date.now()}.csv`;
+        break;
+      default:
+        throw new BadRequestException(
+          `Unsupported export type: ${type}. Valid: incidents, repair-costs, notifications, crash-logs, voice-logs, damage-assessments, dispatch-logs.`,
+        );
+    }
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Cache-Control', 'no-store');
+    // Prefix BOM so Excel auto-detects UTF-8 (handles non-ASCII chars)
+    res.send('\uFEFF' + csv);
   }
 }

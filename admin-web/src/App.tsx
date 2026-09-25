@@ -16,8 +16,9 @@ import RepairCostReportsPage from './pages/RepairCostReportsPage';
 import WorkshopQueuePage from './pages/WorkshopQueuePage';
 import EmergencyNumbersPage from './pages/EmergencyNumbersPage';
 import NotificationHistoryPage from './pages/NotificationHistoryPage';
+import DataExportPage from './pages/DataExportPage';
 
-type Page = 'dashboard' | 'incidents' | 'monitor' | 'crash-logs' | 'voice-logs' | 'damage' | 'repair' | 'workshop' | 'emergency-numbers' | 'health' | 'users' | 'profile' | 'notifications';
+type Page = 'dashboard' | 'incidents' | 'monitor' | 'crash-logs' | 'voice-logs' | 'damage' | 'repair' | 'workshop' | 'emergency-numbers' | 'health' | 'users' | 'profile' | 'notifications' | 'export';
 
 function AppContent() {
   const { user, isLoading } = useAuth();
@@ -71,6 +72,7 @@ function AppContent() {
         {page === 'emergency-numbers' && <EmergencyNumbersPage />}
                 {page === 'notifications' && <NotificationHistoryPage />}
         {page === 'users' && <UsersPage />}
+        {page === 'export' && <DataExportPage />}
         {page === 'profile' && <ProfilePage />}
       </main>
     </div>
