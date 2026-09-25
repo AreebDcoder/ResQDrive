@@ -29,6 +29,7 @@ interface Workshop {
   distanceMeters: number;
   durationText: string;
   durationSeconds: number;
+  isVerifiedPartner?: boolean;
 }
 
 export default function WorkshopsScreen({ navigation, isInline }: { navigation: any; isInline?: boolean }) {
@@ -84,20 +85,28 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
   };
 
   const callWorkshop = (phoneNumber: string) => {
+    if (!phoneNumber || phoneNumber.includes('Navigation') || phoneNumber.includes('N/A')) {
+      alert('Direct phone number is not listed for this public garage. Please tap Navigate for directions.');
+      return;
+    }
     Linking.openURL(`tel:${phoneNumber}`);
   };
 
   const renderWorkshopCard = ({ item, index }: { item: Workshop; index: number }) => (
-    <View style={[styles.card, index === 0 && styles.cardNearest]}>
-      {index === 0 && (
+    <View style={[styles.card, item.isVerifiedPartner && styles.cardPartner, index === 0 && !item.isVerifiedPartner && styles.cardNearest]}>
+      {item.isVerifiedPartner ? (
+        <View style={styles.partnerBadge}>
+          <Text style={styles.partnerBadgeText}>⭐ VERIFIED PARTNER</Text>
+        </View>
+      ) : index === 0 ? (
         <View style={styles.nearestBadge}>
           <Text style={styles.nearestBadgeText}>NEAREST</Text>
         </View>
-      )}
+      ) : null}
 
       <View style={styles.cardHeader}>
-        <View style={styles.iconCircle}>
-          <Ionicons name="construct-outline" size={24} color="#E53935" />
+        <View style={[styles.iconCircle, item.isVerifiedPartner && styles.iconCirclePartner]}>
+          <Ionicons name="construct-outline" size={24} color={item.isVerifiedPartner ? "#00E676" : "#E53935"} />
         </View>
         <View style={styles.cardHeaderText}>
           <Text style={styles.workshopName} numberOfLines={2}>
@@ -106,8 +115,10 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
           <Text style={styles.workshopAddress} numberOfLines={1}>
             {item.address}
           </Text>
-          <View style={styles.specializationBadge}>
-            <Text style={styles.specializationText}>{item.specialization}</Text>
+          <View style={[styles.specializationBadge, item.isVerifiedPartner && styles.specializationBadgePartner]}>
+            <Text style={[styles.specializationText, item.isVerifiedPartner && styles.specializationTextPartner]}>
+              {item.specialization}
+            </Text>
           </View>
         </View>
       </View>
@@ -125,23 +136,25 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
       </View>
 
       <View style={styles.actionRow}>
+        {item.phoneNumber && !item.phoneNumber.includes('Navigation') && !item.phoneNumber.includes('N/A') ? (
+          <TouchableOpacity
+            style={styles.callBtn}
+            onPress={() => callWorkshop(item.phoneNumber)}
+            activeOpacity={0.8}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="call-outline" size={16} color="#00E676" style={{ marginRight: 6 }} />
+              <Text style={styles.callBtnText}>Call</Text>
+            </View>
+          </TouchableOpacity>
+        ) : null}
         <TouchableOpacity
-          style={styles.callBtn}
-          onPress={() => callWorkshop(item.phoneNumber)}
-          activeOpacity={0.8}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Ionicons name="call-outline" size={16} color="#FFF" style={{ marginRight: 6 }} />
-            <Text style={styles.callBtnText}>Call</Text>
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.navigateBtn}
+          style={[styles.navigateBtn, (!item.phoneNumber || item.phoneNumber.includes('Navigation') || item.phoneNumber.includes('N/A')) && { flex: 1 }]}
           onPress={() => openNavigation(item)}
           activeOpacity={0.8}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Ionicons name="navigate-outline" size={16} color="#E53935" style={{ marginRight: 6 }} />
+            <Ionicons name="navigate-outline" size={16} color="#FFF" style={{ marginRight: 6 }} />
             <Text style={styles.navigateBtnText}>Navigate</Text>
           </View>
         </TouchableOpacity>
@@ -307,6 +320,27 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     backgroundColor: 'rgba(229, 57, 53, 0.04)',
   },
+  cardPartner: {
+    borderColor: 'rgba(0, 230, 118, 0.35)',
+    borderWidth: 1.5,
+    backgroundColor: 'rgba(0, 230, 118, 0.04)',
+  },
+  partnerBadge: {
+    position: 'absolute',
+    top: -1,
+    right: 16,
+    backgroundColor: '#00E676',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+  },
+  partnerBadgeText: {
+    color: '#0A0A0F',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
   nearestBadge: {
     position: 'absolute',
     top: -1,
@@ -337,6 +371,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 14,
   },
+  iconCirclePartner: {
+    backgroundColor: 'rgba(0, 230, 118, 0.12)',
+  },
   iconText: {
     fontSize: 22,
   },
@@ -363,8 +400,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(229, 57, 53, 0.25)',
   },
+  specializationBadgePartner: {
+    backgroundColor: 'rgba(0, 230, 118, 0.12)',
+    borderColor: 'rgba(0, 230, 118, 0.25)',
+  },
   specializationText: {
     color: '#FF8A80',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  specializationTextPartner: {
+    color: '#00E676',
     fontSize: 11,
     fontWeight: '700',
   },
