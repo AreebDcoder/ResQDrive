@@ -140,6 +140,7 @@ export default function EmergencyMonitorPage() {
                   <th className="p-3">WhatsApp</th>
                   <th className="p-3">Server SMS</th>
                   <th className="p-3">Email</th>
+                  <th className="p-3">RoboCall</th>
                   <th className="p-3">Time</th>
                 </tr>
               </thead>
@@ -148,6 +149,8 @@ export default function EmergencyMonitorPage() {
                   const payload = typeof log.payload === 'string' ? JSON.parse(log.payload) : log.payload;
                   const whatsappSent = payload?.contacts?.length > 0;
                   const deviceSmsUsed = payload?.deviceSmsUsed || payload?.dispatchMode === 'failed';
+                  const robocallAttempts = allAttempts.filter((a: any) => a.channel === 'PHONE_CALL');
+                  const robocallSent = robocallAttempts.length > 0;
                   return (
                     <tr key={log.id} className="border-b border-gray-800">
                       <td className="p-3 text-sm text-white">{log.user?.fullName || 'Unknown'}</td>
@@ -155,6 +158,7 @@ export default function EmergencyMonitorPage() {
                       <td className="p-3"><span className={`text-xs font-bold ${whatsappSent ? 'text-green-400' : 'text-gray-500'}`}>{whatsappSent ? 'SENT' : 'N/A'}</span></td>
                       <td className="p-3"><span className={`text-xs font-bold ${log.smsStatus === 'SENT' ? 'text-green-400' : 'text-red-400'}`}>{log.smsStatus}</span>{deviceSmsUsed && <span className="block text-[10px] text-amber-400">+ device SIM</span>}</td>
                       <td className="p-3"><span className={`text-xs font-bold ${log.emailStatus === 'SENT' ? 'text-green-400' : 'text-red-400'}`}>{log.emailStatus}</span></td>
+                      <td className="p-3"><span className={`text-xs font-bold ${robocallSent ? 'text-green-400' : 'text-gray-500'}`}>{robocallSent ? 'SENT' : 'N/A'}</span></td>
                       <td className="p-3 text-sm text-gray-400">{new Date(log.createdAt).toLocaleTimeString()}</td>
                     </tr>
                   );

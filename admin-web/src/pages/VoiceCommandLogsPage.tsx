@@ -23,7 +23,9 @@ export default function VoiceCommandLogsPage() {
               <tr className="border-b border-gray-700 text-left text-xs text-gray-500">
                 <th className="p-3">User</th>
                 <th className="p-3">Intent</th>
-                <th className="p-3">Recognized Text</th>
+                <th className="p-3">Transcript</th>
+                <th className="p-3">Engine</th>
+                <th className="p-3">Action Taken</th>
                 <th className="p-3">Timestamp</th>
               </tr>
             </thead>
@@ -31,8 +33,10 @@ export default function VoiceCommandLogsPage() {
               {logs.map((log: any) => (
                 <tr key={log.id} className="border-b border-gray-800 hover:bg-gray-700/30">
                   <td className="p-3 text-sm text-white">{log.user?.fullName || 'Unknown'}</td>
-                  <td className="p-3"><span className="px-2 py-1 rounded text-xs font-bold bg-blue-900/40 text-blue-400">{log.intent || 'N/A'}</span></td>
-                  <td className="p-3 text-sm text-gray-300 italic">"{log.recognizedText || log.transcript || '—'}"</td>
+                  <td className="p-3"><span className="px-2 py-1 rounded text-xs font-bold bg-blue-900/40 text-blue-400">{log.classifiedIntent || 'N/A'}</span></td>
+                  <td className="p-3 text-sm text-gray-300 italic">"{log.rawTranscript || '—'}"</td>
+                  <td className="p-3 text-sm text-gray-400">{log.recognitionEngine || 'N/A'}</td>
+                  <td className="p-3"><span className={`text-xs font-bold ${log.actionTaken ? 'text-green-400' : 'text-gray-500'}`}>{log.actionTaken ? 'YES' : 'NO'}</span></td>
                   <td className="p-3 text-sm text-gray-400">{new Date(log.createdAt).toLocaleString()}</td>
                 </tr>
               ))}
