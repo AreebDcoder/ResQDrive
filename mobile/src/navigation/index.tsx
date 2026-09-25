@@ -42,7 +42,6 @@ import CrashSoundDemoScreen from '../screens/CrashSoundDemoScreen';
 import VoiceCommandDemoScreen from '../screens/VoiceCommandDemoScreen';
 import DamageAssessmentScreen from '../screens/DamageAssessmentScreen';
 import RepairCostScreen from '../screens/RepairCostScreen';
-import CustomEmergencyNumbersScreen from '../screens/CustomEmergencyNumbersScreen';
 import { FCMService } from '../services/fcmService';
 import CountdownScreen from '../screens/CountdownScreen';
 import { CrashSoundDetectionService } from '../services/crashSoundDetectionService';
@@ -165,10 +164,18 @@ function DriverHome({ navigation }: any) {
         const severity = reading.motionSeverity || classifyMotionSeverity(reading.accelG, reading.gyroDegPerSec);
 
         if (severity === 'severe' || severity === 'moderate') {
-          console.log(`🚗 [Motion Monitor] ${severity.toUpperCase()} impact signature detected (${reading.accelG.toFixed(2)}g / ${reading.gyroDegPerSec.toFixed(1)}°/s). Feeding into MultiModalFusionService...`);
-          MultiModalFusionService.recordMotionEvent(severity, reading.accelG, reading.gyroDegPerSec);
+          const mlLog = reading.mlClassifiedSeverity ? ` | ML Prediction: ${reading.mlClassifiedSeverity.toUpperCase()} (${((reading.mlConfidence || 0) * 100).toFixed(1)}%)` : '';
+          console.log(`🚗 [Motion Monitor] ${severity.toUpperCase()} impact signature detected (${reading.accelG.toFixed(2)}g / ${reading.gyroDegPerSec.toFixed(1)}°/s)${mlLog}. Feeding into MultiModalFusionService...`);
+          MultiModalFusionService.recordMotionEvent(
+            severity,
+            reading.accelG,
+            reading.gyroDegPerSec,
+            reading.mlClassifiedSeverity,
+            reading.mlConfidence
+          );
         } else if (severity === 'minor') {
-          console.log(`ℹ️ [Motion Monitor] Logged MINOR jolt event (${reading.accelG.toFixed(2)}g, ${reading.gyroDegPerSec.toFixed(1)}°/s). Recorded for history review without triggering countdown.`);
+          const mlLog = reading.mlClassifiedSeverity ? ` | ML Prediction: ${reading.mlClassifiedSeverity.toUpperCase()} (${((reading.mlConfidence || 0) * 100).toFixed(1)}%)` : '';
+          console.log(`ℹ️ [Motion Monitor] Logged MINOR jolt event (${reading.accelG.toFixed(2)}g, ${reading.gyroDegPerSec.toFixed(1)}°/s)${mlLog}. Recorded for history review without triggering countdown.`);
         }
       });
 
@@ -536,17 +543,6 @@ function DriverHome({ navigation }: any) {
                   <Ionicons name="call-outline" size={20} color="#E53935" style={{ marginRight: 12 }} />
                   <Text style={styles.menuItemText}>Emergency Contacts</Text>
                 </View>
-                <Text style={styles.menuItemArrow}>›</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => {
-                  setIsDrawerOpen(false);
-                  navigation.navigate('CustomEmergencyNumbers');
-                }}
-              >
-                <Text style={styles.menuItemText}>⚙️ Custom Override Numbers</Text>
                 <Text style={styles.menuItemArrow}>›</Text>
               </TouchableOpacity>
 
@@ -1042,7 +1038,6 @@ function AppStack({ role }: { role: string }) {
       <Stack.Screen name="AddEditVehicle" component={AddEditVehicleScreen} options={{ title: 'Vehicle Details' }} />
       <Stack.Screen name="VehicleInsurance" component={VehicleInsuranceScreen} options={{ title: 'Insurance Reference' }} />
       <Stack.Screen name="EmergencyContacts" component={EmergencyContactsScreen} options={{ title: 'Emergency Contacts' }} />
-      <Stack.Screen name="CustomEmergencyNumbers" component={CustomEmergencyNumbersScreen} options={{ title: 'Custom Emergency Numbers' }} />
       <Stack.Screen name="AddEditContact" component={AddEditContactScreen} options={{ title: 'Contact Details' }} />
       <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} options={{ title: 'Preferences' }} />
       <Stack.Screen name="NotificationHistory" component={NotificationHistoryScreen} options={{ title: 'Notifications' }} />

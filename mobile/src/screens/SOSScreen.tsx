@@ -12,6 +12,7 @@ import {
   Easing,
   StatusBar,
   Platform,
+  PermissionsAndroid,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
@@ -37,7 +38,6 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
 
   const [regionalNumbers, setRegionalNumbers] = useState<EmergencyNumberItem[]>([]);
   const personalContacts = useSelector((state: any) => state.contacts?.list || []);
-  const [customNumbers, setCustomNumbers] = useState<EmergencyNumberItem[]>([]);
   const [regionName, setRegionName] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -99,14 +99,21 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
   }, []);
 
   const regionalNumbersRef = useRef(regionalNumbers);
-  const customNumbersRef = useRef(customNumbers);
 
   useEffect(() => {
     regionalNumbersRef.current = regionalNumbers;
-    customNumbersRef.current = customNumbers;
-  }, [regionalNumbers, customNumbers]);
+  }, [regionalNumbers]);
 
   useEffect(() => {
+    // Request CALL_PHONE permission early on screen mount for Android so auto-call is ready
+    if (Platform.OS === 'android') {
+      PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CALL_PHONE, {
+        title: 'Emergency Direct Call Permission',
+        message: 'ResQDrive requires permission to directly place emergency calls to Rescue 1122.',
+        buttonPositive: 'Allow',
+      }).catch((e) => console.log('Early CALL_PHONE permission check error:', e));
+    }
+
     // Start listening to voice commands when SOS Screen mounts
     VoiceCommandService.startListening();
 
@@ -123,11 +130,11 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
         setIsEscalationActive(false);
         if (timerRef.current) clearTimeout(timerRef.current);
 
-        const target = regionalNumbersRef.current[0] || customNumbersRef.current[0];
+        const target = regionalNumbersRef.current[0];
         if (target) {
           try {
             await api.post('/emergency-sos/log-call', {
-              serviceName: target.serviceName || target.label || 'Rescue',
+              serviceName: target.serviceName || 'Rescue',
               autoDialed: false,
             });
           } catch (err) {
@@ -188,7 +195,6 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
 
       setRegionName(response.data.regionName || '');
       setRegionalNumbers(response.data.regionalNumbers || []);
-      setCustomNumbers(response.data.customNumbers || []);
       animateListIn();
     } catch (err: any) {
       setErrorMsg('Could not load emergency numbers. Check your connection.');
@@ -432,32 +438,6 @@ const triggerAutoEscalationCall = async () => {
                 </View>
               </TouchableOpacity>
             ))}
-
-            {/* Custom Numbers Section */}
-            {customNumbers.length > 0 && (
-              <>
-                <Text style={styles.sectionLabel}>YOUR CUSTOM OVERRIDES</Text>
-                {customNumbers.map((item) => (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={styles.callCard}
-                    onPress={() => handleCallNumber(item.phoneNumber, item.label || 'Override')}
-                    activeOpacity={0.85}
-                  >
-                    <View style={[styles.callIconCircle, { backgroundColor: 'rgba(255,152,0,0.12)' }]}>
-                      <Text style={styles.callIcon}>👤</Text>
-                    </View>
-                    <View style={styles.callCardText}>
-                      <Text style={styles.callName}>{item.label}</Text>
-                      <Text style={styles.callNumber}>{item.phoneNumber}</Text>
-                    </View>
-                    <View style={[styles.callNowBadge, { backgroundColor: '#ff9800' }]}>
-                      <Text style={styles.callNowText}>CALL</Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </>
-            )}
 
             {__DEV__ && (
               <View style={styles.devSimRow}>

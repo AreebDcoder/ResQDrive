@@ -82,9 +82,18 @@ export class VoiceCommandService {
   }
 
   /**
+   * Native Google/Apple Cloud-assisted Speech Recognition API implementation
+   */
+  private static restartDelay: ReturnType<typeof setTimeout> | null = null;
+  private static sessionCount = 0;
+  private static consecutiveErrors = 0;
+  private static readonly MAX_CONSECUTIVE_ERRORS = 3;
+
+  /**
    * Starts listening. Always tries native Voice first, falls back to Vosk or mock.
    */
   static async startListening() {
+    this.consecutiveErrors = 0;
     if (this.isListening) return;
 
     const hasPermission = await this.requestPermissions();
@@ -111,6 +120,7 @@ export class VoiceCommandService {
    */
   static stopListening() {
     this.isListening = false;
+    this.consecutiveErrors = 0;
     this.sessionCount++; // Invalidate any in-flight session callbacks
     this.updateStatus('Idle');
 
@@ -136,12 +146,6 @@ export class VoiceCommandService {
       }
     }
   }
-
-  /**
-   * Native Google/Apple Cloud-assisted Speech Recognition API implementation
-   */
-  private static restartDelay: ReturnType<typeof setTimeout> | null = null;
-  private static sessionCount = 0;
 
   private static startNativeSpeech() {
     this.updateEngine('Native (Online)');
@@ -170,6 +174,7 @@ export class VoiceCommandService {
         // Attach handlers BEFORE calling start()
         Voice.onSpeechResults = (e: any) => {
           if (!this.isListening || this.sessionCount !== session) return;
+          this.consecutiveErrors = 0; // Reset error counter on valid speech
           const transcript = e?.value?.[0] ?? '';
           console.log(`[Voice] #${session} RESULT: "${transcript}"`);
           if (transcript) this.handleTranscriptResult(transcript, true, 'native');
@@ -178,6 +183,7 @@ export class VoiceCommandService {
 
         Voice.onSpeechPartialResults = (e: any) => {
           if (!this.isListening || this.sessionCount !== session) return;
+          this.consecutiveErrors = 0; // Reset error counter on partial speech
           const transcript = e?.value?.[0] ?? '';
           console.log(`[Voice] #${session} PARTIAL: "${transcript}"`);
           if (transcript) this.handleTranscriptResult(transcript, false, 'native');
@@ -192,14 +198,25 @@ export class VoiceCommandService {
           if (!this.isListening || this.sessionCount !== session) return;
           const code = String(e?.error?.code ?? e?.error ?? '');
           console.log(`[Voice] #${session} ERROR code=${code}`);
-          // Recoverable errors — just restart:
-          // 2=network error, 6=speech timeout, 7=no match, 8=server error, 9=insufficient permissions
+
+          // Recoverable errors:
+          // 2=network error, 6=speech timeout, 7=no match (silence), 8=server/recognizer busy, 9=insufficient permissions
           if (['2', '6', '7', '8', '9'].includes(code)) {
-            const delay = code === '2' ? 1500 : 500; // Longer delay for network errors
+            this.consecutiveErrors++;
+
+            if (this.consecutiveErrors >= this.MAX_CONSECUTIVE_ERRORS) {
+              console.log(`[Voice] ${this.consecutiveErrors} consecutive speech timeouts/errors. Pausing auto-restart loop to conserve resources.`);
+              this.updateStatus('Listening paused (Silence). Tap to speak.');
+              this.isListening = false;
+              return;
+            }
+
+            const delay = code === '2' ? 2500 : 1500; // 1.5s delay to prevent high-frequency rapid restarts
             scheduleRestart(delay);
           } else {
             console.warn('[Voice] Unrecoverable error, stopping:', e.error);
             this.isListening = false;
+            this.updateStatus('Speech error');
           }
         };
 
@@ -211,7 +228,13 @@ export class VoiceCommandService {
           .then(() => console.log(`[Voice] #${session} start() OK — say something!`))
           .catch((err: any) => {
             console.warn(`[Voice] #${session} start() REJECTED:`, err?.message);
-            scheduleRestart(1000);
+            this.consecutiveErrors++;
+            if (this.consecutiveErrors >= this.MAX_CONSECUTIVE_ERRORS) {
+              this.isListening = false;
+              this.updateStatus('Voice Engine Busy');
+            } else {
+              scheduleRestart(1500);
+            }
           });
       });
   }
@@ -295,17 +318,25 @@ export class VoiceCommandService {
     const intent = classifyIntent(transcript);
     let actionTaken = false;
 
-    if (intent === 'CANCEL') {
-      actionTaken = true;
-      this.stopListening(); // Stop immediately to prevent double-firing
-      if (this.onCancelCallback) {
-        this.onCancelCallback();
-      }
-    } else if (intent === 'SOS') {
-      actionTaken = true;
-      this.stopListening(); // Stop immediately to prevent double-firing
-      if (this.onSOSCallback) {
-        this.onSOSCallback();
+    // To prevent false voice cancels caused by background speaker audio or momentary noise partials:
+    // Only execute single-word intents ("cancel", "sos") if isFinal === true,
+    // or if the transcript is a multi-word phrase (e.g. "i am ok", "cancel alert", "i need help").
+    const isMultiWord = transcript.trim().split(/\s+/).length > 1;
+    const isConfirmedIntent = isFinal || isMultiWord;
+
+    if (isConfirmedIntent) {
+      if (intent === 'CANCEL') {
+        actionTaken = true;
+        this.stopListening(); // Stop immediately to prevent double-firing
+        if (this.onCancelCallback) {
+          this.onCancelCallback();
+        }
+      } else if (intent === 'SOS') {
+        actionTaken = true;
+        this.stopListening(); // Stop immediately to prevent double-firing
+        if (this.onSOSCallback) {
+          this.onSOSCallback();
+        }
       }
     }
 

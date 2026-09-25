@@ -19,6 +19,7 @@ import * as Location from 'expo-location';
 import { VoiceCommandService } from '../services/voiceCommandService';
 import { CrashSoundDetectionService } from '../services/crashSoundDetectionService';
 import { sendBulkBackgroundSMS } from '../utils/directSms';
+import { MultiModalFusionService } from '../services/multiModalFusionService';
 
 const COUNTDOWN_SECONDS = 10;
 
@@ -98,6 +99,7 @@ export default function CountdownScreen({ navigation, route }: any) {
     async (method: 'BUTTON' | 'VOICE' = 'BUTTON') => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       setIsCancelled(true);
+      MultiModalFusionService.reset(); // Clear 3-minute cooldown lockout so user can re-test immediately
       await logIncident('FALSE_ALARM');
       setTimeout(() => navigation.goBack(), 1200);
     },

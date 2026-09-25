@@ -101,7 +101,7 @@ export class HospitalsService {
   }
 
   private async findViaOverpass(lat: number, lng: number): Promise<HospitalResult[]> {
-    const query = `[out:json][timeout:25];node["amenity"="hospital"](around:10000,${lat},${lng});out body 10;`;
+    const query = `[out:json][timeout:25];(nwr["amenity"~"hospital|clinic"](around:10000,${lat},${lng});nwr["healthcare"~"hospital|clinic"](around:10000,${lat},${lng}););out center 15;`;
 
     const res = await axios.post(
       'https://overpass-api.de/api/interpreter',
@@ -116,21 +116,27 @@ export class HospitalsService {
     );
 
     const elements = res.data.elements || [];
-    const results: HospitalResult[] = elements.map((e: any) => {
-      const distanceMeters = this.haversineDistance(lat, lng, e.lat, e.lon);
-      return {
-        name: e.tags?.name || 'Unnamed Hospital',
-        address: e.tags?.['addr:full'] || e.tags?.['addr:street'] || 'Address unavailable',
-        lat: e.lat,
-        lng: e.lon,
-        distanceMeters,
-        durationText: 'Estimate unavailable',
-        durationSeconds: Math.round((distanceMeters / 1000) * 120),
-      };
-    });
+    const results: HospitalResult[] = elements
+      .map((e: any) => {
+        const itemLat = e.lat ?? e.center?.lat;
+        const itemLng = e.lon ?? e.center?.lon;
+        if (!itemLat || !itemLng) return null;
+
+        const distanceMeters = this.haversineDistance(lat, lng, itemLat, itemLng);
+        return {
+          name: e.tags?.name || e.tags?.['name:en'] || 'Medical Center / Hospital',
+          address: e.tags?.['addr:full'] || e.tags?.['addr:street'] || e.tags?.['addr:city'] || 'Address unavailable',
+          lat: itemLat,
+          lng: itemLng,
+          distanceMeters,
+          durationText: `${Math.max(1, Math.round((distanceMeters / 1000) * 2))} min`,
+          durationSeconds: Math.round((distanceMeters / 1000) * 120),
+        };
+      })
+      .filter((item: HospitalResult | null): item is HospitalResult => item !== null);
 
     results.sort((a, b) => a.distanceMeters - b.distanceMeters);
-    return results.slice(0, 3);
+    return results.slice(0, 5);
   }
 
   private formatDuration(seconds: number): string {

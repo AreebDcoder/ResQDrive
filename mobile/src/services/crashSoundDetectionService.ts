@@ -71,6 +71,10 @@ export class CrashSoundDetectionService {
   private static lastTransientTimestamp = 0;
   public static lastCrashTriggerTime = 0;
 
+  static getCurrentRms(): number {
+    return this.currentRms;
+  }
+
   /**
    * Registers a callback listener that triggers whenever crash sound confidence threshold is exceeded.
    */
@@ -379,7 +383,21 @@ export class CrashSoundDetectionService {
             this.logTelemetryWindow(maxConfidence, topClassName, true, true);
             return;
           } else {
-            // Native Android/iOS: Run real local YAMNet TFLite inference
+            // 1. High-Pass Pre-Filter (~140Hz cutoff @ 16kHz)
+            // Attenuates sub-bass wind pop (blowing/whistling into mic) and mechanical table impact thuds
+            // while fully preserving mid/high acoustic crash frequencies (metal crunch, glass shatter, tire squeal).
+            let hpPrevIn = 0;
+            let hpPrevOut = 0;
+            const hpAlpha = 0.94;
+            for (let i = 0; i < centeredWindow.length; i++) {
+              const sample = centeredWindow[i];
+              const hpOut = hpAlpha * (hpPrevOut + sample - hpPrevIn);
+              hpPrevIn = sample;
+              hpPrevOut = hpOut;
+              centeredWindow[i] = hpOut;
+            }
+
+            // 2. Waveform Amplitude Stats
             let minVal = 0;
             let maxVal = 0;
             let maxAmp = 0;
@@ -389,11 +407,12 @@ export class CrashSoundDetectionService {
               const absVal = Math.abs(centeredWindow[i]);
               if (absVal > maxAmp) maxAmp = absVal;
             }
-            console.log('[Native YAMNet Inference] Waveform stats - len:', centeredWindow.length, 'min:', minVal.toFixed(4), 'max:', maxVal.toFixed(4));
+            console.log('[Native YAMNet Inference] Waveform HP-filtered stats - len:', centeredWindow.length, 'min:', minVal.toFixed(4), 'max:', maxVal.toFixed(4));
             
-            // Peak Normalization: Cap scaling factor to 8.0x max to allow external speaker playback audio to normalize cleanly
+            // 3. Peak Normalization: Cap scaling factor to 4.0x max (or 2.0x for low amp) to prevent inflating silent/soft mic noise
             if (maxAmp > 0.001) {
-              const scalingFactor = Math.min(0.95 / maxAmp, 8.0);
+              const maxAllowedScaling = maxAmp < 0.03 ? 2.0 : 4.0;
+              const scalingFactor = Math.min(0.90 / maxAmp, maxAllowedScaling);
               for (let i = 0; i < centeredWindow.length; i++) {
                 centeredWindow[i] *= scalingFactor;
               }
@@ -421,19 +440,25 @@ export class CrashSoundDetectionService {
                 }
               });
 
-              // Speaker Playback Compensation Factor:
-              // External phone/laptop speakers split YAMNet probabilities across "Loudspeaker/Radio" classes (>85%).
-              // We aggregate the crash class spectrum to compensate for speaker playback distortion.
-              const speakerCompensatedScore = Math.min(0.92, (maxDirectScore * 10.0) + (sumCrashScore * 3.0));
+              // 4. Gated Speaker Playback Compensation:
+              // Requires a minimum raw confidence floor (>= 6% raw direct score OR >= 8% crash spectrum total)
+              // before applying speaker compensation multipliers to avoid inflating baseline YAMNet noise (e.g. 3.1%).
+              let speakerCompensatedScore = maxDirectScore;
+              const hasRawCrashConfidence = maxDirectScore >= 0.06 || sumCrashScore >= 0.08;
 
-              if (maxDirectScore >= 0.20 || speakerCompensatedScore >= 0.30) {
+              if (hasRawCrashConfidence) {
+                // Balanced compensation for external phone/laptop speakers
+                speakerCompensatedScore = Math.min(0.92, (maxDirectScore * 3.5) + (sumCrashScore * 1.5));
+              }
+
+              if (maxDirectScore >= 0.18 || (speakerCompensatedScore >= 0.45 && hasRawCrashConfidence)) {
                 isExceeded = true;
                 maxConfidence = Math.max(maxDirectScore, speakerCompensatedScore);
                 topClassName = directClassName;
-              } else if (IS_DEMO_MODE && sumCrashScore >= 0.015) {
+              } else if (IS_DEMO_MODE && sumCrashScore >= 0.03) {
                 // In FYP Demo Mode, boost video playback confidence to ensure reliable demonstration
                 isExceeded = true;
-                maxConfidence = Math.max(0.72, speakerCompensatedScore * 2.0);
+                maxConfidence = Math.max(0.72, speakerCompensatedScore * 1.5);
                 topClassName = directClassName;
               } else {
                 isExceeded = false;
