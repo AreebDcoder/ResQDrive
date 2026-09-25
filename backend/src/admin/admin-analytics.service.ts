@@ -213,4 +213,47 @@ export class AdminAnalyticsService {
 
     return incident;
   }
+
+    async getActiveEmergencySessions() {
+    const sessions = await this.prisma.notificationSession.findMany({
+      where: { status: 'ACTIVE' as any },
+      include: {
+        user: { select: { id: true, fullName: true, email: true, phoneNumber: true } },
+        incident: { select: { id: true, severity: true, occurredAt: true, address: true } },
+      },
+      orderBy: { triggeredAt: 'desc' },
+    });
+    return sessions;
+  }
+
+  async getActiveLocationSessions() {
+    const sessions = await this.prisma.locationSession.findMany({
+      where: { status: 'ACTIVE' as any },
+      include: {
+        user: { select: { id: true, fullName: true, phoneNumber: true } },
+      },
+      orderBy: { startedAt: 'desc' },
+    });
+    return sessions;
+  }
+
+async getRecentDispatchLogs(limit = 20) {
+    const logs = await this.prisma.alertDispatchLog.findMany({
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Populate user info manually if userId is present
+    const userIds = [...new Set(logs.map((l: any) => l.userId).filter(Boolean))];
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, fullName: true },
+    });
+    const userMap = new Map(users.map((u) => [u.id, u]));
+
+    return logs.map((log: any) => ({
+      ...log,
+      user: log.userId ? userMap.get(log.userId) : null,
+    }));
+  }
 }

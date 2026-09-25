@@ -7,8 +7,10 @@ import IncidentDetailPage from './pages/IncidentDetailPage';
 import UsersPage from './pages/UsersPage';
 import ProfilePage from './pages/ProfilePage';
 import Sidebar from './components/Sidebar';
+import SystemHealthPage from './pages/SystemHealthPage';
+import EmergencyMonitorPage from './pages/EmergencyMonitorPage';
 
-type Page = 'dashboard' | 'incidents' | 'users' | 'profile';
+type Page = 'dashboard' | 'incidents' | 'monitor' | 'health' | 'users' | 'profile';
 
 function AppContent() {
   const { user, isLoading } = useAuth();
@@ -52,6 +54,10 @@ function AppContent() {
       <main className="flex-1 overflow-auto">
         {page === 'dashboard' && <DashboardPage />}
         {page === 'incidents' && <IncidentsPage onSelectIncident={setSelectedIncidentId} />}
+        {page === 'monitor' && <EmergencyMonitorPage />}
+        {page === 'health' && <SystemHealthPage />}
+        {page === 'users' && <UsersPage />}
+        {page === 'profile' && <ProfilePage />}
         {page === 'users' && <UsersPage />}
         {page === 'profile' && <ProfilePage />}
       </main>

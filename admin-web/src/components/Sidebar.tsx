@@ -1,18 +1,20 @@
-import { LayoutDashboard, AlertTriangle, Users, LogOut, UserCircle } from 'lucide-react';
+import { LayoutDashboard, AlertTriangle, Users, LogOut, UserCircle, Activity, Shield } from 'lucide-react';
 import { useAuth } from '../auth';
 
 interface SidebarProps {
   currentPage: string;
-  onNavigate: ( page: 'dashboard' | 'incidents' | 'users' | 'profile') => void;
+  onNavigate: (page: 'dashboard' | 'incidents' | 'monitor' | 'health' | 'users' | 'profile') => void;
   activePageLabel?: string;
 }
 
 export default function Sidebar({ currentPage, onNavigate, activePageLabel }: SidebarProps) {
   const { user, logout } = useAuth();
 
-   const navItems = [
+  const navItems = [
     { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'incidents' as const, label: 'Incidents', icon: AlertTriangle },
+    { id: 'monitor' as const, label: 'Emergency Monitor', icon: Activity },
+    { id: 'health' as const, label: 'System Health', icon: Shield },
     { id: 'users' as const, label: 'Users', icon: Users },
     { id: 'profile' as const, label: 'Profile', icon: UserCircle },
   ];

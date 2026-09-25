@@ -69,4 +69,23 @@ export class AdminAnalyticsController {
       throw err;
     }
   }
+
+  @Get('emergency-sessions')
+  @ApiOperation({ summary: 'Get all active emergency notification sessions (admin)' })
+  async getEmergencySessions() {
+    return this.analyticsService.getActiveEmergencySessions();
+  }
+
+  @Get('location-sessions')
+  @ApiOperation({ summary: 'Get all active location sharing sessions (admin)' })
+  async getLocationSessions() {
+    return this.analyticsService.getActiveLocationSessions();
+  }
+
+  @Get('dispatch-logs')
+  @ApiOperation({ summary: 'Get recent alert dispatch logs (admin)' })
+  async getDispatchLogs(@Query('limit') limit?: string) {
+    const l = limit ? parseInt(limit, 10) : 20;
+    return this.analyticsService.getRecentDispatchLogs(l);
+  }
 }
