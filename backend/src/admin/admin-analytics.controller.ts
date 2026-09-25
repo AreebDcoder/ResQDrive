@@ -134,4 +134,12 @@ export class AdminAnalyticsController {
   async getWorkshopQueue() {
     return this.analyticsService.getWorkshopQueue();
   }
+    @Get('notification-history')
+  @ApiOperation({ summary: 'Get all push notification history (admin)' })
+  async getNotificationHistory(@Query('limit') limit?: string, @Query('skip') skip?: string) {
+    return this.analyticsService.getNotificationHistory(
+      limit ? parseInt(limit, 10) : 20,
+      skip ? parseInt(skip, 10) : 0,
+    );
+  }
 }

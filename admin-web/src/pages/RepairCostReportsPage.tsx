@@ -85,7 +85,15 @@ export default function RepairCostReportsPage() {
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Severity</p>
-                      <span className="text-xs font-bold text-amber-400">{r.damageAssessment?.derivedSeverity || items.find((i: any) => i.severity)?.severity || 'N/A'}</span>
+                      <span className="text-xs font-bold text-amber-400">{(() => {
+                    const SEVERITY_MAP: Record<string, string> = {
+                      scratch: 'minor', dent: 'minor',
+                      lamp_broken: 'moderate', tire_flat: 'moderate',
+                      crack: 'severe', glass_shatter: 'severe',
+                    };
+                    const dt = items[0]?.damageType;
+                    return r.damageAssessment?.derivedSeverity || (dt ? SEVERITY_MAP[dt] : 'N/A') || 'N/A';
+                  })()}</span>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Min Cost</p>

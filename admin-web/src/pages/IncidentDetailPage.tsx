@@ -13,6 +13,7 @@ const STATUS_COLORS: Record<string, string> = {
 export default function IncidentDetailPage({ incidentId, onBack }: { incidentId: string; onBack: () => void }) {
   const [incident, setIncident] = useState<Incident | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isResolving, setIsResolving] = useState(false);
 
   useEffect(() => {
     const fetchIncident = async () => {
@@ -71,7 +72,6 @@ export default function IncidentDetailPage({ incidentId, onBack }: { incidentId:
       </div>
     );
   };
-    const [isResolving, setIsResolving] = useState(false);
 
   const handleResolve = async () => {
     setIsResolving(true);

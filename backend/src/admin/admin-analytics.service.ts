@@ -370,4 +370,17 @@ async getRecentDispatchLogs(limit = 20) {
       orderBy: { createdAt: 'desc' },
     });
   }
+
+    async getNotificationHistory(limit = 50, skip = 0) {
+    const [data, total] = await Promise.all([
+      this.prisma.notificationLog.findMany({
+        take: limit,
+        skip,
+        orderBy: { createdAt: 'desc' },
+        include: { user: { select: { id: true, fullName: true } } },
+      }),
+      this.prisma.notificationLog.count(),
+    ]);
+    return { data, total };
+  }
 }

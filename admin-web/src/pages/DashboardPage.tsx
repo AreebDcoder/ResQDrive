@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
   LineChart, Line, XAxis, YAxis, CartesianGrid,
+  BarChart, Bar,
 } from 'recharts';
 import api from '../api';
 import type { AnalyticsSummary, AnalyticsTrend, AnalyticsHotspot } from '../types';
@@ -101,6 +102,23 @@ export default function DashboardPage() {
               <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }} />
               <Line type="monotone" dataKey="count" stroke="#ef4444" strokeWidth={2} />
             </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="bg-gray-800/50 rounded-xl p-6 col-span-2">
+          <h2 className="text-lg font-semibold text-white mb-4">Severity Distribution by Count</h2>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={pieData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis dataKey="name" stroke="#9ca3af" fontSize={11} />
+              <YAxis stroke="#9ca3af" allowDecimals={false} />
+              <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }} />
+              <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+                {pieData.map((entry, i) => (
+                  <Cell key={i} fill={entry.color} />
+                ))}
+              </Bar>
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
