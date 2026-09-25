@@ -6,6 +6,7 @@ export default function EmergencyMonitorPage() {
   const [emergencySessions, setEmergencySessions] = useState<any[]>([]);
   const [locationSessions, setLocationSessions] = useState<any[]>([]);
   const [dispatchLogs, setDispatchLogs] = useState<any[]>([]);
+    const [allAttempts, setAllAttempts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState('');
 
@@ -16,6 +17,12 @@ export default function EmergencyMonitorPage() {
         api.get('/admin/location-sessions'),
         api.get('/admin/dispatch-logs?limit=10'),
       ]);
+
+      // Extract all notification attempts from emergency sessions
+      const attempts = (e.data || []).flatMap((session: any) =>
+        (session.attempts || []).map((a: any) => ({ ...a, sessionUser: session.user?.fullName }))
+      );
+      setAllAttempts(attempts);
       setEmergencySessions(e.data || []);
       setLocationSessions(l.data || []);
       setDispatchLogs(d.data || []);

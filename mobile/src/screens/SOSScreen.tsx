@@ -210,31 +210,23 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
   const escalationStartTimeRef = useRef<number>(0);
 
   useEffect(() => {
-    if (isEscalationActive && escalationTimeLeft > 0) {
-      if (escalationStartTimeRef.current === 0) {
-        escalationStartTimeRef.current = Date.now();
+    if (!isEscalationActive) return;
+
+    const startTime = Date.now();
+    const intervalId = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const remaining = 60 - elapsed;
+
+      if (remaining <= 0) {
+        clearInterval(intervalId);
+        setEscalationTimeLeft(0);
+      } else {
+        setEscalationTimeLeft(remaining);
       }
+    }, 1000);
 
-      timerRef.current = setTimeout(() => {
-        const elapsed = Math.floor((Date.now() - escalationStartTimeRef.current) / 1000);
-        const remaining = 60 - elapsed;
-
-        if (remaining <= 0) {
-          setEscalationTimeLeft(0);
-          escalationStartTimeRef.current = 0;
-        } else {
-          setEscalationTimeLeft(remaining);
-        }
-      }, 500);
-    } else if (isEscalationActive && escalationTimeLeft === 0) {
-      escalationStartTimeRef.current = 0;
-      triggerAutoEscalationCall();
-    }
-
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [isEscalationActive, escalationTimeLeft]);
+    return () => clearInterval(intervalId);
+  }, [isEscalationActive]);
 
 const triggerAutoEscalationCall = async () => {
     setIsEscalationActive(false);

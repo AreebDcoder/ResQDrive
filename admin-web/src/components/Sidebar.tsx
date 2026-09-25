@@ -3,7 +3,7 @@ import { useAuth } from '../auth';
 
 interface SidebarProps {
   currentPage: string;
-  onNavigate: (page: 'dashboard' | 'incidents' | 'monitor' | 'health' | 'users' | 'profile') => void;
+    onNavigate: (page: 'dashboard' | 'incidents' | 'monitor' | 'crash-logs' | 'voice-logs' | 'damage' | 'repair' | 'health' | 'users' | 'profile') => void;
   activePageLabel?: string;
 }
 
@@ -14,6 +14,10 @@ export default function Sidebar({ currentPage, onNavigate, activePageLabel }: Si
     { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'incidents' as const, label: 'Incidents', icon: AlertTriangle },
     { id: 'monitor' as const, label: 'Emergency Monitor', icon: Activity },
+    { id: 'crash-logs' as const, label: 'Crash Detection', icon: AlertTriangle },
+    { id: 'voice-logs' as const, label: 'Voice Commands', icon: UserCircle },
+    { id: 'damage' as const, label: 'Damage Assessment', icon: AlertTriangle },
+    { id: 'repair' as const, label: 'Repair Costs', icon: AlertTriangle },
     { id: 'health' as const, label: 'System Health', icon: Shield },
     { id: 'users' as const, label: 'Users', icon: Users },
     { id: 'profile' as const, label: 'Profile', icon: UserCircle },

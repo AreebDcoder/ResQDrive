@@ -256,4 +256,42 @@ async getRecentDispatchLogs(limit = 20) {
       user: log.userId ? userMap.get(log.userId) : null,
     }));
   }
+
+    async getCrashDetectionLogs(limit = 50) {
+    return this.prisma.crashSoundDetectionLog.findMany({
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: { user: { select: { id: true, fullName: true } } },
+    });
+  }
+
+  async getVoiceCommandLogs(limit = 50) {
+    return this.prisma.voiceCommandLog.findMany({
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: { user: { select: { id: true, fullName: true } } },
+    });
+  }
+
+  async getDamageAssessments(limit = 50) {
+    return this.prisma.damageAssessment.findMany({
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: { select: { id: true, fullName: true } },
+        vehicle: { select: { id: true, make: true, model: true } },
+      },
+    });
+  }
+
+async getRepairCostReports(limit = 50) {
+    return this.prisma.repairCostReport.findMany({
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: { select: { id: true, fullName: true } },
+        vehicle: { select: { id: true, make: true, model: true } },
+      },
+    });
+  }
 }

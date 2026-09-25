@@ -88,4 +88,28 @@ export class AdminAnalyticsController {
     const l = limit ? parseInt(limit, 10) : 20;
     return this.analyticsService.getRecentDispatchLogs(l);
   }
+
+    @Get('crash-detection-logs')
+  @ApiOperation({ summary: 'Get crash sound detection logs (admin)' })
+  async getCrashDetectionLogs(@Query('limit') limit?: string) {
+    return this.analyticsService.getCrashDetectionLogs(limit ? parseInt(limit, 10) : 50);
+  }
+
+  @Get('voice-command-logs')
+  @ApiOperation({ summary: 'Get voice command logs (admin)' })
+  async getVoiceCommandLogs(@Query('limit') limit?: string) {
+    return this.analyticsService.getVoiceCommandLogs(limit ? parseInt(limit, 10) : 50);
+  }
+
+  @Get('damage-assessments')
+  @ApiOperation({ summary: 'Get damage assessment history (admin)' })
+  async getDamageAssessments(@Query('limit') limit?: string) {
+    return this.analyticsService.getDamageAssessments(limit ? parseInt(limit, 10) : 50);
+  }
+
+  @Get('repair-cost-reports')
+  @ApiOperation({ summary: 'Get repair cost reports (admin)' })
+  async getRepairCostReports(@Query('limit') limit?: string) {
+    return this.analyticsService.getRepairCostReports(limit ? parseInt(limit, 10) : 50);
+  }
 }

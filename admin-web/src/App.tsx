@@ -9,8 +9,12 @@ import ProfilePage from './pages/ProfilePage';
 import Sidebar from './components/Sidebar';
 import SystemHealthPage from './pages/SystemHealthPage';
 import EmergencyMonitorPage from './pages/EmergencyMonitorPage';
+import CrashDetectionLogsPage from './pages/CrashDetectionLogsPage';
+import VoiceCommandLogsPage from './pages/VoiceCommandLogsPage';
+import DamageAssessmentPage from './pages/DamageAssessmentPage';
+import RepairCostReportsPage from './pages/RepairCostReportsPage';
 
-type Page = 'dashboard' | 'incidents' | 'monitor' | 'health' | 'users' | 'profile';
+type Page = 'dashboard' | 'incidents' | 'monitor' | 'crash-logs' | 'voice-logs' | 'damage' | 'repair' | 'health' | 'users' | 'profile';
 
 function AppContent() {
   const { user, isLoading } = useAuth();
@@ -56,6 +60,10 @@ function AppContent() {
         {page === 'incidents' && <IncidentsPage onSelectIncident={setSelectedIncidentId} />}
         {page === 'monitor' && <EmergencyMonitorPage />}
         {page === 'health' && <SystemHealthPage />}
+                {page === 'crash-logs' && <CrashDetectionLogsPage />}
+        {page === 'voice-logs' && <VoiceCommandLogsPage />}
+        {page === 'damage' && <DamageAssessmentPage />}
+        {page === 'repair' && <RepairCostReportsPage />}
         {page === 'users' && <UsersPage />}
         {page === 'profile' && <ProfilePage />}
       </main>
