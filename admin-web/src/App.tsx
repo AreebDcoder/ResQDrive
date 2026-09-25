@@ -58,8 +58,6 @@ function AppContent() {
         {page === 'health' && <SystemHealthPage />}
         {page === 'users' && <UsersPage />}
         {page === 'profile' && <ProfilePage />}
-        {page === 'users' && <UsersPage />}
-        {page === 'profile' && <ProfilePage />}
       </main>
     </div>
   );

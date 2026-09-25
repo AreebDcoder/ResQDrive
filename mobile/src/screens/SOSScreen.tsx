@@ -207,14 +207,27 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
     fetchEmergencyNumbers();
   }, [fetchEmergencyNumbers]);
 
-  // Handle Escalation timer countdown tick
+  const escalationStartTimeRef = useRef<number>(0);
+
   useEffect(() => {
     if (isEscalationActive && escalationTimeLeft > 0) {
+      if (escalationStartTimeRef.current === 0) {
+        escalationStartTimeRef.current = Date.now();
+      }
+
       timerRef.current = setTimeout(() => {
-        setEscalationTimeLeft((prev) => prev - 1);
-      }, 1000);
+        const elapsed = Math.floor((Date.now() - escalationStartTimeRef.current) / 1000);
+        const remaining = 60 - elapsed;
+
+        if (remaining <= 0) {
+          setEscalationTimeLeft(0);
+          escalationStartTimeRef.current = 0;
+        } else {
+          setEscalationTimeLeft(remaining);
+        }
+      }, 500);
     } else if (isEscalationActive && escalationTimeLeft === 0) {
-      // Trigger automatic escalation call
+      escalationStartTimeRef.current = 0;
       triggerAutoEscalationCall();
     }
 
@@ -283,6 +296,9 @@ const triggerAutoEscalationCall = async () => {
         // Next is another personal contact
         const nextContact = sortedContacts[nextIndex];
         setPendingCallTarget({ name: nextContact.name, phone: nextContact.phoneNumber });
+      escalationStartTimeRef.current = 0;
+      setEscalationTimeLeft(60);
+      setIsEscalationActive(true);
         setEscalationTimeLeft(60);
         setIsEscalationActive(true);
         console.log(`[SOS] Next escalation scheduled in 60s: Personal contact ${nextContact.name}`);

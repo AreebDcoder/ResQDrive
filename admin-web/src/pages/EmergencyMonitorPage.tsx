@@ -130,21 +130,28 @@ export default function EmergencyMonitorPage() {
                 <tr className="border-b border-gray-700 text-left text-xs text-gray-500">
                   <th className="p-3">User</th>
                   <th className="p-3">Push</th>
-                  <th className="p-3">SMS</th>
+                  <th className="p-3">WhatsApp</th>
+                  <th className="p-3">Server SMS</th>
                   <th className="p-3">Email</th>
                   <th className="p-3">Time</th>
                 </tr>
               </thead>
               <tbody>
-                {dispatchLogs.map((log: any) => (
-                  <tr key={log.id} className="border-b border-gray-800">
-                    <td className="p-3 text-sm text-white">{log.user?.fullName || 'Unknown'}</td>
-                    <td className="p-3"><span className={`text-xs font-bold ${log.pushStatus === 'SENT' ? 'text-green-400' : 'text-red-400'}`}>{log.pushStatus}</span></td>
-                    <td className="p-3"><span className={`text-xs font-bold ${log.smsStatus === 'SENT' ? 'text-green-400' : 'text-red-400'}`}>{log.smsStatus}</span></td>
-                    <td className="p-3"><span className={`text-xs font-bold ${log.emailStatus === 'SENT' ? 'text-green-400' : 'text-red-400'}`}>{log.emailStatus}</span></td>
-                    <td className="p-3 text-sm text-gray-400">{new Date(log.createdAt).toLocaleTimeString()}</td>
-                  </tr>
-                ))}
+                {dispatchLogs.map((log: any) => {
+                  const payload = typeof log.payload === 'string' ? JSON.parse(log.payload) : log.payload;
+                  const whatsappSent = payload?.contacts?.length > 0;
+                  const deviceSmsUsed = payload?.deviceSmsUsed || payload?.dispatchMode === 'failed';
+                  return (
+                    <tr key={log.id} className="border-b border-gray-800">
+                      <td className="p-3 text-sm text-white">{log.user?.fullName || 'Unknown'}</td>
+                      <td className="p-3"><span className={`text-xs font-bold ${log.pushStatus === 'SENT' ? 'text-green-400' : 'text-red-400'}`}>{log.pushStatus}</span></td>
+                      <td className="p-3"><span className={`text-xs font-bold ${whatsappSent ? 'text-green-400' : 'text-gray-500'}`}>{whatsappSent ? 'SENT' : 'N/A'}</span></td>
+                      <td className="p-3"><span className={`text-xs font-bold ${log.smsStatus === 'SENT' ? 'text-green-400' : 'text-red-400'}`}>{log.smsStatus}</span>{deviceSmsUsed && <span className="block text-[10px] text-amber-400">+ device SIM</span>}</td>
+                      <td className="p-3"><span className={`text-xs font-bold ${log.emailStatus === 'SENT' ? 'text-green-400' : 'text-red-400'}`}>{log.emailStatus}</span></td>
+                      <td className="p-3 text-sm text-gray-400">{new Date(log.createdAt).toLocaleTimeString()}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
