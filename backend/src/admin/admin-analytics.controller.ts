@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Param, Query, Res, UseGuards, NotFoundException,
+  Controller, Get, Patch,Param, Query, Res, UseGuards, NotFoundException,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
@@ -89,16 +89,20 @@ export class AdminAnalyticsController {
     return this.analyticsService.getRecentDispatchLogs(l);
   }
 
-    @Get('crash-detection-logs')
-  @ApiOperation({ summary: 'Get crash sound detection logs (admin)' })
-  async getCrashDetectionLogs(@Query('limit') limit?: string) {
-    return this.analyticsService.getCrashDetectionLogs(limit ? parseInt(limit, 10) : 50);
+  @Get('crash-detection-logs')
+  async getCrashDetectionLogs(@Query('limit') limit?: string, @Query('skip') skip?: string) {
+    return this.analyticsService.getCrashDetectionLogs(
+      limit ? parseInt(limit, 10) : 20,
+      skip ? parseInt(skip, 10) : 0,
+    );
   }
 
   @Get('voice-command-logs')
-  @ApiOperation({ summary: 'Get voice command logs (admin)' })
-  async getVoiceCommandLogs(@Query('limit') limit?: string) {
-    return this.analyticsService.getVoiceCommandLogs(limit ? parseInt(limit, 10) : 50);
+  async getVoiceCommandLogs(@Query('limit') limit?: string, @Query('skip') skip?: string) {
+    return this.analyticsService.getVoiceCommandLogs(
+      limit ? parseInt(limit, 10) : 20,
+      skip ? parseInt(skip, 10) : 0,
+    );
   }
 
   @Get('damage-assessments')
@@ -108,8 +112,26 @@ export class AdminAnalyticsController {
   }
 
   @Get('repair-cost-reports')
-  @ApiOperation({ summary: 'Get repair cost reports (admin)' })
-  async getRepairCostReports(@Query('limit') limit?: string) {
-    return this.analyticsService.getRepairCostReports(limit ? parseInt(limit, 10) : 50);
+  async getRepairCostReports(@Query('limit') limit?: string, @Query('skip') skip?: string) {
+    return this.analyticsService.getRepairCostReports(
+      limit ? parseInt(limit, 10) : 20,
+      skip ? parseInt(skip, 10) : 0,
+    );
+  }
+    @Patch('incidents/:id/resolve')
+  @ApiOperation({ summary: 'Mark an incident as resolved' })
+  async resolveIncident(@Param('id') id: string) {
+    return this.analyticsService.resolveIncident(id);
+  }
+    @Get('users/:id/detail')
+  @ApiOperation({ summary: 'Get full user detail with incidents, vehicles, contacts' })
+  async getUserDetail(@Param('id') id: string) {
+    return this.analyticsService.getUserDetail(id);
+  }
+
+  @Get('workshop-queue')
+  @ApiOperation({ summary: 'Get pending mechanic workshop verifications' })
+  async getWorkshopQueue() {
+    return this.analyticsService.getWorkshopQueue();
   }
 }

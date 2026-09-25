@@ -13,8 +13,10 @@ import CrashDetectionLogsPage from './pages/CrashDetectionLogsPage';
 import VoiceCommandLogsPage from './pages/VoiceCommandLogsPage';
 import DamageAssessmentPage from './pages/DamageAssessmentPage';
 import RepairCostReportsPage from './pages/RepairCostReportsPage';
+import WorkshopQueuePage from './pages/WorkshopQueuePage';
+import EmergencyNumbersPage from './pages/EmergencyNumbersPage';
 
-type Page = 'dashboard' | 'incidents' | 'monitor' | 'crash-logs' | 'voice-logs' | 'damage' | 'repair' | 'health' | 'users' | 'profile';
+type Page = 'dashboard' | 'incidents' | 'monitor' | 'crash-logs' | 'voice-logs' | 'damage' | 'repair' | 'workshop' | 'emergency-numbers' | 'health' | 'users' | 'profile';
 
 function AppContent() {
   const { user, isLoading } = useAuth();
@@ -64,6 +66,8 @@ function AppContent() {
         {page === 'voice-logs' && <VoiceCommandLogsPage />}
         {page === 'damage' && <DamageAssessmentPage />}
         {page === 'repair' && <RepairCostReportsPage />}
+                {page === 'workshop' && <WorkshopQueuePage />}
+        {page === 'emergency-numbers' && <EmergencyNumbersPage />}
         {page === 'users' && <UsersPage />}
         {page === 'profile' && <ProfilePage />}
       </main>

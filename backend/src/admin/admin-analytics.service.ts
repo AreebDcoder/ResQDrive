@@ -257,20 +257,30 @@ async getRecentDispatchLogs(limit = 20) {
     }));
   }
 
-    async getCrashDetectionLogs(limit = 50) {
-    return this.prisma.crashSoundDetectionLog.findMany({
-      take: limit,
-      orderBy: { createdAt: 'desc' },
-      include: { user: { select: { id: true, fullName: true } } },
-    });
+  async getCrashDetectionLogs(limit = 50, skip = 0) {
+    const [data, total] = await Promise.all([
+      this.prisma.crashSoundDetectionLog.findMany({
+        take: limit,
+        skip,
+        orderBy: { createdAt: 'desc' },
+        include: { user: { select: { id: true, fullName: true } } },
+      }),
+      this.prisma.crashSoundDetectionLog.count(),
+    ]);
+    return { data, total };
   }
 
-  async getVoiceCommandLogs(limit = 50) {
-    return this.prisma.voiceCommandLog.findMany({
-      take: limit,
-      orderBy: { createdAt: 'desc' },
-      include: { user: { select: { id: true, fullName: true } } },
-    });
+  async getVoiceCommandLogs(limit = 50, skip = 0) {
+    const [data, total] = await Promise.all([
+      this.prisma.voiceCommandLog.findMany({
+        take: limit,
+        skip,
+        orderBy: { createdAt: 'desc' },
+        include: { user: { select: { id: true, fullName: true } } },
+      }),
+      this.prisma.voiceCommandLog.count(),
+    ]);
+    return { data, total };
   }
 
   async getDamageAssessments(limit = 50) {
@@ -284,14 +294,80 @@ async getRecentDispatchLogs(limit = 20) {
     });
   }
 
-async getRepairCostReports(limit = 50) {
-    return this.prisma.repairCostReport.findMany({
+  async getRepairCostReports(limit = 50, skip = 0) {
+    const reports = await this.prisma.repairCostReport.findMany({
       take: limit,
+      skip,
       orderBy: { createdAt: 'desc' },
       include: {
         user: { select: { id: true, fullName: true } },
         vehicle: { select: { id: true, make: true, model: true } },
       },
+    });
+
+    const incidentIds = [...new Set(reports.map(r => r.incidentId).filter(Boolean))];
+    const damageAssessments = incidentIds.length > 0 ? await this.prisma.damageAssessment.findMany({
+      where: { incidentId: { in: incidentIds } },
+      select: { incidentId: true, predictedDamageType: true, derivedSeverity: true, confidenceScore: true, photoUrl: true },
+    }) : [];
+    const damageMap = new Map(damageAssessments.map(d => [d.incidentId, d]));
+
+    const data = reports.map(r => ({
+      ...r,
+      damageAssessment: r.incidentId ? damageMap.get(r.incidentId) : null,
+    }));
+
+    const total = await this.prisma.repairCostReport.count();
+    return { data, total };
+  }
+    async resolveIncident(id: string) {
+    const incident = await this.prisma.incident.findUnique({ where: { id } });
+    if (!incident) throw new NotFoundException('Incident not found');
+    return this.prisma.incident.update({
+      where: { id },
+      data: { status: 'RESOLVED' as any },
+    });
+  }
+    async getUserDetail(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true, fullName: true, email: true, phoneNumber: true,
+        role: true, isVerified: true, isActive: true, createdAt: true,
+        driverDetails: true, mechanicDetails: true,
+      },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    const [incidents, vehicles, contacts] = await Promise.all([
+      this.prisma.incident.findMany({
+        where: { userId, isDeleted: false },
+        orderBy: { occurredAt: 'desc' },
+        take: 10,
+        select: { id: true, severity: true, status: true, occurredAt: true, address: true },
+      }),
+      this.prisma.vehicle.findMany({
+        where: { userId },
+        select: { id: true, make: true, model: true, year: true, licensePlate: true, isPrimary: true },
+      }),
+      this.prisma.emergencyContact.findMany({
+        where: { userId },
+        orderBy: { priorityOrder: 'asc' },
+        select: { id: true, name: true, phoneNumber: true, email: true, relationship: true, priorityOrder: true },
+      }),
+    ]);
+
+    return { ...user, incidents, vehicles, contacts };
+  }
+
+  async getWorkshopQueue() {
+    return this.prisma.user.findMany({
+      where: {
+        role: 'MECHANIC' as any,
+        mechanicDetails: { isWorkshopVerified: false },
+      },
+      include: { mechanicDetails: true },
+      orderBy: { createdAt: 'desc' },
     });
   }
 }

@@ -71,6 +71,20 @@ export default function IncidentDetailPage({ incidentId, onBack }: { incidentId:
       </div>
     );
   };
+    const [isResolving, setIsResolving] = useState(false);
+
+  const handleResolve = async () => {
+    setIsResolving(true);
+    try {
+      await api.patch(`/admin/incidents/${incidentId}/resolve`);
+      alert('Incident marked as resolved.');
+      onBack();
+    } catch (err) {
+      alert('Failed to resolve incident.');
+    } finally {
+      setIsResolving(false);
+    }
+  };
 
   return (
     <div className="p-8 overflow-auto">
@@ -78,6 +92,13 @@ export default function IncidentDetailPage({ incidentId, onBack }: { incidentId:
         <button onClick={onBack} className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
           <ArrowLeft size={20} />
           Back to Incidents
+        </button>
+                <button
+          onClick={handleResolve}
+          disabled={isResolving}
+          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm disabled:opacity-50"
+        >
+          {isResolving ? 'Resolving...' : '✓ Resolve Incident'}
         </button>
         <button
           onClick={downloadPdf}

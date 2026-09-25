@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../api';
 import type { User } from '../types';
+import UserDetailPage from './UserDetailPage';
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -10,6 +11,7 @@ export default function UsersPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [roleFilter, setRoleFilter] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -58,6 +60,11 @@ export default function UsersPage() {
       alert(err?.response?.data?.message || 'Failed to delete user');
     }
   };
+
+  // If selectedUserId is set, render UserDetailPage
+  if (selectedUserId) {
+    return <UserDetailPage userId={selectedUserId} onBack={() => setSelectedUserId(null)} />;
+  }
 
   return (
     <div className="p-8">
@@ -121,9 +128,20 @@ export default function UsersPage() {
                     </button>
                   </td>
                   <td className="p-4">
-                    <button onClick={() => handleDelete(u.id)} className="text-red-400 hover:text-red-300 text-sm">
-                      Delete
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setSelectedUserId(u.id)}
+                        className="text-xs text-blue-400 hover:text-blue-300 font-medium px-2 py-1 bg-blue-900/20 rounded"
+                      >
+                        View
+                      </button>
+                      <button
+                        onClick={() => handleDelete(u.id)}
+                        className="text-red-400 hover:text-red-300 text-sm"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
