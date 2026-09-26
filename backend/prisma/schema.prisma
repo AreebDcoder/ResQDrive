@@ -458,6 +458,10 @@ enum PartTag {
   right_mirror
   headlight
   taillight
+  front_door
+  rear_door
+  front_fender
+  rear_quarter_panel
   door
   windshield
   roof

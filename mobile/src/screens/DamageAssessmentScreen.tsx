@@ -51,7 +51,8 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<any>(null);
-  const [selectedPartTag, setSelectedPartTag] = useState<string>('other');
+  const [selectedPartTag, setSelectedPartTag] = useState<string | null>(null);
+  const [currentSessionAssessmentIds, setCurrentSessionAssessmentIds] = useState<string[]>([]);
 
   const PART_TAGS = [
     { tag: 'front_bumper', label: 'Front Bumper' },
@@ -61,11 +62,13 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
     { tag: 'right_mirror', label: 'Right Side Mirror' },
     { tag: 'headlight', label: 'Headlights' },
     { tag: 'taillight', label: 'Taillights' },
-    { tag: 'door', label: 'Doors / Side Panel' },
+    { tag: 'front_door', label: 'Front Door' },
+    { tag: 'rear_door', label: 'Rear Door' },
+    { tag: 'front_fender', label: 'Front Fender / Panel' },
+    { tag: 'rear_quarter_panel', label: 'Rear Quarter / Side Panel' },
     { tag: 'windshield', label: 'Windshield' },
     { tag: 'roof', label: 'Roof Panel' },
     { tag: 'tire', label: 'Tires / Rims' },
-    { tag: 'other', label: 'Other Parts' },
   ];
 
   // Loading & Error States
@@ -178,6 +181,9 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
       });
 
       setPrediction(response.data);
+      if (response.data?.id) {
+        setCurrentSessionAssessmentIds((prev) => [...prev, response.data.id]);
+      }
     } catch (err: any) {
       console.log('Damage Assessment Error:', err);
       const status = err.response?.status;
@@ -455,7 +461,7 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
                   setPrediction(null);
                   setSelectedImage(null);
                   setImageFile(null);
-                  setSelectedPartTag('other');
+                  setSelectedPartTag(null);
                   setIsCarRejection(false);
                 }}
               >
@@ -466,7 +472,11 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
               <TouchableOpacity
                 style={[styles.actionBtnSecondary, { marginTop: 12 }]}
                 onPress={() => {
-                  navigation.navigate('RepairCost', { incidentId: incidentId || null, generate: true });
+                  navigation.navigate('RepairCost', {
+                    incidentId: incidentId || null,
+                    generate: true,
+                    assessmentIds: currentSessionAssessmentIds,
+                  });
                 }}
               >
                 <Ionicons name="cash-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
@@ -493,7 +503,9 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
 
           {/* Part Tag selector */}
           <View style={styles.dropdownContainer}>
-            <Text style={styles.dropdownLabel}>Select Damaged Part</Text>
+            <Text style={styles.dropdownLabel}>
+              Select Damaged Part <Text style={{ color: '#FF1744' }}>* (Required)</Text>
+            </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.vehicleScroll}>
               {PART_TAGS.map((pt) => (
                 <TouchableOpacity
@@ -565,9 +577,18 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
           </View>
 
           {selectedImage && (
-            <TouchableOpacity style={styles.actionBtnPrimary} onPress={handleAnalyze}>
+            <TouchableOpacity
+              style={[
+                styles.actionBtnPrimary,
+                !selectedPartTag && { opacity: 0.45, backgroundColor: 'rgba(229, 57, 53, 0.4)' },
+              ]}
+              onPress={handleAnalyze}
+              disabled={!selectedPartTag || isAnalyzing}
+            >
               <Ionicons name="hardware-chip-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
-              <Text style={styles.actionBtnText}>Analyze Damage</Text>
+              <Text style={styles.actionBtnText}>
+                {!selectedPartTag ? 'Select Damaged Part Above First' : 'Analyze Damage'}
+              </Text>
             </TouchableOpacity>
           )}
         </View>

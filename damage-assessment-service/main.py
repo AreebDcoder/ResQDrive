@@ -62,6 +62,54 @@ DAMAGE_TYPE_TO_SEVERITY = {
     "shattered glass": "severe",
 }
 
+def evaluate_class_severity(clean_name: str, conf: float, area_ratio: float) -> tuple[str, int]:
+    """
+    Evaluates dynamic severity level (1=minor, 2=moderate, 3=severe) for ALL 6 damage classes 
+    based on Bounding Box Area Ratio (R_area) and Confidence Percentage (Conf).
+    """
+    cls = clean_name.lower().replace(" ", "_")
+
+    # 1. Scratches & Dents (Base: minor)
+    if cls in ["scratch", "dent"]:
+        if area_ratio >= 0.40 and conf >= 0.45:
+            return "severe", 3
+        elif area_ratio >= 0.18 and conf >= 0.35:
+            return "moderate", 2
+        else:
+            return "minor", 1
+
+    # 2. Broken Lamps & Flat Tires (Base: moderate)
+    elif cls in ["lamp_broken", "broken_lamp", "tire_flat", "flat_tire"]:
+        if area_ratio >= 0.25 and conf >= 0.40:
+            return "severe", 3
+        elif area_ratio < 0.05 and conf < 0.35:
+            return "minor", 1
+        else:
+            return "moderate", 2
+
+    # 3. Cracks (Base: severe)
+    elif cls in ["crack"]:
+        if area_ratio >= 0.15 or conf >= 0.50:
+            return "severe", 3
+        elif area_ratio < 0.08 and conf < 0.45:
+            return "moderate", 2
+        else:
+            return "severe", 3
+
+    # 4. Glass Shatter (Base: severe)
+    elif cls in ["glass_shatter", "shattered_glass"]:
+        if area_ratio >= 0.20 or conf >= 0.50:
+            return "severe", 3
+        elif area_ratio < 0.06 and conf < 0.40:
+            return "moderate", 2
+        else:
+            return "severe", 3
+
+    # Fallback for unexpected classes
+    base_sev = DAMAGE_TYPE_TO_SEVERITY.get(cls, "minor")
+    sev_num = 1 if base_sev == "minor" else (2 if base_sev == "moderate" else 3)
+    return base_sev, sev_num
+
 # ImageNet vehicle and part verification classes
 CAR_RELATED_IMAGENET_CLASSES = {
     "convertible", "sports_car", "racer", "cab", "limousine", "jeep",
@@ -188,12 +236,15 @@ async def predict(file: UploadFile = File(...)):
             results = yolo_model.predict(img, verbose=False)
             boxes = results[0].boxes
 
+            img_w, img_h = img.width, img.height
+            img_area = max(1, img_w * img_h)
+
             detections = []
             all_scores = {cls: 0.0 for cls in ["dent", "scratch", "crack", "glass shatter", "lamp broken", "tire flat"]}
 
             best_damage_type = "dent"
             best_confidence = 0.0
-            best_severity = "minor"
+            highest_sev_level = 1
 
             if len(boxes) > 0:
                 for box in boxes:
@@ -205,19 +256,37 @@ async def predict(file: UploadFile = File(...)):
                     clean_name = cls_name.replace(" ", "_")
                     all_scores[cls_name] = max(all_scores.get(cls_name, 0.0), round(conf, 4))
 
-                    sev = DAMAGE_TYPE_TO_SEVERITY.get(cls_name, DAMAGE_TYPE_TO_SEVERITY.get(clean_name, "minor"))
+                    # Calculate Bounding Box Area Ratio (Damage Area vs Full Image Area)
+                    box_w = max(0, xyxy[2] - xyxy[0])
+                    box_h = max(0, xyxy[3] - xyxy[1])
+                    box_area = box_w * box_h
+                    area_ratio = round(box_area / img_area, 4)
+
+                    # Dynamic Area Ratio & Confidence Percentage Evaluation for ALL 6 classes
+                    det_sev, sev_level = evaluate_class_severity(clean_name, conf, area_ratio)
 
                     detections.append({
                         "class": clean_name,
                         "confidence": round(conf, 4),
-                        "severity": sev,
+                        "area_ratio": area_ratio,
+                        "severity": det_sev,
                         "box": [round(c, 2) for c in xyxy],
                     })
+
+                    if sev_level > highest_sev_level:
+                        highest_sev_level = sev_level
 
                     if conf > best_confidence:
                         best_confidence = conf
                         best_damage_type = clean_name
-                        best_severity = sev
+
+                # 4. Multi-detection cumulative area boost:
+                # If combined confidence-weighted damage area across all detections >= 0.35, escalate overall severity tier
+                total_weighted_area = sum(d["confidence"] * d["area_ratio"] for d in detections)
+                if total_weighted_area >= 0.35 and highest_sev_level < 3:
+                    highest_sev_level += 1
+
+                best_severity = "minor" if highest_sev_level == 1 else ("moderate" if highest_sev_level == 2 else "severe")
             else:
                 best_confidence = 0.20
                 best_damage_type = "unknown"

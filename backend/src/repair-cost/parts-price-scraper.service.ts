@@ -49,16 +49,19 @@ export class PartsPriceScraperService {
   private readonly PART_TAG_TO_SEARCH_NAME: Record<string, string> = {
     front_bumper: 'front bumper',
     rear_bumper: 'rear bumper',
-    bonnet: 'bonnet hood',
+    bonnet: 'bonnet',
     left_mirror: 'side mirror',
     right_mirror: 'side mirror',
     headlight: 'headlight',
-    taillight: 'back light taillight',
-    door: 'door panel',
-    windshield: 'windshield glass',
-    roof: 'roof panel',
-    tire: 'tire rim wheel',
-    other: 'spare part',
+    taillight: 'taillight',
+    front_door: 'front door',
+    rear_door: 'rear door',
+    front_fender: 'fender',
+    rear_quarter_panel: 'quarter panel',
+    door: 'door',
+    windshield: 'windshield',
+    roof: 'roof',
+    tire: 'tire',
   };
 
   constructor(private readonly prisma: PrismaService) {}
@@ -96,14 +99,16 @@ export class PartsPriceScraperService {
     const cleanMake = (make || '').trim();
     const cleanModel = (model || '').trim();
     const partKeyword = this.getSearchKeyword(partTag);
-    const searchQuery = `${cleanMake} ${cleanModel} ${partKeyword}`.replace(/\s+/g, ' ').trim();
+
+    // Optimized clean query (e.g. "Corolla front bumper" or "Civic headlight")
+    const searchQuery = `${cleanModel} ${partKeyword}`.replace(/\s+/g, ' ').trim();
     const startTime = Date.now();
 
     this.logger.log(`Initiating marketplace parts price scrape for query: "${searchQuery}"`);
 
     // ── TIER 1: PakWheels AutoStore Scrape ──
     try {
-      const pakwheelsResult = await this.scrapePakWheels(searchQuery, make, model, partKeyword);
+      const pakwheelsResult = await this.scrapePakWheels(searchQuery, cleanMake, cleanModel, partKeyword, action);
       const durationMs = Date.now() - startTime;
 
       if (pakwheelsResult && pakwheelsResult.filteredPrices.length >= 2) {
@@ -138,7 +143,7 @@ export class PartsPriceScraperService {
 
     // ── TIER 2: OLX Pakistan Scrape ──
     try {
-      const olxResult = await this.scrapeOLX(searchQuery, make, model, partKeyword);
+      const olxResult = await this.scrapeOLX(searchQuery, cleanMake, cleanModel, partKeyword);
       const durationMs = Date.now() - startTime;
 
       if (olxResult && olxResult.filteredPrices.length >= 2) {
@@ -198,6 +203,7 @@ export class PartsPriceScraperService {
     make: string,
     model: string,
     partKeyword: string,
+    action: string,
   ) {
     await this.enforceRateLimit();
     const url = `https://www.pakwheels.com/accessories-spare-parts/search/-/?q=${encodeURIComponent(searchQuery)}`;
@@ -210,16 +216,24 @@ export class PartsPriceScraperService {
     const $ = cheerio.load(response.data);
     const rawListings: { title: string; price: number; url: string }[] = [];
 
-    // Parse product cards from PakWheels HTML
-    $('ul.search-results > li, .well, .search-card, li.ad-tile, .single-product-item').each((_, el) => {
-      const title = $(el).find('a.product-title, .title, h3, h4').text().trim() || $(el).find('a').attr('title') || '';
-      const priceText = $(el).find('.price-details, .price, .generic-price, .currency').text().trim();
-      const href = $(el).find('a').attr('href') || '';
+    // Parse product cards from PakWheels HTML using active DOM selectors
+    $('.price-details, .price, .generic-price').each((_, el) => {
+      const priceText = $(el).text().trim();
+      const priceMatch = priceText.match(/PKR\s*([\d,]+)/i) || priceText.match(/Rs\.?\s*([\d,]+)/i);
+      if (priceMatch) {
+        const numericPrice = parseInt(priceMatch[1].replace(/,/g, ''), 10);
+        const card = $(el).closest(
+          'li, div.well, div.search-card, div.single-product-item, div[class*="product"], div[class*="item"], div.border-bottom',
+        );
+        const title =
+          card.find('a[title]').attr('title') ||
+          card.find('h3, h4, .title, a').first().text().replace(/\s+/g, ' ').trim();
+        const href = card.find('a').attr('href') || '';
 
-      const numericPrice = this.parsePriceInteger(priceText);
-      if (title && numericPrice > 0) {
-        const fullUrl = href.startsWith('http') ? href : `https://www.pakwheels.com${href}`;
-        rawListings.push({ title, price: numericPrice, url: fullUrl });
+        if (numericPrice >= 300 && numericPrice <= 350000 && title && title.length > 5) {
+          const fullUrl = href.startsWith('http') ? href : `https://www.pakwheels.com${href}`;
+          rawListings.push({ title, price: numericPrice, url: fullUrl });
+        }
       }
     });
 
@@ -238,17 +252,27 @@ export class PartsPriceScraperService {
       });
     }
 
-    // Relevant filtering: title must contain main part keyword AND at least make or model
+    // Filter relevant listings & exclude minor accessories (spacers, clips) if replacing major part
+    const mainPartToken = partKeyword.split(' ')[0].toLowerCase();
+    const lowerMake = make.toLowerCase();
+    const lowerModel = model.toLowerCase();
+
     const filtered = rawListings.filter((item) => {
       const lowerTitle = item.title.toLowerCase();
-      const lowerMake = make.toLowerCase();
-      const lowerModel = model.toLowerCase();
-      const mainPartToken = partKeyword.split(' ')[0].toLowerCase();
+      const isAccessory =
+        lowerTitle.includes('spacer') ||
+        lowerTitle.includes('clip') ||
+        lowerTitle.includes('bracket') ||
+        lowerTitle.includes('moulding');
+
+      if (action === 'replace' && isAccessory && item.price < 2000) {
+        return false;
+      }
 
       const hasPartMatch = lowerTitle.includes(mainPartToken);
-      const hasVehicleMatch = lowerTitle.includes(lowerMake) || lowerTitle.includes(lowerModel);
+      const hasVehicleMatch = lowerTitle.includes(lowerModel) || lowerTitle.includes(lowerMake);
 
-      return hasPartMatch && hasVehicleMatch && item.price >= 300 && item.price <= 300000;
+      return (hasPartMatch || hasVehicleMatch) && item.price >= 300 && item.price <= 350000;
     });
 
     return {
