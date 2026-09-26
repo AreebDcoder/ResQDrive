@@ -1,88 +1,109 @@
-import { useState } from 'react';
+import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from 'react';
+import {
+  BrowserRouter, Routes, Route, Navigate, useLocation,
+} from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth';
+import AdminLayout from './layouts/AdminLayout';
+import { ROUTES } from './routes';
+import { Spinner } from './components/ui/Spinner';
+import { ErrorBoundary } from './components/ErrorBoundary';
+
+// LoginPage is NOT lazy (it's the first thing users see on auth-fail).
 import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import IncidentsPage from './pages/IncidentsPage';
-import IncidentDetailPage from './pages/IncidentDetailPage';
-import UsersPage from './pages/UsersPage';
-import ProfilePage from './pages/ProfilePage';
-import Sidebar from './components/Sidebar';
-import SystemHealthPage from './pages/SystemHealthPage';
-import EmergencyMonitorPage from './pages/EmergencyMonitorPage';
-import CrashDetectionLogsPage from './pages/CrashDetectionLogsPage';
-import VoiceCommandLogsPage from './pages/VoiceCommandLogsPage';
-import DamageAssessmentPage from './pages/DamageAssessmentPage';
-import RepairCostReportsPage from './pages/RepairCostReportsPage';
-import WorkshopQueuePage from './pages/WorkshopQueuePage';
-import EmergencyNumbersPage from './pages/EmergencyNumbersPage';
-import NotificationHistoryPage from './pages/NotificationHistoryPage';
-import DataExportPage from './pages/DataExportPage';
 
-type Page = 'dashboard' | 'incidents' | 'monitor' | 'crash-logs' | 'voice-logs' | 'damage' | 'repair' | 'workshop' | 'emergency-numbers' | 'health' | 'users' | 'profile' | 'notifications' | 'export';
+// ─── Loading fallback for lazy routes ──────────────────────────────────────
+function RouteLoader() {
+  return (
+    <div className="flex items-center justify-center py-24">
+      <Spinner size={24} className="text-primary-500" label="Loading page" />
+    </div>
+  );
+}
 
-function AppContent() {
+// ─── Auth guard: redirects to /login when not authenticated ────────────────
+function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
-  const [page, setPage] = useState<Page>('dashboard');
-  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
+  const location = useLocation();
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-900">
-        <div className="text-gray-400">Loading...</div>
+      <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-gray-950">
+        <Spinner size={28} className="text-primary-500" label="Loading session" />
       </div>
     );
   }
 
   if (!user) {
-    return <LoginPage />;
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
-  if (selectedIncidentId) {
-    return (
-      <div className="flex h-screen bg-gray-900">
-        <Sidebar
-          currentPage={page}
-          onNavigate={(p) => {
-            setSelectedIncidentId(null);
-            setPage(p);
-          }}
-          activePageLabel="Incident Detail"
-        />
-        <IncidentDetailPage
-          incidentId={selectedIncidentId}
-          onBack={() => setSelectedIncidentId(null)}
-        />
-      </div>
-    );
-  }
+  return <>{children}</>;
+}
 
+// ─── Redirect to dashboard when logged-in user lands on /login ─────────────
+function RedirectIfAuthed({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return null;
+  if (user) return <Navigate to="/dashboard" replace />;
+  return <>{children}</>;
+}
+
+// ─── Routes tree ────────────────────────────────────────────────────────────
+function AppRoutes() {
   return (
-    <div className="flex h-screen bg-gray-900">
-      <Sidebar currentPage={page} onNavigate={setPage} />
-      <main className="flex-1 overflow-auto">
-        {page === 'dashboard' && <DashboardPage />}
-        {page === 'incidents' && <IncidentsPage onSelectIncident={setSelectedIncidentId} />}
-        {page === 'monitor' && <EmergencyMonitorPage />}
-        {page === 'health' && <SystemHealthPage />}
-                {page === 'crash-logs' && <CrashDetectionLogsPage />}
-        {page === 'voice-logs' && <VoiceCommandLogsPage />}
-        {page === 'damage' && <DamageAssessmentPage />}
-        {page === 'repair' && <RepairCostReportsPage />}
-                {page === 'workshop' && <WorkshopQueuePage />}
-        {page === 'emergency-numbers' && <EmergencyNumbersPage />}
-                {page === 'notifications' && <NotificationHistoryPage />}
-        {page === 'users' && <UsersPage />}
-        {page === 'export' && <DataExportPage />}
-        {page === 'profile' && <ProfilePage />}
-      </main>
-    </div>
+    <Routes>
+      {/* Auth route (no layout — just renders LoginPage directly) */}
+      <Route
+        path="/login"
+        element={
+          <RedirectIfAuthed>
+            <LoginPage />
+          </RedirectIfAuthed>
+        }
+      />
+
+      {/* Admin routes (require auth + AdminLayout) */}
+      <Route
+        element={
+          <RequireAuth>
+            <AdminLayout />
+          </RequireAuth>
+        }
+      >
+        {/* Index redirect */}
+        <Route index element={<Navigate to="/dashboard" replace />} />
+
+        {/* Render all routes from routes.ts */}
+        {ROUTES.map((route) => {
+          const Element = route.element as LazyExoticComponent<ComponentType<any>>;
+          return (
+            <Route
+              key={route.path}
+              path={route.path}
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<RouteLoader />}>
+                    <Element />
+                  </Suspense>
+                </ErrorBoundary>
+              }
+            />
+          );
+        })}
+
+        {/* Catch-all → redirect to dashboard */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Route>
+    </Routes>
   );
 }
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </BrowserRouter>
   );
 }

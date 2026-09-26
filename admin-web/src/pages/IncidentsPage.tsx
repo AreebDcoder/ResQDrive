@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import type { Incident } from '../types';
 
@@ -9,7 +10,8 @@ const STATUS_COLORS: Record<string, string> = {
   ACTIVE: 'bg-red-600', RESOLVED: 'bg-green-600', FALSE_ALARM: 'bg-gray-600', ARCHIVED: 'bg-gray-800',
 };
 
-export default function IncidentsPage({ onSelectIncident }: { onSelectIncident: (id: string) => void }) {
+export default function IncidentsPage() {
+  const navigate = useNavigate();
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -98,7 +100,7 @@ export default function IncidentsPage({ onSelectIncident }: { onSelectIncident: 
               {incidents.map((inc) => (
                 <tr
                   key={inc.id}
-                  onClick={() => onSelectIncident(inc.id)}
+                  onClick={() => navigate(`/incidents/${inc.id}`)}
                   className="border-b border-gray-700 hover:bg-gray-700 cursor-pointer transition-colors"
                 >
                   <td className="p-4">

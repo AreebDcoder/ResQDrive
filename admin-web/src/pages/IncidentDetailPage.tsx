@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Download, MapPin } from 'lucide-react';
 import api, { API_URL } from '../api';
 import type { Incident } from '../types';
@@ -10,7 +11,9 @@ const STATUS_COLORS: Record<string, string> = {
   ACTIVE: 'bg-red-600', RESOLVED: 'bg-green-600', FALSE_ALARM: 'bg-gray-600', ARCHIVED: 'bg-gray-800',
 };
 
-export default function IncidentDetailPage({ incidentId, onBack }: { incidentId: string; onBack: () => void }) {
+export default function IncidentDetailPage() {
+  const { id: incidentId = '' } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [incident, setIncident] = useState<Incident | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isResolving, setIsResolving] = useState(false);
@@ -78,7 +81,7 @@ export default function IncidentDetailPage({ incidentId, onBack }: { incidentId:
     try {
       await api.patch(`/admin/incidents/${incidentId}/resolve`);
       alert('Incident marked as resolved.');
-      onBack();
+      navigate('/incidents');
     } catch (err) {
       alert('Failed to resolve incident.');
     } finally {
@@ -89,7 +92,7 @@ export default function IncidentDetailPage({ incidentId, onBack }: { incidentId:
   return (
     <div className="p-8 overflow-auto">
       <div className="flex items-center justify-between mb-6">
-        <button onClick={onBack} className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
+        <button onClick={() => navigate('/incidents')} className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
           <ArrowLeft size={20} />
           Back to Incidents
         </button>

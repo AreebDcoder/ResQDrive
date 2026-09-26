@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import api from '../api';
 
-export default function UserDetailPage({ userId, onBack }: { userId: string; onBack: () => void }) {
+export default function UserDetailPage() {
+  const { id: userId = '' } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -15,7 +18,7 @@ export default function UserDetailPage({ userId, onBack }: { userId: string; onB
 
   return (
     <div className="p-8">
-      <button onClick={onBack} className="flex items-center gap-2 text-gray-400 hover:text-white mb-6">
+      <button onClick={() => navigate('/users')} className="flex items-center gap-2 text-gray-400 hover:text-white mb-6">
         <ArrowLeft size={20} /> Back to Users
       </button>
 

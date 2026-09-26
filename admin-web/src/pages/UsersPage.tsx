@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import type { User } from '../types';
-import UserDetailPage from './UserDetailPage';
 
 export default function UsersPage() {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -11,7 +12,7 @@ export default function UsersPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [roleFilter, setRoleFilter] = useState('');
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -60,11 +61,6 @@ export default function UsersPage() {
       alert(err?.response?.data?.message || 'Failed to delete user');
     }
   };
-
-  // If selectedUserId is set, render UserDetailPage
-  if (selectedUserId) {
-    return <UserDetailPage userId={selectedUserId} onBack={() => setSelectedUserId(null)} />;
-  }
 
   return (
     <div className="p-8">
@@ -130,7 +126,7 @@ export default function UsersPage() {
                   <td className="p-4">
                     <div className="flex items-center gap-3">
                       <button
-                        onClick={() => setSelectedUserId(u.id)}
+                        onClick={() => navigate(`/users/${u.id}`)}
                         className="text-xs text-blue-400 hover:text-blue-300 font-medium px-2 py-1 bg-blue-900/20 rounded"
                       >
                         View
