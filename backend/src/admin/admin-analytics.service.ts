@@ -3,6 +3,7 @@ import { IncidentSeverity, IncidentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnalyticsQueryDto } from './dto/analytics-query.dto';
 import { AdminIncidentsQueryDto } from './dto/admin-incidents-query.dto';
+import { AdminUpdateIncidentDto } from './dto/admin-update-incident.dto';
 
 @Injectable()
 export class AdminAnalyticsService {
@@ -327,6 +328,146 @@ async getRecentDispatchLogs(limit = 20) {
       where: { id },
       data: { status: 'RESOLVED' as any },
     });
+  }
+
+  /**
+   * Admin full-edit of an incident. Bypasses user-scoped checks (this is
+   * admin-only). Cannot modify userId, id, isDeleted, createdAt, updatedAt
+   * (Prisma ignores those silently if not in dto).
+   */
+  async updateIncident(id: string, dto: AdminUpdateIncidentDto) {
+    const incident = await this.prisma.incident.findUnique({ where: { id } });
+    if (!incident || incident.isDeleted) {
+      throw new NotFoundException('Incident not found');
+    }
+    // Build update payload — only fields actually present in dto
+    const updateData: any = {};
+    if (dto.type !== undefined) updateData.type = dto.type;
+    if (dto.severity !== undefined) updateData.severity = dto.severity;
+    if (dto.status !== undefined) updateData.status = dto.status;
+    if (dto.occurredAt !== undefined) updateData.occurredAt = new Date(dto.occurredAt);
+    if (dto.latitude !== undefined) updateData.latitude = dto.latitude;
+    if (dto.longitude !== undefined) updateData.longitude = dto.longitude;
+    if (dto.address !== undefined) updateData.address = dto.address;
+    if (dto.description !== undefined) updateData.description = dto.description;
+    if (dto.sensorSnapshot !== undefined) updateData.sensorSnapshot = dto.sensorSnapshot;
+    if (dto.alertDispatchStatus !== undefined) updateData.alertDispatchStatus = dto.alertDispatchStatus;
+    if (dto.damageAssessmentResult !== undefined) updateData.damageAssessmentResult = dto.damageAssessmentResult;
+
+    return this.prisma.incident.update({ where: { id }, data: updateData });
+  }
+
+  /**
+   * Generic status update. Useful for the admin dropdown to flip an incident
+   * between ACTIVE / RESOLVED / FALSE_ALARM / ARCHIVED without doing a full
+   * edit.
+   */
+  async updateIncidentStatus(id: string, status: string) {
+    const incident = await this.prisma.incident.findUnique({ where: { id } });
+    if (!incident) throw new NotFoundException('Incident not found');
+    return this.prisma.incident.update({
+      where: { id },
+      data: { status: status as any },
+    });
+  }
+
+  /**
+   * Soft-delete an incident (set isDeleted=true + status=ARCHIVED).
+   * Restorable via restoreIncident(). Does NOT permanently delete the row.
+   */
+  async softDeleteIncident(id: string) {
+    const incident = await this.prisma.incident.findUnique({ where: { id } });
+    if (!incident) throw new NotFoundException('Incident not found');
+    if (incident.isDeleted) {
+      // Already soft-deleted — return as-is (idempotent)
+      return incident;
+    }
+    return this.prisma.incident.update({
+      where: { id },
+      data: { isDeleted: true, status: 'ARCHIVED' as any },
+    });
+  }
+
+  /**
+   * Restore a previously soft-deleted incident.
+   * Preserves whatever status it had before deletion (we restore isDeleted=false
+   * but don't touch status — caller can use updateIncidentStatus to flip it back
+   * to ACTIVE/RESOLVED if needed).
+   */
+  async restoreIncident(id: string) {
+    const incident = await this.prisma.incident.findUnique({ where: { id } });
+    if (!incident) throw new NotFoundException('Incident not found');
+    if (!incident.isDeleted) {
+      // Not soft-deleted — return as-is (idempotent)
+      return incident;
+    }
+    return this.prisma.incident.update({
+      where: { id },
+      data: { isDeleted: false },
+    });
+  }
+
+  /**
+   * Bulk resolve — sets status=RESOLVED for all matching IDs in a single
+   * transaction. Idempotent (already-resolved incidents stay resolved).
+   * Returns the count of incidents actually changed + the array of updated rows.
+   */
+  async bulkResolveIncidents(ids: string[]) {
+    // Validate that all IDs exist (so caller can give meaningful error)
+    const found = await this.prisma.incident.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, status: true, isDeleted: true },
+    });
+    const foundIds = new Set(found.map((i) => i.id));
+    const missing = ids.filter((id) => !foundIds.has(id));
+    if (missing.length > 0) {
+      throw new NotFoundException(`Incidents not found: ${missing.join(', ')}`);
+    }
+    // Don't touch soft-deleted ones (caller should restore first)
+    const eligible = found.filter((i) => !i.isDeleted);
+    if (eligible.length === 0) {
+      return { count: 0, incidents: [] };
+    }
+    // Single transaction: update all eligible to RESOLVED
+    const updated = await this.prisma.$transaction(
+      eligible.map((i) =>
+        this.prisma.incident.update({
+          where: { id: i.id },
+          data: { status: 'RESOLVED' as any },
+        }),
+      ),
+    );
+    return { count: updated.length, incidents: updated };
+  }
+
+  /**
+   * Bulk soft-delete — sets isDeleted=true + status=ARCHIVED for all matching
+   * IDs in a single transaction. Idempotent. Permanently-deleted rows can't be
+   * restored (we don't do hard-deletes from the admin panel).
+   */
+  async bulkDeleteIncidents(ids: string[]) {
+    const found = await this.prisma.incident.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, isDeleted: true },
+    });
+    const foundIds = new Set(found.map((i) => i.id));
+    const missing = ids.filter((id) => !foundIds.has(id));
+    if (missing.length > 0) {
+      throw new NotFoundException(`Incidents not found: ${missing.join(', ')}`);
+    }
+    const eligible = found.filter((i) => !i.isDeleted);
+    if (eligible.length === 0) {
+      return { count: 0, incidents: [] };
+    }
+    const updated = await this.prisma.$transaction(
+      eligible.map((i) =>
+        this.prisma.incident.update({
+          where: { id: i.id },
+          data: { isDeleted: true, status: 'ARCHIVED' as any },
+        }),
+      ),
+    );
+    return { count: updated.length, incidents: updated };
   }
     async getUserDetail(userId: string) {
     const user = await this.prisma.user.findUnique({
