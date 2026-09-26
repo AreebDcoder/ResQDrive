@@ -12,9 +12,9 @@
 
 import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
 import {
-  LayoutDashboard, Siren, Activity, Wrench, Phone, Users,
+  LayoutDashboard, Siren, Activity, Wrench, Phone, Users, Car,
   AudioLines, Mic, Image, Calculator, Bell, Download,
-  HeartPulse, UserCircle,
+  HeartPulse, UserCircle, Contact, FileWarning,
 } from 'lucide-react';
 
 // ─── Page lazy-imports (code-splitting per route) ────────────────────────────
@@ -24,6 +24,10 @@ const IncidentDetailPage = lazy(() => import('./pages/IncidentDetailPage'));
 const UsersPage = lazy(() => import('./pages/UsersPage'));
 const UserDetailPage = lazy(() => import('./pages/UserDetailPage'));
 const UserCreatePage = lazy(() => import('./pages/UserCreatePage'));
+const VehiclesPage = lazy(() => import('./pages/VehiclesPage'));
+const VehicleDetailPage = lazy(() => import('./pages/VehicleDetailPage'));
+const EmergencyContactsPage = lazy(() => import('./pages/EmergencyContactsPage'));
+const AccidentReportsPage = lazy(() => import('./pages/AccidentReportsPage'));
 const EmergencyMonitorPage = lazy(() => import('./pages/EmergencyMonitorPage'));
 const SystemHealthPage = lazy(() => import('./pages/SystemHealthPage'));
 const CrashDetectionLogsPage = lazy(() => import('./pages/CrashDetectionLogsPage'));
@@ -75,6 +79,9 @@ export const NAV_GROUPS: NavGroup[] = [
     group: 'Users & Vehicles',
     items: [
       { to: '/users', label: 'Users', icon: Users },
+      { to: '/vehicles', label: 'Vehicles', icon: Car },
+      { to: '/contacts', label: 'Contacts', icon: Contact },
+      { to: '/accident-reports', label: 'Accident Reports', icon: FileWarning },
     ],
   },
   {
@@ -115,6 +122,10 @@ export const ROUTES: RouteDef[] = [
   { path: '/users', element: UsersPage },
   { path: '/users/new', element: UserCreatePage },
   { path: '/users/:id', element: UserDetailPage },
+  { path: '/vehicles', element: VehiclesPage },
+  { path: '/vehicles/:id', element: VehicleDetailPage },
+  { path: '/contacts', element: EmergencyContactsPage },
+  { path: '/accident-reports', element: AccidentReportsPage },
   { path: '/monitor', element: EmergencyMonitorPage },
   { path: '/health', element: SystemHealthPage },
   { path: '/crash-logs', element: CrashDetectionLogsPage },
@@ -136,6 +147,10 @@ export const PAGE_TITLES: Record<string, string> = {
   '/users': 'Users',
   '/users/new': 'Create User',
   '/users/:id': 'User Detail',
+  '/vehicles': 'Vehicles',
+  '/vehicles/:id': 'Vehicle Detail',
+  '/contacts': 'Emergency Contacts',
+  '/accident-reports': 'Accident Reports',
   '/monitor': 'Emergency Monitor',
   '/health': 'System Health',
   '/crash-logs': 'Crash Detection',
