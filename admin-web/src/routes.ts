@@ -23,6 +23,7 @@ const IncidentsPage = lazy(() => import('./pages/IncidentsPage'));
 const IncidentDetailPage = lazy(() => import('./pages/IncidentDetailPage'));
 const UsersPage = lazy(() => import('./pages/UsersPage'));
 const UserDetailPage = lazy(() => import('./pages/UserDetailPage'));
+const UserCreatePage = lazy(() => import('./pages/UserCreatePage'));
 const EmergencyMonitorPage = lazy(() => import('./pages/EmergencyMonitorPage'));
 const SystemHealthPage = lazy(() => import('./pages/SystemHealthPage'));
 const CrashDetectionLogsPage = lazy(() => import('./pages/CrashDetectionLogsPage'));
@@ -112,6 +113,7 @@ export const ROUTES: RouteDef[] = [
   { path: '/incidents', element: IncidentsPage },
   { path: '/incidents/:id', element: IncidentDetailPage },
   { path: '/users', element: UsersPage },
+  { path: '/users/new', element: UserCreatePage },
   { path: '/users/:id', element: UserDetailPage },
   { path: '/monitor', element: EmergencyMonitorPage },
   { path: '/health', element: SystemHealthPage },
@@ -132,6 +134,7 @@ export const PAGE_TITLES: Record<string, string> = {
   '/incidents': 'Incidents',
   '/incidents/:id': 'Incident Detail',
   '/users': 'Users',
+  '/users/new': 'Create User',
   '/users/:id': 'User Detail',
   '/monitor': 'Emergency Monitor',
   '/health': 'System Health',
