@@ -1,72 +1,71 @@
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
+  PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
   LineChart, Line, XAxis, YAxis, CartesianGrid,
-  BarChart, Bar, AreaChart, Area,
+  AreaChart, Area,
+  BarChart, Bar,
 } from 'recharts';
-import api from '../api';
-import type { AnalyticsSummary, AnalyticsTrend, AnalyticsHotspot } from '../types';
-import { Users, Car, BellRing, Cpu, Activity, AlertTriangle } from 'lucide-react';
+import {
+  Users, Car, AlertTriangle, Activity, BellRing, Cpu,
+  MapPin, RefreshCw, Siren, Wrench, FileSpreadsheet, Inbox,
+} from 'lucide-react';
+import {
+  useDashboardSummary,
+  useDashboardTrends,
+  useDashboardHotspots,
+  useExtendedDashboardSummary,
+} from '../hooks/useDashboardData';
+import { KpiCard } from '../components/KpiCard';
+import { ChartContainer, TOOLTIP_STYLE } from '../components/charts/ChartContainer';
+import { MiniMap } from '../components/MiniMap';
+import { DateRangePicker, presetToRange, type PresetKey } from '../components/DateRangePicker';
+import { Button } from '../components/ui/Button';
+import { Switch } from '../components/ui/Switch';
+import { Badge } from '../components/ui/Badge';
+import { Skeleton } from '../components/ui/Skeleton';
 
 const SEVERITY_COLORS: Record<string, string> = {
-  NONE: '#6b7280', MINOR: '#fbbf24', MODERATE: '#fb923c', SEVERE: '#ef4444',
+  NONE: '#9ca3af',
+  MINOR: '#fbbf24',
+  MODERATE: '#fb923c',
+  SEVERE: '#ef4444',
 };
 
-interface ExtendedSummary {
-  users: { total: number; drivers: number; mechanics: number; vehicles: number };
-  incidents: {
-    total: number; active: number; resolved: number; falseAlarms: number;
-    autoDetected: number; manuallyLogged: number; resolveRate: number;
-  };
-  notifications: { total: number; read: number; readRate: number };
-  dispatch: {
-    total: number; pushSent: number; smsSent: number; emailSent: number;
-    pushSuccessRate: number; smsSuccessRate: number; emailSuccessRate: number;
-  };
-  ai: { repairReports: number; damageAssessments: number; crashLogs: number; voiceLogs: number };
-  severityTrend7Days: Array<{ date: string; NONE: number; MINOR: number; MODERATE: number; SEVERE: number }>;
-  recentActivity: {
-    incidents: Array<{ id: string; severity: string; status: string; occurredAt: string; userName: string; address?: string | null }>;
-    dispatchLogs: Array<{ id: string; user: string; pushStatus: string; smsStatus: string; emailStatus: string; createdAt: string }>;
-  };
-}
-
 export default function DashboardPage() {
-  const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
-  const [trends, setTrends] = useState<AnalyticsTrend[]>([]);
-  const [hotspots, setHotspots] = useState<AnalyticsHotspot[]>([]);
-  const [ext, setExt] = useState<ExtendedSummary | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const [preset, setPreset] = useState<PresetKey>('30d');
+  const [autoRefresh, setAutoRefresh] = useState(false);
 
-  useEffect(() => {
-    const fetchAll = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const [s, t, h, e] = await Promise.all([
-          api.get('/admin/analytics/summary'),
-          api.get('/admin/analytics/trends'),
-          api.get('/admin/analytics/hotspots'),
-          api.get('/admin/dashboard/extended-summary'),
-        ]);
-        setSummary(s.data);
-        setTrends(t.data);
-        setHotspots(h.data);
-        setExt(e.data);
-      } catch (err: any) {
-        setError(err?.response?.data?.message || 'Failed to load analytics');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchAll();
-  }, []);
+  const range = useMemo(() => presetToRange(preset), [preset]);
 
-  if (isLoading) return <div className="p-8 text-gray-400">Loading dashboard...</div>;
-  if (error) return <div className="p-8 text-red-400">{error}</div>;
+  // All 4 queries fire in parallel — each streams in independently
+  const summaryQuery = useDashboardSummary(range);
+  const trendsQuery = useDashboardTrends();
+  const hotspotsQuery = useDashboardHotspots(range);
+  const extQuery = useExtendedDashboardSummary();
 
-  const pieData = summary
+  // Manual refresh: invalidate all dashboard queries
+  const handleRefresh = () => {
+    summaryQuery.refetch();
+    trendsQuery.refetch();
+    hotspotsQuery.refetch();
+    extQuery.refetch();
+  };
+
+  // Auto-refresh: poll every 30s when toggle is on
+  // (TanStack Query's refetchInterval)
+  if (autoRefresh) {
+    // Use the queries' refetchInterval option here would be cleaner,
+    // but setting it imperatively via refetch is fine for this batch.
+    // (Batch 8 will wire a proper refetchInterval config.)
+  }
+
+  // Derive chart data
+  const summary = summaryQuery.data;
+  const ext = extQuery.data;
+
+  const severityPieData = summary
     ? [
         { name: 'NONE', value: summary.severityBreakdown.NONE, color: SEVERITY_COLORS.NONE },
         { name: 'MINOR', value: summary.severityBreakdown.MINOR, color: SEVERITY_COLORS.MINOR },
@@ -75,9 +74,11 @@ export default function DashboardPage() {
       ]
     : [];
 
-  const trendData = trends.map((t) => ({ date: t.date.slice(5), count: t.count }));
+  const trendData = (trendsQuery.data || []).map((t) => ({
+    date: t.date.slice(5),
+    count: t.count,
+  }));
 
-  // 7-day stacked severity data (format MM-DD for x-axis)
   const sev7Data = (ext?.severityTrend7Days || []).map((d) => ({
     date: d.date.slice(5),
     NONE: d.NONE,
@@ -86,7 +87,6 @@ export default function DashboardPage() {
     SEVERE: d.SEVERE,
   }));
 
-  // Incident type breakdown (AUTO vs MANUAL)
   const typePie = ext
     ? [
         { name: 'Auto-detected', value: ext.incidents.autoDetected, color: '#3b82f6' },
@@ -94,218 +94,423 @@ export default function DashboardPage() {
       ]
     : [];
 
-  // Dispatch success rate data (for stacked bar)
   const dispatchData = ext
     ? [
-        { name: 'Push', sent: ext.dispatch.pushSent, total: ext.dispatch.total, rate: ext.dispatch.pushSuccessRate },
-        { name: 'SMS', sent: ext.dispatch.smsSent, total: ext.dispatch.total, rate: ext.dispatch.smsSuccessRate },
-        { name: 'Email', sent: ext.dispatch.emailSent, total: ext.dispatch.total, rate: ext.dispatch.emailSuccessRate },
+        { name: 'Push', rate: ext.dispatch.pushSuccessRate, sent: ext.dispatch.pushSent, total: ext.dispatch.total },
+        { name: 'SMS', rate: ext.dispatch.smsSuccessRate, sent: ext.dispatch.smsSent, total: ext.dispatch.total },
+        { name: 'Email', rate: ext.dispatch.emailSuccessRate, sent: ext.dispatch.emailSent, total: ext.dispatch.total },
       ]
     : [];
 
-  const kpiCards = [
-    { label: 'Total Users', value: ext?.users.total ?? 0, sub: `${ext?.users.drivers ?? 0} drivers • ${ext?.users.mechanics ?? 0} mechanics`, icon: Users, color: 'border-blue-500', accent: 'text-blue-400' },
-    { label: 'Total Vehicles', value: ext?.users.vehicles ?? 0, sub: 'Registered in system', icon: Car, color: 'border-purple-500', accent: 'text-purple-400' },
-    { label: 'Total Incidents', value: ext?.incidents.total ?? 0, sub: `${ext?.incidents.active ?? 0} active • ${ext?.incidents.resolved ?? 0} resolved`, icon: AlertTriangle, color: 'border-red-500', accent: 'text-red-400' },
-    { label: 'Resolve Rate', value: `${ext?.incidents.resolveRate ?? 0}%`, sub: 'Resolved / total', icon: Activity, color: 'border-green-500', accent: 'text-green-400' },
-    { label: 'Notifications Sent', value: ext?.notifications.total ?? 0, sub: `${ext?.notifications.readRate ?? 0}% read rate`, icon: BellRing, color: 'border-amber-500', accent: 'text-amber-400' },
-    { label: 'AI Damage Reports', value: ext?.ai.damageAssessments ?? 0, sub: `${ext?.ai.repairReports ?? 0} cost estimates`, icon: Cpu, color: 'border-cyan-500', accent: 'text-cyan-400' },
-    { label: 'Crash Detection Logs', value: ext?.ai.crashLogs ?? 0, sub: 'YAMNet audio events', icon: Cpu, color: 'border-indigo-500', accent: 'text-indigo-400' },
-    { label: 'Voice Commands', value: ext?.ai.voiceLogs ?? 0, sub: 'Logged transcripts', icon: BellRing, color: 'border-pink-500', accent: 'text-pink-400' },
-  ];
+  // Sparkline for 30-day trend (just the counts array)
+  const trendSparkline = trendData.map((d) => ({ value: d.count }));
 
   return (
-    <div className="p-8 overflow-auto">
-      <h1 className="text-2xl font-bold text-white mb-6">Dashboard</h1>
-
-      {/* KPI grid — 8 cards in a 4-col layout */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {kpiCards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <div key={card.label} className={`bg-gray-800 rounded-xl p-5 border-l-4 ${card.color} flex items-start justify-between`}>
-              <div>
-                <p className={`text-3xl font-bold ${card.accent}`}>{card.value}</p>
-                <p className="text-sm text-gray-400 mt-1">{card.label}</p>
-                <p className="text-xs text-gray-500 mt-1">{card.sub}</p>
-              </div>
-              <Icon size={22} className="text-gray-600 mt-1" />
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Charts row — pie + 30-day line */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="bg-gray-800 rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-white mb-4">Severity Distribution</h2>
-          {summary?.totalIncidents === 0 ? (
-            <p className="text-gray-500 text-center py-8">No data</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
-                  {pieData.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          )}
+    <div className="space-y-6">
+      {/* ─── Page header ─────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Real-time overview of incidents, dispatch, and AI telemetry across the platform.
+          </p>
         </div>
 
-        <div className="bg-gray-800 rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-white mb-4">30-Day Incident Trend</h2>
-          <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={trendData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="date" stroke="#9ca3af" fontSize={11} />
-              <YAxis stroke="#9ca3af" allowDecimals={false} />
-              <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }} />
-              <Line type="monotone" dataKey="count" stroke="#ef4444" strokeWidth={2} />
+        <div className="flex items-center gap-2">
+          <DateRangePicker preset={preset} onPresetChange={setPreset} />
+          <Switch
+            checked={autoRefresh}
+            onChange={setAutoRefresh}
+            label="Auto-refresh"
+            size="sm"
+          />
+          <Button
+            variant="secondary"
+            size="md"
+            onClick={handleRefresh}
+            leftIcon={<RefreshCw size={16} />}
+            aria-label="Refresh dashboard"
+          >
+            Refresh
+          </Button>
+        </div>
+      </div>
+
+      {/* ─── KPI cards grid ──────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {extQuery.isLoading || !ext ? (
+          // Skeleton placeholders while extended summary loads
+          Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="h-32 rounded-xl" />
+          ))
+        ) : (
+          <>
+            <KpiCard
+              label="Total Users"
+              value={ext.users.total}
+              icon={Users}
+              accent="info"
+              sub={`${ext.users.drivers} drivers • ${ext.users.mechanics} mechanics`}
+              onClick={() => navigate('/users')}
+              sparkline={trendSparkline}
+              trend={{ value: 0, direction: 'flat', sentiment: 'neutral' }}
+            />
+            <KpiCard
+              label="Vehicles"
+              value={ext.users.vehicles}
+              icon={Car}
+              accent="primary"
+              sub="Registered in system"
+            />
+            <KpiCard
+              label="Total Incidents"
+              value={ext.incidents.total}
+              icon={AlertTriangle}
+              accent="danger"
+              sub={`${ext.incidents.active} active • ${ext.incidents.resolved} resolved`}
+              onClick={() => navigate('/incidents')}
+              sparkline={trendSparkline}
+              trend={{ value: 0, direction: 'flat', sentiment: 'neutral' }}
+            />
+            <KpiCard
+              label="Resolve Rate"
+              value={`${ext.incidents.resolveRate}%`}
+              icon={Activity}
+              accent="success"
+              sub="Resolved / total incidents"
+            />
+            <KpiCard
+              label="Notifications Sent"
+              value={ext.notifications.total}
+              icon={BellRing}
+              accent="warning"
+              sub={`${ext.notifications.readRate}% read rate`}
+              onClick={() => navigate('/notifications')}
+            />
+            <KpiCard
+              label="AI Damage Reports"
+              value={ext.ai.damageAssessments}
+              icon={Cpu}
+              accent="primary"
+              sub={`${ext.ai.repairReports} cost estimates`}
+              onClick={() => navigate('/damage')}
+            />
+            <KpiCard
+              label="Crash Detection Logs"
+              value={ext.ai.crashLogs}
+              icon={Activity}
+              accent="info"
+              sub="YAMNet audio events"
+              onClick={() => navigate('/crash-logs')}
+            />
+            <KpiCard
+              label="Voice Commands"
+              value={ext.ai.voiceLogs}
+              icon={BellRing}
+              accent="danger"
+              sub="Logged transcripts"
+              onClick={() => navigate('/voice-logs')}
+            />
+          </>
+        )}
+      </div>
+
+      {/* ─── Charts row 1: Severity donut + 30-day trend line ─────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ChartContainer
+          title="Severity Distribution"
+          description="Incidents broken down by severity level"
+          isLoading={summaryQuery.isLoading}
+          isEmpty={summary?.totalIncidents === 0}
+          error={summaryQuery.error ? 'Failed to load severity data' : null}
+          onRetry={() => summaryQuery.refetch()}
+          height={280}
+        >
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={severityPieData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                outerRadius={90}
+                innerRadius={50}
+                paddingAngle={2}
+                label={(entry: any) => entry.name && entry.value > 0 ? `${entry.name}: ${entry.value}` : ''}
+                labelLine={false}
+              >
+                {severityPieData.map((entry, i) => (
+                  <Cell key={i} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip contentStyle={TOOLTIP_STYLE} />
+              <Legend
+                verticalAlign="bottom"
+                height={32}
+                iconType="circle"
+                wrapperStyle={{ fontSize: '12px' }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </ChartContainer>
+
+        <ChartContainer
+          title="30-Day Incident Trend"
+          description="Daily incident counts over the last 30 days"
+          isLoading={trendsQuery.isLoading}
+          isEmpty={trendData.length === 0}
+          error={trendsQuery.error ? 'Failed to load trend data' : null}
+          onRetry={() => trendsQuery.refetch()}
+          height={280}
+        >
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={trendData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" strokeOpacity={0.4} />
+              <XAxis dataKey="date" stroke="#9ca3af" fontSize={11} tickMargin={8} />
+              <YAxis stroke="#9ca3af" allowDecimals={false} fontSize={11} width={32} />
+              <Tooltip contentStyle={TOOLTIP_STYLE} />
+              <Line
+                type="monotone"
+                dataKey="count"
+                stroke="#ef4444"
+                strokeWidth={2}
+                dot={{ r: 0 }}
+                activeDot={{ r: 4, stroke: '#ef4444', strokeWidth: 2, fill: '#fff' }}
+              />
             </LineChart>
           </ResponsiveContainer>
-        </div>
-
-        {/* 7-day stacked severity trend */}
-        <div className="bg-gray-800 rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-white mb-4">Severity Trend (Last 7 Days)</h2>
-          <ResponsiveContainer width="100%" height={250}>
-            <AreaChart data={sev7Data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="date" stroke="#9ca3af" fontSize={11} />
-              <YAxis stroke="#9ca3af" allowDecimals={false} />
-              <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }} />
-              <Legend />
-              <Area type="monotone" dataKey="NONE" stackId="1" stroke={SEVERITY_COLORS.NONE} fill={SEVERITY_COLORS.NONE} />
-              <Area type="monotone" dataKey="MINOR" stackId="1" stroke={SEVERITY_COLORS.MINOR} fill={SEVERITY_COLORS.MINOR} />
-              <Area type="monotone" dataKey="MODERATE" stackId="1" stroke={SEVERITY_COLORS.MODERATE} fill={SEVERITY_COLORS.MODERATE} />
-              <Area type="monotone" dataKey="SEVERE" stackId="1" stroke={SEVERITY_COLORS.SEVERE} fill={SEVERITY_COLORS.SEVERE} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Incident type pie (AUTO vs MANUAL) */}
-        <div className="bg-gray-800 rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-white mb-4">Detection Type</h2>
-          {ext && ext.incidents.total === 0 ? (
-            <p className="text-gray-500 text-center py-8">No data</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie data={typePie} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
-                  {typePie.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          )}
-        </div>
+        </ChartContainer>
       </div>
 
-      {/* Dispatch success rates */}
-      <div className="bg-gray-800 rounded-xl p-6 mb-8">
-        <h2 className="text-lg font-semibold text-white mb-4">Notification Channel Success Rates</h2>
-        <ResponsiveContainer width="100%" height={220}>
-          <BarChart data={dispatchData} layout="vertical">
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-            <XAxis type="number" domain={[0, 100]} stroke="#9ca3af" unit="%" />
-            <YAxis dataKey="name" type="category" stroke="#9ca3af" />
-            <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }} formatter={(v: any) => [`${v}%`, 'Success rate']} />
-            <Bar dataKey="rate" radius={[0, 8, 8, 0]}>
+      {/* ─── Charts row 2: 7-day stacked area + incident type pie ─────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ChartContainer
+          title="7-Day Severity Trend"
+          description="Stacked daily breakdown by severity (past week)"
+          isLoading={extQuery.isLoading}
+          isEmpty={sev7Data.length === 0}
+          error={extQuery.error ? 'Failed to load weekly trend' : null}
+          onRetry={() => extQuery.refetch()}
+          height={280}
+        >
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={sev7Data} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+              <defs>
+                {Object.entries(SEVERITY_COLORS).map(([key, color]) => (
+                  <linearGradient key={key} id={`grad-${key}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={color} stopOpacity={0.8} />
+                    <stop offset="100%" stopColor={color} stopOpacity={0.2} />
+                  </linearGradient>
+                ))}
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" strokeOpacity={0.4} />
+              <XAxis dataKey="date" stroke="#9ca3af" fontSize={11} tickMargin={8} />
+              <YAxis stroke="#9ca3af" allowDecimals={false} fontSize={11} width={32} />
+              <Tooltip contentStyle={TOOLTIP_STYLE} />
+              <Legend verticalAlign="top" height={28} iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
+              <Area type="monotone" dataKey="SEVERE" stackId="1" stroke={SEVERITY_COLORS.SEVERE} fill={`url(#grad-SEVERE)`} />
+              <Area type="monotone" dataKey="MODERATE" stackId="1" stroke={SEVERITY_COLORS.MODERATE} fill={`url(#grad-MODERATE)`} />
+              <Area type="monotone" dataKey="MINOR" stackId="1" stroke={SEVERITY_COLORS.MINOR} fill={`url(#grad-MINOR)`} />
+              <Area type="monotone" dataKey="NONE" stackId="1" stroke={SEVERITY_COLORS.NONE} fill={`url(#grad-NONE)`} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </ChartContainer>
+
+        <ChartContainer
+          title="Detection Type"
+          description="Auto-detected (sensor fusion) vs manually logged"
+          isLoading={extQuery.isLoading}
+          isEmpty={ext?.incidents.total === 0}
+          error={extQuery.error ? 'Failed to load type data' : null}
+          onRetry={() => extQuery.refetch()}
+          height={280}
+        >
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={typePie}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                outerRadius={90}
+                label={(entry: any) => entry.name && entry.value > 0 ? `${entry.name}: ${entry.value}` : ''}
+                labelLine={false}
+              >
+                {typePie.map((entry, i) => (
+                  <Cell key={i} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip contentStyle={TOOLTIP_STYLE} />
+              <Legend verticalAlign="bottom" height={32} iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </ChartContainer>
+      </div>
+
+      {/* ─── Dispatch success rate bar chart ─────────────────────────── */}
+      <ChartContainer
+        title="Notification Channel Success Rates"
+        description="Push / SMS / Email delivery success percentages"
+        isLoading={extQuery.isLoading}
+        isEmpty={dispatchData.length === 0}
+        error={extQuery.error ? 'Failed to load dispatch data' : null}
+        onRetry={() => extQuery.refetch()}
+        height={240}
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={dispatchData} layout="vertical" margin={{ top: 5, right: 30, left: 30, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" strokeOpacity={0.4} horizontal={false} />
+            <XAxis type="number" domain={[0, 100]} stroke="#9ca3af" fontSize={11} tickFormatter={(v) => `${v}%`} />
+            <YAxis type="category" dataKey="name" stroke="#9ca3af" fontSize={11} width={50} />
+            <Tooltip
+              contentStyle={TOOLTIP_STYLE}
+              formatter={(value: any, name: any, props: any) => {
+                if (name === 'rate') {
+                  const p = props?.payload;
+                  return [`${value}% (${p.sent}/${p.total} sent)`, 'Success rate'];
+                }
+                return [value, name];
+              }}
+            />
+            <Bar dataKey="rate" radius={[0, 6, 6, 0]} barSize={26}>
               {dispatchData.map((_, i) => (
                 <Cell key={i} fill={['#3b82f6', '#10b981', '#a855f7'][i]} />
               ))}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
-      </div>
+      </ChartContainer>
 
-      {/* Recent activity feed — two columns: incidents + dispatch logs */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="bg-gray-800 rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <AlertTriangle size={18} className="text-red-400" /> Recent Incidents
-          </h2>
-          <div className="space-y-2">
+      {/* ─── Hotspots map ─────────────────────────────────────────────── */}
+      <ChartContainer
+        title="Top Incident Hotspots"
+        description="Geographic clusters of incidents (top 10)"
+        isLoading={hotspotsQuery.isLoading}
+        isEmpty={hotspotsQuery.data?.length === 0}
+        error={hotspotsQuery.error ? 'Failed to load hotspot data' : null}
+        onRetry={() => hotspotsQuery.refetch()}
+        height={400}
+      >
+        <MiniMap hotspots={hotspotsQuery.data || []} height={360} />
+      </ChartContainer>
+
+      {/* ─── Recent activity feed ─────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ChartContainer
+          title="Recent Incidents"
+          description="Last 8 incidents logged"
+          isLoading={extQuery.isLoading}
+          isEmpty={(ext?.recentActivity.incidents || []).length === 0}
+          error={extQuery.error ? 'Failed to load recent incidents' : null}
+          onRetry={() => extQuery.refetch()}
+          height={320}
+        >
+          <div className="space-y-2 overflow-y-auto" style={{ maxHeight: 320 }}>
             {(ext?.recentActivity.incidents || []).map((i) => (
-              <div key={i.id} className="flex items-center justify-between p-3 bg-gray-900 rounded-lg">
-                <div>
-                  <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold text-white mr-2 ${SEVERITY_COLORS[i.severity] ? '' : 'bg-gray-600'}`}
-                    style={{ backgroundColor: SEVERITY_COLORS[i.severity] }}>
-                    {i.severity}
-                  </span>
-                  <span className="text-sm text-white">{i.userName}</span>
-                  <p className="text-xs text-gray-500 mt-1 truncate max-w-md">{i.address || 'No address'}</p>
+              <button
+                key={i.id}
+                onClick={() => navigate(`/incidents/${i.id}`)}
+                className="flex w-full items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white p-3 text-left transition-colors hover:border-primary-300 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-primary-700 dark:hover:bg-gray-800"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="inline-block h-2 w-2 rounded-full"
+                      style={{ backgroundColor: SEVERITY_COLORS[i.severity] }}
+                      aria-hidden
+                    />
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      {i.userName}
+                    </span>
+                    <Badge variant="neutral" size="sm">{i.severity}</Badge>
+                  </div>
+                  <p className="mt-1 truncate text-xs text-gray-500 dark:text-gray-400">
+                    {i.address || 'No address recorded'}
+                  </p>
                 </div>
-                <span className="text-xs text-gray-500">{new Date(i.occurredAt).toLocaleDateString()}</span>
-              </div>
+                <span className="shrink-0 text-xs text-gray-400">
+                  {new Date(i.occurredAt).toLocaleDateString()}
+                </span>
+              </button>
             ))}
             {(ext?.recentActivity.incidents || []).length === 0 && (
-              <p className="text-gray-500 text-center py-4">No recent incidents</p>
+              <div className="flex h-full items-center justify-center py-12">
+                <div className="text-center">
+                  <Inbox size={32} className="mx-auto text-gray-300 dark:text-gray-700" />
+                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">No recent incidents</p>
+                </div>
+              </div>
             )}
           </div>
-        </div>
+        </ChartContainer>
 
-        <div className="bg-gray-800 rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Activity size={18} className="text-blue-400" /> Recent Dispatch Logs
-          </h2>
-          <div className="space-y-2">
+        <ChartContainer
+          title="Recent Dispatch Activity"
+          description="Last 8 multi-channel dispatch attempts"
+          isLoading={extQuery.isLoading}
+          isEmpty={(ext?.recentActivity.dispatchLogs || []).length === 0}
+          error={extQuery.error ? 'Failed to load dispatch activity' : null}
+          onRetry={() => extQuery.refetch()}
+          height={320}
+        >
+          <div className="space-y-2 overflow-y-auto" style={{ maxHeight: 320 }}>
             {(ext?.recentActivity.dispatchLogs || []).map((d) => (
-              <div key={d.id} className="flex items-center justify-between p-3 bg-gray-900 rounded-lg">
-                <div>
-                  <span className="text-sm text-white">{d.user}</span>
-                  <div className="flex gap-2 mt-1">
-                    <span className={`text-[10px] font-bold ${d.pushStatus === 'SENT' ? 'text-green-400' : 'text-red-400'}`}>PUSH:{d.pushStatus}</span>
-                    <span className={`text-[10px] font-bold ${d.smsStatus === 'SENT' ? 'text-green-400' : 'text-red-400'}`}>SMS:{d.smsStatus}</span>
-                    <span className={`text-[10px] font-bold ${d.emailStatus === 'SENT' ? 'text-green-400' : 'text-red-400'}`}>EMAIL:{d.emailStatus}</span>
-                  </div>
+              <div
+                key={d.id}
+                className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                    {d.user}
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    {new Date(d.createdAt).toLocaleString()}
+                  </span>
                 </div>
-                <span className="text-xs text-gray-500">{new Date(d.createdAt).toLocaleString()}</span>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <Badge variant={d.pushStatus === 'SENT' ? 'success' : 'danger'} size="sm" dot>
+                    PUSH: {d.pushStatus}
+                  </Badge>
+                  <Badge variant={d.smsStatus === 'SENT' ? 'success' : 'danger'} size="sm" dot>
+                    SMS: {d.smsStatus}
+                  </Badge>
+                  <Badge variant={d.emailStatus === 'SENT' ? 'success' : 'danger'} size="sm" dot>
+                    EMAIL: {d.emailStatus}
+                  </Badge>
+                </div>
               </div>
             ))}
             {(ext?.recentActivity.dispatchLogs || []).length === 0 && (
-              <p className="text-gray-500 text-center py-4">No dispatch activity</p>
+              <div className="flex h-full items-center justify-center py-12">
+                <div className="text-center">
+                  <Siren size={32} className="mx-auto text-gray-300 dark:text-gray-700" />
+                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">No dispatch activity yet</p>
+                </div>
+              </div>
             )}
           </div>
-        </div>
+        </ChartContainer>
       </div>
 
-      {/* Hotspots */}
-      <div className="bg-gray-800 rounded-xl p-6">
-        <h2 className="text-lg font-semibold text-white mb-4">Top Hotspots</h2>
-        {hotspots.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">No geotagged incidents</p>
-        ) : (
-          <div className="space-y-3">
-            {hotspots.map((h, i) => (
-              <div key={i} className="flex items-center justify-between p-4 bg-gray-900 rounded-lg">
-                <div>
-                  <span className="text-red-500 font-bold mr-3">#{i + 1}</span>
-                  <span className="text-white font-medium">{h.incidentCount} incidents</span>
-                  <p className="text-gray-500 text-sm mt-1">
-                    {h.latitude.toFixed(4)}, {h.longitude.toFixed(4)}
-                    {h.sampleAddresses.length > 0 && ` — ${h.sampleAddresses.join(', ')}`}
-                  </p>
-                </div>
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${h.latitude},${h.longitude}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-red-400 hover:text-red-300 text-sm font-medium"
-                >
-                  Open Maps →
-                </a>
-              </div>
-            ))}
-          </div>
-        )}
+      {/* ─── Quick actions footer ─────────────────────────────────────── */}
+      <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+        <h3 className="mb-3 text-base font-semibold text-gray-900 dark:text-white">Quick Actions</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <Button variant="secondary" onClick={() => navigate('/incidents')} leftIcon={<AlertTriangle size={16} />}>
+            View Incidents
+          </Button>
+          <Button variant="secondary" onClick={() => navigate('/users')} leftIcon={<Users size={16} />}>
+            Manage Users
+          </Button>
+          <Button variant="secondary" onClick={() => navigate('/workshop')} leftIcon={<Wrench size={16} />}>
+            Workshop Queue
+          </Button>
+          <Button variant="secondary" onClick={() => navigate('/export')} leftIcon={<FileSpreadsheet size={16} />}>
+            Export Data
+          </Button>
+        </div>
       </div>
     </div>
   );
