@@ -42,13 +42,19 @@ export class AlertDispatchController {
     );
     const isGeminiConfigured = Boolean(process.env.GEMINI_API_KEY && !process.env.GEMINI_API_KEY.startsWith('paste'));
     const isGoogleMapsConfigured = Boolean(process.env.GOOGLE_MAPS_API_KEY);
+    const isWhatsappConfigured = Boolean(process.env.WHATSAPP_PHONE_NUMBER_ID && process.env.WHATSAPP_ACCESS_TOKEN);
+    const isRobocallConfigured = Boolean(process.env.ROBOCALL_API_KEY);
+    const isRobosmsConfigured = Boolean(process.env.ROBOSMS_API_KEY && process.env.ROBOSMS_EMAIL);
 
     return {
-      devMode: !isTwilioConfigured || !isFirebaseConfigured || !isSmtpConfigured,
+      devMode: !isTwilioConfigured || !isFirebaseConfigured || !isSmtpConfigured || !isWhatsappConfigured,
       channels: {
         push: { configured: isFirebaseConfigured, label: 'Firebase Admin SDK' },
-        sms: { configured: isTwilioConfigured, label: 'Twilio' },
-        email: { configured: isSmtpConfigured, label: 'SMTP (Brevo/Maildev)' },
+        sms: { configured: isRobosmsConfigured, label: 'RoboSMS.pk' },
+        email: { configured: isSmtpConfigured, label: 'SMTP (Brevo)' },
+        whatsapp: { configured: isWhatsappConfigured, label: 'WhatsApp Cloud API' },
+        robocall: { configured: isRobocallConfigured, label: 'RoboCall.pk' },
+        twilio: { configured: isTwilioConfigured, label: 'Twilio (legacy)' },
       },
       services: {
         gemini: { configured: isGeminiConfigured, label: 'Repair Cost Estimation' },

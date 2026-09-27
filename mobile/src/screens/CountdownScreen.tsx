@@ -137,8 +137,23 @@ const handleTimeout = useCallback(async () => {
       email: 'pending', whatsapp: 'pending', module68: 'pending', incident: 'pending',
     });
 
-    // ═══ STEP 1: Log incident in database ═══
+// ═══ STEP 1: Log incident in database ═══
     let incident = null;
+
+    // Reverse geocode address from coordinates
+    let address: string | undefined;
+    try {
+      const geoRes = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${realLat}&lon=${realLng}`,
+        { headers: { 'User-Agent': 'ResQDrive/1.0' } }
+      );
+      const geoData = await geoRes.json();
+      address = geoData?.display_name;
+      console.log('[Countdown] Reverse geocoded address:', address);
+    } catch (err) {
+      console.log('[Countdown] Reverse geocoding failed:', err);
+    }
+
     try {
       const response = await api.post('/incidents', {
         type: 'AUTO',
@@ -147,6 +162,7 @@ const handleTimeout = useCallback(async () => {
         occurredAt: new Date().toISOString(),
         latitude: realLat,
         longitude: realLng,
+        address, // ← NEW: stores real street/city name in database
         description: 'Countdown reached zero — emergency alert dispatched',
       });
       incident = response.data;

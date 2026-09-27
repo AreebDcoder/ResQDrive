@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Param, Query, Res, UseGuards, NotFoundException,
+  Controller, Get, Patch, Post, Body, Param, Query, Res, UseGuards, UseInterceptors, NotFoundException, BadRequestException,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
@@ -11,6 +11,10 @@ import { AdminAnalyticsService } from './admin-analytics.service';
 import { AdminPdfService } from './admin-pdf.service';
 import { AnalyticsQueryDto } from './dto/analytics-query.dto';
 import { AdminIncidentsQueryDto } from './dto/admin-incidents-query.dto';
+import { AdminUpdateIncidentDto } from './dto/admin-update-incident.dto';
+import { BulkIncidentOpsDto } from './dto/bulk-incident-ops.dto';
+import { AuditLog } from './audit/audit-log.decorator';
+import { AuditLogInterceptor } from './audit/audit-log.interceptor';
 
 @ApiTags('Admin Analytics & Reports')
 @ApiBearerAuth()
@@ -68,5 +72,294 @@ export class AdminAnalyticsController {
       if (err instanceof NotFoundException) throw err;
       throw err;
     }
+  }
+
+  @Get('emergency-sessions')
+  @ApiOperation({ summary: 'Get all active emergency notification sessions (admin)' })
+  async getEmergencySessions() {
+    return this.analyticsService.getActiveEmergencySessions();
+  }
+
+  @Get('location-sessions')
+  @ApiOperation({ summary: 'Get all active location sharing sessions (admin)' })
+  async getLocationSessions() {
+    return this.analyticsService.getActiveLocationSessions();
+  }
+
+  @Get('dispatch-logs')
+  @ApiOperation({ summary: 'Get recent alert dispatch logs (admin)' })
+  async getDispatchLogs(@Query('limit') limit?: string) {
+    const l = limit ? parseInt(limit, 10) : 20;
+    return this.analyticsService.getRecentDispatchLogs(l);
+  }
+
+  @Get('crash-detection-logs')
+  async getCrashDetectionLogs(
+    @Query('limit') limit?: string,
+    @Query('skip') skip?: string,
+    @Query('search') search?: string,
+    @Query('userId') userId?: string,
+    @Query('flaggedOnly') flaggedOnly?: string,
+    @Query('className') className?: string,
+    @Query('minConfidence') minConfidence?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    return this.analyticsService.getCrashDetectionLogs(
+      limit ? parseInt(limit, 10) : 20,
+      skip ? parseInt(skip, 10) : 0,
+      {
+        search,
+        userId,
+        flaggedOnly: flaggedOnly === 'true',
+        className,
+        minConfidence: minConfidence ? parseFloat(minConfidence) : undefined,
+        dateFrom,
+        dateTo,
+      },
+    );
+  }
+
+  @Get('voice-command-logs')
+  async getVoiceCommandLogs(
+    @Query('limit') limit?: string,
+    @Query('skip') skip?: string,
+    @Query('search') search?: string,
+    @Query('userId') userId?: string,
+    @Query('intent') intent?: string,
+    @Query('engine') engine?: string,
+    @Query('actionTakenOnly') actionTakenOnly?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    return this.analyticsService.getVoiceCommandLogs(
+      limit ? parseInt(limit, 10) : 20,
+      skip ? parseInt(skip, 10) : 0,
+      {
+        search,
+        userId,
+        intent,
+        engine,
+        actionTakenOnly: actionTakenOnly === 'true',
+        dateFrom,
+        dateTo,
+      },
+    );
+  }
+
+  @Get('damage-assessments')
+  @ApiOperation({ summary: 'Get damage assessment history (admin)' })
+  async getDamageAssessments(
+    @Query('limit') limit?: string,
+    @Query('skip') skip?: string,
+    @Query('search') search?: string,
+    @Query('userId') userId?: string,
+    @Query('damageType') damageType?: string,
+    @Query('severity') severity?: string,
+    @Query('partTag') partTag?: string,
+    @Query('lowConfidenceOnly') lowConfidenceOnly?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    return this.analyticsService.getDamageAssessments(
+      limit ? parseInt(limit, 10) : 50,
+      skip ? parseInt(skip, 10) : 0,
+      {
+        search,
+        userId,
+        damageType,
+        severity,
+        partTag,
+        lowConfidenceOnly: lowConfidenceOnly === 'true',
+        dateFrom,
+        dateTo,
+      },
+    );
+  }
+
+  @Get('repair-cost-reports')
+  async getRepairCostReports(
+    @Query('limit') limit?: string,
+    @Query('skip') skip?: string,
+    @Query('search') search?: string,
+    @Query('userId') userId?: string,
+    @Query('vehicleId') vehicleId?: string,
+    @Query('damageType') damageType?: string,
+    @Query('severity') severity?: string,
+    @Query('minCost') minCost?: string,
+    @Query('maxCost') maxCost?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    return this.analyticsService.getRepairCostReports(
+      limit ? parseInt(limit, 10) : 20,
+      skip ? parseInt(skip, 10) : 0,
+      {
+        search,
+        userId,
+        vehicleId,
+        damageType,
+        severity,
+        minCost: minCost ? parseInt(minCost, 10) : undefined,
+        maxCost: maxCost ? parseInt(maxCost, 10) : undefined,
+        dateFrom,
+        dateTo,
+      },
+    );
+  }
+    @Patch('incidents/:id/resolve')
+  @ApiOperation({ summary: 'Mark an incident as resolved' })
+  @UseInterceptors(AuditLogInterceptor)
+  @AuditLog('resolve_incident', 'Incident', {
+    fetchBefore: async (req) => {
+      const id = req.params.id;
+      const svc = (req as any).app?.get?.('AdminAnalyticsService');
+      // best-effort fetch — return null if anything fails
+      try {
+        const incident = await svc?.getIncidentById?.(id);
+        return incident ? { severity: incident.severity, status: incident.status } : null;
+      } catch { return null; }
+    },
+  })
+  async resolveIncident(@Param('id') id: string) {
+    return this.analyticsService.resolveIncident(id);
+  }
+
+  // ─── BATCH 4 — Full CRUD + Bulk Ops ────────────────────────────────────────
+
+  @Patch('incidents/:id')
+  @ApiOperation({ summary: 'Admin full-edit of an incident (severity, status, type, address, description, etc.)' })
+  @ApiResponse({ status: 200, description: 'Updated incident.' })
+  @ApiResponse({ status: 404, description: 'Incident not found.' })
+  @UseInterceptors(AuditLogInterceptor)
+  @AuditLog('update_incident', 'Incident')
+  async updateIncident(@Param('id') id: string, @Body() dto: AdminUpdateIncidentDto) {
+    return this.analyticsService.updateIncident(id, dto);
+  }
+
+  @Patch('incidents/:id/status')
+  @ApiOperation({ summary: 'Generic status update (ACTIVE/RESOLVED/FALSE_ALARM/ARCHIVED)' })
+  @UseInterceptors(AuditLogInterceptor)
+  @AuditLog('update_incident_status', 'Incident')
+  async updateIncidentStatus(@Param('id') id: string, @Body('status') status: string) {
+    if (!['ACTIVE', 'RESOLVED', 'FALSE_ALARM', 'ARCHIVED'].includes(status)) {
+      throw new BadRequestException(`Invalid status: ${status}. Valid: ACTIVE, RESOLVED, FALSE_ALARM, ARCHIVED.`);
+    }
+    return this.analyticsService.updateIncidentStatus(id, status);
+  }
+
+  @Patch('incidents/:id/soft-delete')
+  @ApiOperation({ summary: 'Soft-delete an incident (isDeleted=true + status=ARCHIVED). Restorable.' })
+  @UseInterceptors(AuditLogInterceptor)
+  @AuditLog('soft_delete_incident', 'Incident')
+  async softDeleteIncident(@Param('id') id: string) {
+    return this.analyticsService.softDeleteIncident(id);
+  }
+
+  @Patch('incidents/:id/restore')
+  @ApiOperation({ summary: 'Restore a previously soft-deleted incident' })
+  @UseInterceptors(AuditLogInterceptor)
+  @AuditLog('restore_incident', 'Incident')
+  async restoreIncident(@Param('id') id: string) {
+    return this.analyticsService.restoreIncident(id);
+  }
+
+  @Post('incidents/bulk-resolve')
+  @ApiOperation({ summary: 'Bulk resolve multiple incidents in one transaction' })
+  @ApiResponse({ status: 200, description: 'Returns { count, incidents[] }.' })
+  @ApiResponse({ status: 404, description: 'One or more incident IDs not found.' })
+  @UseInterceptors(AuditLogInterceptor)
+  @AuditLog('bulk_resolve_incidents', 'Incident', { captureAfter: true })
+  async bulkResolveIncidents(@Body() dto: BulkIncidentOpsDto) {
+    return this.analyticsService.bulkResolveIncidents(dto.ids);
+  }
+
+  @Post('incidents/bulk-delete')
+  @ApiOperation({ summary: 'Bulk soft-delete multiple incidents in one transaction' })
+  @ApiResponse({ status: 200, description: 'Returns { count, incidents[] }.' })
+  @ApiResponse({ status: 404, description: 'One or more incident IDs not found.' })
+  @UseInterceptors(AuditLogInterceptor)
+  @AuditLog('bulk_delete_incidents', 'Incident', { captureAfter: true })
+  async bulkDeleteIncidents(@Body() dto: BulkIncidentOpsDto) {
+    return this.analyticsService.bulkDeleteIncidents(dto.ids);
+  }
+    @Get('users/:id/detail')
+  @ApiOperation({ summary: 'Get full user detail with incidents, vehicles, contacts' })
+  async getUserDetail(@Param('id') id: string) {
+    return this.analyticsService.getUserDetail(id);
+  }
+
+  @Get('workshop-queue')
+  @ApiOperation({ summary: 'Get pending mechanic workshop verifications' })
+  async getWorkshopQueue() {
+    return this.analyticsService.getWorkshopQueue();
+  }
+    @Get('notification-history')
+  @ApiOperation({ summary: 'Get all push notification history (admin)' })
+  async getNotificationHistory(@Query('limit') limit?: string, @Query('skip') skip?: string) {
+    return this.analyticsService.getNotificationHistory(
+      limit ? parseInt(limit, 10) : 20,
+      skip ? parseInt(skip, 10) : 0,
+    );
+  }
+
+  // ───────────────────────────────────────────────────────────────────────
+  // BATCH 5 — Extended dashboard + CSV exports
+  // ───────────────────────────────────────────────────────────────────────
+
+  @Get('dashboard/extended-summary')
+  @ApiOperation({ summary: 'Extended KPI bundle for the enhanced admin dashboard (single call)' })
+  async getExtendedDashboardSummary() {
+    return this.analyticsService.getExtendedDashboardSummary();
+  }
+
+  @Get('export/:type')
+  @ApiOperation({ summary: 'Download a CSV export of any admin dataset (incidents, repair-costs, notifications, crash-logs, voice-logs, damage-assessments, dispatch-logs)' })
+  @ApiResponse({ status: 200, description: 'CSV file download.' })
+  @ApiResponse({ status: 400, description: 'Unsupported export type.' })
+  async exportCsv(@Param('type') type: string, @Res() res: Response) {
+    let csv: string;
+    let filename: string;
+
+    switch (type) {
+      case 'incidents':
+        csv = await this.analyticsService.exportIncidentsCsv();
+        filename = `incidents-${Date.now()}.csv`;
+        break;
+      case 'repair-costs':
+        csv = await this.analyticsService.exportRepairCostsCsv();
+        filename = `repair-costs-${Date.now()}.csv`;
+        break;
+      case 'notifications':
+        csv = await this.analyticsService.exportNotificationsCsv();
+        filename = `notifications-${Date.now()}.csv`;
+        break;
+      case 'crash-logs':
+        csv = await this.analyticsService.exportCrashLogsCsv();
+        filename = `crash-logs-${Date.now()}.csv`;
+        break;
+      case 'voice-logs':
+        csv = await this.analyticsService.exportVoiceLogsCsv();
+        filename = `voice-logs-${Date.now()}.csv`;
+        break;
+      case 'damage-assessments':
+        csv = await this.analyticsService.exportDamageAssessmentsCsv();
+        filename = `damage-assessments-${Date.now()}.csv`;
+        break;
+      case 'dispatch-logs':
+        csv = await this.analyticsService.exportDispatchLogsCsv();
+        filename = `dispatch-logs-${Date.now()}.csv`;
+        break;
+      default:
+        throw new BadRequestException(
+          `Unsupported export type: ${type}. Valid: incidents, repair-costs, notifications, crash-logs, voice-logs, damage-assessments, dispatch-logs.`,
+        );
+    }
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Cache-Control', 'no-store');
+    // Prefix BOM so Excel auto-detects UTF-8 (handles non-ASCII chars)
+    res.send('\uFEFF' + csv);
   }
 }

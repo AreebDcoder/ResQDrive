@@ -107,6 +107,82 @@ export class EmailService {
     }
   }
 
+  // ─── BATCH 5 — Workshop approval/rejection notifications ──────────────────
+
+  /**
+   * Sends "Your workshop has been approved" email to the mechanic.
+   * Fired by AdminService.verifyWorkshop when isWorkshopVerified=true.
+   */
+  async sendWorkshopApprovedEmail(
+    email: string,
+    fullName: string,
+    workshopName: string | null,
+  ): Promise<void> {
+    const workshopDisplay = workshopName ? `<strong>${workshopName}</strong>` : 'your workshop';
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #10b981; border-radius: 8px;">
+        <h2 style="color: #10b981;">ResQDrive Workshop Approved</h2>
+        <p>Hello ${fullName},</p>
+        <p>Great news! The admin team has approved ${workshopDisplay}. You are now a verified mechanic on the ResQDrive platform.</p>
+        <p>Verified mechanics appear in the "Find Nearest Workshop" results shown to drivers after an incident, and can receive repair-cost assessment jobs.</p>
+        <div style="background-color: #ecfdf5; padding: 12px; border-radius: 4px; margin: 20px 0;">
+          <p style="margin: 0; font-size: 14px;">Status: <strong style="color: #10b981;">VERIFIED</strong></p>
+        </div>
+        <p>You can now log in to the mobile app and start receiving job assignments.</p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+        <p style="font-size: 12px; color: #777;">If you have any questions, please contact the admin team at admin@resqdrive.com.</p>
+      </div>
+    `;
+
+    // Workshop approval emails are non-critical — don't throw on queue-only
+    await this.sendMail(email, 'ResQDrive Workshop Approved', html);
+  }
+
+  /**
+   * Sends "Your workshop was rejected" email to the mechanic, including
+   * the admin-provided reason and instructions on what to fix.
+   * Fired by AdminService.rejectWorkshop.
+   */
+  async sendWorkshopRejectedEmail(
+    email: string,
+    fullName: string,
+    workshopName: string | null,
+    reason: string,
+  ): Promise<void> {
+    const workshopDisplay = workshopName ? `<strong>${workshopName}</strong>` : 'your workshop';
+    // HTML-escape the reason to prevent XSS in email preview (nodemailer is safe but defense in depth)
+    const safeReason = reason
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ef4444; border-radius: 8px;">
+        <h2 style="color: #ef4444;">ResQDrive Workshop Verification — Action Needed</h2>
+        <p>Hello ${fullName},</p>
+        <p>The admin team reviewed ${workshopDisplay} and was unable to approve it at this time.</p>
+        <div style="background-color: #fef2f2; padding: 12px; border-radius: 4px; margin: 20px 0; border-left: 4px solid #ef4444;">
+          <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold; color: #ef4444;">Reason:</p>
+          <p style="margin: 0; font-size: 14px; color: #374151; white-space: pre-wrap;">${safeReason}</p>
+        </div>
+        <p><strong>What to do next:</strong></p>
+        <ol style="padding-left: 20px; line-height: 1.6;">
+          <li>Address the issue described above.</li>
+          <li>Log in to the ResQDrive mobile app.</li>
+          <li>Update your workshop profile (name, address, specialization).</li>
+          <li>Re-submit for verification — the admin team will review your updated profile.</li>
+        </ol>
+        <p>Your account is still active — you simply cannot receive workshop jobs until verification is complete.</p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+        <p style="font-size: 12px; color: #777;">If you believe this is an error, please contact the admin team at admin@resqdrive.com.</p>
+      </div>
+    `;
+
+    await this.sendMail(email, 'Action Needed: ResQDrive Workshop Verification', html);
+  }
+
   /**
    * Attempts to send an email. Returns true if actually delivered via
    * SMTP, false if it was queued for retry instead (SMTP unavailable

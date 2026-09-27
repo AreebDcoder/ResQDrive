@@ -92,6 +92,7 @@ model User {
   damageAssessments      DamageAssessment[]
   repairCostReports      RepairCostReport[]
   updatedRegionalNumbers  RegionalEmergencyNumber[]   @relation("AdminUpdatedNumbers")
+  auditLogs               AuditLog[]                  @relation("AdminAuditActor")
   customEmergencyNumbers  UserCustomEmergencyNumber[]
   accidentReports         AccidentReport[]
 
@@ -598,4 +599,36 @@ model AccidentReport {
   createdAt         DateTime               @default(now()) @map("created_at")
 
   @@map("accident_reports")
+}
+
+// ─── Batch 8 — Admin audit log ──────────────────────────────────────────────
+//
+// Every admin mutation (PATCH/POST/DELETE on /admin/* endpoints) is captured
+// by the @AuditLog() decorator + AuditLogInterceptor, which records:
+//   - which admin performed the action
+//   - what action was performed (e.g. 'resolve_incident', 'create_user')
+//   - what resource was affected (type + ID)
+//   - before/after state diff (JSON)
+//   - request metadata (IP, user-agent)
+//
+// The table is append-only — entries cannot be modified or deleted via the
+// admin API (only read). This preserves the chain-of-custody for any
+// compliance/forensic audit.
+model AuditLog {
+  id              String   @id @default(uuid()) @db.Uuid
+  adminUserId     String   @map("admin_user_id") @db.Uuid
+  adminUser       User     @relation("AdminAuditActor", fields: [adminUserId], references: [id], onDelete: Cascade)
+  action          String   @db.VarChar(100) // e.g. 'resolve_incident', 'create_user', 'soft_delete_incident'
+  resourceType    String   @map("resource_type") @db.VarChar(50) // 'Incident', 'User', 'Vehicle', etc.
+  resourceId      String?  @map("resource_id") @db.Uuid // nullable for bulk ops that affect multiple IDs
+  beforeState     Json?    @map("before_state") // JSON snapshot of the resource before mutation
+  afterState      Json?    @map("after_state") // JSON snapshot after mutation
+  ipAddress       String?  @map("ip_address") @db.VarChar(45) // IPv4 or IPv6
+  userAgent       String?  @map("user_agent") @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([adminUserId, createdAt])
+  @@index([resourceType, resourceId])
+  @@index([action])
+  @@map("audit_logs")
 }

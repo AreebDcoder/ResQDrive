@@ -207,21 +207,26 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
     fetchEmergencyNumbers();
   }, [fetchEmergencyNumbers]);
 
-  // Handle Escalation timer countdown tick
-  useEffect(() => {
-    if (isEscalationActive && escalationTimeLeft > 0) {
-      timerRef.current = setTimeout(() => {
-        setEscalationTimeLeft((prev) => prev - 1);
-      }, 1000);
-    } else if (isEscalationActive && escalationTimeLeft === 0) {
-      // Trigger automatic escalation call
-      triggerAutoEscalationCall();
-    }
+  const escalationStartTimeRef = useRef<number>(0);
 
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [isEscalationActive, escalationTimeLeft]);
+  useEffect(() => {
+    if (!isEscalationActive) return;
+
+    const startTime = Date.now();
+    const intervalId = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const remaining = 60 - elapsed;
+
+      if (remaining <= 0) {
+        clearInterval(intervalId);
+        setEscalationTimeLeft(0);
+      } else {
+        setEscalationTimeLeft(remaining);
+      }
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [isEscalationActive]);
 
 const triggerAutoEscalationCall = async () => {
     setIsEscalationActive(false);
@@ -283,6 +288,9 @@ const triggerAutoEscalationCall = async () => {
         // Next is another personal contact
         const nextContact = sortedContacts[nextIndex];
         setPendingCallTarget({ name: nextContact.name, phone: nextContact.phoneNumber });
+      escalationStartTimeRef.current = 0;
+      setEscalationTimeLeft(60);
+      setIsEscalationActive(true);
         setEscalationTimeLeft(60);
         setIsEscalationActive(true);
         console.log(`[SOS] Next escalation scheduled in 60s: Personal contact ${nextContact.name}`);
