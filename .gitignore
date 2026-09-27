@@ -50,3 +50,6 @@ damage-assessment-service/venv/
 
 # EAS build config — each developer uses their own EAS account
 mobile/eas.json
+
+# Prevent accidental stray files created by shell redirects (e.g. `git > something`)
+git

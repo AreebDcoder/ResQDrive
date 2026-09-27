@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { AdminService } from './admin.service';
 import { AdminController } from './admin.controller';
 import { AdminAnalyticsService } from './admin-analytics.service';
@@ -10,14 +11,21 @@ import { AdminEmergencyContactsController } from './contacts/admin-emergency-con
 import { AdminEmergencyContactsService } from './contacts/admin-emergency-contacts.service';
 import { AdminAccidentReportsController } from './accident-reports/admin-accident-reports.controller';
 import { AdminAccidentReportsService } from './accident-reports/admin-accident-reports.service';
+import { AdminAuditController } from './audit/admin-audit.controller';
+import { AdminAuditService } from './audit/admin-audit.service';
+import { AuditLogInterceptor } from './audit/audit-log.interceptor';
 
 @Module({
+  imports: [
+    NotificationsModule, // 👈 Added this so AdminAuditService can use NotificationsService
+  ],
   controllers: [
     AdminController,
     AdminAnalyticsController,
     AdminVehiclesController,
     AdminEmergencyContactsController,
     AdminAccidentReportsController,
+    AdminAuditController,
   ],
   providers: [
     AdminService,
@@ -26,6 +34,8 @@ import { AdminAccidentReportsService } from './accident-reports/admin-accident-r
     AdminVehiclesService,
     AdminEmergencyContactsService,
     AdminAccidentReportsService,
+    AdminAuditService,
+    AuditLogInterceptor,
   ],
   exports: [
     AdminService,
@@ -34,6 +44,7 @@ import { AdminAccidentReportsService } from './accident-reports/admin-accident-r
     AdminVehiclesService,
     AdminEmergencyContactsService,
     AdminAccidentReportsService,
+    AdminAuditService,
   ],
 })
 export class AdminModule {}

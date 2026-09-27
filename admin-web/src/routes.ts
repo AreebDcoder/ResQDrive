@@ -14,7 +14,7 @@ import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
 import {
   LayoutDashboard, Siren, Activity, Wrench, Phone, Users, Car,
   AudioLines, Mic, Image, Calculator, Bell, Download,
-  HeartPulse, UserCircle, Contact, FileWarning,
+  HeartPulse, UserCircle, Contact, FileWarning, Megaphone, ScrollText, Settings,
 } from 'lucide-react';
 
 // ─── Page lazy-imports (code-splitting per route) ────────────────────────────
@@ -37,8 +37,11 @@ const RepairCostReportsPage = lazy(() => import('./pages/RepairCostReportsPage')
 const WorkshopQueuePage = lazy(() => import('./pages/WorkshopQueuePage'));
 const EmergencyNumbersPage = lazy(() => import('./pages/EmergencyNumbersPage'));
 const NotificationHistoryPage = lazy(() => import('./pages/NotificationHistoryPage'));
+const BroadcastPage = lazy(() => import('./pages/BroadcastPage'));
 const DataExportPage = lazy(() => import('./pages/DataExportPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const AuditLogPage = lazy(() => import('./pages/AuditLogPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 
 type LazyPage = LazyExoticComponent<ComponentType<any>>;
 
@@ -97,6 +100,7 @@ export const NAV_GROUPS: NavGroup[] = [
     group: 'Communications',
     items: [
       { to: '/notifications', label: 'Notifications', icon: Bell },
+      { to: '/notifications/broadcast', label: 'New Broadcast', icon: Megaphone },
       { to: '/export', label: 'Data Export', icon: Download },
     ],
   },
@@ -104,6 +108,8 @@ export const NAV_GROUPS: NavGroup[] = [
     group: 'System',
     items: [
       { to: '/health', label: 'System Health', icon: HeartPulse },
+      { to: '/audit-log', label: 'Audit Log', icon: ScrollText },
+      { to: '/settings', label: 'Settings', icon: Settings },
       { to: '/profile', label: 'Profile', icon: UserCircle },
     ],
   },
@@ -135,7 +141,10 @@ export const ROUTES: RouteDef[] = [
   { path: '/workshop', element: WorkshopQueuePage },
   { path: '/emergency-numbers', element: EmergencyNumbersPage },
   { path: '/notifications', element: NotificationHistoryPage },
+  { path: '/notifications/broadcast', element: BroadcastPage },
   { path: '/export', element: DataExportPage },
+  { path: '/audit-log', element: AuditLogPage },
+  { path: '/settings', element: SettingsPage },
   { path: '/profile', element: ProfilePage },
 ];
 
@@ -160,6 +169,9 @@ export const PAGE_TITLES: Record<string, string> = {
   '/workshop': 'Workshop Queue',
   '/emergency-numbers': 'Emergency Numbers',
   '/notifications': 'Notifications',
+  '/notifications/broadcast': 'New Broadcast',
   '/export': 'Data Export',
+  '/audit-log': 'Audit Log',
+  '/settings': 'Settings',
   '/profile': 'Profile',
 };
