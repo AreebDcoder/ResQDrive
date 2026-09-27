@@ -9,8 +9,9 @@ import {
   BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
+import { fetchContactsSuccess } from '../store/slices/contactsSlice';
 import api from '../api/axios';
 import * as Notifications from 'expo-notifications';
 import { dispatchEmergencyAlert } from '../utils/emergencyFallback';
@@ -24,6 +25,7 @@ import { MultiModalFusionService } from '../services/multiModalFusionService';
 const COUNTDOWN_SECONDS = 10;
 
 export default function CountdownScreen({ navigation, route }: any) {
+  const dispatch = useDispatch();
   const { latitude, longitude, severity = 'Moderate', countdownSeconds } = route.params || {};
   const initialCountdown = countdownSeconds || (severity === 'Severe' ? 10 : 20);
   const contacts = useSelector((state: RootState) => state.contacts.list);
@@ -54,6 +56,21 @@ export default function CountdownScreen({ navigation, route }: any) {
   useEffect(() => {
     Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
   }, [fadeAnim]);
+
+  // Refresh emergency contacts list from backend on mount to guarantee fresh priority order
+  useEffect(() => {
+    const syncContacts = async () => {
+      try {
+        const res = await api.get('/emergency-contacts');
+        if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+          dispatch(fetchContactsSuccess(res.data));
+        }
+      } catch (err) {
+        console.log('[Countdown] Background contacts sync failed, using cached contacts:', err);
+      }
+    };
+    syncContacts();
+  }, [dispatch]);
 
   // Prevent Android back button from silently escaping the countdown
   useEffect(() => {
@@ -106,15 +123,34 @@ export default function CountdownScreen({ navigation, route }: any) {
     [logIncident, navigation],
   );
 
-const handleTimeout = useCallback(async () => {
+  const handleTimeout = useCallback(async () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     setIsDispatching(true);
 
-    const dispatchContacts = (contacts || []).map((c: any) => ({
-      name: c.name || 'Emergency Contact',
-      phoneNumber: c.phoneNumber,
-      email: c.email || undefined,
-    })).filter((c: any) => Boolean(c.phoneNumber));
+    // 0. Ensure contacts are strictly ordered by priority (Priority 1 first, Priority 2 second...)
+    let currentContacts = contacts || [];
+    try {
+      const freshRes = await api.get('/emergency-contacts');
+      if (freshRes.data && Array.isArray(freshRes.data) && freshRes.data.length > 0) {
+        currentContacts = freshRes.data;
+        dispatch(fetchContactsSuccess(freshRes.data));
+      }
+    } catch (e) {
+      console.log('[Countdown] Using Redux contacts for dispatch:', e);
+    }
+
+    const sortedContacts = [...currentContacts].sort(
+      (a: any, b: any) => (a.priorityOrder ?? 999) - (b.priorityOrder ?? 999)
+    );
+
+    const dispatchContacts = sortedContacts
+      .map((c: any) => ({
+        name: c.name || 'Emergency Contact',
+        phoneNumber: c.phoneNumber,
+        email: c.email || undefined,
+        priorityOrder: c.priorityOrder ?? 1,
+      }))
+      .filter((c: any) => Boolean(c.phoneNumber));
 
     // 0. Ensure high-accuracy current GPS location before dispatch
     let realLat = latitude;
@@ -304,7 +340,7 @@ const handleTimeout = useCallback(async () => {
         sessionId: emergencyNotificationResult?.sessionId || null,
       });
     }, 3000);
-  }, [contacts, user, severity, latitude, longitude, navigation]);
+  }, [contacts, user, severity, latitude, longitude, navigation, dispatch]);
 
 
   const cancelCallbackRef = useRef(handleCancel);

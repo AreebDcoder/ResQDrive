@@ -40,7 +40,7 @@ const contactsSlice = createSlice({
       state.error = null;
     },
     fetchContactsSuccess: (state, action: PayloadAction<EmergencyContact[]>) => {
-      state.list = action.payload;
+      state.list = [...action.payload].sort((a, b) => (a.priorityOrder ?? 999) - (b.priorityOrder ?? 999));
       state.isLoading = false;
     },
     fetchContactsFailure: (state, action: PayloadAction<string>) => {
@@ -52,16 +52,17 @@ const contactsSlice = createSlice({
     },
     addContactSuccess: (state, action: PayloadAction<EmergencyContact>) => {
       state.list.push(action.payload);
-      state.list.sort((a, b) => a.priorityOrder - b.priorityOrder);
+      state.list.sort((a, b) => (a.priorityOrder ?? 999) - (b.priorityOrder ?? 999));
     },
     updateContactSuccess: (state, action: PayloadAction<EmergencyContact>) => {
       const idx = state.list.findIndex((c) => c.id === action.payload.id);
       if (idx !== -1) {
         state.list[idx] = action.payload;
       }
+      state.list.sort((a, b) => (a.priorityOrder ?? 999) - (b.priorityOrder ?? 999));
     },
     reorderContactsSuccess: (state, action: PayloadAction<EmergencyContact[]>) => {
-      state.list = action.payload;
+      state.list = [...action.payload].sort((a, b) => (a.priorityOrder ?? 999) - (b.priorityOrder ?? 999));
     },
     deleteContactSuccess: (state, action: PayloadAction<{ id: string }>) => {
       // Deleting a contact shifts remaining priorities contiguously

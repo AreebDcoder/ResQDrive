@@ -72,4 +72,30 @@ describe('EmergencyContactsService - reorder', () => {
     expect(prismaMock.$transaction).toHaveBeenCalled();
     expect(result).toBeDefined();
   });
+
+  it('should strictly sort raw orders by priorityOrder even if sent unordered in array', async () => {
+    const updateCalls: any[] = [];
+    prismaMock.emergencyContact.update = jest.fn().mockImplementation(({ where, data }) => {
+      updateCalls.push({ id: where.id, priorityOrder: data.priorityOrder });
+      return Promise.resolve({ id: where.id, ...data });
+    });
+
+    const reorderDto: ReorderContactsDto = {
+      orders: [
+        { contactId: 'c-1', priorityOrder: 3 },
+        { contactId: 'c-3', priorityOrder: 1 },
+        { contactId: 'c-2', priorityOrder: 2 },
+      ],
+    };
+
+    await service.reorder(mockUserId, reorderDto);
+
+    // Final priority assignments (Step 2) must assign c-3 -> 1, c-2 -> 2, c-1 -> 3
+    const finalAssignments = updateCalls.filter(c => c.priorityOrder < 1000);
+    expect(finalAssignments).toEqual([
+      { id: 'c-3', priorityOrder: 1 },
+      { id: 'c-2', priorityOrder: 2 },
+      { id: 'c-1', priorityOrder: 3 },
+    ]);
+  });
 });

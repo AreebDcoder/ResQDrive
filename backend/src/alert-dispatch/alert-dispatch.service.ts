@@ -19,7 +19,7 @@ export interface AlertPayload {
   latitude: number;
   longitude: number;
   severity: string;
-  contacts?: { name: string; phoneNumber: string; email?: string }[];
+  contacts?: { name: string; phoneNumber: string; email?: string; priorityOrder?: number }[];
   acknowledgeUrl?: string;
 }
 
@@ -108,7 +108,11 @@ export class AlertDispatchService {
         } catch (e) {}
       }
 
-      if (contactsToAlert.length === 0) {
+      if (contactsToAlert.length > 0) {
+        contactsToAlert = [...contactsToAlert].sort(
+          (a: any, b: any) => (a.priorityOrder ?? 999) - (b.priorityOrder ?? 999)
+        );
+      } else {
         try {
           const dbContacts = await this.prisma.emergencyContact.findMany({
             where: { userId: payload.userId },
@@ -118,9 +122,11 @@ export class AlertDispatchService {
             name: c.name,
             phoneNumber: c.phoneNumber,
             email: c.email || undefined,
+            priorityOrder: c.priorityOrder,
           }));
         } catch (e) {}
       }
+      payload.contacts = contactsToAlert;
 
       if (!acknowledgeUrl) {
         try {

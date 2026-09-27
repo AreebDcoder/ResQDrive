@@ -18,7 +18,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../api/axios';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchContactsSuccess } from '../store/slices/contactsSlice';
 import { makeDirectPhoneCall, isAutoDialable } from '../utils/directCall';
 import { getSafeDeviceLocation } from '../utils/location';
 
@@ -47,6 +48,7 @@ const DEFAULT_RESCUE_NUMBERS: EmergencyNumberItem[] = [
 ];
 
 export default function SOSScreen({ route, navigation, isInline }: any) {
+  const dispatch = useDispatch();
   // Extract params from countdown trigger if navigated dynamically
   const severity = route?.params?.severity || 'moderate';
   const incidentId = route?.params?.incidentId || null;
@@ -68,18 +70,35 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
   );
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Refresh personal contacts on mount to guarantee fresh priority
+  useEffect(() => {
+    const fetchFreshContacts = async () => {
+      try {
+        const res = await api.get('/emergency-contacts');
+        if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+          dispatch(fetchContactsSuccess(res.data));
+        }
+      } catch (err) {
+        console.log('[SOS] Failed to fetch fresh contacts:', err);
+      }
+    };
+    fetchFreshContacts();
+  }, [dispatch]);
+
   // Keep target contact updated as personalContacts load
   useEffect(() => {
-    if (personalContacts.length > 0 && !pendingCallTarget) {
-      const sorted = [...personalContacts].sort((a: any, b: any) => (a.priorityOrder ?? 0) - (b.priorityOrder ?? 0));
-      setPendingCallTarget({ name: sorted[0].name, phone: sorted[0].phoneNumber });
+    if (personalContacts.length > 0) {
+      const sorted = [...personalContacts].sort((a: any, b: any) => (a.priorityOrder ?? 999) - (b.priorityOrder ?? 999));
+      if (currentContactIndex === 0) {
+        setPendingCallTarget({ name: sorted[0].name, phone: sorted[0].phoneNumber });
+      }
     } else if (personalContacts.length === 0 && regionalNumbers.length > 0 && !pendingCallTarget) {
       setPendingCallTarget({
         name: regionalNumbers[0]?.serviceName || 'Rescue 1122',
         phone: regionalNumbers[0]?.phoneNumber || '1122',
       });
     }
-  }, [personalContacts, regionalNumbers]);
+  }, [personalContacts, regionalNumbers, currentContactIndex]);
 
   // Animations
   const headerOpacity = useRef(new Animated.Value(1)).current;
@@ -198,11 +217,11 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
     return () => clearInterval(intervalId);
   }, [isEscalationActive]);
 
-const triggerAutoEscalationCall = async () => {
+  const triggerAutoEscalationCall = async () => {
     setIsEscalationActive(false);
 
     const sortedContacts = [...personalContacts].sort(
-      (a: any, b: any) => (a.priorityOrder ?? 0) - (b.priorityOrder ?? 0)
+      (a: any, b: any) => (a.priorityOrder ?? 999) - (b.priorityOrder ?? 999)
     );
 
     let phone: string;
@@ -258,9 +277,7 @@ const triggerAutoEscalationCall = async () => {
         // Next is another personal contact
         const nextContact = sortedContacts[nextIndex];
         setPendingCallTarget({ name: nextContact.name, phone: nextContact.phoneNumber });
-      escalationStartTimeRef.current = 0;
-      setEscalationTimeLeft(60);
-      setIsEscalationActive(true);
+        escalationStartTimeRef.current = 0;
         setEscalationTimeLeft(60);
         setIsEscalationActive(true);
         console.log(`[SOS] Next escalation scheduled in 60s: Personal contact ${nextContact.name}`);

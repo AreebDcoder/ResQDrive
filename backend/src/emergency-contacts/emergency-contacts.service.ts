@@ -122,6 +122,10 @@ export class EmergencyContactsService {
    */
   async reorder(userId: string, reorderContactsDto: ReorderContactsDto) {
     const rawOrders = reorderContactsDto?.orders || [];
+    // Sort orders by requested priorityOrder ascending (1, 2, 3...)
+    const sortedOrders = [...rawOrders].sort(
+      (a, b) => (a.priorityOrder ?? 999) - (b.priorityOrder ?? 999)
+    );
 
     const userContacts = await this.prisma.emergencyContact.findMany({
       where: { userId },
@@ -133,7 +137,7 @@ export class EmergencyContactsService {
     const userContactMap = new Map(userContacts.map((c) => [c.id, c]));
 
     const orderedIds: string[] = [];
-    for (const item of rawOrders) {
+    for (const item of sortedOrders) {
       const cid = (item as any).contactId || (item as any).id;
       if (cid && userContactMap.has(cid) && !orderedIds.includes(cid)) {
         orderedIds.push(cid);
