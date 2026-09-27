@@ -121,40 +121,49 @@ export class EmergencyContactsService {
    * Uses temporary negative placeholders to bypass composite unique key (userId, priorityOrder) conflicts.
    */
   async reorder(userId: string, reorderContactsDto: ReorderContactsDto) {
-    const { orders } = reorderContactsDto;
+    const rawOrders = reorderContactsDto?.orders || [];
 
-    // Verify all contacts exist and belong to this user
     const userContacts = await this.prisma.emergencyContact.findMany({
       where: { userId },
+      orderBy: { priorityOrder: 'asc' },
     });
-    const userContactIds = userContacts.map((c) => c.id);
 
-    const isValid = orders.every((o) => userContactIds.includes(o.contactId));
-    if (!isValid) {
-      throw new ForbiddenException('Invalid contacts in reorder payload.');
+    if (userContacts.length === 0) return [];
+
+    const userContactMap = new Map(userContacts.map((c) => [c.id, c]));
+
+    const orderedIds: string[] = [];
+    for (const item of rawOrders) {
+      const cid = (item as any).contactId || (item as any).id;
+      if (cid && userContactMap.has(cid) && !orderedIds.includes(cid)) {
+        orderedIds.push(cid);
+      }
+    }
+    // Append any missing contacts to preserve full list
+    for (const c of userContacts) {
+      if (!orderedIds.includes(c.id)) {
+        orderedIds.push(c.id);
+      }
     }
 
-    // Perform atomic transaction
+    // Atomic transaction using temporary 1000+ offset to prevent unique constraint collisions
     return this.prisma.$transaction(async (tx) => {
-      // 1. Shift target priorities to temporary negative values (e.g. -1, -2, -3)
-      // to avoid unique constraint key violations mid-transaction.
-      for (let i = 0; i < orders.length; i++) {
-        const order = orders[i];
+      // Step 1: Shift all user contacts to temporary offset
+      for (let i = 0; i < userContacts.length; i++) {
         await tx.emergencyContact.update({
-          where: { id: order.contactId },
-          data: { priorityOrder: -(i + 1) },
+          where: { id: userContacts[i].id },
+          data: { priorityOrder: 1000 + i },
         });
       }
 
-      // 2. Shift them to their final user-specified priorities.
-      for (const order of orders) {
+      // Step 2: Assign final contiguous priority orders (1, 2, 3...)
+      for (let i = 0; i < orderedIds.length; i++) {
         await tx.emergencyContact.update({
-          where: { id: order.contactId },
-          data: { priorityOrder: order.priorityOrder },
+          where: { id: orderedIds[i] },
+          data: { priorityOrder: i + 1 },
         });
       }
 
-      // Return refreshed ordered list
       return tx.emergencyContact.findMany({
         where: { userId },
         orderBy: { priorityOrder: 'asc' },

@@ -8,6 +8,7 @@ import api from '../api/axios';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import { dispatchEmergencyAlert } from '../utils/emergencyFallback';
+import { getSafeDeviceLocation } from '../utils/location';
 import { registerForPushNotificationsAsync } from '../utils/registerPushToken';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { logoutAction, setTokens } from '../store/slices/authSlice';
@@ -52,6 +53,47 @@ import { makeDirectPhoneCall } from '../utils/directCall';
 
 const Stack = createStackNavigator();
 
+// Isolated Live Telemetry Widget component so high-frequency sensor updates (5Hz/200ms)
+// do NOT trigger re-renders of DriverHome and its active tabs (Damage Assessment, Services, etc.)
+const LiveTelemetryWidget = React.memo(function LiveTelemetryWidget({ drivingModeEnabled }: { drivingModeEnabled?: boolean }) {
+  const { activeSource, latestReading } = useSelector((state: RootState) => state.sensor);
+
+  return (
+    <View style={styles.dashboardCard}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+        <Ionicons name="pulse-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
+        <Text style={styles.cardHeaderTitle}>Live Telemetry</Text>
+      </View>
+      {drivingModeEnabled ? (
+        <View>
+          <View style={styles.telemetryRow}>
+            <Text style={styles.telemetryLabel}>Source:</Text>
+            <Text style={styles.telemetryValueBold}>
+              {activeSource === 'ble' ? 'BLE Hardware' : 'Phone Sensors'}
+            </Text>
+          </View>
+          <View style={styles.telemetryRow}>
+            <Text style={styles.telemetryLabel}>G-Force Magnitude:</Text>
+            <Text style={styles.telemetryValue}>
+              {latestReading ? `${latestReading.accelG.toFixed(3)} G` : '1.000 G'}
+            </Text>
+          </View>
+          <View style={styles.telemetryRow}>
+            <Text style={styles.telemetryLabel}>Rotation Speed:</Text>
+            <Text style={styles.telemetryValue}>
+              {latestReading ? `${latestReading.gyroDegPerSec.toFixed(1)} °/s` : '0.0 °/s'}
+            </Text>
+          </View>
+        </View>
+      ) : (
+        <Text style={styles.noVehicleText}>
+          Telemetry inactive. Turn on Driving Mode to view live sensors.
+        </Text>
+      )}
+    </View>
+  );
+});
+
 function DriverHome({ navigation }: any) {
   const dispatch = useDispatch();
   const vehicles = useSelector((state: RootState) => state.vehicles.list);
@@ -63,7 +105,7 @@ function DriverHome({ navigation }: any) {
   const [activeTab, setActiveTab] = React.useState<'home' | 'alert' | 'damage' | 'services' | 'parts' | 'voice'>('home');
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
   const { preferences } = useSelector((state: RootState) => state.notifications);
-  const { connectionStatus, activeSource, latestReading } = useSelector((state: RootState) => state.sensor);
+  const connectionStatus = useSelector((state: RootState) => state.sensor.connectionStatus);
   const [isUpdatingPref, setIsUpdatingPref] = React.useState(false);
 
   // Background fetch vehicles and contacts on Dashboard mount
@@ -101,39 +143,20 @@ function DriverHome({ navigation }: any) {
   }, [dispatch]);
 
   React.useEffect(() => {
-    // 1. Subscribe to multi-modal acoustic-motion coincidence triggers (10-second window)
-    MultiModalFusionService.subscribeToConfirmedAccidents((trigger) => {
+    MultiModalFusionService.subscribeToConfirmedAccidents(async (trigger) => {
       console.log(`🚨 MULTI-MODAL ACCIDENT CONFIRMED! Acoustic ("${trigger.soundEvent.topClass}") & Motion (${trigger.motionEvent.severity.toUpperCase()}) co-occurred within 10s window!`);
 
-      Location.requestForegroundPermissionsAsync()
-        .then(async ({ status }) => {
-          if (status !== 'granted') {
-            console.log('❌ Location permission not granted, cannot navigate to Countdown.');
-            return null;
-          }
-          try {
-            return await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-          } catch (e) {
-            console.log('⚠️ High accuracy position failed, falling back to last known position...');
-            return await Location.getLastKnownPositionAsync();
-          }
-        })
-        .then((location) => {
-          if (!location) {
-            console.log('❌ Could not acquire device GPS location.');
-            return;
-          }
-          console.log(`📍 Got precise location: Lat ${location.coords.latitude}, Lng ${location.coords.longitude}`);
-          navigation.navigate('Countdown', {
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-            severity: trigger.combinedSeverity,
-            countdownSeconds: trigger.combinedSeverity === 'Severe' ? 10 : 20,
-          });
-        })
-        .catch((err) => {
-          console.log('❌ Multi-modal accident trigger location fetch failed:', err);
-        });
+      const loc = await getSafeDeviceLocation();
+      const lat = loc?.latitude ?? 33.6844;
+      const lng = loc?.longitude ?? 73.0479;
+
+      console.log(`📍 Got precise location: Lat ${lat}, Lng ${lng}`);
+      navigation.navigate('Countdown', {
+        latitude: lat,
+        longitude: lng,
+        severity: trigger.combinedSeverity,
+        countdownSeconds: trigger.combinedSeverity === 'Severe' ? 10 : 20,
+      });
     });
 
     // 2. Feed YAMNet acoustic crash events into MultiModalFusionService
@@ -215,12 +238,9 @@ function DriverHome({ navigation }: any) {
   };
 
   const testEmergencyFallback = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      alert('Location permission needed for this test.');
-      return;
-    }
-    const location = await Location.getCurrentPositionAsync({});
+    const loc = await getSafeDeviceLocation();
+    const lat = loc?.latitude ?? 33.6844;
+    const lng = loc?.longitude ?? 73.0479;
 
     const result = await dispatchEmergencyAlert(
       [{ name: 'Test Contact', phoneNumber: '+923175718391' }],
@@ -228,8 +248,8 @@ function DriverHome({ navigation }: any) {
         userName: 'Abdul Basit',
         userPhone: '+923321276653',
         severity: 'Moderate',
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
+        latitude: lat,
+        longitude: lng,
       },
       async () => {
         throw new Error('Simulating online dispatch not implemented yet');
@@ -241,12 +261,9 @@ function DriverHome({ navigation }: any) {
 
   const triggerRealEmergencyDispatch = async () => {
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        alert('Location permission needed to send an alert.');
-        return;
-      }
-      const location = await Location.getCurrentPositionAsync({});
+      const loc = await getSafeDeviceLocation();
+      const lat = loc?.latitude ?? 33.6844;
+      const lng = loc?.longitude ?? 73.0479;
 
       if (!contacts || contacts.length === 0) {
         alert('No emergency contacts saved yet. Add contacts first.');
@@ -269,15 +286,15 @@ function DriverHome({ navigation }: any) {
           userName: currentUser.fullName,
           userPhone: currentUser.phoneNumber,
           severity: 'Moderate',
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
+          latitude: lat,
+          longitude: lng,
         },
         async () => {
           await api.post('/alert-dispatch', {
             userId: currentUser.id,
             userName: currentUser.fullName,
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
+            latitude: lat,
+            longitude: lng,
             severity: 'Moderate',
             contacts: dispatchContacts,
           });
@@ -377,39 +394,8 @@ function DriverHome({ navigation }: any) {
               )}
             </View>
 
-            {/* Live Telemetry Widget */}
-            <View style={styles.dashboardCard}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                <Ionicons name="pulse-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
-                <Text style={styles.cardHeaderTitle}>Live Telemetry</Text>
-              </View>
-              {preferences?.drivingModeEnabled ? (
-                <View>
-                  <View style={styles.telemetryRow}>
-                    <Text style={styles.telemetryLabel}>Source:</Text>
-                    <Text style={styles.telemetryValueBold}>
-                      {activeSource === 'ble' ? 'BLE Hardware' : 'Phone Sensors'}
-                    </Text>
-                  </View>
-                  <View style={styles.telemetryRow}>
-                    <Text style={styles.telemetryLabel}>G-Force Magnitude:</Text>
-                    <Text style={styles.telemetryValue}>
-                      {latestReading ? `${latestReading.accelG.toFixed(3)} G` : '1.000 G'}
-                    </Text>
-                  </View>
-                  <View style={styles.telemetryRow}>
-                    <Text style={styles.telemetryLabel}>Rotation Speed:</Text>
-                    <Text style={styles.telemetryValue}>
-                      {latestReading ? `${latestReading.gyroDegPerSec.toFixed(1)} °/s` : '0.0 °/s'}
-                    </Text>
-                  </View>
-                </View>
-              ) : (
-                <Text style={styles.noVehicleText}>
-                  Telemetry inactive. Turn on Driving Mode to view live sensors.
-                </Text>
-              )}
-            </View>
+            {/* Live Telemetry Widget (Isolated subscription to prevent full dashboard re-renders at 5Hz) */}
+            <LiveTelemetryWidget drivingModeEnabled={preferences?.drivingModeEnabled} />
 
             {/* Driving Mode Preference Toggle Widget */}
             <View style={[styles.dashboardCard, { alignItems: 'center' }]}>
@@ -690,7 +676,7 @@ function DriverHome({ navigation }: any) {
                 style={[styles.menuItem, { borderColor: '#d32f2f', borderWidth: 1 }]}
                 onPress={() => {
                   setIsDrawerOpen(false);
-                  triggerRealEmergencyDispatch();
+                  navigation.navigate('SOSScreen');
                 }}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>

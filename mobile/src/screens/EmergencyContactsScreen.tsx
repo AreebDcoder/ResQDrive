@@ -75,6 +75,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
     newContacts[targetIndex] = temp;
 
     const payload = newContacts.map((c, i) => ({
+      contactId: c.id,
       id: c.id,
       priorityOrder: i + 1,
     }));

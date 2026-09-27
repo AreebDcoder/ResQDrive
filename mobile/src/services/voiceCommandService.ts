@@ -92,9 +92,9 @@ export class VoiceCommandService {
   /**
    * Starts listening. Always tries native Voice first, falls back to Vosk or mock.
    */
-  static async startListening() {
+  static async startListening(forceRestart = false) {
     this.consecutiveErrors = 0;
-    if (this.isListening) return;
+    if (this.isListening && !forceRestart) return;
 
     const hasPermission = await this.requestPermissions();
     console.log('[VoiceCommandService]: hasPermission =', hasPermission, 'Voice =', !!Voice);
@@ -199,19 +199,26 @@ export class VoiceCommandService {
           const code = String(e?.error?.code ?? e?.error ?? '');
           console.log(`[Voice] #${session} ERROR code=${code}`);
 
-          // Recoverable errors:
-          // 2=network error, 6=speech timeout, 7=no match (silence), 8=server/recognizer busy, 9=insufficient permissions
-          if (['2', '6', '7', '8', '9'].includes(code)) {
+          // Code 6 (speech timeout) and Code 7 (no match / silence) are normal silence intervals
+          if (code === '6' || code === '7') {
+            console.log(`[Voice] Silence interval (code=${code}). Restarting listener...`);
+            this.consecutiveErrors = 0; // Normal silence is not a fatal error
+            scheduleRestart(400);
+            return;
+          }
+
+          // Recoverable errors: 2=network error, 8=server/recognizer busy, 9=insufficient permissions
+          if (['2', '8', '9'].includes(code)) {
             this.consecutiveErrors++;
 
             if (this.consecutiveErrors >= this.MAX_CONSECUTIVE_ERRORS) {
-              console.log(`[Voice] ${this.consecutiveErrors} consecutive speech timeouts/errors. Pausing auto-restart loop to conserve resources.`);
-              this.updateStatus('Listening paused (Silence). Tap to speak.');
+              console.log(`[Voice] ${this.consecutiveErrors} consecutive speech errors. Pausing auto-restart loop.`);
+              this.updateStatus('Listening paused. Tap microphone to speak.');
               this.isListening = false;
               return;
             }
 
-            const delay = code === '2' ? 2500 : 1500; // 1.5s delay to prevent high-frequency rapid restarts
+            const delay = code === '2' ? 2500 : 1500;
             scheduleRestart(delay);
           } else {
             console.warn('[Voice] Unrecoverable error, stopping:', e.error);
@@ -220,11 +227,7 @@ export class VoiceCommandService {
           }
         };
 
-        Voice.start('en-US', {
-            // Prefer on-device offline recognition — avoids ERROR_NETWORK (code 2)
-            // and works without Google cloud connectivity
-            EXTRA_PREFER_OFFLINE: true,
-          })
+        Voice.start('en-US')
           .then(() => console.log(`[Voice] #${session} start() OK — say something!`))
           .catch((err: any) => {
             console.warn(`[Voice] #${session} start() REJECTED:`, err?.message);

@@ -18,9 +18,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../api/axios';
-import { VoiceCommandService } from '../services/voiceCommandService';
 import { useSelector } from 'react-redux';
 import { makeDirectPhoneCall, isAutoDialable } from '../utils/directCall';
+import { getSafeDeviceLocation } from '../utils/location';
 
 interface EmergencyNumberItem {
   id: string;
@@ -31,15 +31,31 @@ interface EmergencyNumberItem {
   priorityOrder: number;
 }
 
+const DEFAULT_RESCUE_NUMBERS: EmergencyNumberItem[] = [
+  {
+    id: 'def-rescue-hotline',
+    serviceName: 'Rescue 1122 (Emergency Hotline)',
+    phoneNumber: '1122',
+    priorityOrder: 1,
+  },
+  {
+    id: 'def-rescue-hq',
+    serviceName: 'Rescue 1122 Regional HQ (Direct)',
+    phoneNumber: '0519290002',
+    priorityOrder: 2,
+  },
+];
+
 export default function SOSScreen({ route, navigation, isInline }: any) {
   // Extract params from countdown trigger if navigated dynamically
   const severity = route?.params?.severity || 'moderate';
   const incidentId = route?.params?.incidentId || null;
 
-  const [regionalNumbers, setRegionalNumbers] = useState<EmergencyNumberItem[]>([]);
+  const [regionalNumbers, setRegionalNumbers] = useState<EmergencyNumberItem[]>(DEFAULT_RESCUE_NUMBERS);
   const personalContacts = useSelector((state: any) => state.contacts?.list || []);
-  const [regionName, setRegionName] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(true);
+  const [regionName, setRegionName] = useState<string>('Pakistan (Nationwide)');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLocating, setIsLocating] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Auto-escalation state & cycling
@@ -66,10 +82,10 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
   }, [personalContacts, regionalNumbers]);
 
   // Animations
-  const headerOpacity = useRef(new Animated.Value(0)).current;
+  const headerOpacity = useRef(new Animated.Value(1)).current;
   const sosPulse = useRef(new Animated.Value(0)).current;
-  const listOpacity = useRef(new Animated.Value(0)).current;
-  const listTranslateY = useRef(new Animated.Value(20)).current;
+  const listOpacity = useRef(new Animated.Value(1)).current;
+  const listTranslateY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     // Header fade in
@@ -113,47 +129,6 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
         buttonPositive: 'Allow',
       }).catch((e) => console.log('Early CALL_PHONE permission check error:', e));
     }
-
-    // Start listening to voice commands when SOS Screen mounts
-    VoiceCommandService.startListening();
-
-    // Subscribe to callbacks
-    VoiceCommandService.subscribeToCallbacks(
-      () => {
-        console.log('[SOS Voice Command]: CANCEL action detected. Stopping countdown.');
-        setIsEscalationActive(false);
-        if (timerRef.current) clearTimeout(timerRef.current);
-        Alert.alert('System Action', 'Accident escalation timer cancelled via voice command.');
-      },
-      async () => {
-        console.log('[SOS Voice Command]: SOS action detected. Dialing immediately!');
-        setIsEscalationActive(false);
-        if (timerRef.current) clearTimeout(timerRef.current);
-
-        const target = regionalNumbersRef.current[0];
-        if (target) {
-          try {
-            await api.post('/emergency-sos/log-call', {
-              serviceName: target.serviceName || 'Rescue',
-              autoDialed: false,
-            });
-          } catch (err) {
-            console.log('Failed to log voice call:', err);
-          }
-          makeDirectPhoneCall(target.phoneNumber);
-        } else {
-          makeDirectPhoneCall('1122');
-        }
-      },
-      () => {},
-      () => {},
-      () => {}
-    );
-
-    return () => {
-      // Stop listening when SOS Screen unmounts
-      VoiceCommandService.stopListening();
-    };
   }, []);
 
   const animateListIn = () => {
@@ -173,32 +148,27 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
   };
 
   const fetchEmergencyNumbers = useCallback(async () => {
-    setIsLoading(true);
+    setIsLocating(true);
     setErrorMsg(null);
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setErrorMsg('Location permission is required to show the correct emergency numbers.');
-        return;
-      }
-
-      const location = await Promise.race([
-        Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
-        new Promise<any>((resolve) => setTimeout(() => resolve(null), 3000)),
-      ]);
-      const latitude = location?.coords?.latitude ?? 33.6844;
-      const longitude = location?.coords?.longitude ?? 73.0479;
+      const loc = await getSafeDeviceLocation();
+      const latitude = loc?.latitude ?? 33.6844;
+      const longitude = loc?.longitude ?? 73.0479;
 
       const response = await api.get('/emergency-sos/numbers', {
         params: { lat: latitude, lng: longitude },
       });
 
-      setRegionName(response.data.regionName || '');
-      setRegionalNumbers(response.data.regionalNumbers || []);
-      animateListIn();
+      if (response.data?.regionName) {
+        setRegionName(response.data.regionName);
+      }
+      if (response.data?.regionalNumbers && response.data.regionalNumbers.length > 0) {
+        setRegionalNumbers(response.data.regionalNumbers);
+      }
     } catch (err: any) {
-      setErrorMsg('Could not load emergency numbers. Check your connection.');
+      console.log('Non-fatal: could not refresh regional numbers, using standard defaults:', err?.message);
     } finally {
+      setIsLocating(false);
       setIsLoading(false);
     }
   }, []);
@@ -374,9 +344,13 @@ const triggerAutoEscalationCall = async () => {
         )}
         <View style={styles.headerContent}>
           <Text style={styles.title}>Emergency SOS</Text>
-          <Text style={styles.subtitle}>
-            {regionName ? `Region: ${regionName}` : 'Detecting your location...'}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
+            <Ionicons name="location-sharp" size={14} color="#E53935" />
+            <Text style={styles.subtitle}>
+              {isLocating ? 'Detecting local services...' : regionName}
+            </Text>
+            {isLocating && <ActivityIndicator size="small" color="#E53935" style={{ marginLeft: 6 }} />}
+          </View>
         </View>
       </Animated.View>
 
@@ -390,38 +364,14 @@ const triggerAutoEscalationCall = async () => {
         </View>
       )}
 
-      {/* Loading */}
-      {isLoading && (
-        <View style={styles.centerContainer}>
-          <View style={styles.loadingRing}>
-            <ActivityIndicator size="large" color="#E53935" />
-          </View>
-          <Text style={styles.loadingText}>Finding emergency services near you...</Text>
-        </View>
-      )}
-
-      {/* Error */}
-      {!isLoading && errorMsg && (
-        <View style={styles.centerContainer}>
-          <View style={styles.errorBadge}>
-            <Text style={styles.errorEmoji}>⚠️</Text>
-          </View>
-          <Text style={styles.errorText}>{errorMsg}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={fetchEmergencyNumbers}>
-            <Text style={styles.retryBtnText}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
       {/* Emergency Numbers List */}
-      {!isLoading && !errorMsg && (
-        <Animated.View
-          style={{
-            flex: 1,
-            opacity: listOpacity,
-            transform: [{ translateY: listTranslateY }],
-          }}
-        >
+      <Animated.View
+        style={{
+          flex: 1,
+          opacity: listOpacity,
+          transform: [{ translateY: listTranslateY }],
+        }}
+      >
           <ScrollView
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
@@ -447,22 +397,7 @@ const triggerAutoEscalationCall = async () => {
               </TouchableOpacity>
             ))}
 
-            {__DEV__ && (
-              <View style={styles.devSimRow}>
-                <TouchableOpacity
-                  style={styles.devSimBtn}
-                  onPress={() => VoiceCommandService.simulateSpeechInput('Cancel')}
-                >
-                  <Text style={styles.devSimText}>🗣️ Simulate Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.devSimBtn, { borderColor: '#d32f2f' }]}
-                  onPress={() => VoiceCommandService.simulateSpeechInput('SOS')}
-                >
-                  <Text style={[styles.devSimText, { color: '#ff1744' }]}>🗣️ Simulate SOS</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+
 
             <View style={styles.noteBox}>
               <Text style={styles.noteIcon}>ℹ️</Text>
@@ -472,7 +407,6 @@ const triggerAutoEscalationCall = async () => {
             </View>
           </ScrollView>
         </Animated.View>
-      )}
     </SafeAreaView>
   );
 }

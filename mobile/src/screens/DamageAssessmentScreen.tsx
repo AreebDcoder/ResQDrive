@@ -3,7 +3,7 @@
 // All imports, logic, state, handlers preserved identically.
 // Only JSX structure + StyleSheet updated: dark glassmorphism theme.
 // ═══════════════════════════════════════════════════════════════
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -40,7 +40,24 @@ interface DamageAssessmentItem {
   partTag?: string;
 }
 
-export default function DamageAssessmentScreen({ route, navigation, isInline }: any) {
+const PART_TAGS = [
+  { tag: 'front_bumper', label: 'Front Bumper' },
+  { tag: 'rear_bumper', label: 'Rear Bumper' },
+  { tag: 'bonnet', label: 'Bonnet' },
+  { tag: 'left_mirror', label: 'Left Side Mirror' },
+  { tag: 'right_mirror', label: 'Right Side Mirror' },
+  { tag: 'headlight', label: 'Headlights' },
+  { tag: 'taillight', label: 'Taillights' },
+  { tag: 'front_door', label: 'Front Door' },
+  { tag: 'rear_door', label: 'Rear Door' },
+  { tag: 'front_fender', label: 'Front Fender / Panel' },
+  { tag: 'rear_quarter_panel', label: 'Rear Quarter / Side Panel' },
+  { tag: 'windshield', label: 'Windshield' },
+  { tag: 'roof', label: 'Roof Panel' },
+  { tag: 'tire', label: 'Tires / Rims' },
+];
+
+function DamageAssessmentScreen({ route, navigation, isInline }: any) {
   const incidentId = route?.params?.incidentId;
   const vehicles = useSelector((state: RootState) => state.vehicles.list) as VehicleItem[];
 
@@ -53,23 +70,6 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
   const [imageFile, setImageFile] = useState<any>(null);
   const [selectedPartTag, setSelectedPartTag] = useState<string | null>(null);
   const [currentSessionAssessmentIds, setCurrentSessionAssessmentIds] = useState<string[]>([]);
-
-  const PART_TAGS = [
-    { tag: 'front_bumper', label: 'Front Bumper' },
-    { tag: 'rear_bumper', label: 'Rear Bumper' },
-    { tag: 'bonnet', label: 'Bonnet' },
-    { tag: 'left_mirror', label: 'Left Side Mirror' },
-    { tag: 'right_mirror', label: 'Right Side Mirror' },
-    { tag: 'headlight', label: 'Headlights' },
-    { tag: 'taillight', label: 'Taillights' },
-    { tag: 'front_door', label: 'Front Door' },
-    { tag: 'rear_door', label: 'Rear Door' },
-    { tag: 'front_fender', label: 'Front Fender / Panel' },
-    { tag: 'rear_quarter_panel', label: 'Rear Quarter / Side Panel' },
-    { tag: 'windshield', label: 'Windshield' },
-    { tag: 'roof', label: 'Roof Panel' },
-    { tag: 'tire', label: 'Tires / Rims' },
-  ];
 
   // Loading & Error States
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -88,10 +88,10 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
 
   // Initialize selected vehicle to primary or first available
   useEffect(() => {
-    if (vehicles && vehicles.length > 0) {
+    if (vehicles && vehicles.length > 0 && !selectedVehicleId) {
       setSelectedVehicleId(vehicles[0].id);
     }
-  }, [vehicles]);
+  }, [vehicles, selectedVehicleId]);
 
   // Load history when entering history segment
   useEffect(() => {
@@ -103,13 +103,13 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
   }, [activeSegment]);
 
   // Request permissions for image picking
-  const checkPermissions = async () => {
+  const checkPermissions = useCallback(async () => {
     const cameraPerm = await ImagePicker.requestCameraPermissionsAsync();
     const libraryPerm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     return cameraPerm.status === 'granted' && libraryPerm.status === 'granted';
-  };
+  }, []);
 
-  const handlePickImage = async (useCamera: boolean) => {
+  const handlePickImage = useCallback(async (useCamera: boolean) => {
     setErrorMsg(null);
     setIsCarRejection(false);
     setPrediction(null);
@@ -149,7 +149,7 @@ export default function DamageAssessmentScreen({ route, navigation, isInline }: 
         type: `image/${fileExtension === 'jpg' ? 'jpeg' : fileExtension}`,
       });
     }
-  };
+  }, [checkPermissions]);
 
   const handleAnalyze = async () => {
     if (!imageFile) return;
@@ -946,3 +946,5 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
 });
+
+export default React.memo(DamageAssessmentScreen);

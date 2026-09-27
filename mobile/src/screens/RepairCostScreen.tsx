@@ -13,7 +13,9 @@ import {
   ActivityIndicator,
   FlatList,
   Alert,
+  StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import api, { API_URL } from '../api/axios';
 import { documentDirectory, writeAsStringAsync } from 'expo-file-system/legacy';
@@ -400,37 +402,31 @@ const handleShareReport = async () => {
             </View>
           )}
         </TouchableOpacity>
-
-        {/* ── Done / Return Button ── */}
-        <TouchableOpacity 
-          style={styles.returnBtn} 
-          onPress={() => {
-            if (navigation.canGoBack()) {
-              navigation.popToTop();
-            } else {
-              navigation.navigate('Home');
-            }
-          }}
-        >
-          <Ionicons name="checkmark-circle-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
-          <Text style={styles.returnBtnText}>Done & Return to Dashboard</Text>
-        </TouchableOpacity>
       </ScrollView>
     );
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <StatusBar barStyle="light-content" backgroundColor="#0A0A0F" />
       {/* ── Header bar ── */}
-      {!incidentId && !reportId && (
-        <View style={styles.headerBar}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerBarTitle}>Repair Estimation</Text>
-          <View style={{ width: 24 }} />
-        </View>
-      )}
+      <View style={styles.headerBar}>
+        <TouchableOpacity 
+          onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              navigation.navigate('Home');
+            }
+          }}
+          style={styles.backBtn}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+        <Text style={styles.headerBarTitle}>Repair Estimation</Text>
+        <View style={{ width: 24 }} />
+      </View>
 
       {/* ── Segment controls ── */}
       <View style={styles.segmentedHeader}>
@@ -484,7 +480,7 @@ const handleShareReport = async () => {
           }
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -498,11 +494,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 48,
-    paddingBottom: 16,
+    paddingVertical: 14,
     backgroundColor: 'rgba(28, 28, 46, 0.6)',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  backBtn: {
+    padding: 4,
   },
   headerBarTitle: {
     color: '#FFFFFF',
@@ -711,29 +709,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 16,
-    marginBottom: 12,
+    marginBottom: 32,
   },
   shareBtnText: {
     color: '#00E676',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  returnBtn: {
-    flexDirection: 'row',
-    backgroundColor: '#E53935',
-    height: 52,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 28,
-    shadowColor: '#E53935',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  returnBtnText: {
-    color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
   },

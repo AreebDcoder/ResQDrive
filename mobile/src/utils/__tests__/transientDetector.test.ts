@@ -3,6 +3,7 @@ import {
   isTransientDetected,
   updateRollingAverage,
   extractCenteredWindow,
+  classifyAudioSource,
 } from '../transientDetector';
 
 describe('Transient Detector Utility Tests', () => {
@@ -107,6 +108,54 @@ describe('Transient Detector Utility Tests', () => {
       
       // Start index = (500 - 12000 + 48000) % 48000 = 36500
       expect(window![0]).toBe(36500);
+    });
+  });
+
+  describe('classifyAudioSource', () => {
+    it('should classify slow turbulent wind / blowing air as direct mic artifact and NOT compressed playback', () => {
+      // Simulate low-frequency blowing air / breath rumble (20-40 Hz slow sinusoidal with DC bias)
+      const N = 16000;
+      const samples = new Float32Array(N);
+      for (let i = 0; i < N; i++) {
+        // Slow 30Hz wave + DC offset 0.15 (direct air pressure pushing diaphragm)
+        samples[i] = 0.15 + 0.4 * Math.sin((2 * Math.PI * 30 * i) / 16000);
+      }
+
+      const result = classifyAudioSource(samples);
+      expect(result.isDirectMicArtifact).toBe(true);
+      expect(result.isCompressedPlayback).toBe(false);
+      expect(result.zcr).toBeLessThan(0.08);
+    });
+
+    it('should classify crash sound with high frequency texture (YouTube playback) as compressed playback', () => {
+      // Simulate metallic impact / crash sound (high frequency components 1000Hz - 4000Hz, zero DC offset)
+      const N = 16000;
+      const samples = new Float32Array(N);
+      for (let i = 0; i < N; i++) {
+        samples[i] =
+          0.3 * Math.sin((2 * Math.PI * 1200 * i) / 16000) +
+          0.2 * Math.sin((2 * Math.PI * 2800 * i) / 16000) +
+          0.1 * (Math.random() - 0.5);
+      }
+
+      const result = classifyAudioSource(samples);
+      expect(result.isDirectMicArtifact).toBe(false);
+      expect(result.isCompressedPlayback).toBe(true);
+      expect(result.zcr).toBeGreaterThan(0.07);
+    });
+
+    it('should identify direct mouth air puffs with DC shift as direct mic artifact', () => {
+      const N = 16000;
+      const samples = new Float32Array(N);
+      for (let i = 0; i < N; i++) {
+        // Direct mouth puff creating slow air pressure wave with 0.12 DC shift
+        samples[i] = 0.12 + 0.05 * Math.sin((2 * Math.PI * 25 * i) / 16000);
+      }
+
+      const result = classifyAudioSource(samples);
+      expect(result.isDirectMicArtifact).toBe(true);
+      expect(result.isCompressedPlayback).toBe(false);
+      expect(result.dcRatio).toBeGreaterThan(0.06);
     });
   });
 });

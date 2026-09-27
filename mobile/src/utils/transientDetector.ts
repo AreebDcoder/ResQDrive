@@ -92,3 +92,92 @@ export function extractCenteredWindow(
 
   return outputWindow;
 }
+
+export interface AudioSourceClassification {
+  /** True if audio displays signatures of compressed speaker playback (e.g. YouTube video test) */
+  isCompressedPlayback: boolean;
+  /** True if audio displays raw acoustic plosive / blowing air / breath on microphone */
+  isDirectMicArtifact: boolean;
+  zcr: number;
+  highFreqRatio: number;
+  dcRatio: number;
+  crestFactor: number;
+}
+
+/**
+ * Acoustically distinguishes between:
+ * 1) Compressed loudspeaker / YouTube video crash audio:
+ *    - Balanced frequency spread (ZCR >= 0.07, highFreqRatio >= 0.20)
+ *    - Negligible DC bias (dcRatio < 0.035)
+ * 
+ * 2) Uncompressed direct microphone air blow / wind turbulence:
+ *    - Low zero crossing rate (turbulent sub-audible flutter, ZCR < 0.08)
+ *    - Heavy low-frequency dominance (highFreqRatio < 0.25)
+ *    - Noticeable DC offset or membrane bias (dcRatio >= 0.04)
+ */
+export function classifyAudioSource(samples: Float32Array): AudioSourceClassification {
+  if (!samples || samples.length < 2) {
+    return {
+      isCompressedPlayback: false,
+      isDirectMicArtifact: false,
+      zcr: 0,
+      highFreqRatio: 0,
+      dcRatio: 0,
+      crestFactor: 0,
+    };
+  }
+
+  let zeroCrossings = 0;
+  let sum = 0;
+  let sumSquares = 0;
+  let diffSumSquares = 0;
+  let maxAmp = 0;
+
+  for (let i = 0; i < samples.length; i++) {
+    const s = samples[i];
+    const absS = Math.abs(s);
+    if (absS > maxAmp) maxAmp = absS;
+    sum += s;
+    sumSquares += s * s;
+    if (i > 0) {
+      const prev = samples[i - 1];
+      if ((s >= 0 && prev < 0) || (s < 0 && prev >= 0)) {
+        zeroCrossings++;
+      }
+      const diff = s - prev;
+      diffSumSquares += diff * diff;
+    }
+  }
+
+  const N = samples.length;
+  const zcr = zeroCrossings / (N - 1);
+  const mean = sum / N;
+  const rms = Math.sqrt(sumSquares / N);
+  const highFreqRms = Math.sqrt(diffSumSquares / (N - 1));
+  const highFreqRatio = rms > 1e-5 ? highFreqRms / rms : 0;
+  const dcRatio = rms > 1e-5 ? Math.abs(mean) / rms : 0;
+  const crestFactor = rms > 1e-5 ? maxAmp / rms : 0;
+
+  // Direct mic air blow / breath artifact detection:
+  // Blowing air creates slow, turbulent low-frequency membrane displacement:
+  // Must have low ZCR (< 0.08) AND low high-frequency content (< 0.25) AND physical membrane DC displacement (>= 0.05)
+  const isDirectMicArtifact =
+    (zcr < 0.08 && highFreqRatio < 0.25 && dcRatio >= 0.05) ||
+    (zcr < 0.05 && highFreqRatio < 0.18) ||
+    (dcRatio >= 0.10 && zcr < 0.10);
+
+  // Compressed loudspeaker playback (e.g. YouTube video test):
+  // Broadcast audio played through phone/laptop speakers has audible zero-crossings and rich frequency spread
+  const isCompressedPlayback =
+    !isDirectMicArtifact &&
+    (zcr >= 0.07 || highFreqRatio >= 0.20);
+
+  return {
+    isCompressedPlayback,
+    isDirectMicArtifact,
+    zcr,
+    highFreqRatio,
+    dcRatio,
+    crestFactor,
+  };
+}

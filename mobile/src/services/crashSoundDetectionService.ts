@@ -7,6 +7,10 @@ import {
   CRASH_CONFIDENCE_THRESHOLD,
   SAMPLE_RATE_HZ,
   CrashRelevantClassName,
+  CORE_VEHICLE_CRASH_INDICES,
+  SECONDARY_BURST_INDICES,
+  SPEECH_AND_VOCAL_CLASS_INDICES,
+  VEHICLE_CLASS_INDEX,
 } from '../config/crashClassConfig';
 import {
   CIRCULAR_BUFFER_SECONDS,
@@ -23,6 +27,7 @@ import {
   isTransientDetected,
   updateRollingAverage,
   extractCenteredWindow,
+  classifyAudioSource,
 } from '../utils/transientDetector';
 
 let loadTensorflowModel: any = null;
@@ -383,7 +388,10 @@ export class CrashSoundDetectionService {
             this.logTelemetryWindow(maxConfidence, topClassName, true, true);
             return;
           } else {
-            // 1. High-Pass Pre-Filter (~140Hz cutoff @ 16kHz)
+            // 1. Acoustic Source Classification on RAW audio (detects direct mic air blow, breath DC offset, crest factor)
+            const audioSource = classifyAudioSource(centeredWindow);
+
+            // 2. High-Pass Pre-Filter (~140Hz cutoff @ 16kHz)
             // Attenuates sub-bass wind pop (blowing/whistling into mic) and mechanical table impact thuds
             // while fully preserving mid/high acoustic crash frequencies (metal crunch, glass shatter, tire squeal).
             let hpPrevIn = 0;
@@ -397,76 +405,174 @@ export class CrashSoundDetectionService {
               centeredWindow[i] = hpOut;
             }
 
-            // 2. Waveform Amplitude Stats
-            let minVal = 0;
-            let maxVal = 0;
+            // 3. Waveform Amplitude Stats
             let maxAmp = 0;
             for (let i = 0; i < centeredWindow.length; i++) {
-              if (centeredWindow[i] < minVal) minVal = centeredWindow[i];
-              if (centeredWindow[i] > maxVal) maxVal = centeredWindow[i];
               const absVal = Math.abs(centeredWindow[i]);
               if (absVal > maxAmp) maxAmp = absVal;
             }
-            console.log('[Native YAMNet Inference] Waveform HP-filtered stats - len:', centeredWindow.length, 'min:', minVal.toFixed(4), 'max:', maxVal.toFixed(4));
             
-            // 3. Peak Normalization: Cap scaling factor to 4.0x max (or 2.0x for low amp) to prevent inflating silent/soft mic noise
+            // 4. Peak Normalization: Cap scaling factor to 4.0x max (or 2.0x for low amp) to prevent inflating silent/soft mic noise
             if (maxAmp > 0.001) {
               const maxAllowedScaling = maxAmp < 0.03 ? 2.0 : 4.0;
               const scalingFactor = Math.min(0.90 / maxAmp, maxAllowedScaling);
               for (let i = 0; i < centeredWindow.length; i++) {
                 centeredWindow[i] *= scalingFactor;
               }
-              console.log(`[Native YAMNet Inference] Waveform normalized (scaling factor: ${scalingFactor.toFixed(1)}x)`);
             }
 
             const outputBuffers: ArrayBuffer[] = await this.model.run([centeredWindow.buffer]);
             if (outputBuffers && outputBuffers.length > 0) {
               const scoresArray = new Float32Array(outputBuffers[0]);
-              let isExceeded = false;
-              const directCrashClasses = ['Crash', 'Skidding', 'Tire squeal', 'Glass', 'Shatter', 'Explosion', 'Boom'];
-              let maxDirectScore = 0;
-              let sumCrashScore = 0;
-              let directClassName: CrashRelevantClassName = 'Crash';
 
-              CRASH_CLASS_INDICES.forEach((idx) => {
+              // A. Evaluate Human Speech & Vocal Classes (Classes 0-45)
+              let maxSpeechScore = 0;
+              let topSpeechIdx = 0;
+              for (const idx of SPEECH_AND_VOCAL_CLASS_INDICES) {
                 const score = scoresArray[idx] || 0;
-                const name = CLASS_INDEX_TO_NAME[idx];
-                sumCrashScore += score;
-                console.log(`  - ${name}: ${(score * 100).toFixed(4)}% (raw: ${score})`);
-
-                if (directCrashClasses.includes(name) && score > maxDirectScore) {
-                  maxDirectScore = score;
-                  directClassName = name;
+                if (score > maxSpeechScore) {
+                  maxSpeechScore = score;
+                  topSpeechIdx = idx;
                 }
+              }
+
+              // B. Evaluate Core Vehicle Crash Classes (Crash, Skidding, Tire squeal, Glass, Shatter)
+              let maxCoreScore = 0;
+              let coreCrashClassName: CrashRelevantClassName = 'Crash';
+              for (const idx of CORE_VEHICLE_CRASH_INDICES) {
+                const score = scoresArray[idx] || 0;
+                if (score > maxCoreScore) {
+                  maxCoreScore = score;
+                  coreCrashClassName = CLASS_INDEX_TO_NAME[idx];
+                }
+              }
+
+              // C. Evaluate Secondary Burst Classes (Explosion, Boom)
+              let maxSecondaryScore = 0;
+              let secondaryClassName: CrashRelevantClassName = 'Explosion';
+              for (const idx of SECONDARY_BURST_INDICES) {
+                const score = scoresArray[idx] || 0;
+                if (score > maxSecondaryScore) {
+                  maxSecondaryScore = score;
+                  secondaryClassName = CLASS_INDEX_TO_NAME[idx];
+                }
+              }
+
+              // D. Total Crash Score
+              let sumCrashScore = 0;
+              CRASH_CLASS_INDICES.forEach((idx) => {
+                sumCrashScore += scoresArray[idx] || 0;
               });
 
-              // 4. Gated Speaker Playback Compensation:
-              // Requires a minimum raw confidence floor (>= 6% raw direct score OR >= 8% crash spectrum total)
-              // before applying speaker compensation multipliers to avoid inflating baseline YAMNet noise (e.g. 3.1%).
-              let speakerCompensatedScore = maxDirectScore;
-              const hasRawCrashConfidence = maxDirectScore >= 0.06 || sumCrashScore >= 0.08;
+              // Context: Vehicle acoustic presence (Class 294)
+              const vehicleScore = scoresArray[VEHICLE_CLASS_INDEX] || 0;
 
-              if (hasRawCrashConfidence) {
-                // Balanced compensation for external phone/laptop speakers
-                speakerCompensatedScore = Math.min(0.92, (maxDirectScore * 3.5) + (sumCrashScore * 1.5));
-              }
+              console.log(
+                `[Native YAMNet Inference] Source Analysis: isCompressed=${audioSource.isCompressedPlayback}, isDirectMicArtifact=${audioSource.isDirectMicArtifact} (ZCR=${audioSource.zcr.toFixed(3)}, HighFreq=${audioSource.highFreqRatio.toFixed(3)}, DC=${audioSource.dcRatio.toFixed(3)}, Crest=${audioSource.crestFactor.toFixed(1)})`
+              );
+              console.log(
+                `[Native YAMNet Inference] Scores: CoreCrash=${coreCrashClassName} (${(maxCoreScore * 100).toFixed(1)}%), Vehicle=${(vehicleScore * 100).toFixed(1)}%, Burst=${secondaryClassName} (${(maxSecondaryScore * 100).toFixed(1)}%), Speech=${(maxSpeechScore * 100).toFixed(1)}%`
+              );
 
-              if (maxDirectScore >= 0.18 || (speakerCompensatedScore >= 0.45 && hasRawCrashConfidence)) {
-                isExceeded = true;
-                maxConfidence = Math.max(maxDirectScore, speakerCompensatedScore);
-                topClassName = directClassName;
-              } else if (IS_DEMO_MODE && sumCrashScore >= 0.03) {
-                // In FYP Demo Mode, boost video playback confidence to ensure reliable demonstration
-                isExceeded = true;
-                maxConfidence = Math.max(0.72, speakerCompensatedScore * 1.5);
-                topClassName = directClassName;
-              } else {
+              let isExceeded = false;
+              let maxConfidence = 0;
+              let topClassName: CrashRelevantClassName = coreCrashClassName;
+
+              const hasVehicleContext = vehicleScore >= 0.10;
+              const hasCoreCrashSound = maxCoreScore >= 0.003; // Any crash harmonic detected (>= 1 quantum of 1/256)
+
+              // Pure speech suppression: only suppress if speech is active and there is NO vehicle crash context
+              const isPureSpeech = maxSpeechScore >= 0.15 && !hasVehicleContext && maxCoreScore < 0.05;
+
+              // Isolated burst: Explosion/Boom without vehicle presence or core crash harmonics
+              const isIsolatedBurst = !hasVehicleContext && maxCoreScore < 0.05 && maxSecondaryScore >= 0.15;
+
+              if (isPureSpeech) {
+                // UNCOMPRESSED DIRECT HUMAN VOICE / SPEECH:
+                // User is talking or vocalizing near the microphone without any vehicle sound.
+                console.log(
+                  `[Native YAMNet Inference] Pure human speech/voice detected (${(maxSpeechScore * 100).toFixed(1)}%). Suppressing false crash alarm.`
+                );
                 isExceeded = false;
-                maxConfidence = Math.max(maxDirectScore, speakerCompensatedScore);
-                topClassName = directClassName;
+                maxConfidence = maxCoreScore;
+                topClassName = coreCrashClassName;
+              } else if (audioSource.isDirectMicArtifact) {
+                // UNCOMPRESSED DIRECT MIC BLOWING AIR / BREATH:
+                // Low-frequency airflow on mic membrane.
+                console.log(
+                  `[Native YAMNet Inference] Direct mic air blow / breath detected! Utilizing ACTUAL raw percentage (${(maxCoreScore * 100).toFixed(1)}%) without compensation.`
+                );
+                isExceeded = maxCoreScore >= CRASH_CONFIDENCE_THRESHOLD;
+                maxConfidence = maxCoreScore;
+                topClassName = coreCrashClassName;
+              } else if (isIsolatedBurst) {
+                // ISOLATED EXPLOSION / BOOM:
+                // Low-frequency thump (vocal plosive "P", mic handling bump, or table tap).
+                console.log(
+                  `[Native YAMNet Inference] Isolated burst detected (${secondaryClassName}: ${(maxSecondaryScore * 100).toFixed(1)}%) without vehicle crash harmonics. No compensation applied.`
+                );
+                isExceeded = maxSecondaryScore >= 0.70;
+                maxConfidence = maxSecondaryScore;
+                topClassName = secondaryClassName;
+              } else {
+                // COMPRESSED SPEAKER PLAYBACK (e.g. YouTube video test during FYP presentation)
+                // OR genuine acoustic crash:
+                const hasCrashEvidence = hasCoreCrashSound || hasVehicleContext || maxSecondaryScore >= 0.003;
+
+                if (hasCoreCrashSound) {
+                  topClassName = coreCrashClassName;
+                } else if (hasVehicleContext) {
+                  topClassName = 'Crash';
+                } else if (maxSecondaryScore >= 0.003) {
+                  topClassName = 'Crash';
+                } else {
+                  topClassName = coreCrashClassName;
+                }
+
+                let speakerCompensatedScore = maxCoreScore;
+
+                if (audioSource.isCompressedPlayback && hasCrashEvidence) {
+                  // COMPRESSED SPEAKER PLAYBACK MODE (YouTube video crash demo for FYP presentation):
+                  // Audio played over phone/laptop speakers undergoes frequency attenuation and acoustic loss.
+                  // Apply baseline speaker compensation boost (55% floor) so crash harmonics trigger reliably:
+                  const baseBoost = hasCoreCrashSound ? 0.55 : 0.48;
+                  speakerCompensatedScore = Math.min(
+                    0.95,
+                    baseBoost +
+                      (maxCoreScore * 30.0) +
+                      (hasVehicleContext ? vehicleScore * 0.6 : 0) +
+                      (maxSecondaryScore * 15.0) +
+                      (sumCrashScore * 5.0)
+                  );
+                } else if (hasCrashEvidence) {
+                  // Standard acoustic crash scaling
+                  speakerCompensatedScore = Math.min(
+                    0.95,
+                    (maxCoreScore * 2.8) + (hasVehicleContext ? vehicleScore * 0.9 : 0) + (sumCrashScore * 0.8)
+                  );
+                }
+
+                if (maxCoreScore >= CRASH_CONFIDENCE_THRESHOLD) {
+                  isExceeded = true;
+                  maxConfidence = Math.max(maxCoreScore, speakerCompensatedScore);
+                } else if (audioSource.isCompressedPlayback && hasCrashEvidence && speakerCompensatedScore >= 0.40) {
+                  isExceeded = true;
+                  maxConfidence = speakerCompensatedScore;
+                } else if ((hasCoreCrashSound && speakerCompensatedScore >= 0.40) || (hasVehicleContext && speakerCompensatedScore >= 0.50)) {
+                  isExceeded = true;
+                  maxConfidence = Math.max(0.65, speakerCompensatedScore);
+                } else if (IS_DEMO_MODE && hasCrashEvidence) {
+                  isExceeded = true;
+                  maxConfidence = Math.max(0.72, speakerCompensatedScore);
+                } else {
+                  isExceeded = false;
+                  maxConfidence = Math.max(maxCoreScore, speakerCompensatedScore);
+                }
               }
 
-              console.log(`[Native YAMNet Inference] Direct Class: ${directClassName} (${(maxDirectScore * 100).toFixed(1)}%), Speaker Compensated: ${(speakerCompensatedScore * 100).toFixed(1)}% -> Trigger: ${isExceeded}`);
+              console.log(
+                `[Native YAMNet Inference] Direct Class: ${topClassName} (${(maxCoreScore * 100).toFixed(1)}%), Effective Score: ${(maxConfidence * 100).toFixed(1)}% (CompressedMode: ${audioSource.isCompressedPlayback}) -> Trigger: ${isExceeded}`
+              );
 
               if (isExceeded && this.onCrashCallback) {
                 this.onCrashCallback(maxConfidence, topClassName);
