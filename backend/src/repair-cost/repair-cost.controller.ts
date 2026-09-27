@@ -17,9 +17,10 @@ export class RepairCostController {
   @ApiOperation({ summary: 'Generate a full cost report for an incident' })
   async estimate(
     @CurrentUser() user: { id: string },
-    @Body('incidentId') incidentId: string,
+    @Body('incidentId') incidentId?: string,
+    @Body('assessmentIds') assessmentIds?: string[],
   ) {
-    return this.repairCostService.generateReport(user.id, incidentId);
+    return this.repairCostService.generateReport(user.id, incidentId, assessmentIds);
   }
 
   @Get('history')
@@ -135,7 +136,7 @@ export class RepairCostController {
 
     // Disclaimers and notes
     doc.fontSize(8).fillColor('#777777');
-    doc.text('Disclaimer: This is an AI-assisted estimation. Parts pricing matches generic dynamic values and labor costs match regional workshop averages. Actual costs at verified repair workshops may vary.', { width: 500 });
+    doc.text('Disclaimer: This is an automated estimation. Parts pricing matches generic dynamic values and labor costs match regional workshop averages. Actual costs at verified repair workshops may vary.', { width: 500 });
     
     // Check if fallback pricing indicator exists
     const hasFallback = (report.lineItems as any[]).some(item => item.partsSource === 'fallback_default');

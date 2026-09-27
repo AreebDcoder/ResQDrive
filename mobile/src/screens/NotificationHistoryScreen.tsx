@@ -38,10 +38,12 @@ const { history = [], pagination, isHistoryLoading, error } = useSelector(
     dispatch(fetchHistoryStart());
     try {
       const response = await api.get(`/notifications/history?page=${pageToFetch}&limit=20`);
+      const logsData = response.data.logs || response.data.data || [];
+      const paginationData = response.data.pagination || response.data.meta || { total: logsData.length, page: 1, limit: 20, totalPages: 1 };
       dispatch(
         fetchHistorySuccess({
-          logs: response.data.data,
-          pagination: response.data.meta,
+          logs: logsData,
+          pagination: paginationData,
           append,
         })
       );
@@ -65,7 +67,7 @@ const { history = [], pagination, isHistoryLoading, error } = useSelector(
   const handleMarkRead = async (logId: string, currentReadState: boolean) => {
     if (currentReadState) return;
     try {
-      await api.patch(`/notifications/history/${logId}/read`);
+      await api.patch(`/notifications/${logId}/read`);
       dispatch(markReadSuccess(logId));
     } catch (err) {
       console.log('Failed to mark notification read:', err);

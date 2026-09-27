@@ -14,15 +14,18 @@ export class RepairCostService {
     private readonly partsPriceScraper: PartsPriceScraperService,
   ) {}
 
-  async generateReport(userId: string, incidentId?: string) {
+  async generateReport(userId: string, incidentId?: string, assessmentIds?: string[]) {
     const whereClause: any = { userId };
-    if (typeof incidentId === 'string' && incidentId.trim() !== '') {
+
+    if (Array.isArray(assessmentIds) && assessmentIds.length > 0) {
+      whereClause.id = { in: assessmentIds };
+    } else if (typeof incidentId === 'string' && incidentId.trim() !== '') {
       whereClause.incidentId = incidentId;
     } else {
       whereClause.incidentId = null;
-      // Only fetch assessments from the last 2 hours to represent the current session
-      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
-      whereClause.createdAt = { gte: twoHoursAgo };
+      // Fetch only recent assessments from current active session (last 10 minutes)
+      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+      whereClause.createdAt = { gte: tenMinutesAgo };
     }
 
     // 1. Fetch damage assessments matching search criteria
@@ -90,123 +93,113 @@ export class RepairCostService {
         },
       });
 
-      if (!laborRate) {
-        this.logger.warn(`Missing labor rate for ${assessment.partTag} - ${action}. Using fallback labor rate.`);
-      }
-
+      // Repair labor requires intensive denting/painting work (higher labor), whereas replace labor is fitting installation (lower labor)
       const effectiveLaborRate = laborRate || {
-        minCostPkr: 1500,
-        maxCostPkr: 3500,
-      };
-
-      // b. Get parts cost (4-TIER ENGINE: Cache -> Scraper [PakWheels/OLX] -> Gemini AI Fallback -> Static Fallback)
-      let partsMin = 0;
-      let partsMax = 0;
-      let partsSource = 'cache';
-
-      const cacheKey = {
-        vehicleMake: make,
-        vehicleModel: model,
-        vehicleYear: year,
+        id: 'default',
         partTag: assessment.partTag,
         action,
+        minCostPkr: action === RepairAction.repair ? 3500 : 1500,
+        maxCostPkr: action === RepairAction.repair ? 8500 : 3500,
       };
 
-      // TIER 1: Check parts_price_cache table
-      const cached = await this.prisma.partsPriceCache.findUnique({
-        where: {
-          vehicleMake_vehicleModel_vehicleYear_partTag_action: cacheKey,
-        },
-      });
+      // b. Get parts cost (Only replacement action requires purchasing a new spare part)
+      let partsMin = 0;
+      let partsMax = 0;
+      let partsSource = 'none_repaired';
 
-      if (cached) {
-        partsMin = cached.minPricePkr;
-        partsMax = cached.maxPricePkr;
-        partsSource = cached.source; // 'pakwheels_scrape' | 'olx_scrape' | 'gemini_ai_fallback'
-      } else {
-        // TIER 2: Live Marketplace Scraper (PakWheels AutoStore -> OLX Pakistan)
-        const scrapeResult = await this.partsPriceScraper.scrapeMarketplacePrice(
-          make,
-          model,
-          assessment.partTag,
+      if (action === RepairAction.replace) {
+        const cacheKey = {
+          vehicleMake: make,
+          vehicleModel: model,
+          vehicleYear: year,
+          partTag: assessment.partTag,
           action,
-        );
+        };
 
-        if (scrapeResult) {
-          partsMin = scrapeResult.minPricePkr;
-          partsMax = scrapeResult.maxPricePkr;
-          partsSource = scrapeResult.source; // 'pakwheels_scrape' or 'olx_scrape'
+        // TIER 1: Check parts_price_cache table
+        const cached = await this.prisma.partsPriceCache.findUnique({
+          where: {
+            vehicleMake_vehicleModel_vehicleYear_partTag_action: cacheKey,
+          },
+        });
 
-          // Cache successful scrape result
-          await this.prisma.partsPriceCache
-            .create({
-              data: {
-                ...cacheKey,
-                minPricePkr: partsMin,
-                maxPricePkr: partsMax,
-                source: partsSource,
-              },
-            })
-            .catch((err) => {
-              this.logger.warn(`Failed to write scrape result to parts price cache: ${err.message}`);
-            });
+        if (cached) {
+          partsMin = cached.minPricePkr;
+          partsMax = cached.maxPricePkr;
+          partsSource = cached.source;
         } else {
-          // TIER 3: Gemini AI Fallback (demoted from primary, retained as 3rd-tier fallback)
-          this.logger.warn(
-            `Live marketplace scraper yielded no listings for ${make} ${model} ${assessment.partTag}. Attempting Tier 3 Gemini AI fallback...`,
-          );
-
-          const geminiEstimate = await this.geminiPricing.estimatePartsPrice(
+          // TIER 2: Live Marketplace Scraper (PakWheels AutoStore -> OLX Pakistan)
+          const scrapeResult = await this.partsPriceScraper.scrapeMarketplacePrice(
             make,
             model,
-            year,
             assessment.partTag,
             action,
           );
 
-          if (geminiEstimate) {
-            partsMin = geminiEstimate.minPricePkr;
-            partsMax = geminiEstimate.maxPricePkr;
-            partsSource = 'gemini_ai_fallback';
+          if (scrapeResult) {
+            partsMin = scrapeResult.minPricePkr;
+            partsMax = scrapeResult.maxPricePkr;
+            partsSource = scrapeResult.source;
 
-            // Cache Gemini AI fallback response with updated source tag
             await this.prisma.partsPriceCache
               .create({
                 data: {
                   ...cacheKey,
                   minPricePkr: partsMin,
                   maxPricePkr: partsMax,
-                  source: 'gemini_ai_fallback',
+                  source: partsSource,
                 },
               })
               .catch((err) => {
-                this.logger.warn(`Failed to write Gemini fallback to parts price cache: ${err.message}`);
+                this.logger.warn(`Failed to write scrape result to parts price cache: ${err.message}`);
               });
           } else {
-            // TIER 4: Hardcoded Static Safety Net (FallbackPartsPrice)
-            this.logger.warn(
-              `Gemini AI fallback also failed/unreachable. Using Tier 4 hardcoded static fallback table for ${assessment.partTag}.`,
+            // TIER 3: Gemini AI Fallback
+            const geminiEstimate = await this.geminiPricing.estimatePartsPrice(
+              make,
+              model,
+              year,
+              assessment.partTag,
+              action,
             );
 
-            const fallback = await this.prisma.fallbackPartsPrice.findUnique({
-              where: {
-                partTag_action: {
-                  partTag: assessment.partTag,
-                  action,
-                },
-              },
-            });
+            if (geminiEstimate) {
+              partsMin = geminiEstimate.minPricePkr;
+              partsMax = geminiEstimate.maxPricePkr;
+              partsSource = 'gemini_ai_fallback';
 
-            if (fallback) {
-              partsMin = fallback.minPricePkr;
-              partsMax = fallback.maxPricePkr;
+              await this.prisma.partsPriceCache
+                .create({
+                  data: {
+                    ...cacheKey,
+                    minPricePkr: partsMin,
+                    maxPricePkr: partsMax,
+                    source: 'gemini_ai_fallback',
+                  },
+                })
+                .catch((err) => {
+                  this.logger.warn(`Failed to write Gemini fallback to parts price cache: ${err.message}`);
+                });
             } else {
-              // Emergency default if database table is missing seed rows
-              partsMin = 2000;
-              partsMax = 5000;
+              // TIER 4: Hardcoded Static Safety Net
+              const fallback = await this.prisma.fallbackPartsPrice.findUnique({
+                where: {
+                  partTag_action: {
+                    partTag: assessment.partTag,
+                    action,
+                  },
+                },
+              });
+
+              if (fallback) {
+                partsMin = fallback.minPricePkr;
+                partsMax = fallback.maxPricePkr;
+              } else {
+                partsMin = 3000;
+                partsMax = 8000;
+              }
+              partsSource = 'fallback_default';
             }
-            partsSource = 'fallback_default';
-            // Note: Tier 4 fallback results are NOT cached, so future queries retry higher tiers.
           }
         }
       }

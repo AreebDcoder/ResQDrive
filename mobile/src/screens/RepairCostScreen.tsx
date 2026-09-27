@@ -53,6 +53,7 @@ interface CostReport {
 export default function RepairCostScreen({ route, navigation }: any) {
   const incidentId = route?.params?.incidentId;
   const reportId = route?.params?.reportId;
+  const assessmentIds = route?.params?.assessmentIds;
 
   const [activeSegment, setActiveSegment] = useState<'details' | 'history'>('details');
   const [report, setReport] = useState<CostReport | null>(null);
@@ -64,17 +65,19 @@ export default function RepairCostScreen({ route, navigation }: any) {
   const [isSharing, setIsSharing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const generate = route?.params?.generate;
+  const [hasGenerated, setHasGenerated] = useState(false);
 
   useEffect(() => {
-    if (generate || incidentId) {
-      generateEstimate();
-    } else if (reportId) {
+    const hasParams = Boolean(incidentId || (assessmentIds && assessmentIds.length > 0));
+    if (reportId) {
       loadReport(reportId);
-    } else {
+    } else if (hasParams && !hasGenerated) {
+      setHasGenerated(true);
+      generateEstimate();
+    } else if (!report && !hasParams) {
       setActiveSegment('history');
     }
-  }, [incidentId, reportId, generate]);
+  }, [incidentId, reportId, assessmentIds, hasGenerated]);
 
   useEffect(() => {
     if (activeSegment === 'history') {
@@ -86,7 +89,7 @@ export default function RepairCostScreen({ route, navigation }: any) {
     setIsLoading(true);
     setErrorMsg(null);
     try {
-      const response = await api.post('/repair-cost/estimate', { incidentId });
+      const response = await api.post('/repair-cost/estimate', { incidentId, assessmentIds });
       setReport(response.data);
       setActiveSegment('details');
     } catch (err: any) {
@@ -171,6 +174,31 @@ const handleShareReport = async () => {
     return tag.toUpperCase().replace('_', ' ');
   };
 
+  const handleDeleteReport = (id: string) => {
+    Alert.alert(
+      'Confirm Delete',
+      'Are you sure you want to delete this repair cost estimation report?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete(`/repair-cost/report/${id}`);
+              setHistory((prev) => prev.filter((item) => item.id !== id));
+              if (report?.id === id) {
+                setReport(null);
+              }
+            } catch (err) {
+              Alert.alert('Error', 'Failed to delete report.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const renderHistoryCard = ({ item }: { item: CostReport }) => {
     const formattedDate = new Date(item.createdAt).toLocaleDateString(undefined, {
       month: 'short',
@@ -183,25 +211,48 @@ const handleShareReport = async () => {
       : 'Reference Vehicle';
 
     return (
-      <TouchableOpacity 
-        style={styles.historyCard}
-        onPress={() => {
-          setReport(item);
-          setActiveSegment('details');
-        }}
-        activeOpacity={0.7}
-      >
-        <View style={styles.historyCardHeader}>
-          <Text style={styles.historyCarName}>🚗 {carText}</Text>
-          <Text style={styles.historyDateText}>{formattedDate}</Text>
-        </View>
-        <Text style={styles.historyCostText}>
-          PKR {item.totalMinCostPkr.toLocaleString()} - {item.totalMaxCostPkr.toLocaleString()}
-        </Text>
-        <Text style={styles.historyItemsText}>
-          {item.lineItems.length} damaged parts assessed
-        </Text>
-      </TouchableOpacity>
+      <View style={styles.historyCardContainer}>
+        <TouchableOpacity 
+          style={styles.historyCardMain}
+          onPress={() => {
+            loadReport(item.id);
+          }}
+          activeOpacity={0.7}
+        >
+          <View style={styles.historyCardHeader}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="car-sport-outline" size={18} color="#E53935" style={{ marginRight: 6 }} />
+              <Text style={styles.historyCarName}>{carText}</Text>
+            </View>
+            <Text style={styles.historyDateText}>{formattedDate}</Text>
+          </View>
+
+          <View style={styles.historyCostBlock}>
+            <Text style={styles.historyCostLabel}>ESTIMATED RANGE</Text>
+            <Text style={styles.historyCostText}>
+              PKR {item.totalMinCostPkr.toLocaleString()} – {item.totalMaxCostPkr.toLocaleString()}
+            </Text>
+          </View>
+
+          <View style={styles.historyFooter}>
+            <View style={styles.partCountBadge}>
+              <Ionicons name="construct-outline" size={13} color="#82B1FF" style={{ marginRight: 4 }} />
+              <Text style={styles.partCountText}>{item.lineItems.length} Part{item.lineItems.length > 1 ? 's' : ''} Assessed</Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={styles.viewDetailsText}>View Report</Text>
+              <Ionicons name="chevron-forward" size={16} color="#E53935" />
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.deleteReportIconBtn} 
+          onPress={() => handleDeleteReport(item.id)}
+        >
+          <Ionicons name="trash-outline" size={18} color="#FF5252" />
+        </TouchableOpacity>
+      </View>
     );
   };
 
@@ -235,7 +286,7 @@ const handleShareReport = async () => {
           return 'Live OLX Pakistan Listings';
         case 'gemini_ai_fallback':
         case 'gemini_ai':
-          return 'AI-Estimated (No Live Listings Found)';
+          return 'Market Estimate (No Live Listings Found)';
         case 'fallback_default':
         default:
           return 'Generic Static Fallback Table';
@@ -271,7 +322,7 @@ const handleShareReport = async () => {
           <View style={styles.warningBanner}>
             <Ionicons name="information-circle-outline" size={20} color="#FF9100" style={{ marginRight: 8 }} />
             <Text style={styles.warningText}>
-              Note: Certain parts are priced using static default averages because live marketplace listings and Gemini AI fallback were unreachable.
+              Note: Certain parts are priced using static default averages because live marketplace listings and market fallback were unreachable.
             </Text>
           </View>
         )}
@@ -315,9 +366,15 @@ const handleShareReport = async () => {
                     <Ionicons name="cube-outline" size={15} color="#A0A0B0" style={{ marginRight: 6 }} />
                     <Text style={styles.costLabel}>Spare Parts Price</Text>
                   </View>
-                  <Text style={styles.partsSourceSubtext}>{getPartsSourceLabel(item.partsSource)}</Text>
+                  <Text style={styles.partsSourceSubtext}>
+                    {item.action === 'repair' ? 'Repaired (No replacement part purchased)' : getPartsSourceLabel(item.partsSource)}
+                  </Text>
                 </View>
-                <Text style={styles.costVal}>PKR {item.partsCost.min.toLocaleString()} - {item.partsCost.max.toLocaleString()}</Text>
+                <Text style={styles.costVal}>
+                  {item.action === 'repair'
+                    ? 'PKR 0'
+                    : `PKR ${item.partsCost.min.toLocaleString()} - ${item.partsCost.max.toLocaleString()}`}
+                </Text>
               </View>
 
               <View style={[styles.costRow, styles.totalRow]}>
@@ -342,6 +399,21 @@ const handleShareReport = async () => {
               <Text style={styles.shareBtnText}>Share Breakdown Report (PDF)</Text>
             </View>
           )}
+        </TouchableOpacity>
+
+        {/* ── Done / Return Button ── */}
+        <TouchableOpacity 
+          style={styles.returnBtn} 
+          onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.popToTop();
+            } else {
+              navigation.navigate('Home');
+            }
+          }}
+        >
+          <Ionicons name="checkmark-circle-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
+          <Text style={styles.returnBtnText}>Done & Return to Dashboard</Text>
         </TouchableOpacity>
       </ScrollView>
     );
@@ -639,10 +711,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 16,
-    marginBottom: 24,
+    marginBottom: 12,
   },
   shareBtnText: {
     color: '#00E676',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  returnBtn: {
+    flexDirection: 'row',
+    backgroundColor: '#E53935',
+    height: 52,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 28,
+    shadowColor: '#E53935',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  returnBtnText: {
+    color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
   },
@@ -669,13 +760,18 @@ const styles = StyleSheet.create({
   historyListContent: {
     padding: 16,
   },
-  historyCard: {
+  historyCardContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  historyCardMain: {
+    flex: 1,
     backgroundColor: 'rgba(28, 28, 46, 0.6)',
     borderRadius: 14,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.06)',
     padding: 16,
-    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -686,7 +782,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   historyCarName: {
     color: '#FFFFFF',
@@ -697,11 +793,74 @@ const styles = StyleSheet.create({
     color: '#6B6B80',
     fontSize: 11,
   },
+  historyCostBlock: {
+    marginVertical: 4,
+  },
+  historyCostLabel: {
+    color: '#A0A0B8',
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 1,
+  },
   historyCostText: {
     color: '#E53935',
     fontSize: 16,
     fontWeight: '700',
-    marginBottom: 4,
+    marginTop: 2,
+  },
+  historyFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.04)',
+  },
+  partCountBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(41, 121, 255, 0.1)',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+  },
+  partCountText: {
+    color: '#82B1FF',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  viewDetailsText: {
+    color: '#E53935',
+    fontSize: 12,
+    fontWeight: '700',
+    marginRight: 2,
+  },
+  deleteReportIconBtn: {
+    padding: 12,
+    marginLeft: 8,
+    backgroundColor: 'rgba(255, 23, 68, 0.08)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 23, 68, 0.2)',
+  },
+  vehicleInfoChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  emptySubText: {
+    color: '#A0A0B8',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 6,
+    paddingHorizontal: 30,
   },
   partsSourceSubtext: {
     color: '#82B1FF',

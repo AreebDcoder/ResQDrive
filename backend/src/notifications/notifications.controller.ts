@@ -92,4 +92,10 @@ export class NotificationsController {
   async markAsRead(@CurrentUser() user: { id: string }, @Param('id') id: string) {
     return this.notificationsService.markAsRead(user.id, id);
   }
+
+  @Patch('history/:id/read')
+  @ApiOperation({ summary: 'Mark single notification log as read (alias)' })
+  async markHistoryAsRead(@CurrentUser() user: { id: string }, @Param('id') id: string) {
+    return this.notificationsService.markAsRead(user.id, id);
+  }
 }

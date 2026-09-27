@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
+import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { RegisterDto } from './dto/register.dto';
@@ -18,6 +19,49 @@ export class AuthService {
     private configService: ConfigService,
     private emailService: EmailService,
   ) {}
+
+  private async geocodeWorkshopAddress(address: string): Promise<{ lat: number; lng: number } | null> {
+    const geoapifyKey = this.configService.get<string>('GEOAPIFY_API_KEY');
+    if (geoapifyKey && address && address.trim().length > 2) {
+      try {
+        const res = await axios.get('https://api.geoapify.com/v1/geocode/search', {
+          params: {
+            text: address,
+            apiKey: geoapifyKey,
+            limit: 1,
+          },
+          timeout: 4000,
+        });
+        const feature = res.data.features?.[0];
+        if (feature?.properties?.lat && feature?.properties?.lon) {
+          return {
+            lat: feature.properties.lat,
+            lng: feature.properties.lon,
+          };
+        }
+      } catch (e) {}
+    }
+
+    try {
+      const res = await axios.get('https://nominatim.openstreetmap.org/search', {
+        params: {
+          q: address,
+          format: 'json',
+          limit: 1,
+        },
+        headers: { 'User-Agent': 'ResQDrive-Emergency-Platform/1.0' },
+        timeout: 3000,
+      });
+      if (res.data && res.data[0]) {
+        return {
+          lat: parseFloat(res.data[0].lat),
+          lng: parseFloat(res.data[0].lon),
+        };
+      }
+    } catch (e) {}
+
+    return null;
+  }
 
   async register(registerDto: RegisterDto) {
     const { fullName, email, phoneNumber, password, role } = registerDto;
@@ -46,6 +90,17 @@ export class AuthService {
     } else if (role === UserRole.MECHANIC) {
       if (!registerDto.workshopName || !registerDto.workshopAddress || !registerDto.specialization) {
         throw new BadRequestException('Mechanics must provide workshop name, address, and specialization.');
+      }
+    }
+
+    let workshopLat = registerDto.workshopLatitude || null;
+    let workshopLng = registerDto.workshopLongitude || null;
+
+    if (role === UserRole.MECHANIC && (!workshopLat || !workshopLng) && registerDto.workshopAddress) {
+      const coords = await this.geocodeWorkshopAddress(registerDto.workshopAddress);
+      if (coords) {
+        workshopLat = coords.lat;
+        workshopLng = coords.lng;
       }
     }
 
@@ -78,6 +133,8 @@ export class AuthService {
             workshopName: registerDto.workshopName,
             workshopAddress: registerDto.workshopAddress,
             specialization: registerDto.specialization,
+            workshopLatitude: workshopLat,
+            workshopLongitude: workshopLng,
           },
         });
       }
@@ -276,6 +333,16 @@ export class AuthService {
     const generatedPassword = 'Ggl_' + require('crypto').randomBytes(16).toString('hex');
     const passwordHash = await bcrypt.hash(generatedPassword, 10);
 
+    let googleWorkshopLat: number | null = null;
+    let googleWorkshopLng: number | null = null;
+    if (data.role === 'MECHANIC' && data.workshopAddress) {
+      const coords = await this.geocodeWorkshopAddress(data.workshopAddress);
+      if (coords) {
+        googleWorkshopLat = coords.lat;
+        googleWorkshopLng = coords.lng;
+      }
+    }
+
     const result = await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
@@ -305,6 +372,8 @@ export class AuthService {
             workshopName: data.workshopName || '',
             workshopAddress: data.workshopAddress || '',
             specialization: data.specialization || '',
+            workshopLatitude: googleWorkshopLat,
+            workshopLongitude: googleWorkshopLng,
           },
         });
       }
