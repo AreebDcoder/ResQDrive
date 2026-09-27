@@ -258,51 +258,173 @@ async getRecentDispatchLogs(limit = 20) {
     }));
   }
 
-  async getCrashDetectionLogs(limit = 50, skip = 0) {
+  async getCrashDetectionLogs(limit = 50, skip = 0, filters: {
+    search?: string;
+    userId?: string;
+    flaggedOnly?: boolean;
+    className?: string;
+    minConfidence?: number;
+    dateFrom?: string;
+    dateTo?: string;
+  } = {}) {
+    const where: any = {};
+    if (filters.userId) where.userId = filters.userId;
+    if (filters.flaggedOnly) where.flaggedAsCrash = true;
+    if (filters.className) where.topMatchedClass = { contains: filters.className, mode: 'insensitive' };
+    if (filters.minConfidence !== undefined) where.crashConfidence = { gte: filters.minConfidence };
+    if (filters.dateFrom || filters.dateTo) {
+      where.createdAt = {};
+      if (filters.dateFrom) where.createdAt.gte = new Date(filters.dateFrom);
+      if (filters.dateTo) where.createdAt.lte = new Date(filters.dateTo);
+    }
+    if (filters.search) {
+      where.OR = [
+        { topMatchedClass: { contains: filters.search, mode: 'insensitive' } },
+        { user: { fullName: { contains: filters.search, mode: 'insensitive' } } },
+        { user: { email: { contains: filters.search, mode: 'insensitive' } } },
+      ];
+    }
+
     const [data, total] = await Promise.all([
       this.prisma.crashSoundDetectionLog.findMany({
+        where,
         take: limit,
         skip,
         orderBy: { createdAt: 'desc' },
-        include: { user: { select: { id: true, fullName: true } } },
+        include: { user: { select: { id: true, fullName: true, email: true } } },
       }),
-      this.prisma.crashSoundDetectionLog.count(),
+      this.prisma.crashSoundDetectionLog.count({ where }),
     ]);
     return { data, total };
   }
 
-  async getVoiceCommandLogs(limit = 50, skip = 0) {
+  async getVoiceCommandLogs(limit = 50, skip = 0, filters: {
+    search?: string;
+    userId?: string;
+    intent?: string;
+    engine?: string;
+    actionTakenOnly?: boolean;
+    dateFrom?: string;
+    dateTo?: string;
+  } = {}) {
+    const where: any = {};
+    if (filters.userId) where.userId = filters.userId;
+    if (filters.intent) where.classifiedIntent = filters.intent as any;
+    if (filters.engine) where.recognitionEngine = { contains: filters.engine, mode: 'insensitive' };
+    if (filters.actionTakenOnly) where.actionTaken = true;
+    if (filters.dateFrom || filters.dateTo) {
+      where.createdAt = {};
+      if (filters.dateFrom) where.createdAt.gte = new Date(filters.dateFrom);
+      if (filters.dateTo) where.createdAt.lte = new Date(filters.dateTo);
+    }
+    if (filters.search) {
+      where.OR = [
+        { rawTranscript: { contains: filters.search, mode: 'insensitive' } },
+        { user: { fullName: { contains: filters.search, mode: 'insensitive' } } },
+        { user: { email: { contains: filters.search, mode: 'insensitive' } } },
+      ];
+    }
+
     const [data, total] = await Promise.all([
       this.prisma.voiceCommandLog.findMany({
+        where,
         take: limit,
         skip,
         orderBy: { createdAt: 'desc' },
-        include: { user: { select: { id: true, fullName: true } } },
+        include: { user: { select: { id: true, fullName: true, email: true } } },
       }),
-      this.prisma.voiceCommandLog.count(),
+      this.prisma.voiceCommandLog.count({ where }),
     ]);
     return { data, total };
   }
 
-  async getDamageAssessments(limit = 50) {
-    return this.prisma.damageAssessment.findMany({
-      take: limit,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        user: { select: { id: true, fullName: true } },
-        vehicle: { select: { id: true, make: true, model: true } },
-      },
-    });
+  async getDamageAssessments(limit = 50, skip = 0, filters: {
+    search?: string;
+    userId?: string;
+    damageType?: string;
+    severity?: string;
+    partTag?: string;
+    lowConfidenceOnly?: boolean;
+    dateFrom?: string;
+    dateTo?: string;
+  } = {}) {
+    const where: any = {};
+    if (filters.userId) where.userId = filters.userId;
+    if (filters.damageType) where.predictedDamageType = filters.damageType as any;
+    if (filters.severity) where.derivedSeverity = filters.severity as any;
+    if (filters.partTag) where.partTag = filters.partTag as any;
+    if (filters.lowConfidenceOnly) where.confidenceScore = { lt: 0.6 };
+    if (filters.dateFrom || filters.dateTo) {
+      where.createdAt = {};
+      if (filters.dateFrom) where.createdAt.gte = new Date(filters.dateFrom);
+      if (filters.dateTo) where.createdAt.lte = new Date(filters.dateTo);
+    }
+    if (filters.search) {
+      where.OR = [
+        { user: { fullName: { contains: filters.search, mode: 'insensitive' } } },
+        { user: { email: { contains: filters.search, mode: 'insensitive' } } },
+        { vehicle: { make: { contains: filters.search, mode: 'insensitive' } } },
+        { vehicle: { model: { contains: filters.search, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [data, total] = await Promise.all([
+      this.prisma.damageAssessment.findMany({
+        where,
+        take: limit,
+        skip,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: { select: { id: true, fullName: true, email: true } },
+          vehicle: { select: { id: true, make: true, model: true, year: true, licensePlate: true } },
+        },
+      }),
+      this.prisma.damageAssessment.count({ where }),
+    ]);
+    return { data, total };
   }
 
-  async getRepairCostReports(limit = 50, skip = 0) {
+  async getRepairCostReports(limit = 50, skip = 0, filters: {
+    search?: string;
+    userId?: string;
+    vehicleId?: string;
+    damageType?: string;
+    severity?: string;
+    minCost?: number;
+    maxCost?: number;
+    dateFrom?: string;
+    dateTo?: string;
+  } = {}) {
+    const where: any = {};
+    if (filters.userId) where.userId = filters.userId;
+    if (filters.vehicleId) where.vehicleId = filters.vehicleId;
+    if (filters.minCost !== undefined) where.totalMinCostPkr = { gte: filters.minCost };
+    if (filters.maxCost !== undefined) where.totalMaxCostPkr = { lte: filters.maxCost };
+    if (filters.dateFrom || filters.dateTo) {
+      where.createdAt = {};
+      if (filters.dateFrom) where.createdAt.gte = new Date(filters.dateFrom);
+      if (filters.dateTo) where.createdAt.lte = new Date(filters.dateTo);
+    }
+    if (filters.search) {
+      where.OR = [
+        { user: { fullName: { contains: filters.search, mode: 'insensitive' } } },
+        { user: { email: { contains: filters.search, mode: 'insensitive' } } },
+        { vehicle: { make: { contains: filters.search, mode: 'insensitive' } } },
+        { vehicle: { model: { contains: filters.search, mode: 'insensitive' } } },
+        { vehicle: { licensePlate: { contains: filters.search, mode: 'insensitive' } } },
+      ];
+    }
+
+    // damageType / severity filters apply via the joined damageAssessment
+    // (we filter those post-fetch to keep the Prisma query simple)
     const reports = await this.prisma.repairCostReport.findMany({
+      where,
       take: limit,
       skip,
       orderBy: { createdAt: 'desc' },
       include: {
-        user: { select: { id: true, fullName: true } },
-        vehicle: { select: { id: true, make: true, model: true } },
+        user: { select: { id: true, fullName: true, email: true } },
+        vehicle: { select: { id: true, make: true, model: true, year: true, licensePlate: true } },
       },
     });
 
@@ -313,12 +435,20 @@ async getRecentDispatchLogs(limit = 20) {
     }) : [];
     const damageMap = new Map(damageAssessments.map(d => [d.incidentId, d]));
 
-    const data = reports.map(r => ({
+    let data = reports.map(r => ({
       ...r,
       damageAssessment: r.incidentId ? damageMap.get(r.incidentId) : null,
     }));
 
-    const total = await this.prisma.repairCostReport.count();
+    // Apply damageType/severity filters post-fetch (since they're on the joined DamageAssessment)
+    if (filters.damageType) {
+      data = data.filter(r => r.damageAssessment?.predictedDamageType === filters.damageType);
+    }
+    if (filters.severity) {
+      data = data.filter(r => r.damageAssessment?.derivedSeverity === filters.severity);
+    }
+
+    const total = await this.prisma.repairCostReport.count({ where });
     return { data, total };
   }
     async resolveIncident(id: string) {

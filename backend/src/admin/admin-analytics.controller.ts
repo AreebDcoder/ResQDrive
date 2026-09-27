@@ -92,32 +92,117 @@ export class AdminAnalyticsController {
   }
 
   @Get('crash-detection-logs')
-  async getCrashDetectionLogs(@Query('limit') limit?: string, @Query('skip') skip?: string) {
+  async getCrashDetectionLogs(
+    @Query('limit') limit?: string,
+    @Query('skip') skip?: string,
+    @Query('search') search?: string,
+    @Query('userId') userId?: string,
+    @Query('flaggedOnly') flaggedOnly?: string,
+    @Query('className') className?: string,
+    @Query('minConfidence') minConfidence?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
     return this.analyticsService.getCrashDetectionLogs(
       limit ? parseInt(limit, 10) : 20,
       skip ? parseInt(skip, 10) : 0,
+      {
+        search,
+        userId,
+        flaggedOnly: flaggedOnly === 'true',
+        className,
+        minConfidence: minConfidence ? parseFloat(minConfidence) : undefined,
+        dateFrom,
+        dateTo,
+      },
     );
   }
 
   @Get('voice-command-logs')
-  async getVoiceCommandLogs(@Query('limit') limit?: string, @Query('skip') skip?: string) {
+  async getVoiceCommandLogs(
+    @Query('limit') limit?: string,
+    @Query('skip') skip?: string,
+    @Query('search') search?: string,
+    @Query('userId') userId?: string,
+    @Query('intent') intent?: string,
+    @Query('engine') engine?: string,
+    @Query('actionTakenOnly') actionTakenOnly?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
     return this.analyticsService.getVoiceCommandLogs(
       limit ? parseInt(limit, 10) : 20,
       skip ? parseInt(skip, 10) : 0,
+      {
+        search,
+        userId,
+        intent,
+        engine,
+        actionTakenOnly: actionTakenOnly === 'true',
+        dateFrom,
+        dateTo,
+      },
     );
   }
 
   @Get('damage-assessments')
   @ApiOperation({ summary: 'Get damage assessment history (admin)' })
-  async getDamageAssessments(@Query('limit') limit?: string) {
-    return this.analyticsService.getDamageAssessments(limit ? parseInt(limit, 10) : 50);
+  async getDamageAssessments(
+    @Query('limit') limit?: string,
+    @Query('skip') skip?: string,
+    @Query('search') search?: string,
+    @Query('userId') userId?: string,
+    @Query('damageType') damageType?: string,
+    @Query('severity') severity?: string,
+    @Query('partTag') partTag?: string,
+    @Query('lowConfidenceOnly') lowConfidenceOnly?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    return this.analyticsService.getDamageAssessments(
+      limit ? parseInt(limit, 10) : 50,
+      skip ? parseInt(skip, 10) : 0,
+      {
+        search,
+        userId,
+        damageType,
+        severity,
+        partTag,
+        lowConfidenceOnly: lowConfidenceOnly === 'true',
+        dateFrom,
+        dateTo,
+      },
+    );
   }
 
   @Get('repair-cost-reports')
-  async getRepairCostReports(@Query('limit') limit?: string, @Query('skip') skip?: string) {
+  async getRepairCostReports(
+    @Query('limit') limit?: string,
+    @Query('skip') skip?: string,
+    @Query('search') search?: string,
+    @Query('userId') userId?: string,
+    @Query('vehicleId') vehicleId?: string,
+    @Query('damageType') damageType?: string,
+    @Query('severity') severity?: string,
+    @Query('minCost') minCost?: string,
+    @Query('maxCost') maxCost?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
     return this.analyticsService.getRepairCostReports(
       limit ? parseInt(limit, 10) : 20,
       skip ? parseInt(skip, 10) : 0,
+      {
+        search,
+        userId,
+        vehicleId,
+        damageType,
+        severity,
+        minCost: minCost ? parseInt(minCost, 10) : undefined,
+        maxCost: maxCost ? parseInt(maxCost, 10) : undefined,
+        dateFrom,
+        dateTo,
+      },
     );
   }
     @Patch('incidents/:id/resolve')
