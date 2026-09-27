@@ -4,9 +4,10 @@ import { EmergencyNotificationService } from './emergency-notification.service';
 import { EmergencyNotificationScheduler } from './emergency-notification.scheduler';
 import { LocationSharingModule } from '../location-sharing/location-sharing.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { AlertDispatchModule } from '../alert-dispatch/alert-dispatch.module';
 
 @Module({
-  imports: [LocationSharingModule, NotificationsModule],
+  imports: [LocationSharingModule, NotificationsModule, AlertDispatchModule],
   controllers: [EmergencyNotificationController],
   providers: [EmergencyNotificationService, EmergencyNotificationScheduler],
   exports: [EmergencyNotificationService],

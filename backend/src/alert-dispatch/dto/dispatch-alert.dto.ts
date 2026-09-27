@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsLatitude, IsLongitude, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsArray, IsLatitude, IsLongitude, IsNumber, IsOptional, IsString, IsUUID, ValidateNested } from 'class-validator';
 
 export class DispatchContactDto {
   @IsString()
@@ -48,9 +49,16 @@ export class DispatchAlertDto {
   @IsString()
   severity: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  address?: string;
+
   @ApiPropertyOptional({ type: [DispatchContactDto] })
   @IsOptional()
   @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => DispatchContactDto)
   contacts?: DispatchContactDto[];
 
   @ApiPropertyOptional({ description: 'Acknowledge URL from Module 6.8 (for WhatsApp message)' })

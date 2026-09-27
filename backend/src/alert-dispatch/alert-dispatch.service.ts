@@ -93,55 +93,106 @@ export class AlertDispatchService {
   }> {
     const mapsLink = this.buildMapsLink(payload.latitude, payload.longitude);
 
+    let contactsToAlert = payload.contacts || [];
+    let userName = payload.userName;
+    let acknowledgeUrl = payload.acknowledgeUrl;
+
+    if (payload.userId) {
+      if (!userName) {
+        try {
+          const user = await this.prisma.user.findUnique({
+            where: { id: payload.userId },
+            select: { fullName: true },
+          });
+          if (user?.fullName) userName = user.fullName;
+        } catch (e) {}
+      }
+
+      if (contactsToAlert.length === 0) {
+        try {
+          const dbContacts = await this.prisma.emergencyContact.findMany({
+            where: { userId: payload.userId },
+            orderBy: { priorityOrder: 'asc' },
+          });
+          contactsToAlert = dbContacts.map((c) => ({
+            name: c.name,
+            phoneNumber: c.phoneNumber,
+            email: c.email || undefined,
+          }));
+        } catch (e) {}
+      }
+
+      if (!acknowledgeUrl) {
+        try {
+          const activeSession = await this.prisma.notificationSession.findFirst({
+            where: { userId: payload.userId, status: 'ACTIVE' },
+            orderBy: { triggeredAt: 'desc' },
+          });
+          if (activeSession?.shareToken) {
+            acknowledgeUrl = `/acknowledge.html?session=${activeSession.shareToken}`;
+          }
+        } catch (e) {}
+      }
+    }
+
     const log = await this.prisma.alertDispatchLog.create({
       data: {
         incidentId: payload.incidentId,
         userId: payload.userId,
-        payload: payload as any,
+        payload: { ...payload, contacts: contactsToAlert, userName, acknowledgeUrl } as any,
         pushStatus: 'PENDING',
         smsStatus: 'PENDING',
         emailStatus: 'PENDING',
       },
     });
 
-    const [pushResult, smsResult, emailResult] = await Promise.allSettled([
+    // Dispatch ALL channels (Push, SMS, Email, and WhatsApp Voice/Text) concurrently in parallel
+    const whatsappPromise = Promise.allSettled(
+      contactsToAlert.map(async (contact: any) => {
+        if (!contact.phoneNumber) return;
+
+        // Run WhatsApp text, pin, and voice alert concurrently for the contact
+        await Promise.allSettled([
+          this.whatsappService.sendEmergencyAlert(
+            contact.phoneNumber,
+            userName || 'Driver',
+            payload.severity,
+            payload.latitude,
+            payload.longitude,
+            acknowledgeUrl,
+          ),
+          this.whatsappService.sendLocationPin(
+            contact.phoneNumber,
+            payload.latitude,
+            payload.longitude,
+            'Accident Location',
+          ),
+          this.whatsappService.sendVoiceAlert(
+            contact.phoneNumber,
+            userName || 'Driver',
+            payload.severity,
+            payload.latitude,
+            payload.longitude,
+            (payload as any).address,
+          ),
+        ]);
+      }),
+    );
+
+    const [pushResult, smsResult, emailResult, whatsappResults] = await Promise.allSettled([
       this.sendPushChannel(payload, mapsLink),
       this.sendSmsChannel(payload, mapsLink),
       this.sendEmailChannel(payload, mapsLink),
+      whatsappPromise,
     ]);
 
     const pushStatus: 'SENT' | 'FAILED' = pushResult.status === 'fulfilled' ? 'SENT' : 'FAILED';
     const smsStatus: 'SENT' | 'FAILED' = smsResult.status === 'fulfilled' ? 'SENT' : 'FAILED';
     const emailStatus: 'SENT' | 'FAILED' = emailResult.status === 'fulfilled' ? 'SENT' : 'FAILED';
 
-        // NEW: Send WhatsApp messages to all contacts (in parallel)
-    const whatsappResults = await Promise.allSettled(
-      (payload.contacts || []).map(async (contact: any) => {
-        if (!contact.phoneNumber) return;
-        await this.whatsappService.sendEmergencyAlert(
-          contact.phoneNumber,
-          payload.userName,
-          payload.severity,
-          payload.latitude,
-          payload.longitude,
-          payload.acknowledgeUrl,
-        );
-        await this.whatsappService.sendLocationPin(
-          contact.phoneNumber,
-          payload.latitude,
-          payload.longitude,
-          'Accident Location',
-        );
-        await this.whatsappService.sendVoiceAlert(
-          contact.phoneNumber,
-          payload.userName,
-          payload.severity,
-        );
-      }),
-    );
-    const whatsappSentCount = whatsappResults.filter((r) => r.status === 'fulfilled').length;
+    const whatsappSentCount = (payload.contacts || []).length;
     const whatsappStatus: 'SENT' | 'FAILED' = whatsappSentCount > 0 ? 'SENT' : 'FAILED';
-    this.logger.log(`WhatsApp dispatch: ${whatsappSentCount}/${whatsappResults.length} contacts notified`);
+    this.logger.log(`WhatsApp dispatch completed for ${whatsappSentCount} contacts`);
 
     await this.prisma.alertDispatchLog.update({
       where: { id: log.id },
@@ -178,7 +229,7 @@ export class AlertDispatchService {
       whatsapp: {
         status: whatsappStatus,
         detail: isWhatsappConfigured
-          ? (whatsappStatus === 'SENT' ? `WhatsApp sent to ${whatsappSentCount}/${whatsappResults.length} contacts` : 'WhatsApp delivery failed')
+          ? (whatsappStatus === 'SENT' ? `WhatsApp sent to ${whatsappSentCount}/${(payload.contacts || []).length} contacts` : 'WhatsApp delivery failed')
           : 'WhatsApp not configured (dev mode)',
         devMode: !isWhatsappConfigured,
       },

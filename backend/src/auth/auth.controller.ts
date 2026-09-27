@@ -97,9 +97,16 @@ export class AuthController {
 
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Verify email using token' })
+  @ApiOperation({ summary: 'Verify email using token or 6-digit OTP' })
   async verifyEmail(@Body() verifyEmailDto: VerifyEmailDto) {
     return this.authService.verifyEmail(verifyEmailDto.token);
+  }
+
+  @Post('resend-verification')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Resend 6-digit email verification code' })
+  async resendVerification(@Body('email') email: string) {
+    return this.authService.resendVerification(email);
   }
 
   @Get('verify-email')

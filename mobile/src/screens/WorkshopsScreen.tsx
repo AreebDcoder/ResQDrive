@@ -32,34 +32,56 @@ interface Workshop {
   isVerifiedPartner?: boolean;
 }
 
+let memoryWorkshopsCache: Workshop[] = [];
+
 export default function WorkshopsScreen({ navigation, isInline }: { navigation: any; isInline?: boolean }) {
-  const [workshops, setWorkshops] = useState<Workshop[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [workshops, setWorkshops] = useState<Workshop[]>(memoryWorkshopsCache);
+  const [isLoading, setIsLoading] = useState(memoryWorkshopsCache.length === 0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const fetchWorkshops = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setIsRefreshing(true);
-    else setIsLoading(true);
+    if (isRefresh) {
+      setIsRefreshing(true);
+    } else if (memoryWorkshopsCache.length === 0) {
+      setIsLoading(true);
+    }
     setErrorMsg(null);
 
     try {
       let latitude = 33.6844;
       let longitude = 73.0479;
 
+      // Ultra-fast non-blocking location race (max 1.2s)
       try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-          let loc = await Location.getLastKnownPositionAsync({});
-          if (!loc) {
-            loc = await Location.getCurrentPositionAsync({
-              accuracy: Location.Accuracy.Balanced,
-            });
-          }
-          if (loc?.coords) {
-            latitude = loc.coords.latitude;
-            longitude = loc.coords.longitude;
-          }
+        const getLocationQuick = async () => {
+          try {
+            const { status } = await Location.getForegroundPermissionsAsync();
+            let hasPerm = status === 'granted';
+            if (!hasPerm) {
+              const req = await Location.requestForegroundPermissionsAsync();
+              hasPerm = req.status === 'granted';
+            }
+            if (hasPerm) {
+              const loc =
+                (await Location.getLastKnownPositionAsync({})) ||
+                (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }));
+              if (loc?.coords) {
+                return { lat: loc.coords.latitude, lng: loc.coords.longitude };
+              }
+            }
+          } catch (e) {}
+          return null;
+        };
+
+        const locResult = await Promise.race([
+          getLocationQuick(),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 1200)),
+        ]);
+
+        if (locResult) {
+          latitude = locResult.lat;
+          longitude = locResult.lng;
         }
       } catch (locErr) {
         console.log('Location acquisition fallback in WorkshopsScreen:', locErr);
@@ -67,13 +89,24 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
 
       const response = await api.get('/workshops/nearest', {
         params: { lat: latitude, lng: longitude },
+        timeout: 5000,
       });
 
-      setWorkshops(response.data.workshops || []);
+      const items = response.data.workshops || [];
+      if (items.length > 0) {
+        memoryWorkshopsCache = items;
+        setWorkshops(items);
+      } else if (memoryWorkshopsCache.length > 0) {
+        setWorkshops(memoryWorkshopsCache);
+      }
     } catch (err: any) {
-      setErrorMsg(
-        err.response?.data?.message || 'Could not fetch nearby workshops. Check your connection.',
-      );
+      if (memoryWorkshopsCache.length > 0) {
+        setWorkshops(memoryWorkshopsCache);
+      } else {
+        setErrorMsg(
+          err.response?.data?.message || 'Could not fetch nearby workshops. Check your connection.',
+        );
+      }
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -82,7 +115,11 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
 
   useEffect(() => {
     fetchWorkshops();
-  }, [fetchWorkshops]);
+    const unsubscribe = navigation?.addListener?.('focus', () => {
+      fetchWorkshops();
+    });
+    return unsubscribe;
+  }, [navigation, fetchWorkshops]);
 
   const formatDistance = (meters: number) => {
     if (meters < 1000) return `${Math.round(meters)} m`;

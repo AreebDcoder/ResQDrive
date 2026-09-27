@@ -709,19 +709,13 @@ function DriverHome({ navigation }: any) {
                   let lat = 33.6844;
                   let lng = 73.0479;
                   try {
-                    const { status } = await Location.requestForegroundPermissionsAsync();
-                    if (status === 'granted') {
-                      const pos = await Location.getCurrentPositionAsync({
-                        accuracy: Location.Accuracy.High,
-                      });
-                      if (pos?.coords) {
-                        lat = pos.coords.latitude;
-                        lng = pos.coords.longitude;
-                      }
+                    const loc = await Location.getLastKnownPositionAsync({});
+                    if (loc?.coords) {
+                      lat = loc.coords.latitude;
+                      lng = loc.coords.longitude;
                     }
-                  } catch (err) {
-                    console.log('Could not get live GPS for test, using fallback:', err);
-                  }
+                  } catch (err) {}
+                  
                   navigation.navigate('Countdown', {
                     latitude: lat,
                     longitude: lng,

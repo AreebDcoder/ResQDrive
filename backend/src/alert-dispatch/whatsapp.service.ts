@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
+import * as os from 'os';
 
 export interface WhatsAppMessageResult {
   status: 'SENT' | 'FAILED';
@@ -33,6 +34,135 @@ export class WhatsAppService {
     return this.isConfigured;
   }
 
+  private cleanLocationAddress(text?: string): string {
+    if (!text) return '';
+    return text
+      .replace(/[A-Z0-9]{2,8}\+[A-Z0-9]{2,8}[,\s]*/gi, '') // Remove Google Plus Codes (e.g. JV59+82V)
+      .replace(/,\s*,+/g, ', ')
+      .replace(/^[\s,]+|[\s,]+$/g, '')
+      .trim();
+  }
+
+  private isPlusCode(text?: string): boolean {
+    if (!text) return false;
+    return /^[A-Z0-9]{2,8}\+[A-Z0-9]{2,8}/i.test(text.trim());
+  }
+
+  private async getReverseGeocodedLocation(lat: number, lng: number): Promise<string> {
+    try {
+      const geoapifyKey = this.configService.get<string>('GEOAPIFY_API_KEY');
+      if (geoapifyKey) {
+        const res = await axios.get('https://api.geoapify.com/v1/geocode/reverse', {
+          params: { lat, lon: lng, apiKey: geoapifyKey },
+          timeout: 2500,
+        });
+        const props = res.data.features?.[0]?.properties;
+        if (props) {
+          const parts: string[] = [];
+          const street = props.street || props.address_line1;
+          if (street && !this.isPlusCode(street)) parts.push(street);
+          if (props.suburb || props.district) parts.push(props.suburb || props.district);
+          if (props.city && !parts.includes(props.city)) parts.push(props.city);
+
+          if (parts.length > 0) {
+            return this.cleanLocationAddress(parts.join(', '));
+          }
+          if (props.formatted) {
+            const cleaned = this.cleanLocationAddress(props.formatted.split(',').slice(0, 3).join(', '));
+            if (cleaned) return cleaned;
+          }
+        }
+      }
+    } catch (e) {}
+
+    try {
+      const osmRes = await axios.get('https://nominatim.openstreetmap.org/reverse', {
+        params: { lat, lon: lng, format: 'json' },
+        headers: { 'User-Agent': 'ResQDrive-Emergency-Platform/1.0' },
+        timeout: 2000,
+      });
+      if (osmRes.data?.address) {
+        const addr = osmRes.data.address;
+        const parts: string[] = [];
+        const road = addr.road || addr.street;
+        if (road && !this.isPlusCode(road)) parts.push(road);
+        if (addr.suburb || addr.neighbourhood) parts.push(addr.suburb || addr.neighbourhood);
+        if (addr.village || addr.town || addr.city) parts.push(addr.village || addr.town || addr.city);
+        if (parts.length > 0) {
+          return this.cleanLocationAddress(parts.join(', '));
+        }
+      }
+      if (osmRes.data?.display_name) {
+        const cleaned = this.cleanLocationAddress(osmRes.data.display_name.split(',').slice(0, 3).join(', '));
+        if (cleaned) return cleaned;
+      }
+    } catch (e) {}
+
+    return `کوآرڈینیٹس ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+  }
+
+  private async shortenUrl(targetUrl: string): Promise<string> {
+    if (!targetUrl) return targetUrl;
+
+    // 1. Try TinyURL (Supports local network IPs + ports and linkifies in WhatsApp)
+    try {
+      const res = await axios.get(
+        `https://tinyurl.com/api-create.php?url=${encodeURIComponent(targetUrl)}`,
+        { timeout: 3500 },
+      );
+      if (res.status === 200 && typeof res.data === 'string' && res.data.startsWith('http')) {
+        const short = res.data.trim();
+        this.logger.log(`URL shortened via TinyURL: ${targetUrl} → ${short}`);
+        return short;
+      }
+    } catch (e) {}
+
+    // 2. Try clck.ru
+    try {
+      const res = await axios.get(
+        `https://clck.ru/--?url=${encodeURIComponent(targetUrl)}`,
+        { timeout: 3000 },
+      );
+      if (res.status === 200 && typeof res.data === 'string' && res.data.startsWith('http')) {
+        const short = res.data.trim();
+        this.logger.log(`URL shortened via clck.ru: ${targetUrl} → ${short}`);
+        return short;
+      }
+    } catch (e) {}
+
+    // 3. Try da.gd
+    try {
+      const res = await axios.get(
+        `https://da.gd/s?url=${encodeURIComponent(targetUrl)}`,
+        { timeout: 3000 },
+      );
+      if (res.status === 200 && typeof res.data === 'string' && res.data.startsWith('http')) {
+        const short = res.data.trim();
+        this.logger.log(`URL shortened via da.gd: ${targetUrl} → ${short}`);
+        return short;
+      }
+    } catch (e) {}
+
+    return targetUrl;
+  }
+
+  private getActiveLocalIp(): string {
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+      for (const iface of interfaces[name] || []) {
+        if (
+          iface.family === 'IPv4' &&
+          !iface.internal &&
+          !iface.address.startsWith('169.254') &&
+          !iface.address.startsWith('172.18')
+        ) {
+          return iface.address;
+        }
+      }
+    }
+    return 'localhost';
+  }
+
   async sendEmergencyAlert(
     toPhoneNumber: string,
     userName: string,
@@ -50,41 +180,53 @@ export class WhatsAppService {
       return { status: 'FAILED', error: `Invalid phone: ${toPhoneNumber}` };
     }
 
-    // Convert relative acknowledge URL to full URL
-    let fullAcknowledgeUrl = acknowledgeUrl;
-    if (acknowledgeUrl && acknowledgeUrl.startsWith('/')) {
-      const baseUrl = process.env.BACKEND_PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
-      fullAcknowledgeUrl = `${baseUrl}${acknowledgeUrl}`;
-    }
-
-    // Shorten the URL via is.gd (free, no API key) so WhatsApp linkifies it
-    let shortUrl = fullAcknowledgeUrl;
-    if (fullAcknowledgeUrl) {
-      try {
-        const shortenRes = await axios.get(`https://is.gd/create.php?format=simple&url=${encodeURIComponent(fullAcknowledgeUrl)}`);
-        if (shortenRes.status === 200 && shortenRes.data && shortenRes.data.startsWith('http')) {
-          shortUrl = shortenRes.data.trim();
-          this.logger.log(`URL shortened: ${fullAcknowledgeUrl} → ${shortUrl}`);
-        }
-      } catch (err: any) {
-        this.logger.warn(`URL shortening failed, using original URL: ${err.message}`);
-      }
+    // Determine backend base URL (dynamically resolves active Wi-Fi IP so links never point to old/dead subnets)
+    let publicBase = this.configService.get<string>('BACKEND_URL');
+    if (!publicBase || publicBase.includes('localhost') || publicBase.includes('10.120.170.88') || publicBase.includes('ngrok-free.app')) {
+      const activeIp = this.getActiveLocalIp();
+      const port = process.env.PORT || 3000;
+      publicBase = `http://${activeIp}:${port}`;
     }
 
     const mapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
 
-    // Send plain text message with URLs on their own lines (WhatsApp linkifies short URLs)
-    const messageBody = `🚨 ResQDrive EMERGENCY ALERT
+    // Convert relative or private acknowledge URL to full URL
+    let fullAcknowledgeUrl = mapsLink;
+    if (acknowledgeUrl && typeof acknowledgeUrl === 'string' && acknowledgeUrl.trim() !== '' && acknowledgeUrl !== 'undefined') {
+      if (acknowledgeUrl.startsWith('/')) {
+        fullAcknowledgeUrl = `${publicBase.replace(/\/$/, '')}${acknowledgeUrl}`;
+      } else {
+        // If acknowledgeUrl contains an old IP, swap with current publicBase
+        const pathPart = acknowledgeUrl.replace(/^https?:\/\/[^\/]+/, '');
+        fullAcknowledgeUrl = `${publicBase.replace(/\/$/, '')}${pathPart}`;
+      }
+    }
 
- ${userName} may have been in a ${severity} accident.
+    // Shorten the URL via TinyURL/fallback so WhatsApp renders it as a clickable blue hyperlink
+    let shortUrl = mapsLink;
+    if (fullAcknowledgeUrl) {
+      try {
+        shortUrl = await this.shortenUrl(fullAcknowledgeUrl);
+      } catch (e) {
+        shortUrl = fullAcknowledgeUrl;
+      }
+    }
+    if (!shortUrl || shortUrl === 'undefined') {
+      shortUrl = mapsLink;
+    }
 
-📍 Location:
- ${mapsLink}
+    // Format prominent message with working navigation & live tracking links
+    const messageBody = `🚨 *ResQDrive EMERGENCY ALERT*
 
-🔗 Track Live Location:
- ${shortUrl}
+⚠️ *${userName}* may have been involved in a *${severity}* accident.
 
-Please respond immediately.`;
+📍 *Google Maps Location:*
+${mapsLink}
+
+🔗 *Live Tracking & Acknowledge:*
+${shortUrl}
+
+⏱️ *Please open the links above or respond immediately.*`;
 
     try {
       const response = await axios.post(
@@ -114,10 +256,14 @@ Please respond immediately.`;
       return { status: 'FAILED', error: errorDetail };
     }
   }
+
   async sendVoiceAlert(
     toPhoneNumber: string,
     userName: string,
     severity: string,
+    latitude?: number,
+    longitude?: number,
+    locationAddress?: string,
   ): Promise<WhatsAppMessageResult> {
     if (!this.isConfigured) {
       return { status: 'FAILED', error: 'WhatsApp not configured' };
@@ -137,28 +283,41 @@ Please respond immediately.`;
     };
     const urduSeverity = severityUrdu[severity.toLowerCase()] || 'شدید';
 
-    // Build Urdu TTS text — dynamic user name + severity + location reference
-    const urduText = `یہ ریسکیو ڈرائیو ایمرجنسی الرٹ ہے۔ ${userName} ${urduSeverity} حادثے کا شکار ہو سکتے ہیں۔ براہ کرم اس پیغام میں بھیجے گئے نقشے پر کلک کریں اور ان کی موجودہ لوکیشن دیکھیں۔ فوراً تصدیق کے لیے تصدیق بٹن دبائیں۔`;
+    // Verbal Location Resolution
+    let spokenLocation = locationAddress;
+    if (!spokenLocation && latitude && longitude) {
+      try {
+        spokenLocation = await this.getReverseGeocodedLocation(latitude, longitude);
+      } catch (e) {}
+    }
 
-    this.logger.log(`[Voice Alert] Generating Urdu TTS for: "${urduText.substring(0, 80)}..."`);
+    // Split into natural sentences under Google TTS character limits (<100 chars each)
+    const sentences = [
+      `یہ ریسکیو ڈرائیو ایمرجنسی الرٹ ہے۔ ${userName} کا ${urduSeverity} حادثہ ہوا ہے۔`,
+      spokenLocation ? `حادثے کا مقام ${spokenLocation} ہے۔` : '',
+      `براہ کرم واٹس ایپ پر لوکیشن دیکھ کر فوری مدد فراہم کریں۔`,
+    ].filter(Boolean);
+
+    this.logger.log(`[Voice Alert] Generating chunked Urdu TTS with location: "${spokenLocation || 'N/A'}"`);
 
     try {
-      // Step 1: Generate TTS audio via Google Translate (Urdu language: tl=ur)
-      const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(urduText)}&tl=ur&client=tw-ob`;
+      // Step 1: Generate TTS audio chunks in parallel via Google Translate (Urdu language: tl=ur)
+      const chunkBuffers = await Promise.all(
+        sentences.map(async (sentence) => {
+          const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(sentence)}&tl=ur&client=tw-ob`;
+          const audioRes = await axios.get(ttsUrl, {
+            headers: {
+              'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            },
+            responseType: 'arraybuffer',
+            timeout: 8000,
+          });
+          return Buffer.from(audioRes.data);
+        }),
+      );
 
-      const audioResponse = await axios.get(ttsUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        },
-        responseType: 'arraybuffer',
-        timeout: 15000,
-      });
-
-      if (!audioResponse.data || audioResponse.data.length === 0) {
-        throw new Error('TTS returned empty audio');
-      }
-
-      const audioBuffer = Buffer.from(audioResponse.data);
+      const audioBuffer = Buffer.concat(chunkBuffers);
       this.logger.log(`[Voice Alert] Urdu TTS audio generated: ${audioBuffer.length} bytes`);
 
       // Step 2: Upload to Cloudinary (free tier — already configured)

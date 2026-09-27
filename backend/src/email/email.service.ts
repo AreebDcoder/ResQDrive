@@ -31,28 +31,38 @@ export class EmailService {
     }
   }
 
-  async sendVerificationEmail(email: string, fullName: string, token: string): Promise<void> {
-      this.logger.log(`Verification token for ${email}: ${token}`);
-  this.logger.log(
-    `Verification URL: http://localhost:3000/auth/verify-email?token=${token}`,
-  );
+  async sendVerificationEmail(email: string, fullName: string, tokenOrOtp: string): Promise<void> {
+    this.logger.log(`Verification code for ${email}: ${tokenOrOtp}`);
+    const verificationLink = `http://localhost:3000/auth/verify-email?token=${tokenOrOtp}`;
+    this.logger.log(`Verification URL: ${verificationLink}`);
 
-  const verificationLink = `http://localhost:3000/auth/verify-email?token=${token}`;
     const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
-        <h2 style="color: #d32f2f;">Welcome to ResQDrive, ${fullName}!</h2>
-        <p>Thank you for registering. Please click the button below to verify your email address and activate your account:</p>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${verificationLink}" style="background-color: #d32f2f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">Verify Email Address</a>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #ffffff; color: #1a1a2e;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h1 style="color: #d32f2f; margin: 0; font-size: 26px;">ResQDrive</h1>
+          <p style="color: #666; font-size: 14px; margin-top: 4px;">Emergency Assistance & Safety Platform</p>
         </div>
-        <p>If the button doesn't work, copy and paste the following link into your browser:</p>
-        <p><a href="${verificationLink}">${verificationLink}</a></p>
-        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-        <p style="font-size: 12px; color: #777;">If you did not create this account, you can safely ignore this email.</p>
+        
+        <h2 style="color: #1a1a2e; font-size: 20px;">Welcome to ResQDrive, ${fullName}!</h2>
+        <p style="color: #444; font-size: 15px; line-height: 1.5;">Thank you for creating an account. Enter the 6-digit verification code below in your mobile app to activate your account:</p>
+        
+        <div style="text-align: center; margin: 28px 0;">
+          <div style="display: inline-block; background-color: #f8f9fa; border: 2px dashed #d32f2f; padding: 16px 36px; border-radius: 10px; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #d32f2f;">
+            ${tokenOrOtp}
+          </div>
+        </div>
+
+        <p style="color: #555; font-size: 14px; text-align: center;">Or click the button below to verify directly in your browser:</p>
+        <div style="text-align: center; margin: 20px 0;">
+          <a href="${verificationLink}" style="background-color: #d32f2f; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 14px;">Verify Email Address</a>
+        </div>
+        
+        <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
+        <p style="font-size: 12px; color: #888; text-align: center; margin: 0;">This code will expire in 24 hours. If you did not create this account, you can safely ignore this email.</p>
       </div>
     `;
 
-    await this.sendMail(email, 'Verify Your ResQDrive Account', html);
+    await this.sendMail(email, 'ResQDrive - Your 6-Digit Verification Code', html);
   }
 
   async sendPasswordResetEmail(email: string, fullName: string, token: string): Promise<void> {

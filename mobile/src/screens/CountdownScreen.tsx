@@ -111,14 +111,15 @@ const handleTimeout = useCallback(async () => {
     setIsDispatching(true);
 
     const dispatchContacts = (contacts || []).map((c: any) => ({
-      name: c.name,
+      name: c.name || 'Emergency Contact',
       phoneNumber: c.phoneNumber,
-      email: c.email,
-    }));
+      email: c.email || undefined,
+    })).filter((c: any) => Boolean(c.phoneNumber));
 
     // 0. Ensure high-accuracy current GPS location before dispatch
     let realLat = latitude;
     let realLng = longitude;
+    let resolvedAddress: string | undefined;
     try {
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
       if (pos?.coords?.latitude && pos?.coords?.longitude) {
@@ -167,7 +168,7 @@ const handleTimeout = useCallback(async () => {
       });
       incident = response.data;
       setDispatchStatus(prev => ({ ...prev, incident: 'logged' }));
-      console.log('[Countdown] Incident logged:', incident?.id);
+      console.log('[Countdown] Incident logged:', incident?.id, 'Address:', incident?.address);
     } catch (err) {
       console.log('[Countdown] Failed to log incident:', err);
       setDispatchStatus(prev => ({ ...prev, incident: 'failed' }));
@@ -182,6 +183,7 @@ const handleTimeout = useCallback(async () => {
         message: `Accident detected (${severity})`,
         latitude: realLat,
         longitude: realLng,
+        address: incident?.address,
       });
       emergencyNotificationResult = response.data;
       acknowledgeUrl = response.data?.acknowledgeUrl;
@@ -202,6 +204,7 @@ const handleTimeout = useCallback(async () => {
         acknowledgeUrl,
         latitude: realLat,
         longitude: realLng,
+        address: resolvedAddress || incident?.address,
         severity,
         contacts: dispatchContacts,
       });

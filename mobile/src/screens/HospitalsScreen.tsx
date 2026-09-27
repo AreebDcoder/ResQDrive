@@ -29,35 +29,56 @@ interface Hospital {
   durationSeconds: number;
 }
 
+let memoryHospitalsCache: Hospital[] = [];
+
 export default function HospitalsScreen({ navigation, isInline }: { navigation: any; isInline?: boolean }) {
-  // see it is already correct i just add comment and push
-  const [hospitals, setHospitals] = useState<Hospital[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [hospitals, setHospitals] = useState<Hospital[]>(memoryHospitalsCache);
+  const [isLoading, setIsLoading] = useState(memoryHospitalsCache.length === 0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const fetchHospitals = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setIsRefreshing(true);
-    else setIsLoading(true);
+    if (isRefresh) {
+      setIsRefreshing(true);
+    } else if (memoryHospitalsCache.length === 0) {
+      setIsLoading(true);
+    }
     setErrorMsg(null);
 
     try {
       let latitude = 33.6844;
       let longitude = 73.0479;
 
+      // Ultra-fast non-blocking location race (max 1.2s)
       try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-          let loc = await Location.getLastKnownPositionAsync({});
-          if (!loc) {
-            loc = await Location.getCurrentPositionAsync({
-              accuracy: Location.Accuracy.Balanced,
-            });
-          }
-          if (loc?.coords) {
-            latitude = loc.coords.latitude;
-            longitude = loc.coords.longitude;
-          }
+        const getLocationQuick = async () => {
+          try {
+            const { status } = await Location.getForegroundPermissionsAsync();
+            let hasPerm = status === 'granted';
+            if (!hasPerm) {
+              const req = await Location.requestForegroundPermissionsAsync();
+              hasPerm = req.status === 'granted';
+            }
+            if (hasPerm) {
+              const loc =
+                (await Location.getLastKnownPositionAsync({})) ||
+                (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }));
+              if (loc?.coords) {
+                return { lat: loc.coords.latitude, lng: loc.coords.longitude };
+              }
+            }
+          } catch (e) {}
+          return null;
+        };
+
+        const locResult = await Promise.race([
+          getLocationQuick(),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 1200)),
+        ]);
+
+        if (locResult) {
+          latitude = locResult.lat;
+          longitude = locResult.lng;
         }
       } catch (locErr) {
         console.log('Location acquisition fallback in HospitalsScreen:', locErr);
@@ -65,13 +86,24 @@ export default function HospitalsScreen({ navigation, isInline }: { navigation: 
 
       const response = await api.get('/hospitals/nearest', {
         params: { lat: latitude, lng: longitude },
+        timeout: 5000,
       });
 
-      setHospitals(response.data.hospitals || []);
+      const items = response.data.hospitals || [];
+      if (items.length > 0) {
+        memoryHospitalsCache = items;
+        setHospitals(items);
+      } else if (memoryHospitalsCache.length > 0) {
+        setHospitals(memoryHospitalsCache);
+      }
     } catch (err: any) {
-      setErrorMsg(
-        err.response?.data?.message || 'Could not fetch nearby hospitals. Check your connection.',
-      );
+      if (memoryHospitalsCache.length > 0) {
+        setHospitals(memoryHospitalsCache);
+      } else {
+        setErrorMsg(
+          err.response?.data?.message || 'Could not fetch nearby hospitals. Check your connection.',
+        );
+      }
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -80,7 +112,11 @@ export default function HospitalsScreen({ navigation, isInline }: { navigation: 
 
   useEffect(() => {
     fetchHospitals();
-  }, [fetchHospitals]);
+    const unsubscribe = navigation?.addListener?.('focus', () => {
+      fetchHospitals();
+    });
+    return unsubscribe;
+  }, [navigation, fetchHospitals]);
 
   const formatDistance = (meters: number) => {
     if (meters < 1000) return `${Math.round(meters)} m`;

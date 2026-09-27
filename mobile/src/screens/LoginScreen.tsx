@@ -102,7 +102,15 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
       await setItemAsync('refreshToken', refreshToken);
       dispatch(loginSuccess({ accessToken, user }));
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Login failed. Please check your credentials.');
+      const msg = err.response?.data?.message || 'Login failed. Please check your credentials.';
+      if (typeof msg === 'string' && msg.includes('EMAIL_NOT_VERIFIED')) {
+        setErrorMsg('Your account is not verified yet. Redirecting to verification...');
+        setTimeout(() => {
+          navigation.navigate('EmailVerification', { email: data.emailOrPhone });
+        }, 1200);
+      } else {
+        setErrorMsg(msg);
+      }
     } finally {
       setIsLoading(false);
     }

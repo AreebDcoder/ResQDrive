@@ -63,24 +63,15 @@ export class AuthService {
     return null;
   }
 
+  private generateOtp(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  }
+
   async register(registerDto: RegisterDto) {
     const { fullName, email, phoneNumber, password, role } = registerDto;
 
     if (role === UserRole.ADMIN) {
       throw new BadRequestException('Admin accounts cannot self-register.');
-    }
-
-    const existingUser = await this.prisma.user.findFirst({
-      where: {
-        OR: [{ email }, { phoneNumber }],
-      },
-    });
-
-    if (existingUser) {
-      if (existingUser.email === email) {
-        throw new ConflictException('Email address is already registered.');
-      }
-      throw new ConflictException('Phone number is already registered.');
     }
 
     if (role === UserRole.DRIVER) {
@@ -107,61 +98,148 @@ export class AuthService {
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
-    const result = await this.prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          fullName,
-          email,
-          phoneNumber,
-          passwordHash,
-          role,
-        },
-      });
-
-      if (role === UserRole.DRIVER) {
-        await tx.driverDetails.create({
-          data: {
-            userId: user.id,
-            cnicNumber: registerDto.cnicNumber,
-            drivingLicenseNumber: registerDto.drivingLicenseNumber,
-          },
-        });
-      } else if (role === UserRole.MECHANIC) {
-        await tx.mechanicDetails.create({
-          data: {
-            userId: user.id,
-            workshopName: registerDto.workshopName,
-            workshopAddress: registerDto.workshopAddress,
-            specialization: registerDto.specialization,
-            workshopLatitude: workshopLat,
-            workshopLongitude: workshopLng,
-          },
-        });
-      }
-
-      // Auto-initialize default notification preferences for the user
-      await tx.notificationPreference.create({
-        data: {
-          userId: user.id,
-        },
-      });
-
-      return user;
+    const existingUser = await this.prisma.user.findFirst({
+      where: {
+        OR: [{ email }, { phoneNumber }],
+      },
+      include: {
+        driverDetails: true,
+        mechanicDetails: true,
+      },
     });
 
-    const verificationToken = this.jwtService.sign(
-      { sub: result.id, email: result.email },
-      {
-        secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
-        expiresIn: '24h',
-      },
-    );
+    let userId: string;
 
-    await this.emailService.sendVerificationEmail(result.email, result.fullName, verificationToken);
+    if (existingUser) {
+      // If user is already verified, block duplicate registration
+      if (existingUser.isVerified) {
+        if (existingUser.email === email) {
+          throw new ConflictException('Email address is already registered.');
+        }
+        throw new ConflictException('Phone number is already registered.');
+      }
+
+      // If user exists but is NOT verified (e.g. app was closed/reloaded), update details and send fresh OTP
+      userId = existingUser.id;
+      await this.prisma.$transaction(async (tx) => {
+        await tx.user.update({
+          where: { id: existingUser.id },
+          data: {
+            fullName,
+            phoneNumber,
+            passwordHash,
+            role,
+          },
+        });
+
+        if (role === UserRole.DRIVER) {
+          await tx.driverDetails.upsert({
+            where: { userId: existingUser.id },
+            update: {
+              cnicNumber: registerDto.cnicNumber,
+              drivingLicenseNumber: registerDto.drivingLicenseNumber,
+            },
+            create: {
+              userId: existingUser.id,
+              cnicNumber: registerDto.cnicNumber,
+              drivingLicenseNumber: registerDto.drivingLicenseNumber,
+            },
+          });
+        } else if (role === UserRole.MECHANIC) {
+          await tx.mechanicDetails.upsert({
+            where: { userId: existingUser.id },
+            update: {
+              workshopName: registerDto.workshopName,
+              workshopAddress: registerDto.workshopAddress,
+              specialization: registerDto.specialization,
+              workshopLatitude: workshopLat,
+              workshopLongitude: workshopLng,
+            },
+            create: {
+              userId: existingUser.id,
+              workshopName: registerDto.workshopName,
+              workshopAddress: registerDto.workshopAddress,
+              specialization: registerDto.specialization,
+              workshopLatitude: workshopLat,
+              workshopLongitude: workshopLng,
+            },
+          });
+        }
+      });
+    } else {
+      // Create fresh new user
+      const newUser = await this.prisma.$transaction(async (tx) => {
+        const user = await tx.user.create({
+          data: {
+            fullName,
+            email,
+            phoneNumber,
+            passwordHash,
+            role,
+            isVerified: false,
+          },
+        });
+
+        if (role === UserRole.DRIVER) {
+          await tx.driverDetails.create({
+            data: {
+              userId: user.id,
+              cnicNumber: registerDto.cnicNumber,
+              drivingLicenseNumber: registerDto.drivingLicenseNumber,
+            },
+          });
+        } else if (role === UserRole.MECHANIC) {
+          await tx.mechanicDetails.create({
+            data: {
+              userId: user.id,
+              workshopName: registerDto.workshopName,
+              workshopAddress: registerDto.workshopAddress,
+              specialization: registerDto.specialization,
+              workshopLatitude: workshopLat,
+              workshopLongitude: workshopLng,
+            },
+          });
+        }
+
+        // Auto-initialize default notification preferences
+        await tx.notificationPreference.create({
+          data: {
+            userId: user.id,
+          },
+        });
+
+        return user;
+      });
+
+      userId = newUser.id;
+    }
+
+    // Invalidate prior verification tokens for this user
+    await this.prisma.passwordResetToken.deleteMany({
+      where: {
+        userId,
+        token: { startsWith: 'VERIFY_' },
+      },
+    });
+
+    const otp = this.generateOtp();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    await this.prisma.passwordResetToken.create({
+      data: {
+        userId,
+        token: `VERIFY_${otp}`,
+        expiresAt,
+      },
+    });
+
+    await this.emailService.sendVerificationEmail(email, fullName, otp);
 
     return {
-      message: 'Registration successful. Please check your email to verify your account.',
-      userId: result.id,
+      message: 'Registration successful. Please check your email for the 6-digit verification code.',
+      userId,
+      email,
+      requiresVerification: true,
     };
   }
   async login(loginDto: LoginDto) {
@@ -183,6 +261,24 @@ export class AuthService {
 
     if (!user.isActive) {
       throw new UnauthorizedException('Account is deactivated. Contact support.');
+    }
+
+    if (!user.isVerified) {
+      // Generate / refresh 6-digit OTP so the user can easily verify
+      const otp = this.generateOtp();
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      await this.prisma.passwordResetToken.deleteMany({
+        where: { userId: user.id, token: { startsWith: 'VERIFY_' } },
+      });
+      await this.prisma.passwordResetToken.create({
+        data: {
+          userId: user.id,
+          token: `VERIFY_${otp}`,
+          expiresAt,
+        },
+      });
+      await this.emailService.sendVerificationEmail(user.email, user.fullName, otp);
+      throw new UnauthorizedException('EMAIL_NOT_VERIFIED: Please verify your email with the 6-digit code sent to your inbox.');
     }
 
     // If password is empty string, skip bcrypt check (Google auth bypass)
@@ -451,21 +547,107 @@ export class AuthService {
     return { message: 'Logged out successfully.' };
   }
 
-  async verifyEmail(token: string) {
+  async verifyEmail(tokenOrOtp: string) {
+    if (!tokenOrOtp) {
+      throw new BadRequestException('Verification code or token is required.');
+    }
+    const cleanToken = tokenOrOtp.trim();
+
+    // 1. Try OTP check in passwordResetToken
+    const resetToken = await this.prisma.passwordResetToken.findFirst({
+      where: {
+        OR: [
+          { token: cleanToken },
+          { token: `VERIFY_${cleanToken}` },
+        ],
+        used: false,
+        expiresAt: { gt: new Date() },
+      },
+      include: { user: { include: { mechanicDetails: true } } },
+    });
+
+    if (resetToken && resetToken.user) {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.user.update({
+          where: { id: resetToken.userId },
+          data: { isVerified: true },
+        });
+        await tx.passwordResetToken.update({
+          where: { id: resetToken.id },
+          data: { used: true },
+        });
+        if (resetToken.user.role === UserRole.MECHANIC) {
+          await tx.mechanicDetails.updateMany({
+            where: { userId: resetToken.userId },
+            data: { isWorkshopVerified: true },
+          });
+        }
+      });
+      return { message: 'Email address successfully verified! You can now log in.' };
+    }
+
+    // 2. Fallback to legacy JWT verification
     try {
-      const payload = this.jwtService.verify(token, {
+      const payload = this.jwtService.verify(cleanToken, {
         secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
       });
 
-      await this.prisma.user.update({
+      const user = await this.prisma.user.update({
         where: { id: payload.sub },
         data: { isVerified: true },
+        include: { mechanicDetails: true },
       });
 
-      return { message: 'Email address successfully verified.' };
+      if (user.role === UserRole.MECHANIC) {
+        await this.prisma.mechanicDetails.updateMany({
+          where: { userId: user.id },
+          data: { isWorkshopVerified: true },
+        });
+      }
+
+      return { message: 'Email address successfully verified! You can now log in.' };
     } catch (error) {
-      throw new BadRequestException('Invalid or expired verification link.');
+      throw new BadRequestException('Invalid or expired verification code.');
     }
+  }
+
+  async resendVerification(email: string) {
+    if (!email) {
+      throw new BadRequestException('Email is required.');
+    }
+    const user = await this.prisma.user.findUnique({
+      where: { email: email.trim().toLowerCase() },
+    });
+
+    if (!user) {
+      return { message: 'If the email matches an unverified account, a new verification code has been sent.' };
+    }
+
+    if (user.isVerified) {
+      return { message: 'Your account is already verified. Please log in.' };
+    }
+
+    await this.prisma.passwordResetToken.deleteMany({
+      where: {
+        userId: user.id,
+        token: { startsWith: 'VERIFY_' },
+      },
+    });
+
+    const otp = this.generateOtp();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await this.prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        token: `VERIFY_${otp}`,
+        expiresAt,
+      },
+    });
+
+    await this.emailService.sendVerificationEmail(user.email, user.fullName, otp);
+
+    return { message: 'A new 6-digit verification code has been sent to your email.' };
   }
 
   async forgotPassword(email: string) {

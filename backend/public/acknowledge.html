@@ -202,8 +202,8 @@
               <span class="info-value">${data.incident.severity}</span>
             </div>
             <div class="info-row">
-              <span class="info-label">Address</span>
-              <span class="info-value">${data.incident.address || 'Unknown'}</span>
+              <span class="info-label">Address / Location</span>
+              <span class="info-value" style="color: #60a5fa; font-weight: 600;">${data.incident.address && data.incident.address !== 'Unknown' ? data.incident.address : (data.incident.latitude && data.incident.longitude ? `Near ${data.incident.latitude.toFixed(4)}, ${data.incident.longitude.toFixed(4)}` : 'Location pinned on map below')}</span>
             </div>
             ${data.incident.description ? `
             <div class="info-row">
@@ -214,41 +214,52 @@
         `;
       }
 
+      const lat = data.incident?.latitude || data.locationSession?.lastLat;
+      const lng = data.incident?.longitude || data.locationSession?.lastLng;
+      const mapsLink = (lat && lng) ? `https://www.google.com/maps?q=${lat},${lng}` : null;
+
       if (data.locationSession && data.locationSession.trackUrl) {
         html += `
           <div class="card">
-            <h2>Live Location</h2>
-            <p style="color: #94a3b8; font-size: 13px; margin-bottom: 12px;">The person's live GPS location is shown below. Updates every 5 seconds.</p>
+            <h2>Live Location Tracking</h2>
+            <p style="color: #94a3b8; font-size: 13px; margin-bottom: 12px;">Live GPS coordinates from the vehicle.</p>
             <iframe src="${data.locationSession.trackUrl}" class="map-iframe" allow="geolocation"></iframe>
-            <a href="${data.locationSession.trackUrl}" target="_blank" class="map-link">Open Full-Screen Map →</a>
+            <a href="${data.locationSession.trackUrl}" target="_blank" class="map-link">Open Full-Screen Live Tracker →</a>
+          </div>
+        `;
+      } else if (mapsLink) {
+        html += `
+          <div class="card">
+            <h2>Accident Location</h2>
+            <p style="color: #94a3b8; font-size: 13px; margin-bottom: 12px;">GPS Coordinates: ${lat.toFixed(5)}, ${lng.toFixed(5)}</p>
+            <iframe src="https://maps.google.com/maps?q=${lat},${lng}&hl=en&z=15&output=embed" class="map-iframe"></iframe>
+            <a href="${mapsLink}" target="_blank" class="map-link">Open Google Maps Navigation →</a>
           </div>
         `;
       }
 
-      if (data.status === 'ACTIVE') {
+      if (data.status === 'ACTIVE' || data.status === 'EXHAUSTED') {
         html += `
-          <div class="card">
+          <div class="card" id="ackCard">
             <h2>Acknowledge This Alert</h2>
-            <p style="color: #94a3b8; font-size: 13px; margin-bottom: 12px;">By acknowledging, you confirm you have received this alert. The person in distress will be notified.</p>
-            <input type="text" id="ackName" placeholder="Your name (optional)" />
+            <p style="color: #94a3b8; font-size: 13px; margin-bottom: 12px;">By acknowledging, you confirm you received this emergency alert and are providing assistance. The driver will be notified immediately.</p>
+            <input type="text" id="ackName" placeholder="Your name (e.g. John Doe / Brother)" />
             <button class="acknowledge-btn" onclick="acknowledge()">✓ I Acknowledge This Alert</button>
           </div>
         `;
       } else if (data.status === 'ACKNOWLEDGED') {
-        html += `<div class="success-banner">✓ This alert has been acknowledged by ${data.acknowledgedBy || 'someone'}.</div>`;
+        html += `<div class="success-banner">✓ This alert has been acknowledged by <strong>${data.acknowledgedBy || 'someone'}</strong>. Help is on the way.</div>`;
       } else if (data.status === 'CANCELLED') {
-        html += `<div class="success-banner">This alert was cancelled by the person in distress. They are safe.</div>`;
+        html += `<div class="success-banner">This alert was marked resolved / cancelled by the driver. They are safe.</div>`;
       } else if (data.status === 'EXPIRED') {
-        html += `<div class="error-banner">This alert has expired (no acknowledgement for 30 minutes).</div>`;
-      } else if (data.status === 'EXHAUSTED') {
-        html += `<div class="error-banner">All emergency contacts were notified but no one acknowledged.</div>`;
+        html += `<div class="error-banner">This alert has expired (over 30 minutes elapsed).</div>`;
       }
 
       contentEl.innerHTML = html;
     }
 
     async function acknowledge() {
-      const name = document.getElementById('ackName').value.trim() || 'Anonymous';
+      const name = document.getElementById('ackName').value.trim() || 'Emergency Contact';
       const btn = document.querySelector('.acknowledge-btn');
       btn.disabled = true;
       btn.textContent = 'Acknowledging…';
@@ -264,11 +275,11 @@
           throw new Error(err.message || 'Failed to acknowledge');
         }
         const data = await res.json();
-        loadSession();
+        await loadSession();
       } catch (err) {
         btn.disabled = false;
         btn.textContent = '✓ I Acknowledge This Alert';
-        alert('Failed to acknowledge: ' + err.message);
+        alert('Notice: ' + err.message);
       }
     }
 

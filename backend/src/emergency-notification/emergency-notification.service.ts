@@ -15,6 +15,7 @@ const SESSION_EXPIRY_MS = 30 * 60 * 1000;
 
 import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService } from '../email/email.service';
+import { WhatsAppService } from '../alert-dispatch/whatsapp.service';
 
 // ─── RoboCall.pk & RoboSMS.pk ─────────────────────────────────────────────
 // All calls/sms are placed server-side via simple HTTPS GET requests.
@@ -55,19 +56,30 @@ export class EmergencyNotificationService {
     private locationSharingService: LocationSharingService,
     private notificationsService: NotificationsService,
     private emailService: EmailService,
+    private whatsappService: WhatsAppService,
   ) {}
+
+  private cleanLocationAddress(text?: string): string {
+    if (!text) return '';
+    return text
+      .replace(/[A-Z0-9]{2,8}\+[A-Z0-9]{2,8}[,\s]*/gi, '') // Remove Google Plus Codes (e.g. JV59+82V)
+      .replace(/,\s*,+/g, ', ')
+      .replace(/^[\s,]+|[\s,]+$/g, '')
+      .trim();
+  }
+
+  private isPlusCode(text?: string): boolean {
+    if (!text) return false;
+    return /^[A-Z0-9]{2,8}\+[A-Z0-9]{2,8}/i.test(text.trim());
+  }
 
   /**
    * Reverse-geocodes coordinates into an exact and recognizable human location.
-   * Prioritizes: Road/Landmark + Sector/Neighbourhood + City (e.g. "Kashmir Highway, Sector H-9, Islamabad")
+   * Prioritizes: Road/Landmark + Sector/Neighbourhood + City (e.g. "Street 57, Faisal Town, Islamabad")
    */
   private async reverseGeocodeLocation(lat: number, lng: number, fallbackAddress?: string): Promise<string> {
-    if (fallbackAddress && fallbackAddress.trim().length > 3) {
-      return fallbackAddress.trim();
-    }
-
     const geoapifyKey = process.env.GEOAPIFY_API_KEY || '';
-    if (geoapifyKey) {
+    if (geoapifyKey && lat && lng) {
       try {
         const response = await fetch(
           `https://api.geoapify.com/v1/geocode/reverse?lat=${lat}&lon=${lng}&apiKey=${geoapifyKey}`,
@@ -77,19 +89,20 @@ export class EmergencyNotificationService {
         const props = data.features?.[0]?.properties;
         if (props) {
           const parts: string[] = [];
-          const roadOrLandmark = props.street || props.name || props.road || props.address_line1;
+          const roadOrLandmark = props.street || props.address_line1 || props.name || props.road;
           const area = props.suburb || props.district || props.neighbourhood || props.quarter;
           const city = props.city || props.town || props.village || props.county || props.state;
 
-          if (roadOrLandmark) parts.push(roadOrLandmark);
+          if (roadOrLandmark && !this.isPlusCode(roadOrLandmark)) parts.push(roadOrLandmark);
           if (area && area !== roadOrLandmark) parts.push(area);
-          if (city && city !== area) parts.push(city);
+          if (city && city !== area && !parts.includes(city)) parts.push(city);
 
           if (parts.length > 0) {
-            return parts.join(', ');
+            return this.cleanLocationAddress(parts.join(', '));
           }
           if (props.formatted) {
-            return props.formatted;
+            const cleaned = this.cleanLocationAddress(props.formatted);
+            if (cleaned) return cleaned;
           }
         }
       } catch (err: any) {
@@ -110,19 +123,24 @@ export class EmergencyNotificationService {
       if (data && data.address) {
         const addr = data.address;
         const parts: string[] = [];
-        const road = addr.road || addr.amenity || addr.building;
+        const road = addr.road || addr.amenity || addr.building || addr.street;
         const suburb = addr.suburb || addr.neighbourhood || addr.city_district || addr.subdivision;
         const city = addr.city || addr.town || addr.county || addr.state;
-        if (road) parts.push(road);
+        if (road && !this.isPlusCode(road)) parts.push(road);
         if (suburb && suburb !== road) parts.push(suburb);
-        if (city && city !== suburb) parts.push(city);
-        if (parts.length > 0) return parts.join(', ');
+        if (city && city !== suburb && !parts.includes(city)) parts.push(city);
+        if (parts.length > 0) return this.cleanLocationAddress(parts.join(', '));
       }
     } catch (err: any) {
       this.logger.warn(`Nominatim fallback reverse geocode failed: ${err.message}`);
     }
 
-    return `near ${lat.toFixed(3)}, ${lng.toFixed(3)}`;
+    if (fallbackAddress && fallbackAddress.trim().length > 3) {
+      const cleaned = this.cleanLocationAddress(fallbackAddress);
+      if (cleaned) return cleaned;
+    }
+
+    return `Near ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
   }
 
   // ─── RoboCall.pk: Place automated voice call ────────────────────────────
@@ -345,8 +363,18 @@ export class EmergencyNotificationService {
       include: { attempts: true },
     });
     if (!session) throw new NotFoundException('Session not found');
-    if (session.status !== NotificationSessionStatus.ACTIVE) {
-      throw new BadRequestException(`Session is already ${session.status}`);
+
+    if (session.status === NotificationSessionStatus.ACKNOWLEDGED) {
+      return {
+        message: `This alert was already acknowledged by ${session.acknowledgedBy || 'someone'}.`,
+        status: NotificationSessionStatus.ACKNOWLEDGED,
+        acknowledgedAt: session.acknowledgedAt,
+        acknowledgedBy: session.acknowledgedBy,
+      };
+    }
+
+    if (session.status === NotificationSessionStatus.CANCELLED) {
+      throw new BadRequestException('This alert was cancelled by the driver.');
     }
 
     const now = new Date();
@@ -355,7 +383,7 @@ export class EmergencyNotificationService {
         where: { id: session.id },
         data: { status: NotificationSessionStatus.EXPIRED, nextEscalationAt: null },
       });
-      throw new BadRequestException('Session has expired');
+      throw new BadRequestException('This alert has expired.');
     }
 
     await this.prisma.$transaction([
@@ -435,7 +463,7 @@ export class EmergencyNotificationService {
           select: { id: true, fullName: true, phoneNumber: true },
         },
         incident: {
-          select: { id: true, severity: true, occurredAt: true, address: true, description: true },
+          select: { id: true, severity: true, occurredAt: true, address: true, description: true, latitude: true, longitude: true },
         },
         locationSession: {
           select: { id: true, shareToken: true, status: true, lastLat: true, lastLng: true },
@@ -454,6 +482,44 @@ export class EmergencyNotificationService {
       status = NotificationSessionStatus.EXPIRED;
     }
 
+    const lat = session.incident?.latitude ?? session.locationSession?.lastLat;
+    const lng = session.incident?.longitude ?? session.locationSession?.lastLng;
+
+    let address = session.incident?.address;
+    if ((!address || address === 'Unknown' || address.trim() === '') && lat && lng) {
+      try {
+        address = await this.reverseGeocodeLocation(lat, lng);
+        if (session.incident?.id && address && address !== 'Unknown') {
+          // Persist the resolved address to DB for future queries
+          await this.prisma.incident.update({
+            where: { id: session.incident.id },
+            data: { address },
+          }).catch(() => {});
+        }
+      } catch (e) {
+        address = `Near ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      }
+    }
+
+    const incidentData = session.incident
+      ? {
+          ...session.incident,
+          address: address || session.incident.address || (lat && lng ? `Near ${lat.toFixed(4)}, ${lng.toFixed(4)}` : 'Unknown'),
+          latitude: lat,
+          longitude: lng,
+        }
+      : lat && lng
+      ? {
+          id: null,
+          severity: 'MODERATE',
+          occurredAt: session.triggeredAt,
+          address: address || `Near ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+          description: 'Emergency assistance requested',
+          latitude: lat,
+          longitude: lng,
+        }
+      : null;
+
     return {
       sessionId: session.id,
       status,
@@ -461,13 +527,13 @@ export class EmergencyNotificationService {
       acknowledgedAt: session.acknowledgedAt,
       acknowledgedBy: session.acknowledgedBy,
       user: session.user,
-      incident: session.incident,
+      incident: incidentData,
       locationSession: session.locationSession
         ? {
             shareToken: session.locationSession.shareToken,
             trackUrl: `/track.html?session=${session.locationSession.shareToken}`,
-            lastLat: session.locationSession.lastLat,
-            lastLng: session.locationSession.lastLng,
+            lastLat: session.locationSession.lastLat ?? lat,
+            lastLng: session.locationSession.lastLng ?? lng,
           }
         : null,
     };
@@ -718,6 +784,39 @@ export class EmergencyNotificationService {
       });
     } catch (err: any) {
       this.logger.warn(`[PUSH] Push notification failed: ${err.message}`);
+    }
+
+    // ─── WHATSAPP via WhatsAppService (Text + Location Pin + Voice Note) ──
+    if (this.whatsappService && this.whatsappService.isReady() && contact.phoneNumber) {
+      try {
+        await Promise.allSettled([
+          this.whatsappService.sendEmergencyAlert(
+            contact.phoneNumber,
+            user.fullName || 'Driver',
+            'Moderate',
+            lat,
+            lng,
+            ackLink,
+          ),
+          this.whatsappService.sendLocationPin(
+            contact.phoneNumber,
+            lat,
+            lng,
+            'Accident Location',
+          ),
+          this.whatsappService.sendVoiceAlert(
+            contact.phoneNumber,
+            user.fullName || 'Driver',
+            'Moderate',
+            lat,
+            lng,
+            locationDescription,
+          ),
+        ]);
+        this.logger.log(`[WHATSAPP] WhatsApp alert, pin & voice sent to ${contact.name} (${contact.phoneNumber})`);
+      } catch (err: any) {
+        this.logger.warn(`[WHATSAPP] Failed for ${contact.name}: ${err.message}`);
+      }
     }
   }
 }
