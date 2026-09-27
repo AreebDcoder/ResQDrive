@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Patch, Post, Body, Param, Query, Res, UseGuards, NotFoundException, BadRequestException,
+  Controller, Get, Patch, Post, Body, Param, Query, Res, UseGuards, UseInterceptors, NotFoundException, BadRequestException,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
@@ -13,6 +13,8 @@ import { AnalyticsQueryDto } from './dto/analytics-query.dto';
 import { AdminIncidentsQueryDto } from './dto/admin-incidents-query.dto';
 import { AdminUpdateIncidentDto } from './dto/admin-update-incident.dto';
 import { BulkIncidentOpsDto } from './dto/bulk-incident-ops.dto';
+import { AuditLog } from './audit/audit-log.decorator';
+import { AuditLogInterceptor } from './audit/audit-log.interceptor';
 
 @ApiTags('Admin Analytics & Reports')
 @ApiBearerAuth()
@@ -207,6 +209,18 @@ export class AdminAnalyticsController {
   }
     @Patch('incidents/:id/resolve')
   @ApiOperation({ summary: 'Mark an incident as resolved' })
+  @UseInterceptors(AuditLogInterceptor)
+  @AuditLog('resolve_incident', 'Incident', {
+    fetchBefore: async (req) => {
+      const id = req.params.id;
+      const svc = (req as any).app?.get?.('AdminAnalyticsService');
+      // best-effort fetch — return null if anything fails
+      try {
+        const incident = await svc?.getIncidentById?.(id);
+        return incident ? { severity: incident.severity, status: incident.status } : null;
+      } catch { return null; }
+    },
+  })
   async resolveIncident(@Param('id') id: string) {
     return this.analyticsService.resolveIncident(id);
   }
@@ -217,12 +231,16 @@ export class AdminAnalyticsController {
   @ApiOperation({ summary: 'Admin full-edit of an incident (severity, status, type, address, description, etc.)' })
   @ApiResponse({ status: 200, description: 'Updated incident.' })
   @ApiResponse({ status: 404, description: 'Incident not found.' })
+  @UseInterceptors(AuditLogInterceptor)
+  @AuditLog('update_incident', 'Incident')
   async updateIncident(@Param('id') id: string, @Body() dto: AdminUpdateIncidentDto) {
     return this.analyticsService.updateIncident(id, dto);
   }
 
   @Patch('incidents/:id/status')
   @ApiOperation({ summary: 'Generic status update (ACTIVE/RESOLVED/FALSE_ALARM/ARCHIVED)' })
+  @UseInterceptors(AuditLogInterceptor)
+  @AuditLog('update_incident_status', 'Incident')
   async updateIncidentStatus(@Param('id') id: string, @Body('status') status: string) {
     if (!['ACTIVE', 'RESOLVED', 'FALSE_ALARM', 'ARCHIVED'].includes(status)) {
       throw new BadRequestException(`Invalid status: ${status}. Valid: ACTIVE, RESOLVED, FALSE_ALARM, ARCHIVED.`);
@@ -232,12 +250,16 @@ export class AdminAnalyticsController {
 
   @Patch('incidents/:id/soft-delete')
   @ApiOperation({ summary: 'Soft-delete an incident (isDeleted=true + status=ARCHIVED). Restorable.' })
+  @UseInterceptors(AuditLogInterceptor)
+  @AuditLog('soft_delete_incident', 'Incident')
   async softDeleteIncident(@Param('id') id: string) {
     return this.analyticsService.softDeleteIncident(id);
   }
 
   @Patch('incidents/:id/restore')
   @ApiOperation({ summary: 'Restore a previously soft-deleted incident' })
+  @UseInterceptors(AuditLogInterceptor)
+  @AuditLog('restore_incident', 'Incident')
   async restoreIncident(@Param('id') id: string) {
     return this.analyticsService.restoreIncident(id);
   }
@@ -246,6 +268,8 @@ export class AdminAnalyticsController {
   @ApiOperation({ summary: 'Bulk resolve multiple incidents in one transaction' })
   @ApiResponse({ status: 200, description: 'Returns { count, incidents[] }.' })
   @ApiResponse({ status: 404, description: 'One or more incident IDs not found.' })
+  @UseInterceptors(AuditLogInterceptor)
+  @AuditLog('bulk_resolve_incidents', 'Incident', { captureAfter: true })
   async bulkResolveIncidents(@Body() dto: BulkIncidentOpsDto) {
     return this.analyticsService.bulkResolveIncidents(dto.ids);
   }
@@ -254,6 +278,8 @@ export class AdminAnalyticsController {
   @ApiOperation({ summary: 'Bulk soft-delete multiple incidents in one transaction' })
   @ApiResponse({ status: 200, description: 'Returns { count, incidents[] }.' })
   @ApiResponse({ status: 404, description: 'One or more incident IDs not found.' })
+  @UseInterceptors(AuditLogInterceptor)
+  @AuditLog('bulk_delete_incidents', 'Incident', { captureAfter: true })
   async bulkDeleteIncidents(@Body() dto: BulkIncidentOpsDto) {
     return this.analyticsService.bulkDeleteIncidents(dto.ids);
   }
