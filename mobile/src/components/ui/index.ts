@@ -2,7 +2,7 @@
  * Barrel export — import all UI primitives from one place.
  *
  * Usage:
- *   import { Button, Card, Input, Badge } from '@/components/ui';
+ *   import { Button, Card, Input, Badge, useToast } from '@/components/ui';
  */
 
 export { Button, type ButtonProps } from './Button';
@@ -19,4 +19,10 @@ export { ListItem, type ListItemProps } from './ListItem';
 export { FilterChip, type FilterChipProps } from './FilterChip';
 export { FAB, type FABProps } from './FAB';
 export { Skeleton, type SkeletonProps } from './Skeleton';
+export { Modal, type ModalProps } from './Modal';
+export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog';
+export { ToastProvider, useToast } from './Toast';
+export { Textarea, type TextareaProps } from './Textarea';
+export { FormInput, type FormInputProps } from './FormInput';
+export { FormSelect, type FormSelectProps } from './FormSelect';
 export type { IconName } from './types';

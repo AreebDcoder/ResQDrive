@@ -9,6 +9,7 @@ export interface InputProps {
   label?: string;
   value: string;
   onChangeText: (text: string) => void;
+  onBlur?: () => void;
   placeholder?: string;
   error?: string;
   hint?: string;
@@ -24,7 +25,7 @@ export interface InputProps {
 }
 
 export function Input({
-  label, value, onChangeText, placeholder, error, hint, leftIcon,
+  label, value, onChangeText, onBlur, placeholder, error, hint, leftIcon,
   secureTextEntry, keyboardType = 'default', autoCapitalize = 'none',
   editable = true, multiline = false, numberOfLines = 1,
   accessibilityLabel, style,
@@ -62,7 +63,7 @@ export function Input({
           placeholder={placeholder}
           placeholderTextColor={tc.textTertiary}
           onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
+          onBlur={() => { setFocused(false); onBlur?.(); }}
           secureTextEntry={secureTextEntry && !showPassword}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}

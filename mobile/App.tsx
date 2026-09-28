@@ -16,6 +16,7 @@ import { DrivingNotificationService } from './src/services/drivingNotificationSe
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { ThemeProvider } from './src/theme/ThemeProvider';
 import { useTheme } from './src/theme/useTheme';
+import { ToastProvider } from './src/components/ui/Toast';
 
 // Configure how notifications appear when the app is in the foreground
 Notifications.setNotificationHandler({
@@ -73,12 +74,14 @@ export default function App() {
       <ErrorBoundary>
         <Provider store={store}>
           <ThemeProvider>
-            <SafeAreaProvider>
-              <DrivingModeNotificationTracker />
-              <Navigation />
-              <NotificationBanner />
-              <ThemedStatusBar />
-            </SafeAreaProvider>
+            <ToastProvider>
+              <SafeAreaProvider>
+                <DrivingModeNotificationTracker />
+                <Navigation />
+                <NotificationBanner />
+                <ThemedStatusBar />
+              </SafeAreaProvider>
+            </ToastProvider>
           </ThemeProvider>
         </Provider>
       </ErrorBoundary>
