@@ -13,7 +13,9 @@ import { store, RootState } from './src/store/store';
 import Navigation from './src/navigation';
 import NotificationBanner from './src/components/NotificationBanner';
 import { DrivingNotificationService } from './src/services/drivingNotificationService';
-
+import { ErrorBoundary } from './src/components/ErrorBoundary';
+import { ThemeProvider } from './src/theme/ThemeProvider';
+import { useTheme } from './src/theme/useTheme';
 
 // Configure how notifications appear when the app is in the foreground
 Notifications.setNotificationHandler({
@@ -29,7 +31,7 @@ Notifications.setNotificationHandler({
 // Create Android notification channel (required for Android 8+)
 if (Platform.OS === 'android') {
   Notifications.setNotificationChannelAsync('emergency-alerts', {
-    name: '🚨 Emergency Alerts',
+    name: 'Emergency Alerts',
     importance: Notifications.AndroidImportance.MAX,
     vibrationPattern: [0, 250, 250, 250],
     lightColor: '#FF0000',
@@ -57,19 +59,29 @@ function DrivingModeNotificationTracker() {
   return null;
 }
 
+// StatusBar that respects theme
+function ThemedStatusBar() {
+  const { theme } = useTheme();
+  return <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />;
+}
+
 const GHRootView = GestureHandlerRootView as any;
 
 export default function App() {
   return (
     <GHRootView style={{ flex: 1 }}>
-      <Provider store={store}>
-        <SafeAreaProvider>
-          <DrivingModeNotificationTracker />
-          <Navigation />
-          <NotificationBanner />
-          <StatusBar style="light" />
-        </SafeAreaProvider>
-      </Provider>
+      <ErrorBoundary>
+        <Provider store={store}>
+          <ThemeProvider>
+            <SafeAreaProvider>
+              <DrivingModeNotificationTracker />
+              <Navigation />
+              <NotificationBanner />
+              <ThemedStatusBar />
+            </SafeAreaProvider>
+          </ThemeProvider>
+        </Provider>
+      </ErrorBoundary>
     </GHRootView>
   );
 }
