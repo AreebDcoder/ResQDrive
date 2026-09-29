@@ -1,6 +1,7 @@
 import { API_URL } from '../api/axios';
 import React, { useEffect, useState, useRef } from 'react';
 import {
+  AccessibilityInfo,
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
   ScrollView, Linking, Alert, Platform, Animated,
 } from 'react-native';
@@ -49,12 +50,27 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
 
+  // Batch 7 Phase 4: Respect Reduce Motion accessibility setting
+  const [reduceMotion, setReduceMotion] = useState(false);
+
   useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    // Skip decorative entrance animation when Reduce Motion is enabled
+    if (reduceMotion) {
+      fadeAnim.setValue(1);
+      slideAnim.setValue(0);
+      return;
+    }
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
     ]).start();
-  }, [fadeAnim, slideAnim]);
+  }, [fadeAnim, slideAnim, reduceMotion]);
 
   // Start GPS tracking for the emergency location session
   async function startEmergencyLocationTracking(locationSessionId: string) {
@@ -280,8 +296,8 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
       >
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
           <View style={styles.glassCard}>
-            <Text style={styles.headerTitle} accessibilityRole="header">Emergency Alert</Text>
-            <Text style={styles.headerSubtitle}>
+            <Text style={styles.headerTitle} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Emergency Alert</Text>
+            <Text style={styles.headerSubtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               Triggers multi-channel alerts (push, SMS, email, phone call) to your emergency contacts.
               Escalates every 30 seconds until someone acknowledges.
             </Text>
@@ -290,7 +306,7 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
           {emergency.error && (
             <View style={styles.errorBox}>
               <Ionicons name="alert-circle-outline" size={18} color={colors.danger[400]} style={{ marginRight: 8 }} />
-              <Text style={styles.errorText}>{emergency.error}</Text>
+              <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{emergency.error}</Text>
             </View>
           )}
 
@@ -305,8 +321,8 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
               ) : (
                 <>
                   <Ionicons name="alert-circle" size={36} color={darkColors.text} style={{ marginBottom: 4 }} />
-                  <Text style={styles.triggerBtnText}>TRIGGER EMERGENCY ALERT</Text>
-                  <Text style={styles.triggerBtnSubtext}>Tap to notify all contacts</Text>
+                  <Text style={styles.triggerBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>TRIGGER EMERGENCY ALERT</Text>
+                  <Text style={styles.triggerBtnSubtext} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Tap to notify all contacts</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -316,34 +332,34 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
             <View style={styles.activeCard}>
               <View style={styles.activeHeader}>
                 <View style={styles.pulseDot} />
-                <Text style={styles.activeTitle}>ALERT ACTIVE</Text>
+                <Text style={styles.activeTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>ALERT ACTIVE</Text>
               </View>
-              <Text style={styles.activeSince}>
+              <Text style={styles.activeSince} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 Triggered: {new Date(emergency.triggeredAt || '').toLocaleString()}
               </Text>
               {emergency.nextEscalationAt && (
-                <Text style={styles.nextEscalation}>
+                <Text style={styles.nextEscalation} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                   Next escalation: {new Date(emergency.nextEscalationAt).toLocaleTimeString()}
                 </Text>
               )}
-              <Text style={styles.currentPriority}>
+              <Text style={styles.currentPriority} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 Currently notifying: Priority {emergency.currentPriority}
               </Text>
               {gpsStatusText ? (
-                <Text style={styles.gpsStatus}>{gpsStatusText}</Text>
+                <Text style={styles.gpsStatus} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{gpsStatusText}</Text>
               ) : null}
 
               <View style={styles.actionsRow}>
                 <TouchableOpacity style={styles.linkBtn} onPress={copyAcknowledgeLink} accessibilityRole="button">
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Ionicons name="copy-outline" size={16} color={darkColors.text} style={{ marginRight: 6 }} />
-                    <Text style={styles.linkBtnText}>Copy Link</Text>
+                    <Text style={styles.linkBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Copy Link</Text>
                   </View>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.linkBtn} onPress={openAcknowledgePage} accessibilityRole="button">
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Ionicons name="globe-outline" size={16} color={darkColors.text} style={{ marginRight: 6 }} />
-                    <Text style={styles.linkBtnText}>Open Page</Text>
+                    <Text style={styles.linkBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Open Page</Text>
                   </View>
                 </TouchableOpacity>
               </View>
@@ -356,7 +372,7 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
                 {emergency.isCancelling ? (
                   <ActivityIndicator color={darkColors.text} />
                 ) : (
-                  <Text style={styles.cancelBtnText}>Cancel Alert (False Alarm)</Text>
+                  <Text style={styles.cancelBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Cancel Alert (False Alarm)</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -365,8 +381,8 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
           {emergency.status === 'ACKNOWLEDGED' && (
             <View style={styles.acknowledgedCard}>
               <Ionicons name="checkmark-circle-outline" size={40} color={colors.success[400]} style={{ marginBottom: 8 }} />
-              <Text style={styles.acknowledgedTitle}>Alert Acknowledged</Text>
-              <Text style={styles.acknowledgedText}>
+              <Text style={styles.acknowledgedTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Alert Acknowledged</Text>
+              <Text style={styles.acknowledgedText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 Your emergency contact has acknowledged the alert. Escalation has stopped.
                 Your live location is still being shared.
               </Text>
@@ -374,7 +390,7 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
                 style={styles.resetBtn}
                 onPress={() => dispatch(clearEmergency())} accessibilityRole="button"
               >
-                <Text style={styles.resetBtnText}>Dismiss</Text>
+                <Text style={styles.resetBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Dismiss</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -382,22 +398,22 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
           {emergency.status === 'CANCELLED' && (
             <View style={styles.cancelledCard}>
               <Ionicons name="checkmark-circle-outline" size={40} color={colors.success[400]} style={{ marginBottom: 8 }} />
-              <Text style={styles.cancelledTitle}>Alert Cancelled</Text>
-              <Text style={styles.cancelledText}>
+              <Text style={styles.cancelledTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Alert Cancelled</Text>
+              <Text style={styles.cancelledText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 The emergency alert has been cancelled. Your contacts have been notified.
               </Text>
               <TouchableOpacity
                 style={styles.resetBtn}
                 onPress={() => dispatch(clearEmergency())} accessibilityRole="button"
               >
-                <Text style={styles.resetBtnText}>Dismiss</Text>
+                <Text style={styles.resetBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Dismiss</Text>
               </TouchableOpacity>
             </View>
           )}
 
           {priorityKeys.length > 0 && (
             <View style={styles.progressCard}>
-              <Text style={styles.progressTitle}>Escalation Progress</Text>
+              <Text style={styles.progressTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Escalation Progress</Text>
               {priorityKeys.map((priority) => {
                 const attempts = attemptsByPriority[priority];
                 const firstAttempt = attempts[0];
@@ -408,19 +424,19 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
                     style={[styles.priorityBlock, isCurrent && styles.priorityBlockCurrent]}
                   >
                     <View style={styles.priorityHeader}>
-                      <Text style={styles.priorityLabel}>Priority {priority}</Text>
-                      <Text style={styles.priorityName}>{firstAttempt.contactName}</Text>
-                      {isCurrent && <Text style={styles.currentBadge}>● CURRENT</Text>}
+                      <Text style={styles.priorityLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Priority {priority}</Text>
+                      <Text style={styles.priorityName} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{firstAttempt.contactName}</Text>
+                      {isCurrent && <Text style={styles.currentBadge} allowFontScaling={true} maxFontSizeMultiplier={1.5}>● CURRENT</Text>}
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                       <Ionicons name="call-outline" size={14} color={darkColors.textSecondary} style={{ marginRight: 4 }} />
-                      <Text style={styles.priorityPhone}>{firstAttempt.contactPhone}</Text>
+                      <Text style={styles.priorityPhone} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{firstAttempt.contactPhone}</Text>
                     </View>
                     <View style={styles.channelsRow}>
                       {attempts.map((a: any, i: number) => (
                         <View key={i} style={styles.channelChip}>
                           <Ionicons name={CHANNEL_ICONS[a.channel] || "mail-outline"} size={14} color={darkColors.textSecondary} style={{ marginRight: 4 }} />
-                          <Text style={[styles.channelStatus, { color: STATUS_COLORS[a.status] || darkColors.textTertiary }]}>
+                          <Text style={[styles.channelStatus, { color: STATUS_COLORS[a.status] || darkColors.textTertiary }]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                             {a.status}
                           </Text>
                         </View>
@@ -434,14 +450,14 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
 
           {!emergency.active && emergency.status !== 'ACKNOWLEDGED' && emergency.status !== 'CANCELLED' && (
             <View style={styles.infoCard}>
-              <Text style={styles.infoTitle}>How escalation works</Text>
-              <Text style={styles.infoText}>• Priority 1 contact notified immediately via all channels</Text>
-              <Text style={styles.infoText}>• If no acknowledgement in 30s, escalates to Priority 2</Text>
-              <Text style={styles.infoText}>• Continues every 30s until someone acknowledges</Text>
-              <Text style={styles.infoText}>• Live location is shared automatically via tracking link</Text>
-              <Text style={styles.infoText}>• Contact opens link → sees your location + can acknowledge</Text>
-              <Text style={styles.infoText}>• You can cancel anytime if it was a false alarm</Text>
-              <Text style={styles.infoText}>• Auto-expires after 30 minutes of no acknowledgement</Text>
+              <Text style={styles.infoTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>How escalation works</Text>
+              <Text style={styles.infoText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>• Priority 1 contact notified immediately via all channels</Text>
+              <Text style={styles.infoText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>• If no acknowledgement in 30s, escalates to Priority 2</Text>
+              <Text style={styles.infoText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>• Continues every 30s until someone acknowledges</Text>
+              <Text style={styles.infoText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>• Live location is shared automatically via tracking link</Text>
+              <Text style={styles.infoText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>• Contact opens link → sees your location + can acknowledge</Text>
+              <Text style={styles.infoText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>• You can cancel anytime if it was a false alarm</Text>
+              <Text style={styles.infoText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>• Auto-expires after 30 minutes of no acknowledgement</Text>
             </View>
           )}
         </ScrollView>

@@ -315,22 +315,22 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
         <Image source={{ uri: fullPhotoUrl }} style={styles.historyThumb} />
         <View style={styles.historyCardInfo}>
           <View style={styles.historyCardHeader}>
-            <Text style={styles.historyTypeTitle}>{item.predictedDamageType.toUpperCase().replace('_', ' ')}</Text>
+            <Text style={styles.historyTypeTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.predictedDamageType.toUpperCase().replace('_', ' ')}</Text>
             <View style={[styles.severityBadge, { backgroundColor: getSeverityColor(item.derivedSeverity) }]}>
-              <Text style={styles.severityBadgeText}>{item.derivedSeverity.toUpperCase()}</Text>
+              <Text style={styles.severityBadgeText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.derivedSeverity.toUpperCase()}</Text>
             </View>
           </View>
-          <Text style={styles.historyConfText}>Part Tag: {item.partTag ? item.partTag.toUpperCase().replace('_', ' ') : 'OTHER'}</Text>
-          <Text style={styles.historyConfText}>Confidence: {Math.round(item.confidenceScore * 100)}%</Text>
+          <Text style={styles.historyConfText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Part Tag: {item.partTag ? item.partTag.toUpperCase().replace('_', ' ') : 'OTHER'}</Text>
+          <Text style={styles.historyConfText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Confidence: {Math.round(item.confidenceScore * 100)}%</Text>
           {item.inferenceTimeMs !== undefined && (
-            <Text style={styles.historyConfText}>Latency: {item.inferenceTimeMs}ms</Text>
+            <Text style={styles.historyConfText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Latency: {item.inferenceTimeMs}ms</Text>
           )}
-          <Text style={styles.historyDateText}>{formattedDate}</Text>
+          <Text style={styles.historyDateText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{formattedDate}</Text>
         </View>
         <TouchableOpacity
           style={styles.deleteCardBtn}
           onPress={() => handleDeleteAssessment(item.id)} accessibilityRole="button"
-         accessibilityLabel="Delete">
+         accessibilityLabel="Delete" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Ionicons name="trash-outline" size={20} color={colors.danger[400]} />
         </TouchableOpacity>
       </View>
@@ -361,19 +361,19 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
           </View>
           <View style={styles.historyCardInfo}>
             <View style={styles.historyCardHeader}>
-              <Text style={styles.historyTypeTitle}>{carText}</Text>
+              <Text style={styles.historyTypeTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{carText}</Text>
             </View>
-            <Text style={styles.historyCostText}>
+            <Text style={styles.historyCostText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               PKR {item.totalMinCostPkr.toLocaleString()} - {item.totalMaxCostPkr.toLocaleString()}
             </Text>
-            <Text style={styles.historyConfText}>{item.lineItems?.length || 0} items assessed</Text>
-            <Text style={styles.historyDateText}>{formattedDate}</Text>
+            <Text style={styles.historyConfText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.lineItems?.length || 0} items assessed</Text>
+            <Text style={styles.historyDateText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{formattedDate}</Text>
           </View>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.deleteCardBtn}
           onPress={() => handleDeleteCostReport(item.id)} accessibilityRole="button"
-         accessibilityLabel="Delete">
+         accessibilityLabel="Delete" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Ionicons name="trash-outline" size={20} color={colors.danger[400]} />
         </TouchableOpacity>
       </View>
@@ -388,8 +388,8 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
         <ScrollView style={styles.tabContent} contentContainerStyle={{ paddingBottom: 40 }}>
           <View style={styles.carRejectionCard}>
             <Ionicons name="car-outline" size={48} color={colors.danger[400]} style={{ marginBottom: 12, alignSelf: 'center' }} />
-            <Text style={styles.carRejectionTitle}>Vehicle Verification Failed</Text>
-            <Text style={styles.carRejectionMessage}>{errorMsg}</Text>
+            <Text style={styles.carRejectionTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Vehicle Verification Failed</Text>
+            <Text style={styles.carRejectionMessage} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errorMsg}</Text>
 
             <TouchableOpacity
               style={styles.actionBtnPrimary}
@@ -401,7 +401,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
               }} accessibilityRole="button"
             >
               <Ionicons name="camera-outline" size={20} color={darkColors.text} style={{ marginRight: 8 }} />
-              <Text style={styles.actionBtnText}>Retake Photo</Text>
+              <Text style={styles.actionBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Retake Photo</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -418,14 +418,14 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
           <View style={styles.card}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
               <Ionicons name="analytics-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
-              <Text style={styles.cardHeaderTitle}>ASSESSMENT RESULTS</Text>
+              <Text style={styles.cardHeaderTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>ASSESSMENT RESULTS</Text>
             </View>
 
             {/* Low-Confidence Warning Banner */}
             {isLowConfidence && (
               <View style={styles.lowConfidenceBanner}>
                 <Ionicons name="warning" size={22} color={colors.warning[300]} style={{ marginRight: 10 }} />
-                <Text style={styles.lowConfidenceText}>
+                <Text style={styles.lowConfidenceText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                   Low confidence result — consider retaking the photo with better lighting or a closer, clearer angle of the damage.
                 </Text>
               </View>
@@ -435,26 +435,26 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
 
             <View style={styles.resultsContainer}>
               <View style={styles.resultField}>
-                <Text style={styles.resultLabel}>Damage Type</Text>
-                <Text style={styles.resultValue}>{prediction.predictedDamageType.toUpperCase().replace('_', ' ')}</Text>
+                <Text style={styles.resultLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Damage Type</Text>
+                <Text style={styles.resultValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{prediction.predictedDamageType.toUpperCase().replace('_', ' ')}</Text>
               </View>
 
               <View style={styles.resultField}>
-                <Text style={styles.resultLabel}>Confidence Level</Text>
-                <Text style={styles.resultValue}>{Math.round(prediction.confidenceScore * 100)}%</Text>
+                <Text style={styles.resultLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Confidence Level</Text>
+                <Text style={styles.resultValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{Math.round(prediction.confidenceScore * 100)}%</Text>
               </View>
 
               <View style={styles.resultField}>
-                <Text style={styles.resultLabel}>Derived Severity</Text>
+                <Text style={styles.resultLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Derived Severity</Text>
                 <View style={[styles.severityBadgeLarge, { backgroundColor: getSeverityColor(prediction.derivedSeverity) }]}>
-                  <Text style={styles.severityBadgeText}>{prediction.derivedSeverity.toUpperCase()}</Text>
+                  <Text style={styles.severityBadgeText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{prediction.derivedSeverity.toUpperCase()}</Text>
                 </View>
               </View>
 
               {prediction.inferenceTimeMs && (
                 <View style={styles.resultField}>
-                  <Text style={styles.resultLabel}>Inference Latency</Text>
-                  <Text style={styles.resultValue}>{prediction.inferenceTimeMs} ms</Text>
+                  <Text style={styles.resultLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Inference Latency</Text>
+                  <Text style={styles.resultValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{prediction.inferenceTimeMs} ms</Text>
                 </View>
               )}
             </View>
@@ -471,7 +471,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
                 }} accessibilityRole="button"
               >
                 <Ionicons name="add-circle-outline" size={20} color={darkColors.text} style={{ marginRight: 8 }} />
-                <Text style={styles.actionBtnText}>Add Another Damaged Area</Text>
+                <Text style={styles.actionBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Add Another Damaged Area</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -485,7 +485,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
                 }} accessibilityRole="button"
               >
                 <Ionicons name="cash-outline" size={20} color={darkColors.text} style={{ marginRight: 8 }} />
-                <Text style={styles.actionBtnText}>Finish & View Repair Cost</Text>
+                <Text style={styles.actionBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Finish & View Repair Cost</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -500,16 +500,16 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
         <View style={styles.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
             <Ionicons name="camera-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
-            <Text style={styles.cardHeaderTitle}>Upload Damage Image</Text>
+            <Text style={styles.cardHeaderTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Upload Damage Image</Text>
           </View>
-          <Text style={styles.cardDescription}>
+          <Text style={styles.cardDescription} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             Select the vehicle part tag, then capture/choose a photo of the damage.
           </Text>
 
           {/* Part Tag selector */}
           <View style={styles.dropdownContainer}>
-            <Text style={styles.dropdownLabel}>
-              Select Damaged Part <Text style={{ color: colors.danger[500] }}>* (Required)</Text>
+            <Text style={styles.dropdownLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+              Select Damaged Part <Text style={{ color: colors.danger[500] }} allowFontScaling={true} maxFontSizeMultiplier={1.5}>* (Required)</Text>
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.vehicleScroll}>
               {PART_TAGS.map((pt) => (
@@ -521,7 +521,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
                   ]}
                   onPress={() => setSelectedPartTag(pt.tag)} accessibilityRole="button"
                 >
-                  <Text style={[styles.vehicleChipText, selectedPartTag === pt.tag && styles.vehicleChipTextActive]}>
+                  <Text style={[styles.vehicleChipText, selectedPartTag === pt.tag && styles.vehicleChipTextActive]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                     {pt.label}
                   </Text>
                 </TouchableOpacity>
@@ -534,14 +534,14 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
           ) : (
             <View style={styles.placeholderContainer}>
               <Ionicons name="image-outline" size={42} color={darkColors.textTertiary} style={{ marginBottom: 8 }} />
-              <Text style={styles.placeholderText}>No image selected</Text>
+              <Text style={styles.placeholderText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>No image selected</Text>
             </View>
           )}
 
           {/* Vehicle Dropdown (Optional: only show if user has > 1 vehicles) */}
           {vehicles && vehicles.length > 1 && (
             <View style={styles.dropdownContainer}>
-              <Text style={styles.dropdownLabel}>Select Affected Vehicle</Text>
+              <Text style={styles.dropdownLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Select Affected Vehicle</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.vehicleScroll}>
                 {vehicles.map((v) => (
                   <TouchableOpacity
@@ -552,7 +552,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
                     ]}
                     onPress={() => setSelectedVehicleId(v.id)} accessibilityRole="button"
                   >
-                    <Text style={[styles.vehicleChipText, selectedVehicleId === v.id && styles.vehicleChipTextActive]}>
+                    <Text style={[styles.vehicleChipText, selectedVehicleId === v.id && styles.vehicleChipTextActive]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                       {v.make} {v.model}
                     </Text>
                   </TouchableOpacity>
@@ -564,20 +564,20 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
           <View style={styles.pickerRow}>
             <TouchableOpacity style={styles.pickerBtn} onPress={() => handlePickImage(true)} accessibilityRole="button">
               <Ionicons name="camera-outline" size={20} color={darkColors.text} style={{ marginRight: 6 }} />
-              <Text style={styles.pickerBtnText}>Camera</Text>
+              <Text style={styles.pickerBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Camera</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.pickerBtn} onPress={() => handlePickImage(false)} accessibilityRole="button">
               <Ionicons name="images-outline" size={20} color={darkColors.text} style={{ marginRight: 6 }} />
-              <Text style={styles.pickerBtnText}>Gallery</Text>
+              <Text style={styles.pickerBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Gallery</Text>
             </TouchableOpacity>
           </View>
 
           {/* User Photo Capture Guidance Tip */}
           <View style={styles.photoTipCard}>
             <Ionicons name="information-circle-outline" size={18} color={colors.warning[500]} style={{ marginRight: 8, marginTop: 2 }} />
-            <Text style={styles.photoTipText}>
-              <Text style={{ fontWeight: '700' }}>Tip:</Text> Include some recognizable part of the car (wheel, mirror, body shape) in frame, not just an extreme close-up of the damage.
+            <Text style={styles.photoTipText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+              <Text style={{ fontWeight: '700' }} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Tip:</Text> Include some recognizable part of the car (wheel, mirror, body shape) in frame, not just an extreme close-up of the damage.
             </Text>
           </View>
 
@@ -591,14 +591,14 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
               disabled={!selectedPartTag || isAnalyzing} accessibilityRole="button"
             >
               <Ionicons name="hardware-chip-outline" size={20} color={darkColors.text} style={{ marginRight: 8 }} />
-              <Text style={styles.actionBtnText}>
+              <Text style={styles.actionBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 {!selectedPartTag ? 'Select Damaged Part Above First' : 'Analyze Damage'}
               </Text>
             </TouchableOpacity>
           )}
         </View>
 
-        <Text style={styles.scopeNoticeText}>
+        <Text style={styles.scopeNoticeText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
           Note: Damage area localization has been evaluated and deferred to future releases due to insufficient COCO dataset limits.
         </Text>
       </ScrollView>
@@ -614,7 +614,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
           onPress={() => setActiveSegment('new')} accessibilityRole="button"
         >
           <Ionicons name="camera-outline" size={16} color={activeSegment === 'new' ? colors.danger[500] : darkColors.textTertiary} style={{ marginRight: 6 }} />
-          <Text style={[styles.segmentBtnText, activeSegment === 'new' && styles.segmentBtnTextActive]}>
+          <Text style={[styles.segmentBtnText, activeSegment === 'new' && styles.segmentBtnTextActive]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             New
           </Text>
         </TouchableOpacity>
@@ -624,7 +624,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
           onPress={() => setActiveSegment('history')} accessibilityRole="button"
         >
           <Ionicons name="time-outline" size={16} color={activeSegment === 'history' ? colors.danger[500] : darkColors.textTertiary} style={{ marginRight: 6 }} />
-          <Text style={[styles.segmentBtnText, activeSegment === 'history' && styles.segmentBtnTextActive]}>
+          <Text style={[styles.segmentBtnText, activeSegment === 'history' && styles.segmentBtnTextActive]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             History
           </Text>
         </TouchableOpacity>
@@ -634,7 +634,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
           onPress={() => setActiveSegment('cost_history')} accessibilityRole="button"
         >
           <Ionicons name="receipt-outline" size={16} color={activeSegment === 'cost_history' ? colors.danger[500] : darkColors.textTertiary} style={{ marginRight: 6 }} />
-          <Text style={[styles.segmentBtnText, activeSegment === 'cost_history' && styles.segmentBtnTextActive]}>
+          <Text style={[styles.segmentBtnText, activeSegment === 'cost_history' && styles.segmentBtnTextActive]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             Costs
           </Text>
         </TouchableOpacity>
@@ -644,7 +644,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
       {errorMsg && (
         <View style={styles.errorBanner}>
           <Ionicons name="alert-circle-outline" size={18} color={colors.danger[400]} style={{ marginRight: 8 }} />
-          <Text style={styles.errorText} numberOfLines={3}>{errorMsg}</Text>
+          <Text style={styles.errorText} numberOfLines={3} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errorMsg}</Text>
         </View>
       )}
 
@@ -652,7 +652,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
       {isAnalyzing && (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.danger[500]} />
-          <Text style={styles.loadingText}>{analysisStage}</Text>
+          <Text style={styles.loadingText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{analysisStage}</Text>
         </View>
       )}
 
@@ -682,7 +682,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
             !historyLoading ? (
               <View style={styles.emptyContainer}>
                 <Ionicons name="folder-open-outline" size={44} color={darkColors.textTertiary} style={{ marginBottom: 12 }} />
-                <Text style={styles.emptyText}>No damage logs recorded yet.</Text>
+                <Text style={styles.emptyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>No damage logs recorded yet.</Text>
               </View>
             ) : null
           }
@@ -701,7 +701,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
             !costHistoryLoading ? (
               <View style={styles.emptyContainer}>
                 <Ionicons name="receipt-outline" size={44} color={darkColors.textTertiary} style={{ marginBottom: 12 }} />
-                <Text style={styles.emptyText}>No repair cost reports saved yet.</Text>
+                <Text style={styles.emptyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>No repair cost reports saved yet.</Text>
               </View>
             ) : null
           }

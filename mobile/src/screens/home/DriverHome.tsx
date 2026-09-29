@@ -34,31 +34,31 @@ const LiveTelemetryWidget = React.memo(function LiveTelemetryWidget({ drivingMod
     <View style={styles.dashboardCard}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
         <Ionicons name="pulse-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
-        <Text style={styles.cardHeaderTitle}>Live Telemetry</Text>
+        <Text style={styles.cardHeaderTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Live Telemetry</Text>
       </View>
       {drivingModeEnabled ? (
         <View>
           <View style={styles.telemetryRow}>
-            <Text style={styles.telemetryLabel}>Source:</Text>
-            <Text style={styles.telemetryValueBold}>
+            <Text style={styles.telemetryLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Source:</Text>
+            <Text style={styles.telemetryValueBold} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               {activeSource === 'ble' ? 'BLE Hardware' : 'Phone Sensors'}
             </Text>
           </View>
           <View style={styles.telemetryRow}>
-            <Text style={styles.telemetryLabel}>G-Force Magnitude:</Text>
-            <Text style={styles.telemetryValue}>
+            <Text style={styles.telemetryLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>G-Force Magnitude:</Text>
+            <Text style={styles.telemetryValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               {latestReading ? `${latestReading.accelG.toFixed(3)} G` : '1.000 G'}
             </Text>
           </View>
           <View style={styles.telemetryRow}>
-            <Text style={styles.telemetryLabel}>Rotation Speed:</Text>
-            <Text style={styles.telemetryValue}>
+            <Text style={styles.telemetryLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Rotation Speed:</Text>
+            <Text style={styles.telemetryValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               {latestReading ? `${latestReading.gyroDegPerSec.toFixed(1)} °/s` : '0.0 °/s'}
             </Text>
           </View>
         </View>
       ) : (
-        <Text style={styles.noVehicleText}>
+        <Text style={styles.noVehicleText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
           Telemetry inactive. Turn on Driving Mode to view live sensors.
         </Text>
       )}
@@ -308,26 +308,26 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
             <View style={styles.dashboardCard}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
                 <Ionicons name="car-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
-                <Text style={styles.cardHeaderTitle}>Paired Vehicle</Text>
+                <Text style={styles.cardHeaderTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Paired Vehicle</Text>
               </View>
               {activeVehicle ? (
                 <View style={styles.vehicleDetailsBlock}>
-                  <Text style={styles.activeVehicleName}>
+                  <Text style={styles.activeVehicleName} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                     {activeVehicle.make} {activeVehicle.model} ({activeVehicle.year})
                   </Text>
                   <View style={styles.activePlateBadge}>
-                    <Text style={styles.activePlateText}>{activeVehicle.licensePlate.toUpperCase()}</Text>
+                    <Text style={styles.activePlateText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{activeVehicle.licensePlate.toUpperCase()}</Text>
                   </View>
                 </View>
               ) : (
                 <View style={styles.vehicleDetailsBlock}>
-                  <Text style={styles.noVehicleText}>No active vehicle paired for crash detection.</Text>
+                  <Text style={styles.noVehicleText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>No active vehicle paired for crash detection.</Text>
                   <TouchableOpacity
                     style={styles.actionBtnSecondary}
                     onPress={() => navigation.navigate('MyVehicles')} accessibilityRole="button"
                   >
                     <Ionicons name="add" size={16} color={darkColors.text} style={{ marginRight: 4 }} />
-                    <Text style={styles.actionBtnText}>Add Vehicle</Text>
+                    <Text style={styles.actionBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Add Vehicle</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -337,30 +337,30 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
             <View style={styles.dashboardCard}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
                 <Ionicons name="shield-checkmark-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
-                <Text style={styles.cardHeaderTitle}>Quick-Access Contact</Text>
+                <Text style={styles.cardHeaderTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Quick-Access Contact</Text>
               </View>
               {primaryContact ? (
                 <View style={styles.contactDetailsBlock}>
                   <View style={{ flex: 1, marginRight: 12 }}>
-                    <Text style={styles.contactDisplayName}>{primaryContact.name}</Text>
-                    <Text style={styles.contactDisplaySub}>
+                    <Text style={styles.contactDisplayName} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{primaryContact.name}</Text>
+                    <Text style={styles.contactDisplaySub} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                       {primaryContact.relationship} • {primaryContact.phoneNumber}
                     </Text>
                   </View>
                   <TouchableOpacity style={styles.callNowBtn} onPress={handleQuickCall} accessibilityRole="button">
                     <Ionicons name="call" size={14} color={darkColors.text} style={{ marginRight: 4 }} />
-                    <Text style={styles.callNowBtnText}>CALL</Text>
+                    <Text style={styles.callNowBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>CALL</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
                 <View style={styles.vehicleDetailsBlock}>
-                  <Text style={styles.noVehicleText}>No emergency contacts registered.</Text>
+                  <Text style={styles.noVehicleText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>No emergency contacts registered.</Text>
                   <TouchableOpacity
                     style={styles.actionBtnSecondary}
                     onPress={() => navigation.navigate('EmergencyContacts')} accessibilityRole="button"
                   >
                     <Ionicons name="add" size={16} color={darkColors.text} style={{ marginRight: 4 }} />
-                    <Text style={styles.actionBtnText}>Add Contact</Text>
+                    <Text style={styles.actionBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Add Contact</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -379,7 +379,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                   (preferences?.drivingModeEnabled) ? styles.circleActive : styles.circleInactive
                 ]}
                 activeOpacity={0.8} accessibilityRole="button"
-              >
+               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                 <Ionicons
                   name="power"
                   size={48}
@@ -387,10 +387,10 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 />
               </TouchableOpacity>
 
-              <Text style={styles.drivingModeStatusText}>
+              <Text style={styles.drivingModeStatusText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 Driving Mode
               </Text>
-              <Text style={styles.drivingModeActionText}>
+              <Text style={styles.drivingModeActionText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 {(preferences?.drivingModeEnabled) ? 'On' : 'Off'}
               </Text>
             </View>
@@ -403,14 +403,14 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
     <View style={{ flex: 1, backgroundColor: darkColors.surface }}>
       {/* Header */}
       <View style={styles.customHeader}>
-        <TouchableOpacity onPress={() => setIsDrawerOpen(true)} accessibilityRole="button" accessibilityLabel="Menu">
+        <TouchableOpacity onPress={() => setIsDrawerOpen(true)} accessibilityRole="button" accessibilityLabel="Menu" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Ionicons name="menu" size={28} color={darkColors.text} />
         </TouchableOpacity>
-        <Text style={styles.customHeaderTitle}>ResQDrive</Text>
+        <Text style={styles.customHeaderTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>ResQDrive</Text>
         <TouchableOpacity 
           onPress={() => navigation.navigate('BleSensorDemo')}
           style={{ padding: 4 }} accessibilityRole="button"
-        >
+         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Ionicons 
             name={connectionStatus === 'connected' ? 'bluetooth' : 'bluetooth-outline'} 
             size={24} 
@@ -435,31 +435,31 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
         <TouchableOpacity style={tabStyles.tabItem} onPress={() => handleTabPress('home')} accessibilityRole="button">
           {activeTab === 'home' && <View style={tabStyles.activeIndicator} />}
           <Ionicons name={activeTab === 'home' ? "home" : "home-outline"} size={22} color={activeTab === 'home' ? colors.danger[600] : darkColors.textTertiary} />
-          <Text style={[tabStyles.tabLabel, activeTab === 'home' && tabStyles.activeTabLabel]}>Home</Text>
+          <Text style={[tabStyles.tabLabel, activeTab === 'home' && tabStyles.activeTabLabel]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Home</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={tabStyles.tabItem} onPress={() => handleTabPress('alert')} accessibilityRole="button">
           {activeTab === 'alert' && <View style={tabStyles.activeIndicator} />}
           <Ionicons name={activeTab === 'alert' ? "warning" : "warning-outline"} size={22} color={activeTab === 'alert' ? colors.danger[600] : darkColors.textTertiary} />
-          <Text style={[tabStyles.tabLabel, activeTab === 'alert' && tabStyles.activeTabLabel]}>Alert</Text>
+          <Text style={[tabStyles.tabLabel, activeTab === 'alert' && tabStyles.activeTabLabel]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Alert</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={tabStyles.tabItem} onPress={() => handleTabPress('damage')} accessibilityRole="button">
           {activeTab === 'damage' && <View style={tabStyles.activeIndicator} />}
           <Ionicons name={activeTab === 'damage' ? "camera" : "camera-outline"} size={22} color={activeTab === 'damage' ? colors.danger[600] : darkColors.textTertiary} />
-          <Text style={[tabStyles.tabLabel, activeTab === 'damage' && tabStyles.activeTabLabel]}>Damage</Text>
+          <Text style={[tabStyles.tabLabel, activeTab === 'damage' && tabStyles.activeTabLabel]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Damage</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={tabStyles.tabItem} onPress={() => handleTabPress('services')} accessibilityRole="button">
           {activeTab === 'services' && <View style={tabStyles.activeIndicator} />}
           <Ionicons name={activeTab === 'services' ? "location" : "location-outline"} size={22} color={activeTab === 'services' ? colors.danger[600] : darkColors.textTertiary} />
-          <Text style={[tabStyles.tabLabel, activeTab === 'services' && tabStyles.activeTabLabel]}>Hospital</Text>
+          <Text style={[tabStyles.tabLabel, activeTab === 'services' && tabStyles.activeTabLabel]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Hospital</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={tabStyles.tabItem} onPress={() => handleTabPress('parts')} accessibilityRole="button">
           {activeTab === 'parts' && <View style={tabStyles.activeIndicator} />}
           <MaterialCommunityIcons name={activeTab === 'parts' ? "wrench" : "wrench-outline"} size={22} color={activeTab === 'parts' ? colors.danger[600] : darkColors.textTertiary} />
-          <Text style={[tabStyles.tabLabel, activeTab === 'parts' && tabStyles.activeTabLabel]}>Workshop</Text>
+          <Text style={[tabStyles.tabLabel, activeTab === 'parts' && tabStyles.activeTabLabel]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Workshop</Text>
         </TouchableOpacity>
       </View>
 
@@ -469,7 +469,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
           <TouchableOpacity style={drawerStyles.backdrop} activeOpacity={1} onPress={() => setIsDrawerOpen(false)} accessibilityRole="button" />
           <View style={drawerStyles.drawerContainer}>
             <View style={drawerStyles.drawerHeader}>
-              <Text style={drawerStyles.drawerTitle}>Menu Options</Text>
+              <Text style={drawerStyles.drawerTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Menu Options</Text>
               <TouchableOpacity onPress={() => setIsDrawerOpen(false)} accessibilityRole="button" accessibilityLabel="Close">
                 <Ionicons name="close-outline" size={24} color={darkColors.text} />
               </TouchableOpacity>
@@ -485,9 +485,9 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="car-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
-                  <Text style={styles.menuItemText}>My Vehicles</Text>
+                  <Text style={styles.menuItemText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>My Vehicles</Text>
                 </View>
-                <Text style={styles.menuItemArrow}>›</Text>
+                <Text style={styles.menuItemArrow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -499,9 +499,9 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="call-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
-                  <Text style={styles.menuItemText}>Emergency Contacts</Text>
+                  <Text style={styles.menuItemText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Emergency Contacts</Text>
                 </View>
-                <Text style={styles.menuItemArrow}>›</Text>
+                <Text style={styles.menuItemArrow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -513,9 +513,9 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="notifications-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
-                  <Text style={styles.menuItemText}>Notification History</Text>
+                  <Text style={styles.menuItemText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Notification History</Text>
                 </View>
-                <Text style={styles.menuItemArrow}>›</Text>
+                <Text style={styles.menuItemArrow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -527,9 +527,9 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="settings-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
-                  <Text style={styles.menuItemText}>Notification Preferences</Text>
+                  <Text style={styles.menuItemText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Notification Preferences</Text>
                 </View>
-                <Text style={styles.menuItemArrow}>›</Text>
+                <Text style={styles.menuItemArrow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -541,9 +541,9 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="mic-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
-                  <Text style={styles.menuItemText}>Crash Sound Detection</Text>
+                  <Text style={styles.menuItemText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Crash Sound Detection</Text>
                 </View>
-                <Text style={styles.menuItemArrow}>›</Text>
+                <Text style={styles.menuItemArrow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -555,9 +555,9 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="bluetooth-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
-                  <Text style={styles.menuItemText}>BLE Sensor Diagnostics</Text>
+                  <Text style={styles.menuItemText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>BLE Sensor Diagnostics</Text>
                 </View>
-                <Text style={styles.menuItemArrow}>›</Text>
+                <Text style={styles.menuItemArrow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -569,9 +569,9 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="volume-high-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
-                  <Text style={styles.menuItemText}>Voice Commands</Text>
+                  <Text style={styles.menuItemText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Voice Commands</Text>
                 </View>
-                <Text style={styles.menuItemArrow}>›</Text>
+                <Text style={styles.menuItemArrow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -583,9 +583,9 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="person-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
-                  <Text style={styles.menuItemText}>My Profile Details</Text>
+                  <Text style={styles.menuItemText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>My Profile Details</Text>
                 </View>
-                <Text style={styles.menuItemArrow}>›</Text>
+                <Text style={styles.menuItemArrow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -597,9 +597,9 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="document-text-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
-                  <Text style={styles.menuItemText}>Incident History</Text>
+                  <Text style={styles.menuItemText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Incident History</Text>
                 </View>
-                <Text style={styles.menuItemArrow}>›</Text>
+                <Text style={styles.menuItemArrow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -611,9 +611,9 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="location-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
-                  <Text style={styles.menuItemText}>Share Live Location</Text>
+                  <Text style={styles.menuItemText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Share Live Location</Text>
                 </View>
-                <Text style={styles.menuItemArrow}>›</Text>
+                <Text style={styles.menuItemArrow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -625,9 +625,9 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="warning-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
-                  <Text style={styles.menuItemText}>Emergency Alert</Text>
+                  <Text style={styles.menuItemText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Emergency Alert</Text>
                 </View>
-                <Text style={styles.menuItemArrow}>›</Text>
+                <Text style={styles.menuItemArrow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -639,9 +639,9 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                   <Ionicons name="flask-outline" size={18} color={darkColors.textTertiary} />
-                  <Text style={styles.menuItemText}>Test Emergency Fallback</Text>
+                  <Text style={styles.menuItemText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Test Emergency Fallback</Text>
                 </View>
-                <Text style={styles.menuItemArrow}>›</Text>
+                <Text style={styles.menuItemArrow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -653,9 +653,9 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                   <Ionicons name="alert-circle-outline" size={18} color={colors.danger[600]} />
-                  <Text style={[styles.menuItemText, { color: colors.danger[600], fontWeight: 'bold' }]}>Send Emergency Alert</Text>
+                  <Text style={[styles.menuItemText, { color: colors.danger[600], fontWeight: 'bold' }]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Send Emergency Alert</Text>
                 </View>
-                <Text style={[styles.menuItemArrow, { color: colors.danger[600] }]}>›</Text>
+                <Text style={[styles.menuItemArrow, { color: colors.danger[600] }]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
               </TouchableOpacity>
 
 
@@ -683,9 +683,9 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                   <Ionicons name="warning-outline" size={18} color={darkColors.text} />
-                  <Text style={[styles.menuItemText, { color: darkColors.text }]}>Simulate Crash (Test Countdown)</Text>
+                  <Text style={[styles.menuItemText, { color: darkColors.text }]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Simulate Crash (Test Countdown)</Text>
                 </View>
-                <Text style={[styles.menuItemArrow, { color: darkColors.text }]}>›</Text>
+                <Text style={[styles.menuItemArrow, { color: darkColors.text }]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>

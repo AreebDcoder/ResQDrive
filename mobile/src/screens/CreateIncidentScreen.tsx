@@ -95,7 +95,7 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
   if (isEdit && loadError) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>{loadError}</Text>
+        <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{loadError}</Text>
       </View>
     );
   }
@@ -106,7 +106,7 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
       style={styles.container}
     >
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
-        <Text style={styles.sectionTitle} accessibilityRole="header">Severity</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Severity</Text>
         <Controller
           control={control}
           name="severity"
@@ -121,15 +121,15 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
                   }]}
                   onPress={() => onChange(opt)} accessibilityRole="button"
                 >
-                  <Text style={[styles.chipText, value === opt && { color: SEVERITY_COLORS[opt] }]}>{opt}</Text>
+                  <Text style={[styles.chipText, value === opt && { color: SEVERITY_COLORS[opt] }]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{opt}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           )}
         />
-        {errors.severity && <Text style={styles.errorHelper}>{errors.severity.message}</Text>}
+        {errors.severity && <Text style={styles.errorHelper} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errors.severity.message}</Text>}
 
-        <Text style={styles.sectionTitle} accessibilityRole="header">Status</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Status</Text>
         <Controller
           control={control}
           name="status"
@@ -144,14 +144,14 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
                   }]}
                   onPress={() => onChange(opt)} accessibilityRole="button"
                 >
-                  <Text style={[styles.chipText, value === opt && { color: STATUS_COLORS[opt] }]}>{opt.replace('_', ' ')}</Text>
+                  <Text style={[styles.chipText, value === opt && { color: STATUS_COLORS[opt] }]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{opt.replace('_', ' ')}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           )}
         />
 
-        <Text style={styles.sectionTitle} accessibilityRole="header">Date & Time (YYYY-MM-DDTHH:MM)</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Date & Time (YYYY-MM-DDTHH:MM)</Text>
         <FormInput
           name="occurredAt"
           control={control}

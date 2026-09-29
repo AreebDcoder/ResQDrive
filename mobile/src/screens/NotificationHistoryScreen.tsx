@@ -24,12 +24,14 @@ import {
 } from '../store/slices/notificationsSlice';
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useToast } from '../components/ui/Toast';
 import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function NotificationHistoryScreen() {
   const toast = useToast();
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
 const { history = [], pagination, isHistoryLoading, error } = useSelector(
     (state: RootState) => state.notifications
   );
@@ -118,16 +120,16 @@ const { history = [], pagination, isHistoryLoading, error } = useSelector(
   return (
     <View style={styles.container}>
       {/* ── Header ── */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Ionicons name="mail-unread-outline" size={24} color={colors.danger[500]} />
-          <Text style={styles.title} accessibilityRole="header">History Inbox</Text>
+          <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>History Inbox</Text>
         </View>
         {logs?.some((l: NotificationLog) => !l.isRead) && (
           <TouchableOpacity style={styles.markAllBtn} onPress={handleMarkAllRead} accessibilityRole="button">
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <Ionicons name="checkmark-done" size={16} color={colors.success[400]} />
-              <Text style={styles.markAllText}>Mark all read</Text>
+              <Text style={styles.markAllText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Mark all read</Text>
             </View>
           </TouchableOpacity>
         )}
@@ -138,16 +140,16 @@ const { history = [], pagination, isHistoryLoading, error } = useSelector(
       ) : error ? (
         <View style={styles.centerContainer}>
           <Ionicons name="alert-circle-outline" size={36} color={colors.danger[400]} style={{ marginBottom: 8 }} />
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{error}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={() => fetchHistory(1, false)} accessibilityRole="button">
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Retry</Text>
           </TouchableOpacity>
         </View>
       ) : logs.length === 0 ? (
         <View style={styles.centerContainer}>
           <Ionicons name="mail-open-outline" size={48} color={darkColors.textTertiary} style={{ marginBottom: 12 }} />
-          <Text style={styles.emptyText}>Your inbox is empty.</Text>
-          <Text style={styles.emptySubtitle}>Pushes and logs will show up here.</Text>
+          <Text style={styles.emptyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Your inbox is empty.</Text>
+          <Text style={styles.emptySubtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Pushes and logs will show up here.</Text>
         </View>
       ) : (
         <FlatList
@@ -168,9 +170,9 @@ const { history = [], pagination, isHistoryLoading, error } = useSelector(
               <View style={styles.cardHeader}>
                 {renderCategoryIcon(item.category)}
                 <View style={styles.cardInfo}>
-                  <Text style={styles.cardTitleText}>{item.title}</Text>
-                  <Text style={styles.cardBodyText}>{item.body}</Text>
-                  <Text style={styles.cardDate}>{formatDate(item.createdAt)}</Text>
+                  <Text style={styles.cardTitleText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.title}</Text>
+                  <Text style={styles.cardBodyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.body}</Text>
+                  <Text style={styles.cardDate} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{formatDate(item.createdAt)}</Text>
                 </View>
                 {!item.isRead && <View style={styles.unreadDot} />}
               </View>

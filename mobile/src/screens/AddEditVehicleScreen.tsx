@@ -18,6 +18,7 @@ import { vehicleSchema, VehicleInput } from '../schemas/validation';
 import { addVehicleSuccess, updateVehicleSuccess, deleteVehicleSuccess } from '../store/slices/vehiclesSlice';
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useToast } from '../components/ui/Toast';
 import { ConfirmDialog } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
@@ -25,6 +26,7 @@ import { colors, darkColors, tints } from '../theme/tokens';
 export default function AddEditVehicleScreen({ route, navigation }: any) {
   const toast = useToast();
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
   const vehicle = route.params?.vehicle; // If defined, we are editing
   const isEditing = !!vehicle;
 
@@ -100,16 +102,16 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
-      <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.scrollContainer, { paddingTop: insets.top + 16 }]} keyboardShouldPersistTaps="handled">
         {/* ── Header ── */}
         <View style={styles.header}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Ionicons name={isEditing ? 'pencil-outline' : 'car-outline'} size={26} color={colors.danger[500]} />
-            <Text style={styles.title} accessibilityRole="header">
+            <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               {isEditing ? 'Edit Vehicle' : 'Add Vehicle'}
             </Text>
           </View>
-          <Text style={styles.subtitle}>
+          <Text style={styles.subtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             {isEditing ? 'Update your registered vehicle details' : 'Register a vehicle for accident detection'}
           </Text>
         </View>
@@ -118,12 +120,12 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
         {errorMsg && (
           <View style={styles.errorContainer}>
             <Ionicons name="alert-circle-outline" size={18} color={colors.danger[300]} style={{ marginRight: 8 }} />
-            <Text style={styles.errorText}>{errorMsg}</Text>
+            <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errorMsg}</Text>
           </View>
         )}
 
         <View style={styles.form}>
-          <Text style={styles.label}>Make / Manufacturer</Text>
+          <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Make / Manufacturer</Text>
           <Controller
             control={control}
             name="make"
@@ -135,12 +137,14 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
+                allowFontScaling={true}
+                maxFontSizeMultiplier={1.5}
               />
             )}
           />
-          {errors.make && <Text style={styles.errorHelper}>{errors.make.message}</Text>}
+          {errors.make && <Text style={styles.errorHelper} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errors.make.message}</Text>}
 
-          <Text style={styles.label}>Model</Text>
+          <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Model</Text>
           <Controller
             control={control}
             name="model"
@@ -152,14 +156,16 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
+                allowFontScaling={true}
+                maxFontSizeMultiplier={1.5}
               />
             )}
           />
-          {errors.model && <Text style={styles.errorHelper}>{errors.model.message}</Text>}
+          {errors.model && <Text style={styles.errorHelper} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errors.model.message}</Text>}
 
           <View style={styles.row}>
             <View style={styles.rowCol}>
-              <Text style={styles.label}>Year</Text>
+              <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Year</Text>
               <Controller
                 control={control}
                 name="year"
@@ -172,14 +178,16 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
                     onBlur={onBlur}
                     onChangeText={onChange}
                     value={value !== undefined && value !== null ? String(value) : ''}
+                    allowFontScaling={true}
+                    maxFontSizeMultiplier={1.5}
                   />
                 )}
               />
-              {errors.year && <Text style={styles.errorHelper}>{errors.year.message}</Text>}
+              {errors.year && <Text style={styles.errorHelper} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errors.year.message}</Text>}
             </View>
 
             <View style={styles.rowCol}>
-              <Text style={styles.label}>Color</Text>
+              <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Color</Text>
               <Controller
                 control={control}
                 name="color"
@@ -191,14 +199,16 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
                     onBlur={onBlur}
                     onChangeText={onChange}
                     value={value}
+                    allowFontScaling={true}
+                    maxFontSizeMultiplier={1.5}
                   />
                 )}
               />
-              {errors.color && <Text style={styles.errorHelper}>{errors.color.message}</Text>}
+              {errors.color && <Text style={styles.errorHelper} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errors.color.message}</Text>}
             </View>
           </View>
 
-          <Text style={styles.label}>License Plate Number</Text>
+          <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>License Plate Number</Text>
           <Controller
             control={control}
             name="licensePlate"
@@ -211,10 +221,12 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
+                allowFontScaling={true}
+                maxFontSizeMultiplier={1.5}
               />
             )}
           />
-          {errors.licensePlate && <Text style={styles.errorHelper}>{errors.licensePlate.message}</Text>}
+          {errors.licensePlate && <Text style={styles.errorHelper} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errors.licensePlate.message}</Text>}
 
           {/* ── Save Button ── */}
           <TouchableOpacity
@@ -225,7 +237,7 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
             {isLoading ? (
               <ActivityIndicator color={darkColors.text} />
             ) : (
-              <Text style={styles.saveBtnText}>
+              <Text style={styles.saveBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 {isEditing ? 'Save Changes' : 'Register Vehicle'}
               </Text>
             )}
@@ -245,7 +257,7 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                   <Ionicons name="shield-checkmark-outline" size={18} color={colors.danger[500]} />
-                  <Text style={styles.insuranceBtnText}>
+                  <Text style={styles.insuranceBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                     {vehicle.insurance ? 'View/Edit Insurance Details' : 'Add Vehicle Insurance (Optional)'}
                   </Text>
                 </View>
@@ -258,7 +270,7 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                   <Ionicons name="trash-outline" size={18} color={colors.danger[400]} />
-                  <Text style={styles.deleteBtnText}>Remove Vehicle</Text>
+                  <Text style={styles.deleteBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Remove Vehicle</Text>
                 </View>
               </TouchableOpacity>
             </View>

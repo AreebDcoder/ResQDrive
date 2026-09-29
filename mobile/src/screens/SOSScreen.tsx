@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
+  AccessibilityInfo,
   View,
   Text,
   StyleSheet,
@@ -114,15 +115,30 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
   const listOpacity = useRef(new Animated.Value(1)).current;
   const listTranslateY = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-    // Header fade in
-    Animated.timing(headerOpacity, {
-      toValue: 1,
-      duration: 500,
-      useNativeDriver: true,
-    }).start();
+  // Batch 7 Phase 4: Respect Reduce Motion accessibility setting
+  const [reduceMotion, setReduceMotion] = useState(false);
 
-    // SOS pulse loop
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    // Skip decorative header entrance animation when Reduce Motion is enabled.
+    // The sosPulse Animated.loop is a functional pulse indicator and remains running.
+    if (reduceMotion) {
+      headerOpacity.setValue(1);
+    } else {
+      // Header fade in
+      Animated.timing(headerOpacity, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+    }
+
+    // SOS pulse loop — continuous pulse effect, NOT skipped (functional indicator)
     Animated.loop(
       Animated.sequence([
         Animated.timing(sosPulse, {
@@ -139,7 +155,7 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
         }),
       ]),
     ).start();
-  }, []);
+  }, [reduceMotion]);
 
   const regionalNumbersRef = useRef(regionalNumbers);
 
@@ -358,15 +374,15 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
       {/* Header */}
       <Animated.View style={[styles.header, { opacity: headerOpacity }]}>
         {!isInline && (
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Back">
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Back" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Ionicons name="arrow-back" size={24} color={darkColors.text} />
           </TouchableOpacity>
         )}
         <View style={styles.headerContent}>
-          <Text style={styles.title} accessibilityRole="header">Emergency SOS</Text>
+          <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Emergency SOS</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
             <Ionicons name="location-sharp" size={14} color={colors.danger[500]} />
-            <Text style={styles.subtitle}>
+            <Text style={styles.subtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               {isLocating ? 'Detecting local services...' : regionName}
             </Text>
             {isLocating && <ActivityIndicator size="small" color={colors.danger[500]} style={{ marginLeft: 6 }} />}
@@ -378,7 +394,7 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
       {isEscalationActive && (
         <View style={styles.countdownBanner}>
           <Ionicons name="warning" size={24} color={colors.warning[500]} style={{ marginRight: 8 }} />
-          <Text style={styles.countdownText}>
+          <Text style={styles.countdownText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             Auto-dialing {pendingCallTarget?.name || 'rescue'} in {escalationTimeLeft}s if no response...
           </Text>
         </View>
@@ -396,7 +412,7 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
           >
-            <Text style={styles.sectionLabel}>REGIONAL EMERGENCY SERVICES</Text>
+            <Text style={styles.sectionLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>REGIONAL EMERGENCY SERVICES</Text>
             {regionalNumbers.map((item, index) => (
               <TouchableOpacity
                 key={item.id}
@@ -408,11 +424,11 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
                   <Ionicons name="call-outline" size={24} color={darkColors.text} />
                 </View>
                 <View style={styles.callCardText}>
-                  <Text style={styles.callName}>{item.serviceName}</Text>
-                  <Text style={styles.callNumber}>{item.phoneNumber}</Text>
+                  <Text style={styles.callName} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.serviceName}</Text>
+                  <Text style={styles.callNumber} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.phoneNumber}</Text>
                 </View>
                 <View style={styles.callNowBadge}>
-                  <Text style={styles.callNowText}>CALL</Text>
+                  <Text style={styles.callNowText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>CALL</Text>
                 </View>
               </TouchableOpacity>
             ))}
@@ -420,8 +436,8 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
 
 
             <View style={styles.noteBox}>
-              <Text style={styles.noteIcon}>ℹ️</Text>
-              <Text style={styles.noteText}>
+              <Text style={styles.noteIcon} allowFontScaling={true} maxFontSizeMultiplier={1.5}>ℹ️</Text>
+              <Text style={styles.noteText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 These calls work as standard cellular calls and do not require internet access.
               </Text>
             </View>

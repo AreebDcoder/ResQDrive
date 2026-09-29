@@ -146,11 +146,11 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
     <View style={[styles.card, item.isVerifiedPartner && styles.cardPartner, index === 0 && !item.isVerifiedPartner && styles.cardNearest]}>
       {item.isVerifiedPartner ? (
         <View style={styles.partnerBadge}>
-          <Text style={styles.partnerBadgeText}>⭐ VERIFIED PARTNER</Text>
+          <Text style={styles.partnerBadgeText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>⭐ VERIFIED PARTNER</Text>
         </View>
       ) : index === 0 ? (
         <View style={styles.nearestBadge}>
-          <Text style={styles.nearestBadgeText}>NEAREST</Text>
+          <Text style={styles.nearestBadgeText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>NEAREST</Text>
         </View>
       ) : null}
 
@@ -159,14 +159,14 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
           <Ionicons name="construct-outline" size={24} color={item.isVerifiedPartner ? colors.success[400] : colors.danger[500]} />
         </View>
         <View style={styles.cardHeaderText}>
-          <Text style={styles.workshopName} numberOfLines={2}>
+          <Text style={styles.workshopName} numberOfLines={2} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             {item.name}
           </Text>
-          <Text style={styles.workshopAddress} numberOfLines={1}>
+          <Text style={styles.workshopAddress} numberOfLines={1} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             {item.address}
           </Text>
           <View style={[styles.specializationBadge, item.isVerifiedPartner && styles.specializationBadgePartner]}>
-            <Text style={[styles.specializationText, item.isVerifiedPartner && styles.specializationTextPartner]}>
+            <Text style={[styles.specializationText, item.isVerifiedPartner && styles.specializationTextPartner]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               {item.specialization}
             </Text>
           </View>
@@ -175,13 +175,13 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
 
       <View style={styles.statsRow}>
         <View style={styles.statBox}>
-          <Text style={styles.statValue}>{formatDistance(item.distanceMeters)}</Text>
-          <Text style={styles.statLabel}>Distance</Text>
+          <Text style={styles.statValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{formatDistance(item.distanceMeters)}</Text>
+          <Text style={styles.statLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Distance</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statBox}>
-          <Text style={styles.statValue}>{item.durationText}</Text>
-          <Text style={styles.statLabel}>ETA</Text>
+          <Text style={styles.statValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.durationText}</Text>
+          <Text style={styles.statLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>ETA</Text>
         </View>
       </View>
 
@@ -194,7 +194,7 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
           >
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Ionicons name="call-outline" size={16} color={colors.success[400]} style={{ marginRight: 6 }} />
-              <Text style={styles.callBtnText}>Call</Text>
+              <Text style={styles.callBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Call</Text>
             </View>
           </TouchableOpacity>
         ) : null}
@@ -205,7 +205,7 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
         >
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Ionicons name="navigate-outline" size={16} color={darkColors.text} style={{ marginRight: 6 }} />
-            <Text style={styles.navigateBtnText}>Navigate</Text>
+            <Text style={styles.navigateBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Navigate</Text>
           </View>
         </TouchableOpacity>
       </View>
@@ -217,31 +217,31 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
       {/* ── Header ── */}
       <View style={styles.header}>
         {!isInline && (
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Back">
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Back" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Ionicons name="arrow-back" size={20} color={darkColors.text} />
           </TouchableOpacity>
         )}
         <View>
-          <Text style={styles.title} accessibilityRole="header">Nearby Workshops</Text>
-          <Text style={styles.subtitle}>Verified mechanics near you</Text>
+          <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Nearby Workshops</Text>
+          <Text style={styles.subtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Verified mechanics near you</Text>
         </View>
       </View>
 
       {isLoading && (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={colors.danger[500]} />
-          <Text style={styles.loadingText}>Finding nearby workshops...</Text>
+          <Text style={styles.loadingText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Finding nearby workshops...</Text>
         </View>
       )}
 
       {!isLoading && errorMsg && (
         <View style={styles.centerContainer}>
           <Ionicons name="warning-outline" size={48} color={colors.danger[400]} style={{ marginBottom: 12 }} />
-          <Text style={styles.errorText}>{errorMsg}</Text>
+          <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errorMsg}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={() => fetchWorkshops()} accessibilityRole="button">
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Ionicons name="refresh-outline" size={16} color={darkColors.text} style={{ marginRight: 6 }} />
-              <Text style={styles.retryBtnText}>Try Again</Text>
+              <Text style={styles.retryBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Try Again</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -250,7 +250,7 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
       {!isLoading && !errorMsg && workshops.length === 0 && (
         <View style={styles.centerContainer}>
           <Ionicons name="search-outline" size={48} color={darkColors.textTertiary} style={{ marginBottom: 12 }} />
-          <Text style={styles.errorText}>No verified workshops found nearby yet.</Text>
+          <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>No verified workshops found nearby yet.</Text>
         </View>
       )}
 

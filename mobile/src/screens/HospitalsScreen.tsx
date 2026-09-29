@@ -133,7 +133,7 @@ export default function HospitalsScreen({ navigation, isInline }: { navigation: 
     <View style={[styles.card, index === 0 && styles.cardNearest]}>
       {index === 0 && (
         <View style={styles.nearestBadge}>
-          <Text style={styles.nearestBadgeText}>NEAREST</Text>
+          <Text style={styles.nearestBadgeText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>NEAREST</Text>
         </View>
       )}
 
@@ -142,10 +142,10 @@ export default function HospitalsScreen({ navigation, isInline }: { navigation: 
           <Ionicons name="medical-outline" size={24} color={colors.danger[500]} />
         </View>
         <View style={styles.cardHeaderText}>
-          <Text style={styles.hospitalName} numberOfLines={2}>
+          <Text style={styles.hospitalName} numberOfLines={2} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             {item.name}
           </Text>
-          <Text style={styles.hospitalAddress} numberOfLines={1}>
+          <Text style={styles.hospitalAddress} numberOfLines={1} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             {item.address}
           </Text>
         </View>
@@ -153,13 +153,13 @@ export default function HospitalsScreen({ navigation, isInline }: { navigation: 
 
       <View style={styles.statsRow}>
         <View style={styles.statBox}>
-          <Text style={styles.statValue}>{formatDistance(item.distanceMeters)}</Text>
-          <Text style={styles.statLabel}>Distance</Text>
+          <Text style={styles.statValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{formatDistance(item.distanceMeters)}</Text>
+          <Text style={styles.statLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Distance</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statBox}>
-          <Text style={styles.statValue}>{item.durationText}</Text>
-          <Text style={styles.statLabel}>ETA</Text>
+          <Text style={styles.statValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.durationText}</Text>
+          <Text style={styles.statLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>ETA</Text>
         </View>
       </View>
 
@@ -170,7 +170,7 @@ export default function HospitalsScreen({ navigation, isInline }: { navigation: 
       >
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Ionicons name="navigate-outline" size={16} color={darkColors.text} style={{ marginRight: 6 }} />
-          <Text style={styles.navigateBtnText}>Navigate</Text>
+          <Text style={styles.navigateBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Navigate</Text>
         </View>
       </TouchableOpacity>
     </View>
@@ -181,31 +181,31 @@ export default function HospitalsScreen({ navigation, isInline }: { navigation: 
       {/* ── Header ── */}
       <View style={styles.header}>
         {!isInline && (
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Back">
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Back" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Ionicons name="arrow-back" size={20} color={darkColors.text} />
           </TouchableOpacity>
         )}
         <View>
-          <Text style={styles.title} accessibilityRole="header">Nearest Hospitals</Text>
-          <Text style={styles.subtitle}>Emergency medical care near you</Text>
+          <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Nearest Hospitals</Text>
+          <Text style={styles.subtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Emergency medical care near you</Text>
         </View>
       </View>
 
       {isLoading && (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={colors.danger[500]} />
-          <Text style={styles.loadingText}>Locating nearby hospitals...</Text>
+          <Text style={styles.loadingText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Locating nearby hospitals...</Text>
         </View>
       )}
 
       {!isLoading && errorMsg && (
         <View style={styles.centerContainer}>
           <Ionicons name="warning-outline" size={48} color={colors.danger[400]} style={{ marginBottom: 12 }} />
-          <Text style={styles.errorText}>{errorMsg}</Text>
+          <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errorMsg}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={() => fetchHospitals()} accessibilityRole="button">
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Ionicons name="refresh-outline" size={16} color={darkColors.text} style={{ marginRight: 6 }} />
-              <Text style={styles.retryBtnText}>Try Again</Text>
+              <Text style={styles.retryBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Try Again</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -214,7 +214,7 @@ export default function HospitalsScreen({ navigation, isInline }: { navigation: 
       {!isLoading && !errorMsg && hospitals.length === 0 && (
         <View style={styles.centerContainer}>
           <Ionicons name="search-outline" size={48} color={darkColors.textTertiary} style={{ marginBottom: 12 }} />
-          <Text style={styles.errorText}>No hospitals found nearby.</Text>
+          <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>No hospitals found nearby.</Text>
         </View>
       )}
 

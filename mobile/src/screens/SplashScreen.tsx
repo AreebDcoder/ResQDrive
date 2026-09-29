@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  AccessibilityInfo,
   ActivityIndicator,
   Animated,
   Easing,
@@ -59,8 +60,30 @@ export default function SplashScreen() {
   const ringScale = useRef(new Animated.Value(0.7)).current;
   const ringOpacity = useRef(new Animated.Value(0.6)).current;
 
+  // Batch 7 Phase 4: Respect Reduce Motion accessibility setting
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
+
   // Entrance animation sequence
   useEffect(() => {
+    // Skip decorative entrance animation when Reduce Motion is enabled.
+    // The ring pulse loop and AnimatedDot loaders below are functional indicators
+    // and remain running per a11y guidance.
+    if (reduceMotion) {
+      ringScale.setValue(1.0);
+      ringOpacity.setValue(0.8);
+      logoScale.setValue(1);
+      logoOpacity.setValue(1);
+      titleTranslateY.setValue(0);
+      titleOpacity.setValue(1);
+      subtitleOpacity.setValue(1);
+      return;
+    }
     Animated.sequence([
       // Ring pulses in
       Animated.parallel([
@@ -111,7 +134,7 @@ export default function SplashScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [reduceMotion]);
   // Ring pulse loop — starts AFTER entrance animation completes
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -233,8 +256,8 @@ export default function SplashScreen() {
           },
         ]}
       >
-        <Text style={styles.title} accessibilityRole="header">
-          ResQ<Text style={styles.highlight}>Drive</Text>
+        <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+          ResQ<Text style={styles.highlight} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Drive</Text>
         </Text>
       </Animated.View>
 

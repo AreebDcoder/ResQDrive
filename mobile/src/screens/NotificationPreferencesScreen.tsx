@@ -17,6 +17,7 @@ import {
 } from '../store/slices/notificationsSlice';
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useToast } from '../components/ui/Toast';
 import { colors, darkColors, tints } from '../theme/tokens';
 
@@ -55,6 +56,7 @@ const CATEGORIES: Array<{
 export default function NotificationPreferencesScreen() {
   const toast = useToast();
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
   const { preferences, isLoading, error } = useSelector((state: RootState) => state.notifications);
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -102,14 +104,14 @@ export default function NotificationPreferencesScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 16 }]}>
       {/* ── Header ── */}
       <View style={styles.header}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <Ionicons name="settings-outline" size={26} color={colors.danger[500]} />
-          <Text style={styles.title} accessibilityRole="header">Notification Preferences</Text>
+          <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Notification Preferences</Text>
         </View>
-        <Text style={styles.subtitle}>
+        <Text style={styles.subtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
           Configure which categories of push notifications you want to receive on your device
         </Text>
       </View>
@@ -118,13 +120,13 @@ export default function NotificationPreferencesScreen() {
       {isUpdating && (
         <View style={styles.updatingBanner}>
           <ActivityIndicator size="small" color={colors.info[500]} />
-          <Text style={styles.updatingText}> Syncing...</Text>
+          <Text style={styles.updatingText} allowFontScaling={true} maxFontSizeMultiplier={1.5}> Syncing...</Text>
         </View>
       )}
 
       {error && (
         <View style={styles.errorBanner}>
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{error}</Text>
         </View>
       )}
 
@@ -141,8 +143,8 @@ export default function NotificationPreferencesScreen() {
                 <View style={styles.textContainer}>
                   <Ionicons name={category.icon} size={22} color={colors.danger[500]} style={{ marginRight: 12 }} />
                   <View style={styles.textInner}>
-                    <Text style={styles.preferenceTitle}>{category.title}</Text>
-                    <Text style={styles.preferenceDesc}>{category.description}</Text>
+                    <Text style={styles.preferenceTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{category.title}</Text>
+                    <Text style={styles.preferenceDesc} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{category.description}</Text>
                   </View>
                 </View>
                 <Switch

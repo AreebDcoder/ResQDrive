@@ -1,6 +1,7 @@
 import { colors, darkColors, tints } from '../../theme/tokens';
-import React, { useEffect, useCallback, useRef } from 'react';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
 import {
+  AccessibilityInfo,
   View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
   RefreshControl, Linking, Animated,
 } from 'react-native';
@@ -24,12 +25,27 @@ export default function AdminDashboardScreen({ navigation }: any) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
 
+  // Batch 7 Phase 4: Respect Reduce Motion accessibility setting
+  const [reduceMotion, setReduceMotion] = useState(false);
+
   useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    // Skip decorative entrance animation when Reduce Motion is enabled
+    if (reduceMotion) {
+      fadeAnim.setValue(1);
+      slideAnim.setValue(0);
+      return;
+    }
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
     ]).start();
-  }, [fadeAnim, slideAnim]);
+  }, [fadeAnim, slideAnim, reduceMotion]);
 
   useEffect(() => {
     dispatch(fetchAnalyticsSummary());
@@ -52,7 +68,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
         <View style={styles.center}>
           <View style={styles.glassCard}>
             <ActivityIndicator color={colors.danger[500]} size="large" />
-            <Text style={styles.loadingText}>Loading dashboard...</Text>
+            <Text style={styles.loadingText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Loading dashboard...</Text>
           </View>
         </View>
       </View>
@@ -68,9 +84,9 @@ export default function AdminDashboardScreen({ navigation }: any) {
         </View>
         <View style={styles.center}>
           <View style={styles.glassCard}>
-            <Text style={styles.errorText}>{error}</Text>
+            <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{error}</Text>
             <TouchableOpacity style={styles.retryBtn} onPress={() => onRefresh()} accessibilityRole="button">
-              <Text style={styles.retryBtnText}>Retry</Text>
+              <Text style={styles.retryBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Retry</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -96,47 +112,47 @@ export default function AdminDashboardScreen({ navigation }: any) {
             style={styles.manageSosBtn}
             onPress={() => navigation.navigate('AdminEmergencyNumbers')} accessibilityRole="button"
           >
-            <Text style={styles.manageSosBtnText}>Manage SOS Emergency Numbers</Text>
+            <Text style={styles.manageSosBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Manage SOS Emergency Numbers</Text>
           </TouchableOpacity>
 
-          <Text style={styles.sectionTitle} accessibilityRole="header">Overview</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Overview</Text>
           <View style={styles.cardsRow}>
             <View style={[styles.card, { borderLeftColor: colors.danger[500] }]}>
-              <Text style={styles.cardValue}>{summary?.totalIncidents ?? 0}</Text>
-              <Text style={styles.cardLabel}>Total</Text>
+              <Text style={styles.cardValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{summary?.totalIncidents ?? 0}</Text>
+              <Text style={styles.cardLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Total</Text>
             </View>
             <View style={[styles.card, { borderLeftColor: colors.warning[500] }]}>
-              <Text style={styles.cardValue}>{summary?.activeIncidents ?? 0}</Text>
-              <Text style={styles.cardLabel}>Active</Text>
+              <Text style={styles.cardValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{summary?.activeIncidents ?? 0}</Text>
+              <Text style={styles.cardLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Active</Text>
             </View>
             <View style={[styles.card, { borderLeftColor: colors.success[500] }]}>
-              <Text style={styles.cardValue}>{summary?.resolvedIncidents ?? 0}</Text>
-              <Text style={styles.cardLabel}>Resolved</Text>
+              <Text style={styles.cardValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{summary?.resolvedIncidents ?? 0}</Text>
+              <Text style={styles.cardLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Resolved</Text>
             </View>
             <View style={[styles.card, { borderLeftColor: darkColors.textTertiary }]}>
-              <Text style={styles.cardValue}>{summary?.falseAlarms ?? 0}</Text>
-              <Text style={styles.cardLabel}>False Alarms</Text>
+              <Text style={styles.cardValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{summary?.falseAlarms ?? 0}</Text>
+              <Text style={styles.cardLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>False Alarms</Text>
             </View>
           </View>
 
-          <Text style={styles.sectionTitle} accessibilityRole="header">Severity Breakdown</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Severity Breakdown</Text>
           <View style={styles.panel}>
             {['NONE', 'MINOR', 'MODERATE', 'SEVERE'].map((sev) => {
               const pct = summary?.severityPercentages?.[sev as keyof typeof summary.severityPercentages] ?? 0;
               const count = summary?.severityBreakdown?.[sev as keyof typeof summary.severityBreakdown] ?? 0;
               return (
                 <View key={sev} style={styles.barRow}>
-                  <Text style={[styles.barLabel, { color: SEVERITY_COLORS[sev] }]}>{sev}</Text>
+                  <Text style={[styles.barLabel, { color: SEVERITY_COLORS[sev] }]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{sev}</Text>
                   <View style={styles.barTrack}>
                     <View style={[styles.barFill, { width: `${pct}%`, backgroundColor: SEVERITY_COLORS[sev] }]} />
                   </View>
-                  <Text style={styles.barCount}>{count} ({pct}%)</Text>
+                  <Text style={styles.barCount} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{count} ({pct}%)</Text>
                 </View>
               );
             })}
           </View>
 
-          <Text style={styles.sectionTitle} accessibilityRole="header">Incident Trends (Last 30 Days)</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Incident Trends (Last 30 Days)</Text>
           <View style={styles.panel}>
             <View style={styles.chartRow}>
               {trends.map((t, i) => {
@@ -156,29 +172,29 @@ export default function AdminDashboardScreen({ navigation }: any) {
               })}
             </View>
             <View style={styles.chartLegend}>
-              <Text style={styles.chartLegendText}>
+              <Text style={styles.chartLegendText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 {trends[0]?.date.slice(5)} → {trends[trends.length - 1]?.date.slice(5)}
               </Text>
-              <Text style={styles.chartLegendText}>Peak: {maxTrend}/day</Text>
+              <Text style={styles.chartLegendText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Peak: {maxTrend}/day</Text>
             </View>
           </View>
 
-          <Text style={styles.sectionTitle} accessibilityRole="header">Top Incident Hotspots</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Top Incident Hotspots</Text>
           {hotspots.length === 0 ? (
             <View style={styles.panel}>
-              <Text style={styles.emptyText}>No geotagged incidents yet.</Text>
+              <Text style={styles.emptyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>No geotagged incidents yet.</Text>
             </View>
           ) : (
             hotspots.map((h, i) => (
               <View key={i} style={styles.hotspotCard}>
                 <View style={styles.hotspotHeader}>
-                  <Text style={styles.hotspotRank}>#{i + 1}</Text>
-                  <Text style={styles.hotspotCount}>{h.incidentCount} incidents</Text>
+                  <Text style={styles.hotspotRank} allowFontScaling={true} maxFontSizeMultiplier={1.5}>#{i + 1}</Text>
+                  <Text style={styles.hotspotCount} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{h.incidentCount} incidents</Text>
                 </View>
-                <Text style={styles.hotspotCoords}>{h.latitude.toFixed(4)}, {h.longitude.toFixed(4)}
+                <Text style={styles.hotspotCoords} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{h.latitude.toFixed(4)}, {h.longitude.toFixed(4)}
                 </Text>
                 {h.sampleAddresses.length > 0 && (
-                  <Text style={styles.hotspotAddr} numberOfLines={2}>
+                  <Text style={styles.hotspotAddr} numberOfLines={2} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                     {h.sampleAddresses.join(' • ')}
                   </Text>
                 )}
@@ -186,27 +202,27 @@ export default function AdminDashboardScreen({ navigation }: any) {
                   style={styles.mapsBtn}
                   onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${h.latitude},${h.longitude}`)} accessibilityRole="button"
                 >
-                  <Text style={styles.mapsBtnText}>Open in Google Maps</Text>
+                  <Text style={styles.mapsBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Open in Google Maps</Text>
                 </TouchableOpacity>
               </View>
             ))
           )}
 
-          <Text style={styles.sectionTitle} accessibilityRole="header">Recent Activity</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Recent Activity</Text>
           <View style={styles.panel}>
             {summary?.recentIncidents.length === 0 ? (
-              <Text style={styles.emptyText}>No recent incidents.</Text>
+              <Text style={styles.emptyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>No recent incidents.</Text>
             ) : (
               summary?.recentIncidents.map((inc) => (
                 <View key={inc.id} style={styles.recentRow}>
                   <View style={[styles.recentBadge, { backgroundColor: SEVERITY_COLORS[inc.severity] || darkColors.textTertiary }]}>
-                    <Text style={styles.recentBadgeText}>{inc.severity}</Text>
+                    <Text style={styles.recentBadgeText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{inc.severity}</Text>
                   </View>
                   <View style={styles.recentInfo}>
-                    <Text style={styles.recentDate}>{new Date(inc.occurredAt).toLocaleString()}</Text>
-                    {inc.address ? <Text style={styles.recentAddr} numberOfLines={1}>{inc.address}</Text> : null}
+                    <Text style={styles.recentDate} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{new Date(inc.occurredAt).toLocaleString()}</Text>
+                    {inc.address ? <Text style={styles.recentAddr} numberOfLines={1} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{inc.address}</Text> : null}
                   </View>
-                  <Text style={styles.recentStatus}>{inc.status.replace('_', ' ')}</Text>
+                  <Text style={styles.recentStatus} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{inc.status.replace('_', ' ')}</Text>
                 </View>
               ))
             )}

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import {
+  AccessibilityInfo,
   ActivityIndicator,
   Alert,
   Animated,
@@ -23,6 +24,7 @@ import { loginSuccess } from '../store/slices/authSlice';
 import api from '../api/axios';
 import { setItemAsync } from '../utils/secureStorage';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useToast } from '../components/ui/Toast';
 import { Button, FormInput } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
@@ -30,6 +32,7 @@ import { colors, darkColors, tints } from '../theme/tokens';
 export default function LoginScreen({ navigation }: { navigation: any }) {
   const toast = useToast();
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -40,6 +43,9 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
   const headerOpacity = useRef(new Animated.Value(0)).current;
   const headerTranslateY = useRef(new Animated.Value(16)).current;
 
+  // Batch 7 Phase 4: Respect Reduce Motion accessibility setting
+  const [reduceMotion, setReduceMotion] = useState(false);
+
   // Google Sign-In config
   useEffect(() => {
     GoogleSignin.configure({
@@ -49,6 +55,20 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
   }, []);
 
   useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    // Skip decorative entrance animation when Reduce Motion is enabled
+    if (reduceMotion) {
+      headerTranslateY.setValue(0);
+      headerOpacity.setValue(1);
+      cardY.setValue(0);
+      cardOpacity.setValue(1);
+      return;
+    }
     Animated.sequence([
       Animated.parallel([
         Animated.timing(headerTranslateY, {
@@ -77,7 +97,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
         }),
       ]),
     ]).start();
-  }, []);
+  }, [reduceMotion]);
 
   const {
     control,
@@ -174,7 +194,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
           style={styles.keyboardAvoid}
         >
           <ScrollView
-            contentContainerStyle={styles.scrollContainer}
+            contentContainerStyle={[styles.scrollContainer, { paddingTop: insets.top + 16 }]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
@@ -196,12 +216,12 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
                 <View style={styles.logoBadge}>
                   <Ionicons name="shield-checkmark" size={24} color={colors.danger[500]} />
                 </View>
-                <Text style={styles.brandText} accessibilityRole="header">
-                  ResQ<Text style={styles.brandAccent}>Drive</Text>
+                <Text style={styles.brandText} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+                  ResQ<Text style={styles.brandAccent} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Drive</Text>
                 </Text>
               </View>
-              <Text style={styles.title} accessibilityRole="header">Welcome Back</Text>
-              <Text style={styles.subtitle}>Log in to your ResQDrive account</Text>
+              <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Welcome Back</Text>
+              <Text style={styles.subtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Log in to your ResQDrive account</Text>
             </Animated.View>
 
             {/* Glass Card */}
@@ -218,7 +238,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
               {errorMsg && (
                 <View style={styles.errorContainer}>
                   <Ionicons name="alert-circle-outline" size={18} color={colors.danger[400]} style={{ marginRight: 6 }} />
-                  <Text style={styles.errorText}>{errorMsg}</Text>
+                  <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errorMsg}</Text>
                 </View>
               )}
 
@@ -266,7 +286,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
             {/* Divider */}
             <View style={styles.dividerRow}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or continue with</Text>
+              <Text style={styles.dividerText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>or continue with</Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -286,7 +306,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
 
             {/* Footer */}
             <View style={styles.footer}>
-              <Text style={styles.footerText}>Don't have an account? </Text>
+              <Text style={styles.footerText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Don't have an account? </Text>
               <Button
                 label="Sign Up"
                 variant="ghost"

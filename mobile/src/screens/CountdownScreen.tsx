@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
+  AccessibilityInfo,
   View,
   Text,
   StyleSheet,
@@ -55,9 +56,23 @@ export default function CountdownScreen({ navigation, route }: any) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Batch 7 Phase 4: Respect Reduce Motion accessibility setting
+  const [reduceMotion, setReduceMotion] = useState(false);
+
   useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    // Skip decorative entrance fade-in when Reduce Motion is enabled
+    if (reduceMotion) {
+      fadeAnim.setValue(1);
+      return;
+    }
     Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
-  }, [fadeAnim]);
+  }, [fadeAnim, reduceMotion]);
 
   // Refresh emergency contacts list from backend on mount to guarantee fresh priority order
   useEffect(() => {
@@ -411,8 +426,8 @@ export default function CountdownScreen({ navigation, route }: any) {
           <View style={[StyleSheet.absoluteFillObject, styles.cancelledGrad]} />
         </View>
         <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', opacity: fadeAnim }}>
-          <Text style={styles.cancelledIcon}>\u2705</Text>
-          <Text style={styles.cancelledText}>Marked as false alarm</Text>
+          <Text style={styles.cancelledIcon} allowFontScaling={true} maxFontSizeMultiplier={1.5}>\u2705</Text>
+          <Text style={styles.cancelledText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Marked as false alarm</Text>
         </Animated.View>
       </SafeAreaView>
     );
@@ -444,38 +459,38 @@ export default function CountdownScreen({ navigation, route }: any) {
         </View>
         <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', opacity: fadeAnim, paddingHorizontal: 24 }}>
           <Ionicons name="warning-outline" size={24} color={darkColors.text} />
-          <Text style={styles.dispatchingText}>Dispatching Emergency Alert</Text>
+          <Text style={styles.dispatchingText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Dispatching Emergency Alert</Text>
                     {isDevMode && (
-            <Text style={styles.devModeBanner}>DEV MODE: Some channels not configured. Real delivery limited.
+            <Text style={styles.devModeBanner} allowFontScaling={true} maxFontSizeMultiplier={1.5}>DEV MODE: Some channels not configured. Real delivery limited.
             </Text>
           )}
 
           <View style={styles.statusList}>
-            <Text style={styles.statusRow}>
+            <Text style={styles.statusRow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               <Ionicons name={statusIcon(dispatchStatus.backend)} size={14} color={darkColors.text} /> Backend Dispatch: {statusText(dispatchStatus.backend)}
             </Text>
-            <Text style={styles.statusRow}>
+            <Text style={styles.statusRow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               <Ionicons name={statusIcon(dispatchStatus.push)} size={14} color={darkColors.text} /> Push Notification: {statusText(dispatchStatus.push, backendChannels?.push?.devMode)}
             </Text>
-            <Text style={styles.statusRow}>
+            <Text style={styles.statusRow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               <Ionicons name={statusIcon(dispatchStatus.sms)} size={14} color={darkColors.text} /> SMS: {statusText(dispatchStatus.sms, backendChannels?.sms?.devMode)}
             </Text>
-                        <Text style={styles.statusRow}>
+                        <Text style={styles.statusRow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               <Ionicons name={statusIcon(dispatchStatus.whatsapp)} size={14} color={darkColors.text} /> WhatsApp: {statusText(dispatchStatus.whatsapp, backendChannels?.whatsapp?.devMode)}
             </Text>
-            <Text style={styles.statusRow}>
+            <Text style={styles.statusRow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               <Ionicons name={statusIcon(dispatchStatus.email)} size={14} color={darkColors.text} /> Email: {statusText(dispatchStatus.email, backendChannels?.email?.devMode)}
             </Text>
-            <Text style={styles.statusRow}>
+            <Text style={styles.statusRow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               <Ionicons name={statusIcon(dispatchStatus.incident)} size={14} color={darkColors.text} /> Incident Log: {statusText(dispatchStatus.incident)}
             </Text>
-            <Text style={styles.statusRow}>
+            <Text style={styles.statusRow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               <Ionicons name={statusIcon(dispatchStatus.module68)} size={14} color={darkColors.text} /> Contact Escalation: {statusText(dispatchStatus.module68)}
             </Text>
           </View>
 
           {dispatchStatus.sms === 'sent-via-device' && (
-            <Text style={styles.smsHint}>Your SMS app opened. Tap "Send" to deliver the alert to your contacts.
+            <Text style={styles.smsHint} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Your SMS app opened. Tap "Send" to deliver the alert to your contacts.
             </Text>
           )}
         </Animated.View>
@@ -493,15 +508,15 @@ export default function CountdownScreen({ navigation, route }: any) {
         </View>
         <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', opacity: fadeAnim, paddingHorizontal: 24 }}>
           <Ionicons name={allGood ? "checkmark-circle" : "warning-outline"} size={48} color={darkColors.text} />
-          <Text style={styles.completeTitle}>
+          <Text style={styles.completeTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             {allGood ? 'Alert Dispatched' : 'Partially Dispatched'}
           </Text>
-          <Text style={styles.completeSubtext}>
+          <Text style={styles.completeSubtext} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             {allGood
               ? 'Emergency contacts have been notified. Live GPS tracking is active. Escalation started.'
               : 'Some channels failed. Your contacts may still receive the alert via other channels.'}
           </Text>
-          <Text style={styles.redirectHint}>Redirecting to SOS screen...</Text>
+          <Text style={styles.redirectHint} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Redirecting to SOS screen...</Text>
         </Animated.View>
       </SafeAreaView>
     );
@@ -518,14 +533,14 @@ export default function CountdownScreen({ navigation, route }: any) {
       </View>
 
       <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24, opacity: fadeAnim }}>
-        <Text style={styles.warningLabel}>POSSIBLE ACCIDENT DETECTED</Text>
+        <Text style={styles.warningLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>POSSIBLE ACCIDENT DETECTED</Text>
 
         <Animated.View style={[styles.numberCircle, { transform: [{ scale: pulseAnim }] }]}>
           <View style={[StyleSheet.absoluteFillObject, styles.numberCircleGrad]} />
-          <Text style={styles.countdownNumber}>{secondsLeft}</Text>
+          <Text style={styles.countdownNumber} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{secondsLeft}</Text>
         </Animated.View>
 
-        <Text style={styles.subLabel}>
+        <Text style={styles.subLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
           Emergency alert will be sent automatically in {secondsLeft} second{secondsLeft !== 1 ? 's' : ''}
         </Text>
 
@@ -534,10 +549,10 @@ export default function CountdownScreen({ navigation, route }: any) {
           onPress={() => handleCancel('BUTTON')}
           activeOpacity={0.85} accessibilityRole="button"
         >
-          <Text style={styles.cancelBtnText}>I AM OK CANCEL</Text>
+          <Text style={styles.cancelBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>I AM OK CANCEL</Text>
         </TouchableOpacity>
 
-        <Text style={styles.voiceHint}>You can also say "I am OK" or "Cancel"</Text>
+        <Text style={styles.voiceHint} allowFontScaling={true} maxFontSizeMultiplier={1.5}>You can also say "I am OK" or "Cancel"</Text>
 
         {__DEV__ && (
           <View style={styles.devSimRow}>
@@ -545,13 +560,13 @@ export default function CountdownScreen({ navigation, route }: any) {
               style={styles.devSimBtn}
               onPress={() => VoiceCommandService.simulateSpeechInput('Cancel')} accessibilityRole="button"
             >
-              <Text style={styles.devSimText}>Simulate Cancel</Text>
+              <Text style={styles.devSimText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Simulate Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.devSimBtn, { borderColor: colors.danger[600] }]}
               onPress={() => VoiceCommandService.simulateSpeechInput('SOS')} accessibilityRole="button"
             >
-              <Text style={[styles.devSimText, { color: colors.danger[500] }]}>Simulate SOS</Text>
+              <Text style={[styles.devSimText, { color: colors.danger[500] }]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Simulate SOS</Text>
             </TouchableOpacity>
           </View>
         )}

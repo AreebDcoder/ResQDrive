@@ -26,6 +26,7 @@ import {
 } from '../store/slices/contactsSlice';
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useToast } from '../components/ui/Toast';
 import { ConfirmDialog } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
@@ -33,6 +34,7 @@ import { colors, darkColors, tints } from '../theme/tokens';
 export default function EmergencyContactsScreen({ navigation }: any) {
   const toast = useToast();
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
   const { list: contacts, isLoading, error } = useSelector(
     (state: RootState) => state.contacts
   );
@@ -162,7 +164,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
           }}
         />
 
-        <Text style={styles.infoText}>
+        <Text style={styles.infoText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
           Escalation Rules: In an emergency, your primary
           contact (Priority 1) is notified first. Secondary
           contacts are alerted at 30-second intervals if the
@@ -171,12 +173,12 @@ export default function EmergencyContactsScreen({ navigation }: any) {
       </View>
 
       {/* ── Header ── */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle} accessibilityRole="header">
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <Text style={styles.headerTitle} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>
           Emergency Contacts
         </Text>
 
-        <Text style={styles.headerSub}>
+        <Text style={styles.headerSub} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
           {contacts.length}/5 slots used
         </Text>
       </View>
@@ -196,7 +198,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
             style={{ marginBottom: 8 }}
           />
 
-          <Text style={styles.errorText}>
+          <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             {error}
           </Text>
 
@@ -204,7 +206,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
             style={styles.retryBtn}
             onPress={fetchContacts} accessibilityRole="button"
           >
-            <Text style={styles.retryText}>
+            <Text style={styles.retryText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               Retry
             </Text>
           </TouchableOpacity>
@@ -218,11 +220,11 @@ export default function EmergencyContactsScreen({ navigation }: any) {
             style={{ marginBottom: 12 }}
           />
 
-          <Text style={styles.emptyText}>
+          <Text style={styles.emptyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             No emergency contacts added yet.
           </Text>
 
-          <Text style={styles.emptySubtitle}>
+          <Text style={styles.emptySubtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             Add up to 5 contacts (e.g. Spouse, Parents,
             Friends) to receive automatic crash alerts.
           </Text>
@@ -236,7 +238,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
                 size="small"
               />
 
-              <Text style={styles.updatingText}>
+              <Text style={styles.updatingText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 Syncing priority list...
               </Text>
             </View>
@@ -262,11 +264,11 @@ export default function EmergencyContactsScreen({ navigation }: any) {
                       styles.primaryPriority,
                   ]}
                 >
-                  <Text style={styles.priorityNum}>
+                  <Text style={styles.priorityNum} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                     {item.priorityOrder}
                   </Text>
 
-                  <Text style={styles.priorityLabel}>
+                  <Text style={styles.priorityLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                     {item.priorityOrder === 1
                       ? 'Primary'
                       : 'Sec'}
@@ -284,17 +286,17 @@ export default function EmergencyContactsScreen({ navigation }: any) {
                   }
                   activeOpacity={0.7} accessibilityRole="button"
                 >
-                  <Text style={styles.contactName}>
+                  <Text style={styles.contactName} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                     {item.name}
                   </Text>
 
-                  <Text style={styles.contactMeta}>
+                  <Text style={styles.contactMeta} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                     {item.relationship} •{' '}
                     {item.phoneNumber}
                   </Text>
 
                   {item.email ? (
-                    <Text style={styles.contactEmail}>
+                    <Text style={styles.contactEmail} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                       {item.email}
                     </Text>
                   ) : null}
@@ -316,7 +318,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
                       disabled={
                         index === 0 || isUpdating
                       } accessibilityRole="button"
-                     accessibilityLabel="Up">
+                     accessibilityLabel="Up" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                       <Ionicons
                         name="chevron-up"
                         size={16}
@@ -343,7 +345,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
                           contacts.length - 1 ||
                         isUpdating
                       } accessibilityRole="button"
-                     accessibilityLabel="Down">
+                     accessibilityLabel="Down" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                       <Ionicons
                         name="chevron-down"
                         size={16}
@@ -404,7 +406,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
               color={darkColors.text}
             />
 
-            <Text style={styles.addBtnText}>
+            <Text style={styles.addBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               Add Emergency Contact ({contacts.length}/5)
             </Text>
           </View>
@@ -418,7 +420,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
             style={{ marginRight: 6 }}
           />
 
-          <Text style={styles.limitBannerText}>
+          <Text style={styles.limitBannerText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             Emergency contact limit reached (maximum 5).
             Remove or edit existing contacts if needed.
           </Text>

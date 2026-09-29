@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
+  AccessibilityInfo,
   ActivityIndicator,
   StyleSheet,
   Text,
@@ -24,12 +25,27 @@ export default function EmailVerificationScreen({ route, navigation }: { route: 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
 
+  // Batch 7 Phase 4: Respect Reduce Motion accessibility setting
+  const [reduceMotion, setReduceMotion] = useState(false);
+
   useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    // Skip decorative entrance animation when Reduce Motion is enabled
+    if (reduceMotion) {
+      fadeAnim.setValue(1);
+      slideAnim.setValue(0);
+      return;
+    }
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
     ]).start();
-  }, []);
+  }, [reduceMotion]);
 
   useEffect(() => {
     let timer: any;
@@ -91,28 +107,28 @@ export default function EmailVerificationScreen({ route, navigation }: { route: 
           <View style={styles.iconCircle}>
             <Ionicons name="mail-unread-outline" size={36} color={colors.danger[500]} />
           </View>
-          <Text style={styles.title} accessibilityRole="header">Verify Your Email</Text>
-          <Text style={styles.subtitle}>
-            We've sent a 6-digit verification code to <Text style={styles.emailHighlight}>{email}</Text>.
+          <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Verify Your Email</Text>
+          <Text style={styles.subtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+            We've sent a 6-digit verification code to <Text style={styles.emailHighlight} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{email}</Text>.
           </Text>
         </View>
 
         {errorMsg && (
           <View style={styles.alertError}>
             <Ionicons name="alert-circle-outline" size={18} color={colors.danger[400]} style={{ marginRight: 8 }} />
-            <Text style={styles.alertText}>{errorMsg}</Text>
+            <Text style={styles.alertText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errorMsg}</Text>
           </View>
         )}
 
         {successMsg && (
           <View style={styles.alertSuccess}>
             <Ionicons name="checkmark-circle-outline" size={18} color={colors.success[400]} style={{ marginRight: 8 }} />
-            <Text style={styles.successText}>{successMsg}</Text>
+            <Text style={styles.successText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{successMsg}</Text>
           </View>
         )}
 
         <View style={styles.form}>
-          <Text style={styles.label}>6-Digit Verification Code</Text>
+          <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>6-Digit Verification Code</Text>
           <TextInput
             style={styles.otpInput}
             placeholder="• • • • • •"
@@ -122,6 +138,8 @@ export default function EmailVerificationScreen({ route, navigation }: { route: 
             value={otp}
             onChangeText={setOtp}
             autoFocus
+            allowFontScaling={true}
+            maxFontSizeMultiplier={1.5}
           />
 
           <TouchableOpacity
@@ -132,20 +150,20 @@ export default function EmailVerificationScreen({ route, navigation }: { route: 
             {isLoading ? (
               <ActivityIndicator color={darkColors.text} />
             ) : (
-              <Text style={styles.verifyBtnText}>Verify & Continue</Text>
+              <Text style={styles.verifyBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Verify & Continue</Text>
             )}
           </TouchableOpacity>
 
           <View style={styles.resendContainer}>
-            <Text style={styles.resendText}>Didn't receive the code? </Text>
+            <Text style={styles.resendText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Didn't receive the code? </Text>
             {countdown > 0 ? (
-              <Text style={styles.countdownText}>Resend in {countdown}s</Text>
+              <Text style={styles.countdownText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Resend in {countdown}s</Text>
             ) : (
               <TouchableOpacity onPress={handleResend} disabled={isResending} accessibilityRole="button">
                 {isResending ? (
                   <ActivityIndicator size="small" color={colors.danger[500]} />
                 ) : (
-                  <Text style={styles.resendBtnText}>Resend Code</Text>
+                  <Text style={styles.resendBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Resend Code</Text>
                 )}
               </TouchableOpacity>
             )}
@@ -154,7 +172,7 @@ export default function EmailVerificationScreen({ route, navigation }: { route: 
 
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate('Login')} accessibilityRole="button">
           <Ionicons name="arrow-back-outline" size={16} color={darkColors.textSecondary} style={{ marginRight: 6 }} />
-          <Text style={styles.backText}>Back to Log In</Text>
+          <Text style={styles.backText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Back to Log In</Text>
         </TouchableOpacity>
       </Animated.View>
     </View>

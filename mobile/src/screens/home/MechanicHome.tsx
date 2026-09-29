@@ -37,37 +37,37 @@ export default function MechanicHome({ navigation }: { navigation: AppNavigation
       <StatusBar barStyle="light-content" backgroundColor={darkColors.background} />
       <View style={mS.customHeader}>
         <View style={{ width: 28 }} />
-        <Text style={mS.customHeaderTitle}>Workshop Dashboard</Text>
+        <Text style={mS.customHeaderTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Workshop Dashboard</Text>
         <View style={{ width: 28 }} />
       </View>
       <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }}>
         <View style={mS.workshopCard}>
-          <Text style={mS.workshopLabel}>Workshop</Text>
-          <Text style={mS.workshopName}>{user?.mechanicDetails?.workshopName || 'My Workshop'}</Text>
-          <Text style={mS.workshopSpec}>{user?.mechanicDetails?.specialization || 'General Repair'}</Text>
+          <Text style={mS.workshopLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Workshop</Text>
+          <Text style={mS.workshopName} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{user?.mechanicDetails?.workshopName || 'My Workshop'}</Text>
+          <Text style={mS.workshopSpec} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{user?.mechanicDetails?.specialization || 'General Repair'}</Text>
         </View>
         <TouchableOpacity style={mS.menuItem} onPress={() => navigation.navigate('Profile')} accessibilityRole="button" accessibilityLabel="My Profile">
           <Ionicons name="person-circle-outline" size={22} color={darkColors.textTertiary} />
-          <Text style={mS.menuLabel}>My Profile</Text>
+          <Text style={mS.menuLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>My Profile</Text>
           <Ionicons name="chevron-forward" size={18} color={darkColors.textTertiary} />
         </TouchableOpacity>
         <TouchableOpacity style={mS.menuItem} onPress={() => navigation.navigate('IncidentsList')} accessibilityRole="button" accessibilityLabel="Incident History">
           <Ionicons name="document-text-outline" size={22} color={darkColors.textTertiary} />
-          <Text style={mS.menuLabel}>Incident History</Text>
+          <Text style={mS.menuLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Incident History</Text>
           <Ionicons name="chevron-forward" size={18} color={darkColors.textTertiary} />
         </TouchableOpacity>
         <TouchableOpacity style={mS.menuItem} onPress={() => navigation.navigate('NotificationHistory')} accessibilityRole="button" accessibilityLabel="Notifications">
           <Ionicons name="notifications-outline" size={22} color={darkColors.textTertiary} />
-          <Text style={mS.menuLabel}>Notifications</Text>
+          <Text style={mS.menuLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Notifications</Text>
           <Ionicons name="chevron-forward" size={18} color={darkColors.textTertiary} />
         </TouchableOpacity>
         <TouchableOpacity style={mS.menuItem} onPress={() => navigation.navigate('Hospitals')} accessibilityRole="button" accessibilityLabel="Nearby Hospitals">
           <Ionicons name="medkit-outline" size={22} color={darkColors.textTertiary} />
-          <Text style={mS.menuLabel}>Nearby Hospitals</Text>
+          <Text style={mS.menuLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Nearby Hospitals</Text>
           <Ionicons name="chevron-forward" size={18} color={darkColors.textTertiary} />
         </TouchableOpacity>
         <TouchableOpacity style={mS.logoutBtn} onPress={() => dispatch(logoutAction())} accessibilityRole="button" accessibilityLabel="Logout">
-          <Text style={mS.logoutText}>Logout</Text>
+          <Text style={mS.logoutText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Logout</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

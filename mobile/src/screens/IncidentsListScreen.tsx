@@ -82,20 +82,20 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
           <View style={styles.cardHeader}>
             <View style={styles.badgesRow}>
               <View style={[styles.badge, { backgroundColor: SEVERITY_COLORS[item.severity] || darkColors.textTertiary }]}>
-                <Text style={styles.badgeText}>{item.severity}</Text>
+                <Text style={styles.badgeText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.severity}</Text>
               </View>
               <View style={[styles.badge, { backgroundColor: STATUS_COLORS[item.status] || darkColors.textTertiary }]}>
-                <Text style={styles.badgeText}>{item.status.replace('_', ' ')}</Text>
+                <Text style={styles.badgeText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.status.replace('_', ' ')}</Text>
               </View>
             </View>
-            <Text style={styles.cardType}>{item.type === 'AUTO' ? 'Auto' : 'Manual'}</Text>
+            <Text style={styles.cardType} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.type === 'AUTO' ? 'Auto' : 'Manual'}</Text>
           </View>
-          <Text style={styles.cardDate}>{date}</Text>
+          <Text style={styles.cardDate} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{date}</Text>
           {item.address ? (
-            <Text style={styles.cardAddress} numberOfLines={1}>{item.address}</Text>
+            <Text style={styles.cardAddress} numberOfLines={1} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.address}</Text>
           ) : null}
           {item.description ? (
-            <Text style={styles.cardDesc} numberOfLines={2}>{item.description}</Text>
+            <Text style={styles.cardDesc} numberOfLines={2} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.description}</Text>
           ) : null}
         </TouchableOpacity>
 
@@ -141,7 +141,7 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
           <View style={styles.errorBadge}>
             <Ionicons name="alert-circle-outline" size={40} color={colors.danger[400]} />
           </View>
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{error}</Text>
           <View style={styles.retryBtnWrap}>
             <Button
               label="Retry"
@@ -172,8 +172,8 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
                 <View style={styles.emptyIconBg}>
                   <Ionicons name="document-text-outline" size={48} color={darkColors.textTertiary} />
                 </View>
-                <Text style={styles.emptyText}>No incidents recorded yet.</Text>
-                <Text style={styles.emptySubtext}>Tap the + button to log your first incident.</Text>
+                <Text style={styles.emptyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>No incidents recorded yet.</Text>
+                <Text style={styles.emptySubtext} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Tap the + button to log your first incident.</Text>
               </View>
             ) : null
           }

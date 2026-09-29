@@ -1,6 +1,7 @@
 import { colors, darkColors, tints } from '../theme/tokens';
 import React, { useEffect, useState, useRef } from 'react';
 import {
+  AccessibilityInfo,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,10 +18,12 @@ import {
   CRASH_RELEVANT_CLASS_NAMES,
   CrashRelevantClassName,
 } from '../config/crashClassConfig';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function CrashSoundDemoScreen() {
   const preferences = useSelector((state: RootState) => state.notifications.preferences);
   const drivingModeEnabled = !!preferences?.drivingModeEnabled;
+  const insets = useSafeAreaInsets();
 
   const [isMonitoring, setIsMonitoring] = useState(drivingModeEnabled);
   const [demoModeActive, setDemoModeActive] = useState(IS_DEMO_MODE);
@@ -40,12 +43,27 @@ export default function CrashSoundDemoScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
 
+  // Batch 7 Phase 4: Respect Reduce Motion accessibility setting
+  const [reduceMotion, setReduceMotion] = useState(false);
+
   useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    // Skip decorative entrance animation when Reduce Motion is enabled
+    if (reduceMotion) {
+      fadeAnim.setValue(1);
+      slideAnim.setValue(0);
+      return;
+    }
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
     ]).start();
-  }, [fadeAnim, slideAnim]);
+  }, [fadeAnim, slideAnim, reduceMotion]);
 
   useEffect(() => {
     if (drivingModeEnabled) {
@@ -98,73 +116,73 @@ export default function CrashSoundDemoScreen() {
       </View>
 
       <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 16 }]}>
           <View style={styles.header}>
-            <Text style={styles.title} accessibilityRole="header">Transient-Triggered Crash Sound Detection</Text>
-            <Text style={styles.subtitle}>
+            <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Transient-Triggered Crash Sound Detection</Text>
+            <Text style={styles.subtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               Event-driven audio classifier: RMS transient detector triggers YAMNet inference on centered 2-second windows.
             </Text>
           </View>
 
           {transientFlash && (
             <View style={styles.transientBanner}>
-              <Text style={styles.transientBannerText}>ACOUSTIC TRANSIENT DETECTED (Ratio: {telemetry.transientRatio.toFixed(1)}x)
+              <Text style={styles.transientBannerText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>ACOUSTIC TRANSIENT DETECTED (Ratio: {telemetry.transientRatio.toFixed(1)}x)
               </Text>
             </View>
           )}
 
           {flashWarning && lastAlert && (
             <View style={styles.warningBanner}>
-              <Text style={styles.warningText}>CRASH SOUND CONFIRMED: {lastAlert.className.toUpperCase()} ({Math.round(lastAlert.confidence * 100)}%)
+              <Text style={styles.warningText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>CRASH SOUND CONFIRMED: {lastAlert.className.toUpperCase()} ({Math.round(lastAlert.confidence * 100)}%)
               </Text>
             </View>
           )}
 
           <View style={styles.card}>
-            <Text style={styles.cardLabel}>Real-Time Audio Diagnostics</Text>
+            <Text style={styles.cardLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Real-Time Audio Diagnostics</Text>
 
             <View style={styles.telemetryRow}>
-              <Text style={styles.telemetryTitle}>Status:</Text>
+              <Text style={styles.telemetryTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Status:</Text>
               <View style={[styles.statusDot, isMonitoring ? styles.activeDot : styles.idleDot]} />
-              <Text style={[styles.telemetryValue, isMonitoring ? styles.activeText : styles.idleText]}>
+              <Text style={[styles.telemetryValue, isMonitoring ? styles.activeText : styles.idleText]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 {isMonitoring ? 'Monitoring Active' : 'Idle'}
               </Text>
             </View>
 
             <View style={styles.telemetryRow}>
-              <Text style={styles.telemetryTitle}>Instantaneous RMS Energy:</Text>
-              <Text style={styles.telemetryValue}>{telemetry.currentRms.toFixed(4)}</Text>
+              <Text style={styles.telemetryTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Instantaneous RMS Energy:</Text>
+              <Text style={styles.telemetryValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{telemetry.currentRms.toFixed(4)}</Text>
             </View>
 
             <View style={styles.telemetryRow}>
-              <Text style={styles.telemetryTitle}>Rolling 5s Avg RMS:</Text>
-              <Text style={styles.telemetryValue}>{telemetry.rollingAvgRms.toFixed(4)}</Text>
+              <Text style={styles.telemetryTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Rolling 5s Avg RMS:</Text>
+              <Text style={styles.telemetryValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{telemetry.rollingAvgRms.toFixed(4)}</Text>
             </View>
 
             <View style={styles.telemetryRow}>
-              <Text style={styles.telemetryTitle}>Transient Energy Multiplier:</Text>
-              <Text style={[styles.telemetryValue, telemetry.transientRatio >= 2.5 ? styles.dangerValue : styles.normalValue]}>
+              <Text style={styles.telemetryTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Transient Energy Multiplier:</Text>
+              <Text style={[styles.telemetryValue, telemetry.transientRatio >= 2.5 ? styles.dangerValue : styles.normalValue]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 {telemetry.transientRatio.toFixed(1)}x (Threshold: 2.5x)
               </Text>
             </View>
 
             <View style={styles.telemetryRow}>
-              <Text style={styles.telemetryTitle}>Max Crash Confidence:</Text>
-              <Text style={[styles.telemetryValue, currentConfidence > CRASH_CONFIDENCE_THRESHOLD ? styles.dangerValue : styles.normalValue]}>
+              <Text style={styles.telemetryTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Max Crash Confidence:</Text>
+              <Text style={[styles.telemetryValue, currentConfidence > CRASH_CONFIDENCE_THRESHOLD ? styles.dangerValue : styles.normalValue]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 {Math.round(currentConfidence * 100)}%
               </Text>
             </View>
 
             <View style={styles.telemetryRow}>
-              <Text style={styles.telemetryTitle}>Top Matched Sound:</Text>
-              <Text style={styles.telemetryValue}>{currentClass || '—'}</Text>
+              <Text style={styles.telemetryTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Top Matched Sound:</Text>
+              <Text style={styles.telemetryValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{currentClass || '—'}</Text>
             </View>
 
             <TouchableOpacity
               style={[styles.actionBtn, isMonitoring ? styles.stopBtn : styles.startBtn]}
               onPress={handleToggleMonitoring} accessibilityRole="button"
             >
-              <Text style={styles.actionBtnText}>
+              <Text style={styles.actionBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 {isMonitoring ? 'Stop Audio Capture' : 'Start Audio Capture'}
               </Text>
             </TouchableOpacity>
@@ -174,8 +192,8 @@ export default function CrashSoundDemoScreen() {
           <View style={styles.card}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <View style={{ flex: 1, marginRight: 12 }}>
-                <Text style={styles.cardLabel}>FYP Video Evaluation Mode</Text>
-                <Text style={{ fontSize: 13, color: darkColors.textSecondary, marginTop: 4, lineHeight: 18 }}>
+                <Text style={styles.cardLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>FYP Video Evaluation Mode</Text>
+                <Text style={{ fontSize: 13, color: darkColors.textSecondary, marginTop: 4, lineHeight: 18 }} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                   Enables acoustic speaker compensation & continuous video playback detection for video presentations.
                 </Text>
               </View>
@@ -192,15 +210,15 @@ export default function CrashSoundDemoScreen() {
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardLabel}>Manual Classifier Simulator</Text>
-            <Text style={styles.simSubtitle}>
+            <Text style={styles.cardLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Manual Classifier Simulator</Text>
+            <Text style={styles.simSubtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               Simulate a high-confidence crash sound event to test the dual-signal event callbacks.
             </Text>
 
             <View style={styles.simGrid}>
               {CRASH_RELEVANT_CLASS_NAMES.map((name) => (
                 <TouchableOpacity key={name} style={styles.simBtn} onPress={() => handleSimulateCrash(name)} accessibilityRole="button">
-                  <Text style={styles.simBtnText}>{name}</Text>
+                  <Text style={styles.simBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{name}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -208,31 +226,31 @@ export default function CrashSoundDemoScreen() {
 
           {lastAlert && (
             <View style={styles.historyCard}>
-              <Text style={styles.cardLabel}>Last Confirmed Alert Event</Text>
-              <Text style={styles.historyText}>
-                Class: <Text style={styles.highlightText}>{lastAlert.className}</Text>
+              <Text style={styles.cardLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Last Confirmed Alert Event</Text>
+              <Text style={styles.historyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+                Class: <Text style={styles.highlightText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{lastAlert.className}</Text>
               </Text>
-              <Text style={styles.historyText}>
-                Confidence: <Text style={styles.highlightText}>{Math.round(lastAlert.confidence * 100)}%</Text>
+              <Text style={styles.historyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+                Confidence: <Text style={styles.highlightText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{Math.round(lastAlert.confidence * 100)}%</Text>
               </Text>
-              <Text style={styles.historyText}>
-                Timestamp: <Text style={styles.highlightText}>{lastAlert.timestamp.toLocaleTimeString()}</Text>
+              <Text style={styles.historyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+                Timestamp: <Text style={styles.highlightText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{lastAlert.timestamp.toLocaleTimeString()}</Text>
               </Text>
             </View>
           )}
 
           <View style={styles.infoCard}>
-            <Text style={styles.infoTitle}>Zero-Shot Classification Info</Text>
-            <Text style={styles.infoDesc}>
+            <Text style={styles.infoTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Zero-Shot Classification Info</Text>
+            <Text style={styles.infoDesc} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               This module monitors audio locally at 16kHz mono. It uses YAMNet's pre-trained AudioSet classification layers to identify crash events without uploading raw files or recording data to disk.
             </Text>
             {!CrashSoundDetectionService.isNativeSupported() && (
               <View style={styles.webWarningBox}>
-                <Text style={styles.webWarningTitle}>Running in Web/Mock Simulator Mode</Text>
-                <Text style={styles.webWarningDesc}>
+                <Text style={styles.webWarningTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Running in Web/Mock Simulator Mode</Text>
+                <Text style={styles.webWarningDesc} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                   Since standard web browsers cannot run native TensorFlow Lite models directly, clapping or other loud noise spikes will trigger simulated crash classifications (like Explosion, Shatter, Skidding) for database logging and telemetry testing.
                 </Text>
-                <Text style={styles.webWarningFooter}>
+                <Text style={styles.webWarningFooter} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                   To run the real YAMNet AI classification on phone microphone audio, run: npx expo run:android
                 </Text>
               </View>

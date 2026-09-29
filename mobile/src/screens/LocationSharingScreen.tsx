@@ -17,6 +17,7 @@ import { connectSocket, disconnectSocket, emitLocationUpdate } from '../services
 import { useToast } from '../components/ui/Toast';
 import { colors, darkColors, tints } from '../theme/tokens';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const FAST_INTERVAL_MS = 5000;
 const SLOW_INTERVAL_MS = 30000;
@@ -24,6 +25,7 @@ const BACKOFF_AFTER_MS = 10 * 60 * 1000;
 
 export default function LocationSharingScreen({ navigation }: { navigation: any }) {
   const toast = useToast();
+  const insets = useSafeAreaInsets();
   const { user } = useSelector((state: RootState) => state.auth);
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<any>(null);
@@ -194,17 +196,17 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
     return (
       <View style={styles.center}>
         <ActivityIndicator color={colors.danger[500]} size="large" />
-        <Text style={styles.loadingText}>Checking session status…</Text>
+        <Text style={styles.loadingText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Checking session status…</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 16 }]}>
       {/* ── Intro Card ── */}
       <View style={styles.card}>
-        <Text style={styles.title} accessibilityRole="header">Real-Time Location Sharing</Text>
-        <Text style={styles.subtitle}>
+        <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Real-Time Location Sharing</Text>
+        <Text style={styles.subtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
           Share your live location with emergency contacts via a simple link.
           No app install required for them.
         </Text>
@@ -214,7 +216,7 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
       {error && (
         <View style={styles.errorBox}>
           <Ionicons name="warning-outline" size={24} color={darkColors.text} />
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{error}</Text>
         </View>
       )}
 
@@ -222,7 +224,7 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
       {permissionDenied && (
         <View style={styles.warnBox}>
           <Ionicons name="lock-closed-outline" size={24} color={darkColors.text} />
-          <Text style={styles.warnText}>
+          <Text style={styles.warnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             Location permission denied. Please enable it in your device settings to share your location.
           </Text>
         </View>
@@ -233,22 +235,22 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
         <View style={styles.activeCard}>
           <View style={styles.activeHeader}>
             <View style={styles.liveDot} />
-            <Text style={styles.activeTitle}>LIVE — Sharing</Text>
+            <Text style={styles.activeTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>LIVE — Sharing</Text>
           </View>
-          <Text style={styles.activeSince}>⏱️ Started: {new Date(session.startedAt).toLocaleString()}</Text>
-          <Text style={styles.socketStatus}>Socket: {socketStatus === 'connected' ? 'Connected' : socketStatus === 'connecting' ? 'Connecting…' : 'Disconnected'}
+          <Text style={styles.activeSince} allowFontScaling={true} maxFontSizeMultiplier={1.5}>⏱️ Started: {new Date(session.startedAt).toLocaleString()}</Text>
+          <Text style={styles.socketStatus} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Socket: {socketStatus === 'connected' ? 'Connected' : socketStatus === 'connecting' ? 'Connecting…' : 'Disconnected'}
           </Text>
           {lastSent ? (
-            <Text style={styles.lastUpdate}>Last GPS ping: {lastSent}</Text>
+            <Text style={styles.lastUpdate} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Last GPS ping: {lastSent}</Text>
           ) : (
-            <Text style={styles.lastUpdate}>Waiting for first GPS fix…</Text>
+            <Text style={styles.lastUpdate} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Waiting for first GPS fix…</Text>
           )}
 
           <TouchableOpacity style={styles.linkBtn} onPress={copyShareLink} accessibilityRole="button">
-            <Text style={styles.linkBtnText}>Copy Share Link</Text>
+            <Text style={styles.linkBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Copy Share Link</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.linkBtnSecondary} onPress={openInBrowser} accessibilityRole="button">
-            <Text style={styles.linkBtnSecondaryText}>Open Tracking Page</Text>
+            <Text style={styles.linkBtnSecondaryText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Open Tracking Page</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -259,7 +261,7 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
             {isStopping ? (
               <ActivityIndicator color={darkColors.text} />
             ) : (
-              <Text style={styles.stopBtnText}>⏹️ Stop Sharing</Text>
+              <Text style={styles.stopBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>⏹️ Stop Sharing</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -275,19 +277,19 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
           {isStarting ? (
             <ActivityIndicator color={darkColors.text} />
           ) : (
-            <Text style={styles.startBtnText}>Start Live Location Sharing</Text>
+            <Text style={styles.startBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Start Live Location Sharing</Text>
           )}
         </TouchableOpacity>
       )}
 
       {/* ── Info Card ── */}
       <View style={styles.infoCard}>
-        <Text style={styles.infoTitle}>ℹ️ How it works</Text>
-        <Text style={styles.infoText}>• Your phone sends GPS coordinates every 5 seconds</Text>
-        <Text style={styles.infoText}>• After 10 minutes, backs off to every 30 seconds (battery saver)</Text>
-        <Text style={styles.infoText}>• Emergency contacts open the link in any browser</Text>
-        <Text style={styles.infoText}>• They see a live map with your moving location + trail</Text>
-        <Text style={styles.infoText}>• Session auto-expires after 2 hours of inactivity</Text>
+        <Text style={styles.infoTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>ℹ️ How it works</Text>
+        <Text style={styles.infoText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>• Your phone sends GPS coordinates every 5 seconds</Text>
+        <Text style={styles.infoText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>• After 10 minutes, backs off to every 30 seconds (battery saver)</Text>
+        <Text style={styles.infoText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>• Emergency contacts open the link in any browser</Text>
+        <Text style={styles.infoText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>• They see a live map with your moving location + trail</Text>
+        <Text style={styles.infoText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>• Session auto-expires after 2 hours of inactivity</Text>
       </View>
     </ScrollView>
   );

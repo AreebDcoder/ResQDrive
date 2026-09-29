@@ -72,34 +72,34 @@ export default function AdminHome({ navigation }: { navigation: AppNavigation })
     <View style={{ flex: 1, backgroundColor: darkColors.surface }}>
       <View style={adminStyles.customHeader}>
         <View style={{ width: 28 }} />
-        <Text style={adminStyles.customHeaderTitle}>Admin Controls</Text>
+        <Text style={adminStyles.customHeaderTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Admin Controls</Text>
         <View style={{ width: 28 }} />
       </View>
       <View style={adminStyles.container}>
-        <Text style={adminStyles.sectionTitle}>Pending Workshop Approvals ({pendingMechanics.length})</Text>
+        <Text style={adminStyles.sectionTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Pending Workshop Approvals ({pendingMechanics.length})</Text>
 
         {isLoading ? (
           <ActivityIndicator color={colors.danger[600]} size="large" style={{ marginTop: 20 }} />
         ) : message ? (
-          <Text style={adminStyles.errorText}>{message}</Text>
+          <Text style={adminStyles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{message}</Text>
         ) : pendingMechanics.length === 0 ? (
           <View style={adminStyles.emptyContainer}>
-            <Text style={adminStyles.emptyText}>All workshops are currently verified!</Text>
+            <Text style={adminStyles.emptyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>All workshops are currently verified!</Text>
           </View>
         ) : (
           <ScrollView style={adminStyles.scrollList}>
             {pendingMechanics.map((mechanic) => (
               <View key={mechanic.id} style={adminStyles.approvalCard}>
                 <View style={adminStyles.cardRow}>
-                  <Text style={adminStyles.mechanicName}>{mechanic.fullName}</Text>
-                  <Text style={adminStyles.specializationBadge}>{mechanic.mechanicDetails?.specialization}</Text>
+                  <Text style={adminStyles.mechanicName} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{mechanic.fullName}</Text>
+                  <Text style={adminStyles.specializationBadge} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{mechanic.mechanicDetails?.specialization}</Text>
                 </View>
-                <Text style={adminStyles.cardInfo}>Email: {mechanic.email}</Text>
-                <Text style={adminStyles.cardInfo}>Phone: {mechanic.phoneNumber}</Text>
-                <Text style={adminStyles.cardInfo}>Workshop: <Text style={{ fontWeight: 'bold', color: darkColors.text }}>{mechanic.mechanicDetails?.workshopName}</Text></Text>
-                <Text style={adminStyles.cardInfo}>Address: {mechanic.mechanicDetails?.workshopAddress}</Text>
+                <Text style={adminStyles.cardInfo} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Email: {mechanic.email}</Text>
+                <Text style={adminStyles.cardInfo} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Phone: {mechanic.phoneNumber}</Text>
+                <Text style={adminStyles.cardInfo} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Workshop: <Text style={{ fontWeight: 'bold', color: darkColors.text }} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{mechanic.mechanicDetails?.workshopName}</Text></Text>
+                <Text style={adminStyles.cardInfo} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Address: {mechanic.mechanicDetails?.workshopAddress}</Text>
                 <TouchableOpacity style={adminStyles.approveBtn} onPress={() => handleApprove(mechanic.id)} accessibilityRole="button" accessibilityLabel={`Approve workshop for ${mechanic.fullName}`}>
-                  <Text style={adminStyles.approveBtnText}>Approve & Verify Workshop</Text>
+                  <Text style={adminStyles.approveBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Approve & Verify Workshop</Text>
                 </TouchableOpacity>
               </View>
             ))}
@@ -109,11 +109,11 @@ export default function AdminHome({ navigation }: { navigation: AppNavigation })
         <TouchableOpacity style={adminStyles.navBtn} onPress={() => navigation.navigate('AdminDashboard')} accessibilityRole="button" accessibilityLabel="Analytics Dashboard">
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
             <Ionicons name="analytics-outline" size={18} color={darkColors.text} />
-            <Text style={adminStyles.navBtnText}>Analytics Dashboard</Text>
+            <Text style={adminStyles.navBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Analytics Dashboard</Text>
           </View>
         </TouchableOpacity>
         <TouchableOpacity style={adminStyles.navBtn} onPress={() => navigation.navigate('Profile')} accessibilityRole="button" accessibilityLabel="Go to My Profile">
-          <Text style={adminStyles.navBtnText}>Go to My Profile</Text>
+          <Text style={adminStyles.navBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Go to My Profile</Text>
         </TouchableOpacity>
       </View>
     </View>

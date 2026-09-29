@@ -44,15 +44,15 @@ export default function MyVehiclesScreen({ navigation }: { navigation: AppNaviga
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 }}>
                   <View>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Text style={[styles.vehicleTitle, { color: tc.text }]}>{item.make} {item.model}</Text>
+                      <Text style={[styles.vehicleTitle, { color: tc.text }]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.make} {item.model}</Text>
                       {item.isPrimary && (
                         <View style={[styles.primaryBadge, { backgroundColor: colors.success[100] }]}>
                           <Ionicons name="star" size={10} color={colors.success[600]} />
-                          <Text style={[styles.primaryBadgeText, { color: colors.success[700] }]}>Primary</Text>
+                          <Text style={[styles.primaryBadgeText, { color: colors.success[700] }]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Primary</Text>
                         </View>
                       )}
                     </View>
-                    <Text style={[styles.vehicleMeta, { color: tc.textSecondary }]}>{item.year} • {item.color || 'No color'}</Text>
+                    <Text style={[styles.vehicleMeta, { color: tc.textSecondary }]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.year} • {item.color || 'No color'}</Text>
                   </View>
                 </View>
               </View>
@@ -63,8 +63,8 @@ export default function MyVehiclesScreen({ navigation }: { navigation: AppNaviga
 
       {/* Plate */}
       <View style={[styles.plateContainer, { backgroundColor: tc.background }]}>
-        <Text style={[styles.plateLabel, { color: tc.textTertiary }]}>License Plate</Text>
-        <Text style={[styles.plateNumber, { color: tc.text }]}>{item.licensePlate.toUpperCase()}</Text>
+        <Text style={[styles.plateLabel, { color: tc.textTertiary }]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>License Plate</Text>
+        <Text style={[styles.plateNumber, { color: tc.text }]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.licensePlate.toUpperCase()}</Text>
       </View>
 
       {/* Card Actions */}
@@ -72,7 +72,7 @@ export default function MyVehiclesScreen({ navigation }: { navigation: AppNaviga
         {item.isPrimary ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
             <Ionicons name="shield-checkmark" size={14} color={colors.success[500]} />
-            <Text style={[styles.activeLabel, { color: colors.success[600] }]}>Paired with crash sensor</Text>
+            <Text style={[styles.activeLabel, { color: colors.success[600] }]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Paired with crash sensor</Text>
           </View>
         ) : (
           <Pressable
@@ -86,7 +86,7 @@ export default function MyVehiclesScreen({ navigation }: { navigation: AppNaviga
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
               <Ionicons name="flash-outline" size={14} color={colors.primary[500]} />
-              <Text style={[styles.setPrimaryText, { color: colors.primary[600] }]}>Activate</Text>
+              <Text style={[styles.setPrimaryText, { color: colors.primary[600] }]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Activate</Text>
             </View>
           </Pressable>
         )}
@@ -103,7 +103,7 @@ export default function MyVehiclesScreen({ navigation }: { navigation: AppNaviga
               size={14}
               color={item.insurance ? colors.success[500] : colors.primary[500]}
             />
-            <Text style={{ color: item.insurance ? colors.success[600] : colors.primary[600], fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium }}>
+            <Text style={{ color: item.insurance ? colors.success[600] : colors.primary[600], fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium }} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               {item.insurance ? 'Insured' : 'Add Insurance'}
             </Text>
           </View>
@@ -116,8 +116,8 @@ export default function MyVehiclesScreen({ navigation }: { navigation: AppNaviga
     <View style={{ flex: 1, backgroundColor: tc.background }}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: tc.text }]} accessibilityRole="header">My Vehicles</Text>
-        <Text style={[styles.headerSub, { color: tc.textSecondary }]}>{vehicles?.length || 0} registered</Text>
+        <Text style={[styles.headerTitle, { color: tc.text }]} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>My Vehicles</Text>
+        <Text style={[styles.headerSub, { color: tc.textSecondary }]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{vehicles?.length || 0} registered</Text>
       </View>
 
       {/* Loading */}
@@ -131,9 +131,9 @@ export default function MyVehiclesScreen({ navigation }: { navigation: AppNaviga
       {error != null && (
         <View style={styles.center}>
           <Ionicons name="alert-circle-outline" size={36} color={colors.danger[500]} style={{ marginBottom: spacing.sm }} />
-          <Text style={{ color: colors.danger[500], fontSize: typography.fontSize.md }}>Failed to load vehicles</Text>
+          <Text style={{ color: colors.danger[500], fontSize: typography.fontSize.md }} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Failed to load vehicles</Text>
           <Pressable onPress={() => refetch()} accessibilityRole="button" accessibilityLabel="Retry" style={{ marginTop: spacing.md }}>
-            <Text style={{ color: colors.primary[500], fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold }}>Retry</Text>
+            <Text style={{ color: colors.primary[500], fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold }} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Retry</Text>
           </Pressable>
         </View>
       )}
@@ -142,8 +142,8 @@ export default function MyVehiclesScreen({ navigation }: { navigation: AppNaviga
       {!isLoading && !error && vehicles?.length === 0 && (
         <View style={styles.center}>
           <Ionicons name="car-outline" size={48} color={tc.textTertiary} style={{ marginBottom: spacing.md }} />
-          <Text style={{ color: tc.text, fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold }}>No vehicles registered</Text>
-          <Text style={{ color: tc.textSecondary, fontSize: typography.fontSize.sm, marginTop: spacing.xs, textAlign: 'center' }}>
+          <Text style={{ color: tc.text, fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold }} allowFontScaling={true} maxFontSizeMultiplier={1.5}>No vehicles registered</Text>
+          <Text style={{ color: tc.textSecondary, fontSize: typography.fontSize.sm, marginTop: spacing.xs, textAlign: 'center' }} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             Add a vehicle to enable automatic accident detection.
           </Text>
         </View>
@@ -168,7 +168,7 @@ export default function MyVehiclesScreen({ navigation }: { navigation: AppNaviga
           styles.fab,
           { backgroundColor: colors.primary[600], opacity: pressed ? 0.85 : 1 },
         ]}
-      >
+       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
         <Ionicons name="add" size={28} color={darkColors.text} />
       </Pressable>
     </View>

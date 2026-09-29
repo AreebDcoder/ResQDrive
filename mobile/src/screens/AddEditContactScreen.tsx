@@ -23,6 +23,7 @@ import { contactSchema, ContactInput } from '../schemas/validation';
 import { addContactSuccess, updateContactSuccess, deleteContactSuccess } from '../store/slices/contactsSlice';
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useToast } from '../components/ui/Toast';
 import { ConfirmDialog } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
@@ -40,6 +41,7 @@ const RELATIONSHIP_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
 export default function AddEditContactScreen({ route, navigation }: any) {
   const toast = useToast();
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
   const contact = route.params?.contact; // If defined, we are editing
   const isEditing = !!contact;
 
@@ -118,16 +120,16 @@ const doDelete = async () => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
-      <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.scrollContainer, { paddingTop: insets.top + 16 }]} keyboardShouldPersistTaps="handled">
         {/* ── Header ── */}
         <View style={styles.header}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Ionicons name={isEditing ? 'pencil-outline' : 'person-add-outline'} size={26} color={colors.danger[500]} />
-            <Text style={styles.title} accessibilityRole="header">
+            <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               {isEditing ? 'Edit Contact' : 'Add Contact'}
             </Text>
           </View>
-          <Text style={styles.subtitle}>
+          <Text style={styles.subtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             {isEditing ? 'Update emergency contact parameters' : 'Register a contact for crash alerts notification'}
           </Text>
         </View>
@@ -136,12 +138,12 @@ const doDelete = async () => {
         {errorMsg && (
           <View style={styles.errorContainer}>
             <Ionicons name="alert-circle-outline" size={18} color={colors.danger[300]} style={{ marginRight: 8 }} />
-            <Text style={styles.errorText}>{errorMsg}</Text>
+            <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errorMsg}</Text>
           </View>
         )}
 
         <View style={styles.form}>
-          <Text style={styles.label}>Contact Name</Text>
+          <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Contact Name</Text>
           <Controller
             control={control}
             name="name"
@@ -153,12 +155,14 @@ const doDelete = async () => {
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
+                allowFontScaling={true}
+                maxFontSizeMultiplier={1.5}
               />
             )}
           />
-          {errors.name && <Text style={styles.errorHelper}>{errors.name.message}</Text>}
+          {errors.name && <Text style={styles.errorHelper} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errors.name.message}</Text>}
 
-          <Text style={styles.label}>Phone Number</Text>
+          <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Phone Number</Text>
           <Controller
             control={control}
             name="phoneNumber"
@@ -171,12 +175,14 @@ const doDelete = async () => {
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
+                allowFontScaling={true}
+                maxFontSizeMultiplier={1.5}
               />
             )}
           />
-          {errors.phoneNumber && <Text style={styles.errorHelper}>{errors.phoneNumber.message}</Text>}
+          {errors.phoneNumber && <Text style={styles.errorHelper} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errors.phoneNumber.message}</Text>}
 
-          <Text style={styles.label}>Email Address</Text>
+          <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Email Address</Text>
           <Controller
             control={control}
             name="email"
@@ -190,13 +196,15 @@ const doDelete = async () => {
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
+                allowFontScaling={true}
+                maxFontSizeMultiplier={1.5}
               />
             )}
           />
-          {errors.email && <Text style={styles.errorHelper}>{errors.email.message}</Text>}
+          {errors.email && <Text style={styles.errorHelper} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errors.email.message}</Text>}
 
           {/* ── Relationship Tags ── */}
-          <Text style={styles.label}>Relationship</Text>
+          <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Relationship</Text>
           <View style={styles.relationshipTags}>
             {RELATIONSHIPS.map((rel) => (
               <TouchableOpacity
@@ -219,7 +227,7 @@ const doDelete = async () => {
                     styles.tagText,
                     selectedRelationship === rel && styles.tagTextSelected,
                   ]}
-                >
+                 allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                   {rel}
                 </Text>
               </TouchableOpacity>
@@ -235,7 +243,7 @@ const doDelete = async () => {
             {isLoading ? (
               <ActivityIndicator color={darkColors.text} />
             ) : (
-              <Text style={styles.saveBtnText}>
+              <Text style={styles.saveBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 {isEditing ? 'Save Changes' : 'Add Contact'}
               </Text>
             )}
@@ -250,7 +258,7 @@ const doDelete = async () => {
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                 <Ionicons name="trash-outline" size={18} color={colors.danger[400]} />
-                <Text style={styles.deleteBtnText}>Remove Contact</Text>
+                <Text style={styles.deleteBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Remove Contact</Text>
               </View>
             </TouchableOpacity>
           )}

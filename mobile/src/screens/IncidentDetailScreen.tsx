@@ -7,6 +7,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import { fetchIncident, deleteIncident } from '../store/slices/incidentsSlice';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useToast } from '../components/ui/Toast';
 import { Button, ConfirmDialog } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
@@ -22,6 +23,7 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
   const toast = useToast();
   const { id } = route.params;
   const dispatch = useDispatch<any>();
+  const insets = useSafeAreaInsets();
   const { current, isLoading, isSubmitting } = useSelector((state: RootState) => state.incidents);
   const [removeDialogVisible, setRemoveDialogVisible] = useState(false);
 
@@ -66,25 +68,25 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
   if (!current) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>Incident record not found.</Text>
+        <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Incident record not found.</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingBottom: 60 }}>
+    <ScrollView style={[styles.container, { paddingTop: insets.top + 16 }]} contentContainerStyle={{ padding: 20, paddingBottom: 60 }}>
       {/* Top Banner */}
       <View style={styles.heroCard}>
-        <Text style={styles.heroId}>Incident #{current.id.slice(0, 8)}</Text>
+        <Text style={styles.heroId} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Incident #{current.id.slice(0, 8)}</Text>
         <View style={styles.badgesRow}>
           <View style={[styles.badge, { backgroundColor: SEVERITY_COLORS[current.severity] || darkColors.textTertiary }]}>
             <View style={[styles.badgeDot, { backgroundColor: darkColors.text }]} />
-            <Text style={styles.badgeText}>{current.severity}</Text>
+            <Text style={styles.badgeText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{current.severity}</Text>
           </View>
           <View style={[styles.badge, { backgroundColor: STATUS_COLORS[current.status] || darkColors.textTertiary }]}>
-            <Text style={styles.badgeText}>{current.status.replace('_', ' ')}</Text>
+            <Text style={styles.badgeText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{current.status.replace('_', ' ')}</Text>
           </View>
-          <Text style={styles.typeText}>
+          <Text style={styles.typeText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             {current.type === 'AUTO' ? 'Auto-detected' : 'Manually logged'}
           </Text>
         </View>
@@ -94,9 +96,9 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Ionicons name="time-outline" size={18} color={colors.danger[500]} style={{ marginRight: 8 }} />
-          <Text style={styles.label}>Occurred At</Text>
+          <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Occurred At</Text>
         </View>
-        <Text style={styles.value}>{fmtDate(current.occurredAt)}</Text>
+        <Text style={styles.value} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{fmtDate(current.occurredAt)}</Text>
       </View>
 
       {/* Address */}
@@ -104,9 +106,9 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="location-outline" size={18} color={colors.danger[500]} style={{ marginRight: 8 }} />
-            <Text style={styles.label}>Address</Text>
+            <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Address</Text>
           </View>
-          <Text style={styles.value}>{current.address}</Text>
+          <Text style={styles.value} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{current.address}</Text>
           {current.latitude && current.longitude ? (
             <View style={styles.mapsBtnWrap}>
               <Button
@@ -127,9 +129,9 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="globe-outline" size={18} color={colors.danger[500]} style={{ marginRight: 8 }} />
-            <Text style={styles.label}>Coordinates</Text>
+            <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Coordinates</Text>
           </View>
-          <Text style={styles.value}>{current.latitude.toFixed(6)}, {current.longitude.toFixed(6)}</Text>
+          <Text style={styles.value} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{current.latitude.toFixed(6)}, {current.longitude.toFixed(6)}</Text>
         </View>
       ) : null}
 
@@ -138,9 +140,9 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="document-text-outline" size={18} color={colors.danger[500]} style={{ marginRight: 8 }} />
-            <Text style={styles.label}>Description</Text>
+            <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Description</Text>
           </View>
-          <Text style={styles.value}>{current.description}</Text>
+          <Text style={styles.value} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{current.description}</Text>
         </View>
       ) : null}
 
@@ -149,10 +151,10 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="hardware-chip-outline" size={18} color={colors.danger[500]} style={{ marginRight: 8 }} />
-            <Text style={styles.label}>Sensor Snapshot</Text>
+            <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Sensor Snapshot</Text>
           </View>
           <View style={styles.jsonBox}>
-            <Text style={styles.jsonText}>{JSON.stringify(current.sensorSnapshot, null, 2)}</Text>
+            <Text style={styles.jsonText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{JSON.stringify(current.sensorSnapshot, null, 2)}</Text>
           </View>
         </View>
       ) : null}
@@ -162,10 +164,10 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="alert-circle-outline" size={18} color={colors.danger[500]} style={{ marginRight: 8 }} />
-            <Text style={styles.label}>Alert Dispatch Status</Text>
+            <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Alert Dispatch Status</Text>
           </View>
           <View style={styles.jsonBox}>
-            <Text style={styles.jsonText}>{JSON.stringify(current.alertDispatchStatus, null, 2)}</Text>
+            <Text style={styles.jsonText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{JSON.stringify(current.alertDispatchStatus, null, 2)}</Text>
           </View>
         </View>
       ) : null}
@@ -175,10 +177,10 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="search-outline" size={18} color={colors.danger[500]} style={{ marginRight: 8 }} />
-            <Text style={styles.label}>Damage Assessment</Text>
+            <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Damage Assessment</Text>
           </View>
           <View style={styles.jsonBox}>
-            <Text style={styles.jsonText}>{JSON.stringify(current.damageAssessmentResult, null, 2)}</Text>
+            <Text style={styles.jsonText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{JSON.stringify(current.damageAssessmentResult, null, 2)}</Text>
           </View>
         </View>
       ) : null}
@@ -187,16 +189,16 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Ionicons name="calendar-outline" size={18} color={colors.danger[500]} style={{ marginRight: 8 }} />
-          <Text style={styles.label}>Record Timeline</Text>
+          <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Record Timeline</Text>
         </View>
         <View style={styles.timelineRow}>
-          <Text style={styles.timelineLabel}>Created</Text>
-          <Text style={styles.timelineValue}>{fmtDate(current.createdAt)}</Text>
+          <Text style={styles.timelineLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Created</Text>
+          <Text style={styles.timelineValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{fmtDate(current.createdAt)}</Text>
         </View>
         <View style={styles.timelineDivider} />
         <View style={styles.timelineRow}>
-          <Text style={styles.timelineLabel}>Updated</Text>
-          <Text style={styles.timelineValue}>{fmtDate(current.updatedAt)}</Text>
+          <Text style={styles.timelineLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Updated</Text>
+          <Text style={styles.timelineValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{fmtDate(current.updatedAt)}</Text>
         </View>
       </View>
 

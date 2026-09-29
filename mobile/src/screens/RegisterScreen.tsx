@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
+  AccessibilityInfo,
   Animated,
   Easing,
   Keyboard,
@@ -20,11 +21,13 @@ import { useDispatch } from 'react-redux';
 import { loginSuccess } from '../store/slices/authSlice';
 import { setItemAsync } from '../utils/secureStorage';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, FormInput } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function RegisterScreen({ route, navigation }: { route: any; navigation: any }) {
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
   const googleData = route?.params?.googleData || null;
   const isGoogleUser = !!googleData;
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -37,7 +40,24 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
   const cardY = useRef(new Animated.Value(24)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
 
+  // Batch 7 Phase 4: Respect Reduce Motion accessibility setting
+  const [reduceMotion, setReduceMotion] = useState(false);
+
   useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    // Skip decorative entrance animation when Reduce Motion is enabled
+    if (reduceMotion) {
+      headerTranslateY.setValue(0);
+      headerOpacity.setValue(1);
+      cardY.setValue(0);
+      cardOpacity.setValue(1);
+      return;
+    }
     Animated.sequence([
       Animated.parallel([
         Animated.timing(headerTranslateY, {
@@ -66,7 +86,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
         }),
       ]),
     ]).start();
-  }, []);
+  }, [reduceMotion]);
 
   const {
     control,
@@ -137,7 +157,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
           style={styles.keyboardAvoid}
         >
           <ScrollView
-            contentContainerStyle={styles.scrollContainer}
+            contentContainerStyle={[styles.scrollContainer, { paddingTop: insets.top + 16 }]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
@@ -154,8 +174,8 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                 },
               ]}
             >
-              <Text style={styles.title} accessibilityRole="header">Join ResQDrive</Text>
-              <Text style={styles.subtitle}>Create an account to start</Text>
+              <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Join ResQDrive</Text>
+              <Text style={styles.subtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Create an account to start</Text>
             </Animated.View>
 
             {/* Glass Card */}
@@ -172,7 +192,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
               {errorMsg && (
                 <View style={styles.errorContainer}>
                   <Ionicons name="alert-circle-outline" size={18} color={colors.danger[400]} style={{ marginRight: 8 }} />
-                  <Text style={styles.errorText}>{errorMsg}</Text>
+                  <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errorMsg}</Text>
                 </View>
               )}
 
@@ -184,7 +204,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                   activeOpacity={0.7} accessibilityRole="button"
                 >
                   <Ionicons name="car-outline" size={18} color={selectedRole === 'DRIVER' ? darkColors.text : darkColors.textTertiary} />
-                  <Text style={[styles.roleTabText, selectedRole === 'DRIVER' && styles.activeRoleTabText]}>
+                  <Text style={[styles.roleTabText, selectedRole === 'DRIVER' && styles.activeRoleTabText]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                     Driver
                   </Text>
                 </TouchableOpacity>
@@ -194,7 +214,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                   activeOpacity={0.7} accessibilityRole="button"
                 >
                   <Ionicons name="construct-outline" size={18} color={selectedRole === 'MECHANIC' ? darkColors.text : darkColors.textTertiary} />
-                  <Text style={[styles.roleTabText, selectedRole === 'MECHANIC' && styles.activeRoleTabText]}>
+                  <Text style={[styles.roleTabText, selectedRole === 'MECHANIC' && styles.activeRoleTabText]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                     Mechanic
                   </Text>
                 </TouchableOpacity>
@@ -234,7 +254,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                   <View style={styles.roleSection}>
                     <View style={styles.roleSectionHeader}>
                       <Ionicons name="card-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
-                      <Text style={styles.roleSectionTitle}>Driver Details</Text>
+                      <Text style={styles.roleSectionTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Driver Details</Text>
                     </View>
 
                     <FormInput
@@ -258,7 +278,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                   <View style={styles.roleSection}>
                     <View style={styles.roleSectionHeader}>
                       <Ionicons name="business-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
-                      <Text style={styles.roleSectionTitle}>Workshop Details</Text>
+                      <Text style={styles.roleSectionTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Workshop Details</Text>
                     </View>
 
                     <FormInput
@@ -324,7 +344,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                     {!isGoogleUser && (<>
             {/* Footer */}
             <View style={styles.footer}>
-              <Text style={styles.footerText}>Already have an account? </Text>
+              <Text style={styles.footerText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Already have an account? </Text>
               <Button
                 label="Log In"
                 variant="ghost"

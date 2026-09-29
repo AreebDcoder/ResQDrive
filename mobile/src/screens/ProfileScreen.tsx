@@ -22,11 +22,13 @@ import { updateProfileSchema, changePasswordSchema, UpdateProfileInput, ChangePa
 import { FCMService } from '../services/fcmService';
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, FormInput, Input } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function ProfileScreen() {
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
   const { user } = useSelector((state: RootState) => state.auth);
   
   const [isEditing, setIsEditing] = useState(false);
@@ -141,10 +143,10 @@ export default function ProfileScreen() {
   if (!user) return null;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 16 }]}>
       {/* ── Profile Picture Header ── */}
       <View style={styles.profileHeader}>
-        <TouchableOpacity onPress={simulatePictureUpload} style={styles.avatarWrap} accessibilityRole="button">
+        <TouchableOpacity onPress={simulatePictureUpload} style={styles.avatarWrap} accessibilityRole="button" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <View style={styles.avatarRing}>
             <Image
               source={{ uri: user.profilePictureUrl || 'https://i.pravatar.cc/300?img=11' }}
@@ -155,16 +157,16 @@ export default function ProfileScreen() {
             <Ionicons name="camera" size={14} color={darkColors.text} />
           </View>
         </TouchableOpacity>
-        <Text style={styles.profileName}>{user.fullName}</Text>
+        <Text style={styles.profileName} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{user.fullName}</Text>
         <View style={styles.roleRow}>
-          <Text style={styles.profileRole}>Role: </Text>
+          <Text style={styles.profileRole} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Role: </Text>
           <View style={styles.rolePill}>
-            <Text style={styles.roleLabel}>{user.role}</Text>
+            <Text style={styles.roleLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{user.role}</Text>
           </View>
         </View>
         {user.role === 'MECHANIC' && (
           <View style={styles.verificationRow}>
-            <Text style={styles.verificationText}>
+            <Text style={styles.verificationText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               Workshop Verified: {user.mechanicDetails?.isWorkshopVerified ? 'Yes' : 'Pending Approval'}
             </Text>
           </View>
@@ -174,7 +176,7 @@ export default function ProfileScreen() {
       {/* ── Profile Alert ── */}
       {profileMessage && (
         <View style={profileMessage.type === 'success' ? styles.alertSuccess : styles.alertError}>
-          <Text style={profileMessage.type === 'success' ? styles.successText : styles.alertText}>
+          <Text style={profileMessage.type === 'success' ? styles.successText : styles.alertText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             {profileMessage.text}
           </Text>
         </View>
@@ -185,7 +187,7 @@ export default function ProfileScreen() {
         <View style={styles.cardHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Ionicons name="person-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
-            <Text style={styles.cardTitle}>Account Details</Text>
+            <Text style={styles.cardTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Account Details</Text>
           </View>
           <Button
             label={isEditing ? 'Cancel' : 'Edit'}
@@ -290,7 +292,7 @@ export default function ProfileScreen() {
         <TouchableOpacity style={styles.cardHeader} onPress={() => { setIsChangingPassword(!isChangingPassword); setPwMessage(null); }} accessibilityRole="button">
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Ionicons name="lock-closed-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
-            <Text style={styles.cardTitle}>Security & Password</Text>
+            <Text style={styles.cardTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Security & Password</Text>
           </View>
           <Ionicons name={isChangingPassword ? 'chevron-up-outline' : 'chevron-down-outline'} size={20} color={darkColors.textTertiary} />
         </TouchableOpacity>
@@ -299,7 +301,7 @@ export default function ProfileScreen() {
           <View style={styles.pwContainer}>
             {pwMessage && (
               <View style={pwMessage.type === 'success' ? styles.alertSuccess : styles.alertError}>
-                <Text style={pwMessage.type === 'success' ? styles.successText : styles.alertText}>
+                <Text style={pwMessage.type === 'success' ? styles.successText : styles.alertText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                   {pwMessage.text}
                 </Text>
               </View>

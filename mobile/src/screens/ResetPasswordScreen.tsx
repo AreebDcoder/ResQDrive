@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
+  AccessibilityInfo,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -27,12 +28,27 @@ export default function ResetPasswordScreen({ navigation }: { navigation: any })
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
 
-  useState(() => {
+  // Batch 7 Phase 4: Respect Reduce Motion accessibility setting
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    // Skip decorative entrance animation when Reduce Motion is enabled
+    if (reduceMotion) {
+      fadeAnim.setValue(1);
+      slideAnim.setValue(0);
+      return;
+    }
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
     ]).start();
-  });
+  }, [fadeAnim, slideAnim, reduceMotion]);
 
   const {
     control,
@@ -81,24 +97,24 @@ export default function ResetPasswordScreen({ navigation }: { navigation: any })
       <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
-            <Text style={styles.title} accessibilityRole="header">Reset Password</Text>
-            <Text style={styles.subtitle}>Enter the reset token sent to your email and your new password</Text>
+            <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Reset Password</Text>
+            <Text style={styles.subtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Enter the reset token sent to your email and your new password</Text>
           </View>
 
           {errorMsg && (
             <View style={styles.alertError}>
-              <Text style={styles.alertText}>{errorMsg}</Text>
+              <Text style={styles.alertText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errorMsg}</Text>
             </View>
           )}
 
           {successMsg && (
             <View style={styles.alertSuccess}>
-              <Text style={styles.successText}>{successMsg}</Text>
+              <Text style={styles.successText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{successMsg}</Text>
             </View>
           )}
 
           <View style={styles.form}>
-            <Text style={styles.label}>Reset Token</Text>
+            <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Reset Token</Text>
             <Controller
               control={control}
               name="token"
@@ -111,12 +127,14 @@ export default function ResetPasswordScreen({ navigation }: { navigation: any })
                   onBlur={onBlur}
                   onChangeText={onChange}
                   value={value}
+                  allowFontScaling={true}
+                  maxFontSizeMultiplier={1.5}
                 />
               )}
             />
-            {errors.token && <Text style={styles.errorHelper}>{errors.token.message}</Text>}
+            {errors.token && <Text style={styles.errorHelper} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errors.token.message}</Text>}
 
-            <Text style={styles.label}>New Password</Text>
+            <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>New Password</Text>
             <Controller
               control={control}
               name="password"
@@ -131,16 +149,18 @@ export default function ResetPasswordScreen({ navigation }: { navigation: any })
                     onBlur={onBlur}
                     onChangeText={onChange}
                     value={value}
+                    allowFontScaling={true}
+                    maxFontSizeMultiplier={1.5}
                   />
                   <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(!showPassword)} accessibilityRole="button">
-                    <Text style={styles.eyeBtnText}>{showPassword ? 'Hide' : 'Show'}</Text>
+                    <Text style={styles.eyeBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{showPassword ? 'Hide' : 'Show'}</Text>
                   </TouchableOpacity>
                 </View>
               )}
             />
-            {errors.password && <Text style={styles.errorHelper}>{errors.password.message}</Text>}
+            {errors.password && <Text style={styles.errorHelper} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errors.password.message}</Text>}
 
-            <Text style={styles.label}>Confirm New Password</Text>
+            <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Confirm New Password</Text>
             <Controller
               control={control}
               name="confirmPassword"
@@ -155,29 +175,31 @@ export default function ResetPasswordScreen({ navigation }: { navigation: any })
                     onBlur={onBlur}
                     onChangeText={onChange}
                     value={value}
+                    allowFontScaling={true}
+                    maxFontSizeMultiplier={1.5}
                   />
                   <TouchableOpacity
                     style={styles.eyeBtn}
                     onPress={() => setShowConfirmPassword(!showConfirmPassword)} accessibilityRole="button"
                   >
-                    <Text style={styles.eyeBtnText}>{showConfirmPassword ? 'Hide' : 'Show'}</Text>
+                    <Text style={styles.eyeBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{showConfirmPassword ? 'Hide' : 'Show'}</Text>
                   </TouchableOpacity>
                 </View>
               )}
             />
-            {errors.confirmPassword && <Text style={styles.errorHelper}>{errors.confirmPassword.message}</Text>}
+            {errors.confirmPassword && <Text style={styles.errorHelper} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errors.confirmPassword.message}</Text>}
 
             <TouchableOpacity style={styles.resetBtn} onPress={handleSubmit(onSubmit)} disabled={isLoading} accessibilityRole="button">
               {isLoading ? (
                 <ActivityIndicator color={darkColors.text} />
               ) : (
-                <Text style={styles.resetBtnText}>Reset Password</Text>
+                <Text style={styles.resetBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Reset Password</Text>
               )}
             </TouchableOpacity>
           </View>
 
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate('Login')} accessibilityRole="button">
-            <Text style={styles.backText}>Back to Log In</Text>
+            <Text style={styles.backText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Back to Log In</Text>
           </TouchableOpacity>
         </ScrollView>
       </Animated.View>

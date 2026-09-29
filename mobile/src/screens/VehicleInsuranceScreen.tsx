@@ -18,6 +18,7 @@ import { insuranceSchema, InsuranceInput } from '../schemas/validation';
 import { upsertInsuranceSuccess, deleteInsuranceSuccess } from '../store/slices/vehiclesSlice';
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useToast } from '../components/ui/Toast';
 import { ConfirmDialog } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
@@ -25,6 +26,7 @@ import { colors, darkColors, tints } from '../theme/tokens';
 export default function VehicleInsuranceScreen({ route, navigation }: any) {
   const toast = useToast();
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
   const { vehicleId, insurance } = route.params;
   const isEditing = !!insurance;
 
@@ -102,14 +104,14 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
-      <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.scrollContainer, { paddingTop: insets.top + 16 }]} keyboardShouldPersistTaps="handled">
         {/* ── Header ── */}
         <View style={styles.header}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Ionicons name="shield-checkmark-outline" size={26} color={colors.danger[500]} />
-            <Text style={styles.title} accessibilityRole="header">Insurance Details</Text>
+            <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Insurance Details</Text>
           </View>
-          <Text style={styles.subtitle}>
+          <Text style={styles.subtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             Optional reference details shown on crash screens and auto-filled in accident exports
           </Text>
         </View>
@@ -118,12 +120,12 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
         {errorMsg && (
           <View style={styles.errorContainer}>
             <Ionicons name="alert-circle-outline" size={18} color={colors.danger[300]} style={{ marginRight: 8 }} />
-            <Text style={styles.errorText}>{errorMsg}</Text>
+            <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errorMsg}</Text>
           </View>
         )}
 
         <View style={styles.form}>
-          <Text style={styles.label}>Insurance Provider Name</Text>
+          <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Insurance Provider Name</Text>
           <Controller
             control={control}
             name="providerName"
@@ -135,11 +137,13 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
+                allowFontScaling={true}
+                maxFontSizeMultiplier={1.5}
               />
             )}
           />
 
-          <Text style={styles.label}>Policy Number</Text>
+          <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Policy Number</Text>
           <Controller
             control={control}
             name="policyNumber"
@@ -151,13 +155,15 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
+                allowFontScaling={true}
+                maxFontSizeMultiplier={1.5}
               />
             )}
           />
 
           <View style={styles.row}>
             <View style={styles.rowCol}>
-              <Text style={styles.label}>Coverage Type</Text>
+              <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Coverage Type</Text>
               <Controller
                 control={control}
                 name="coverageType"
@@ -169,13 +175,15 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
                     onBlur={onBlur}
                     onChangeText={onChange}
                     value={value}
+                    allowFontScaling={true}
+                    maxFontSizeMultiplier={1.5}
                   />
                 )}
               />
             </View>
 
             <View style={styles.rowCol}>
-              <Text style={styles.label}>Expiry (YYYY-MM-DD)</Text>
+              <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Expiry (YYYY-MM-DD)</Text>
               <Controller
                 control={control}
                 name="expiryDate"
@@ -187,13 +195,15 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
                     onBlur={onBlur}
                     onChangeText={onChange}
                     value={value}
+                    allowFontScaling={true}
+                    maxFontSizeMultiplier={1.5}
                   />
                 )}
               />
             </View>
           </View>
 
-          <Text style={styles.label}>Emergency Helpline Number</Text>
+          <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Emergency Helpline Number</Text>
           <Controller
             control={control}
             name="emergencyHelpline"
@@ -206,6 +216,8 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
+                allowFontScaling={true}
+                maxFontSizeMultiplier={1.5}
               />
             )}
           />
@@ -219,7 +231,7 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
             {isLoading ? (
               <ActivityIndicator color={darkColors.text} />
             ) : (
-              <Text style={styles.saveBtnText}>Save Insurance Details</Text>
+              <Text style={styles.saveBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Save Insurance Details</Text>
             )}
           </TouchableOpacity>
 
@@ -232,7 +244,7 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                 <Ionicons name="trash-outline" size={18} color={colors.danger[400]} />
-                <Text style={styles.deleteBtnText}>Remove Insurance Details</Text>
+                <Text style={styles.deleteBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Remove Insurance Details</Text>
               </View>
             </TouchableOpacity>
           )}

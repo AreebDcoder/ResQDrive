@@ -230,14 +230,14 @@ const handleShareReport = async () => {
           <View style={styles.historyCardHeader}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Ionicons name="car-sport-outline" size={18} color={colors.danger[500]} style={{ marginRight: 6 }} />
-              <Text style={styles.historyCarName}>{carText}</Text>
+              <Text style={styles.historyCarName} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{carText}</Text>
             </View>
-            <Text style={styles.historyDateText}>{formattedDate}</Text>
+            <Text style={styles.historyDateText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{formattedDate}</Text>
           </View>
 
           <View style={styles.historyCostBlock}>
-            <Text style={styles.historyCostLabel}>ESTIMATED RANGE</Text>
-            <Text style={styles.historyCostText}>
+            <Text style={styles.historyCostLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>ESTIMATED RANGE</Text>
+            <Text style={styles.historyCostText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               PKR {item.totalMinCostPkr.toLocaleString()} – {item.totalMaxCostPkr.toLocaleString()}
             </Text>
           </View>
@@ -245,10 +245,10 @@ const handleShareReport = async () => {
           <View style={styles.historyFooter}>
             <View style={styles.partCountBadge}>
               <Ionicons name="construct-outline" size={13} color={colors.info[300]} style={{ marginRight: 4 }} />
-              <Text style={styles.partCountText}>{item.lineItems.length} Part{item.lineItems.length > 1 ? 's' : ''} Assessed</Text>
+              <Text style={styles.partCountText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.lineItems.length} Part{item.lineItems.length > 1 ? 's' : ''} Assessed</Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={styles.viewDetailsText}>View Report</Text>
+              <Text style={styles.viewDetailsText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>View Report</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.danger[500]} />
             </View>
           </View>
@@ -257,7 +257,7 @@ const handleShareReport = async () => {
         <TouchableOpacity 
           style={styles.deleteReportIconBtn} 
           onPress={() => handleDeleteReport(item.id)} accessibilityRole="button"
-         accessibilityLabel="Delete">
+         accessibilityLabel="Delete" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Ionicons name="trash-outline" size={18} color={colors.danger[400]} />
         </TouchableOpacity>
       </View>
@@ -269,7 +269,7 @@ const handleShareReport = async () => {
       return (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={colors.danger[500]} />
-          <Text style={styles.loadingText}>Generating auto repair estimates...</Text>
+          <Text style={styles.loadingText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Generating auto repair estimates...</Text>
         </View>
       );
     }
@@ -278,7 +278,7 @@ const handleShareReport = async () => {
       return (
         <View style={styles.centerContainer}>
           <Ionicons name="receipt-outline" size={48} color={darkColors.textTertiary} style={{ marginBottom: 12 }} />
-          <Text style={styles.emptyText}>No cost report loaded. Check history to open past estimates.</Text>
+          <Text style={styles.emptyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>No cost report loaded. Check history to open past estimates.</Text>
         </View>
       );
     }
@@ -310,15 +310,15 @@ const handleShareReport = async () => {
         <View style={styles.totalCard}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
             <Ionicons name="cash-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
-            <Text style={styles.totalLabel}>TOTAL ESTIMATED COST RANGE</Text>
+            <Text style={styles.totalLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>TOTAL ESTIMATED COST RANGE</Text>
           </View>
-          <Text style={styles.totalValue}>
+          <Text style={styles.totalValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             PKR {report.totalMinCostPkr.toLocaleString()} - {report.totalMaxCostPkr.toLocaleString()}
           </Text>
           {report.vehicle && (
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
               <Ionicons name="car-outline" size={16} color={darkColors.textSecondary} style={{ marginRight: 6 }} />
-              <Text style={styles.vehicleSubText}>
+              <Text style={styles.vehicleSubText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 {report.vehicle.year} {report.vehicle.make} {report.vehicle.model} ({report.vehicle.licensePlate.toUpperCase()})
               </Text>
             </View>
@@ -329,7 +329,7 @@ const handleShareReport = async () => {
         {hasFallbackItems && (
           <View style={styles.warningBanner}>
             <Ionicons name="information-circle-outline" size={20} color={colors.warning[500]} style={{ marginRight: 8 }} />
-            <Text style={styles.warningText}>
+            <Text style={styles.warningText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               Note: Certain parts are priced using static default averages because live marketplace listings and market fallback were unreachable.
             </Text>
           </View>
@@ -338,12 +338,12 @@ const handleShareReport = async () => {
         {/* ── Line Items ── */}
         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 24, marginBottom: 12 }}>
           <Ionicons name="construct-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
-          <Text style={styles.sectionHeaderTitle}>DAMAGED PARTS BREAKDOWN</Text>
+          <Text style={styles.sectionHeaderTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>DAMAGED PARTS BREAKDOWN</Text>
         </View>
         {report.lineItems.map((item, index) => (
           <View key={index} style={styles.lineItemCard}>
             <View style={styles.itemHeader}>
-              <Text style={styles.itemPartName}>{getPartName(item.partTag)}</Text>
+              <Text style={styles.itemPartName} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{getPartName(item.partTag)}</Text>
               <View style={[
                 styles.badge, 
                 { backgroundColor: item.action === 'repair' ? 'tints.successSubtle' : tints.dangerErrorBg }
@@ -351,34 +351,34 @@ const handleShareReport = async () => {
                 <Text style={[
                   styles.badgeText, 
                   { color: item.action === 'repair' ? colors.success[500] : colors.danger[500] }
-                ]}>
+                ]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                   {item.action.toUpperCase()}
                 </Text>
               </View>
             </View>
 
-            <Text style={styles.itemSubText}>Damage: {item.damageType.toUpperCase().replace('_', ' ')}</Text>
+            <Text style={styles.itemSubText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Damage: {item.damageType.toUpperCase().replace('_', ' ')}</Text>
 
             <View style={styles.costDetailsBox}>
               <View style={styles.costRow}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="build-outline" size={15} color={darkColors.textSecondary} style={{ marginRight: 6 }} />
-                  <Text style={styles.costLabel}>Workshop Labor Cost</Text>
+                  <Text style={styles.costLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Workshop Labor Cost</Text>
                 </View>
-                <Text style={styles.costVal}>PKR {item.laborCost.min.toLocaleString()} - {item.laborCost.max.toLocaleString()}</Text>
+                <Text style={styles.costVal} allowFontScaling={true} maxFontSizeMultiplier={1.5}>PKR {item.laborCost.min.toLocaleString()} - {item.laborCost.max.toLocaleString()}</Text>
               </View>
 
               <View style={styles.costRow}>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Ionicons name="cube-outline" size={15} color={darkColors.textSecondary} style={{ marginRight: 6 }} />
-                    <Text style={styles.costLabel}>Spare Parts Price</Text>
+                    <Text style={styles.costLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Spare Parts Price</Text>
                   </View>
-                  <Text style={styles.partsSourceSubtext}>
+                  <Text style={styles.partsSourceSubtext} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                     {item.action === 'repair' ? 'Repaired (No replacement part purchased)' : getPartsSourceLabel(item.partsSource)}
                   </Text>
                 </View>
-                <Text style={styles.costVal}>
+                <Text style={styles.costVal} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                   {item.action === 'repair'
                     ? 'PKR 0'
                     : `PKR ${item.partsCost.min.toLocaleString()} - ${item.partsCost.max.toLocaleString()}`}
@@ -386,8 +386,8 @@ const handleShareReport = async () => {
               </View>
 
               <View style={[styles.costRow, styles.totalRow]}>
-                <Text style={styles.totalRowLabel}>Estimated Total</Text>
-                <Text style={styles.totalRowVal}>PKR {item.lineTotal.min.toLocaleString()} - {item.lineTotal.max.toLocaleString()}</Text>
+                <Text style={styles.totalRowLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Estimated Total</Text>
+                <Text style={styles.totalRowVal} allowFontScaling={true} maxFontSizeMultiplier={1.5}>PKR {item.lineTotal.min.toLocaleString()} - {item.lineTotal.max.toLocaleString()}</Text>
               </View>
             </View>
           </View>
@@ -404,7 +404,7 @@ const handleShareReport = async () => {
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Ionicons name="share-social-outline" size={20} color={darkColors.text} style={{ marginRight: 8 }} />
-              <Text style={styles.shareBtnText}>Share Breakdown Report (PDF)</Text>
+              <Text style={styles.shareBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Share Breakdown Report (PDF)</Text>
             </View>
           )}
         </TouchableOpacity>
@@ -430,7 +430,7 @@ const handleShareReport = async () => {
          accessibilityLabel="Back">
           <Ionicons name="arrow-back" size={24} color={darkColors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerBarTitle}>Repair Estimation</Text>
+        <Text style={styles.headerBarTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Repair Estimation</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -441,7 +441,7 @@ const handleShareReport = async () => {
           onPress={() => setActiveSegment('details')} accessibilityRole="button"
         >
           <Ionicons name="document-text-outline" size={16} color={activeSegment === 'details' ? colors.danger[500] : darkColors.textTertiary} style={{ marginRight: 6 }} />
-          <Text style={[styles.segmentBtnText, activeSegment === 'details' && styles.segmentBtnTextActive]}>
+          <Text style={[styles.segmentBtnText, activeSegment === 'details' && styles.segmentBtnTextActive]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             Estimate Report
           </Text>
         </TouchableOpacity>
@@ -451,7 +451,7 @@ const handleShareReport = async () => {
           onPress={() => setActiveSegment('history')} accessibilityRole="button"
         >
           <Ionicons name="folder-open-outline" size={16} color={activeSegment === 'history' ? colors.danger[500] : darkColors.textTertiary} style={{ marginRight: 6 }} />
-          <Text style={[styles.segmentBtnText, activeSegment === 'history' && styles.segmentBtnTextActive]}>
+          <Text style={[styles.segmentBtnText, activeSegment === 'history' && styles.segmentBtnTextActive]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             Reports History
           </Text>
         </TouchableOpacity>
@@ -461,7 +461,7 @@ const handleShareReport = async () => {
       {errorMsg && (
         <View style={styles.errorBanner}>
           <Ionicons name="warning-outline" size={20} color={colors.danger[400]} style={{ marginRight: 8 }} />
-          <Text style={styles.errorText}>{errorMsg}</Text>
+          <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errorMsg}</Text>
         </View>
       )}
 
@@ -480,7 +480,7 @@ const handleShareReport = async () => {
             !historyLoading ? (
               <View style={styles.centerContainer}>
                 <Ionicons name="folder-open-outline" size={48} color={darkColors.textTertiary} style={{ marginBottom: 12 }} />
-                <Text style={styles.emptyText}>No repair estimates generated yet.</Text>
+                <Text style={styles.emptyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>No repair estimates generated yet.</Text>
               </View>
             ) : null
           }

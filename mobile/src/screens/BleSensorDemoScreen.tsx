@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {
+  AccessibilityInfo,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,23 +15,40 @@ import { Ionicons } from '@expo/vector-icons';
 import { CrashSoundDetectionService } from '../services/crashSoundDetectionService';
 import { MultiModalFusionService } from '../services/multiModalFusionService';
 import { colors, darkColors, tints } from '../theme/tokens';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function BleSensorDemoScreen() {
   const { connectionStatus, activeSource, latestReading } = useSelector(
     (state: RootState) => state.sensor
   );
+  const insets = useSafeAreaInsets();
 
   const [rawPayload, setRawPayload] = useState<string>('No data received yet.');
+
+  // Batch 7 Phase 4: Respect Reduce Motion accessibility setting
+  const [reduceMotion, setReduceMotion] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
 
   useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    // Skip decorative entrance animation when Reduce Motion is enabled
+    if (reduceMotion) {
+      fadeAnim.setValue(1);
+      slideAnim.setValue(0);
+      return;
+    }
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
     ]).start();
-  }, [fadeAnim, slideAnim]);
+  }, [fadeAnim, slideAnim, reduceMotion]);
 
   useEffect(() => {
     sensorSourceManager.onSensorEvent((reading) => {
@@ -71,26 +89,26 @@ export default function BleSensorDemoScreen() {
       </View>
 
       <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 16 }]}>
           <View style={styles.header}>
-            <Text style={styles.title} accessibilityRole="header">BLE Sensor Diagnostics</Text>
-            <Text style={styles.subtitle}>
+            <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>BLE Sensor Diagnostics</Text>
+            <Text style={styles.subtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               Monitor ResQDrive-Sensor connection, telemetry values, and fallback states.
             </Text>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardHeader}>Connection Status</Text>
+            <Text style={styles.cardHeader} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Connection Status</Text>
 
             <View style={styles.row}>
-              <Text style={styles.label}>Hardware State:</Text>
+              <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Hardware State:</Text>
               <View style={[styles.statusBadge, { backgroundColor: getStatusColor() }]}>
-                <Text style={styles.statusText}>{connectionStatus.toUpperCase()}</Text>
+                <Text style={styles.statusText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{connectionStatus.toUpperCase()}</Text>
               </View>
             </View>
 
             <View style={styles.row}>
-              <Text style={styles.label}>Active Data Source:</Text>
+              <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Active Data Source:</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Ionicons
                   name={activeSource === 'ble' ? 'hardware-chip-outline' : activeSource === 'phone' ? 'phone-portrait-outline' : 'flask-outline'}
@@ -98,7 +116,7 @@ export default function BleSensorDemoScreen() {
                   color={colors.success[400]}
                   style={{ marginRight: 6 }}
                 />
-                <Text style={styles.valueText}>
+                <Text style={styles.valueText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                   {activeSource === 'ble'
                     ? 'ESP32 BLE Hardware'
                     : activeSource === 'phone'
@@ -110,30 +128,30 @@ export default function BleSensorDemoScreen() {
 
             <TouchableOpacity style={styles.reconnectBtn} onPress={handleForceReconnect} accessibilityRole="button">
               <Ionicons name="refresh" size={18} color={darkColors.text} style={{ marginRight: 6 }} />
-              <Text style={styles.reconnectBtnText}>Force Reconnect BLE</Text>
+              <Text style={styles.reconnectBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Force Reconnect BLE</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardHeader}>Derived Telemetry</Text>
+            <Text style={styles.cardHeader} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Derived Telemetry</Text>
 
             <View style={styles.row}>
-              <Text style={styles.label}>Linear Acceleration (accelG):</Text>
-              <Text style={styles.valueText}>
+              <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Linear Acceleration (accelG):</Text>
+              <Text style={styles.valueText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 {latestReading ? `${latestReading.accelG.toFixed(4)} g` : '—'}
               </Text>
             </View>
 
             <View style={styles.row}>
-              <Text style={styles.label}>Rotation Speed (gyroDegPerSec):</Text>
-              <Text style={styles.valueText}>
+              <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Rotation Speed (gyroDegPerSec):</Text>
+              <Text style={styles.valueText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 {latestReading ? `${latestReading.gyroDegPerSec.toFixed(2)} °/s` : '—'}
               </Text>
             </View>
 
             <View style={styles.row}>
-              <Text style={styles.label}>Sudden Speed Drop (gpsSpeedDrop):</Text>
-              <Text style={styles.valueText}>
+              <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Sudden Speed Drop (gpsSpeedDrop):</Text>
+              <Text style={styles.valueText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 {latestReading ? `${latestReading.gpsSpeedDropKmh.toFixed(1)} km/h` : '—'}
               </Text>
             </View>
@@ -153,13 +171,13 @@ export default function BleSensorDemoScreen() {
             }} accessibilityRole="button"
           >
             <Ionicons name="flash" size={18} color={darkColors.text} style={{ marginRight: 8 }} />
-            <Text style={styles.simCrashBtnText}>DEV: Trigger Confirmed Accident</Text>
+            <Text style={styles.simCrashBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>DEV: Trigger Confirmed Accident</Text>
           </TouchableOpacity>
 
           <View style={styles.card}>
-            <Text style={styles.cardHeader}>Raw BLE JSON Broadcast Payload</Text>
+            <Text style={styles.cardHeader} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Raw BLE JSON Broadcast Payload</Text>
             <View style={styles.codeBlock}>
-              <Text style={styles.codeText}>{rawPayload}</Text>
+              <Text style={styles.codeText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{rawPayload}</Text>
             </View>
           </View>
         </ScrollView>

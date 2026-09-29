@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
+  AccessibilityInfo,
   ActivityIndicator,
   StyleSheet,
   Text,
@@ -22,12 +23,27 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: any }
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
 
-  useState(() => {
+  // Batch 7 Phase 4: Respect Reduce Motion accessibility setting
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    // Skip decorative entrance animation when Reduce Motion is enabled
+    if (reduceMotion) {
+      fadeAnim.setValue(1);
+      slideAnim.setValue(0);
+      return;
+    }
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
     ]).start();
-  });
+  }, [fadeAnim, slideAnim, reduceMotion]);
 
   const {
     control,
@@ -65,26 +81,26 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: any }
 
       <Animated.View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 24, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
         <View style={styles.header}>
-          <Text style={styles.title} accessibilityRole="header">Forgot Password?</Text>
-          <Text style={styles.subtitle}>
+          <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Forgot Password?</Text>
+          <Text style={styles.subtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             Enter your email and we'll send you a token to reset your password.
           </Text>
         </View>
 
         {errorMsg && (
           <View style={styles.alertError}>
-            <Text style={styles.alertText}>{errorMsg}</Text>
+            <Text style={styles.alertText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errorMsg}</Text>
           </View>
         )}
 
         {successMsg && (
           <View style={styles.alertSuccess}>
-            <Text style={styles.successText}>{successMsg}</Text>
+            <Text style={styles.successText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{successMsg}</Text>
           </View>
         )}
 
         <View style={styles.form}>
-          <Text style={styles.label}>Email Address</Text>
+          <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Email Address</Text>
           <Controller
             control={control}
             name="email"
@@ -98,22 +114,24 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: any }
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
+                allowFontScaling={true}
+                maxFontSizeMultiplier={1.5}
               />
             )}
           />
-          {errors.email && <Text style={styles.errorHelper}>{errors.email.message}</Text>}
+          {errors.email && <Text style={styles.errorHelper} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errors.email.message}</Text>}
 
           <TouchableOpacity style={styles.sendBtn} onPress={handleSubmit(onSubmit)} disabled={isLoading} accessibilityRole="button">
             {isLoading ? (
               <ActivityIndicator color={darkColors.text} />
             ) : (
-              <Text style={styles.sendBtnText}>Send Reset Link</Text>
+              <Text style={styles.sendBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Send Reset Link</Text>
             )}
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate('Login')} accessibilityRole="button">
-          <Text style={styles.backText}>Back to Log In</Text>
+          <Text style={styles.backText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Back to Log In</Text>
         </TouchableOpacity>
       </Animated.View>
     </View>

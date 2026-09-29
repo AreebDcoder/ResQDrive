@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {
+  AccessibilityInfo,
   Alert,
   ScrollView,
   StyleSheet,
@@ -17,9 +18,11 @@ import { TtsService } from '../services/ttsService';
 import { useToast } from '../components/ui/Toast';
 import { ConfirmDialog } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function VoiceCommandDemoScreen() {
   const toast = useToast();
+  const insets = useSafeAreaInsets();
   const [status, setStatus] = useState('Idle');
   const [engine, setEngine] = useState('Mock Simulator');
   const [transcript, setTranscript] = useState('');
@@ -32,15 +35,30 @@ export default function VoiceCommandDemoScreen() {
   // Phase 8: ConfirmDialog state for cautionary SOS call confirm (triggered by voice callback)
   const [callDialogVisible, setCallDialogVisible] = useState(false);
 
+  // Batch 7 Phase 4: Respect Reduce Motion accessibility setting
+  const [reduceMotion, setReduceMotion] = useState(false);
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
 
   useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    // Skip decorative entrance animation when Reduce Motion is enabled
+    if (reduceMotion) {
+      fadeAnim.setValue(1);
+      slideAnim.setValue(0);
+      return;
+    }
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
     ]).start();
-  }, [fadeAnim, slideAnim]);
+  }, [fadeAnim, slideAnim, reduceMotion]);
 
   useEffect(() => {
     VoiceCommandService.subscribeToCallbacks(
@@ -146,39 +164,39 @@ export default function VoiceCommandDemoScreen() {
       </View>
 
       <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 16 }]}>
           <View style={styles.header}>
-            <Text style={styles.title} accessibilityRole="header">Voice Command Controls</Text>
-            <Text style={styles.subtitle}>
+            <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Voice Command Controls</Text>
+            <Text style={styles.subtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               Hands-free continuous recognition monitoring. Activates during emergency count-downs.
             </Text>
           </View>
 
           {callbackFlash && (
             <View style={styles.flashBanner}>
-              <Text style={styles.flashBannerText}>{callbackFlash}</Text>
+              <Text style={styles.flashBannerText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{callbackFlash}</Text>
             </View>
           )}
 
           <View style={styles.card}>
-            <Text style={styles.cardLabel}>Real-Time Telemetry Console</Text>
+            <Text style={styles.cardLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Real-Time Telemetry Console</Text>
 
             <View style={styles.row}>
-              <Text style={styles.rowTitle}>Listening Status:</Text>
+              <Text style={styles.rowTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Listening Status:</Text>
               <View style={[styles.dot, isListening ? styles.activeDot : styles.idleDot]} />
-              <Text style={[styles.rowValue, isListening ? styles.activeText : styles.idleText]}>
+              <Text style={[styles.rowValue, isListening ? styles.activeText : styles.idleText]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 {status}
               </Text>
             </View>
 
             <View style={styles.row}>
-              <Text style={styles.rowTitle}>Recognition Engine:</Text>
-              <Text style={styles.rowValue}>{engine}</Text>
+              <Text style={styles.rowTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Recognition Engine:</Text>
+              <Text style={styles.rowValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{engine}</Text>
             </View>
 
             <View style={styles.transcriptBox}>
-              <Text style={styles.transcriptLabel}>Rolling Speech Transcript:</Text>
-              <Text style={styles.transcriptText}>
+              <Text style={styles.transcriptLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Rolling Speech Transcript:</Text>
+              <Text style={styles.transcriptText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 {transcript ? `"${transcript}"` : 'No speech recognized. Say something...'}
               </Text>
             </View>
@@ -187,19 +205,19 @@ export default function VoiceCommandDemoScreen() {
               style={[styles.actionBtn, isListening ? styles.stopBtn : styles.startBtn]}
               onPress={handleToggleListening} accessibilityRole="button"
             >
-              <Text style={styles.actionBtnText}>
+              <Text style={styles.actionBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 {isListening ? 'Stop Speech Recognition' : 'Start Speech Recognition'}
               </Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardLabel}>Speech Command Simulator</Text>
-            <Text style={styles.desc}>
+            <Text style={styles.cardLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Speech Command Simulator</Text>
+            <Text style={styles.desc} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               If testing in Expo Go, tap phrases below to simulate raw microphone input feed to the voice parser:
             </Text>
 
-            <Text style={styles.sectionSub}>Cancel / Abort Intents</Text>
+            <Text style={styles.sectionSub} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Cancel / Abort Intents</Text>
             <View style={styles.grid}>
               {['I am OK', "I'm fine", 'Cancel', 'Stop'].map((phrase) => (
                 <TouchableOpacity
@@ -207,12 +225,12 @@ export default function VoiceCommandDemoScreen() {
                   style={styles.simBtn}
                   onPress={() => handleSimulatePhrase(phrase)} accessibilityRole="button"
                 >
-                  <Text style={styles.simBtnText}>"{phrase}"</Text>
+                  <Text style={styles.simBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>"{phrase}"</Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text style={styles.sectionSub}>SOS / Trigger Intents</Text>
+            <Text style={styles.sectionSub} allowFontScaling={true} maxFontSizeMultiplier={1.5}>SOS / Trigger Intents</Text>
             <View style={styles.grid}>
               {['Help me', 'Emergency', 'Call ambulance', 'SOS'].map((phrase) => (
                 <TouchableOpacity
@@ -220,37 +238,41 @@ export default function VoiceCommandDemoScreen() {
                   style={[styles.simBtn, styles.sosSimBtn]}
                   onPress={() => handleSimulatePhrase(phrase)} accessibilityRole="button"
                 >
-                  <Text style={styles.simBtnText}>"{phrase}"</Text>
+                  <Text style={styles.simBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>"{phrase}"</Text>
                 </TouchableOpacity>
               ))}
             </View>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardLabel}>Text-To-Speech (TTS) Announcement</Text>
-            <Text style={styles.desc}>
+            <Text style={styles.cardLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Text-To-Speech (TTS) Announcement</Text>
+            <Text style={styles.desc} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               Test the spoken synthesized audio read out when an accident alert is verified.
             </Text>
 
-            <Text style={styles.inputLabel}>Incident Location Description</Text>
+            <Text style={styles.inputLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Incident Location Description</Text>
             <TextInput
               style={styles.input}
               value={locationText}
               onChangeText={setLocationText}
               placeholder="e.g. Sector G-11/3, Islamabad"
               placeholderTextColor={darkColors.textTertiary}
+              allowFontScaling={true}
+              maxFontSizeMultiplier={1.5}
             />
 
-            <Text style={styles.inputLabel}>Nearest Target Hospital</Text>
+            <Text style={styles.inputLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Nearest Target Hospital</Text>
             <TextInput
               style={styles.input}
               value={hospitalText}
               onChangeText={setHospitalText}
               placeholder="e.g. Shifa International Hospital"
               placeholderTextColor={darkColors.textTertiary}
+              allowFontScaling={true}
+              maxFontSizeMultiplier={1.5}
             />
 
-            <Text style={styles.inputLabel}>Estimated Responder ETA (Minutes)</Text>
+            <Text style={styles.inputLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Estimated Responder ETA (Minutes)</Text>
             <TextInput
               style={styles.input}
               value={etaValue}
@@ -258,10 +280,12 @@ export default function VoiceCommandDemoScreen() {
               keyboardType="numeric"
               placeholder="e.g. 8"
               placeholderTextColor={darkColors.textTertiary}
+              allowFontScaling={true}
+              maxFontSizeMultiplier={1.5}
             />
 
             <TouchableOpacity style={styles.ttsBtn} onPress={handleTTSAnnouncement} accessibilityRole="button">
-              <Text style={styles.ttsBtnText}>Speak Announcement</Text>
+              <Text style={styles.ttsBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Speak Announcement</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

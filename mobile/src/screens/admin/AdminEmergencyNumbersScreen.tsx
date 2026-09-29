@@ -128,21 +128,23 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Back">
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Back" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Ionicons name="arrow-back" size={24} color={darkColors.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle} accessibilityRole="header">Manage Regional Numbers</Text>
+          <Text style={styles.headerTitle} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Manage Regional Numbers</Text>
         </View>
 
         {/* Input Form Card */}
         <View style={styles.formCard}>
-          <Text style={styles.formTitle}>Add Regional Number</Text>
+          <Text style={styles.formTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Add Regional Number</Text>
           <TextInput
             placeholder="Region Name (e.g. Punjab / Islamabad, Karachi)"
             placeholderTextColor={darkColors.textTertiary}
             value={regionName}
             onChangeText={setRegionName}
             style={styles.input}
+            allowFontScaling={true}
+            maxFontSizeMultiplier={1.5}
           />
           <TextInput
             placeholder="Service Name (e.g. Rescue 1122)"
@@ -150,6 +152,8 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
             value={serviceName}
             onChangeText={setServiceName}
             style={styles.input}
+            allowFontScaling={true}
+            maxFontSizeMultiplier={1.5}
           />
           <TextInput
             placeholder="Phone Number (e.g. 1122, 115)"
@@ -158,6 +162,8 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
             onChangeText={setPhoneNumber}
             keyboardType="phone-pad"
             style={styles.input}
+            allowFontScaling={true}
+            maxFontSizeMultiplier={1.5}
           />
           <TextInput
             placeholder="Priority Order (e.g. 1, 2)"
@@ -166,9 +172,11 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
             onChangeText={setPriorityOrder}
             keyboardType="number-pad"
             style={styles.input}
+            allowFontScaling={true}
+            maxFontSizeMultiplier={1.5}
           />
           <View style={styles.switchRow}>
-            <Text style={{ color: darkColors.text }}>Active status:</Text>
+            <Text style={{ color: darkColors.text }} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Active status:</Text>
             <Switch value={isActive} onValueChange={setIsActive} />
           </View>
           <TouchableOpacity
@@ -179,20 +187,20 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
             {isSubmitting ? (
               <ActivityIndicator color={darkColors.text} />
             ) : (
-              <Text style={styles.addBtnText}>Add Regional Number</Text>
+              <Text style={styles.addBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Add Regional Number</Text>
             )}
           </TouchableOpacity>
         </View>
 
         {/* List of Numbers */}
-        <Text style={styles.listSectionTitle}>DATABASE ENTRIES</Text>
+        <Text style={styles.listSectionTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>DATABASE ENTRIES</Text>
         {isLoading ? (
           <View style={styles.center}>
             <ActivityIndicator size="large" color={colors.danger[600]} />
           </View>
         ) : numbers.length === 0 ? (
           <View style={styles.center}>
-            <Text style={styles.emptyText}>No regional emergency numbers found.</Text>
+            <Text style={styles.emptyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>No regional emergency numbers found.</Text>
           </View>
         ) : (
           <FlatList
@@ -202,10 +210,10 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
             renderItem={({ item }) => (
               <View style={styles.numberCard}>
                 <View style={styles.cardDetails}>
-                  <Text style={styles.cardRegion}>{item.regionName}</Text>
-                  <Text style={styles.cardService}>{item.serviceName}</Text>
-                  <Text style={styles.cardPhone}>Number: {item.phoneNumber}</Text>
-                  <Text style={styles.cardPriority}>Priority: {item.priorityOrder}</Text>
+                  <Text style={styles.cardRegion} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.regionName}</Text>
+                  <Text style={styles.cardService} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.serviceName}</Text>
+                  <Text style={styles.cardPhone} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Number: {item.phoneNumber}</Text>
+                  <Text style={styles.cardPriority} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Priority: {item.priorityOrder}</Text>
                 </View>
                 <View style={styles.actionsBlock}>
                   <Switch
@@ -215,7 +223,7 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
                   <TouchableOpacity
                     style={styles.deleteBtn}
                     onPress={() => handleDeleteNumber(item.id, item.serviceName)} accessibilityRole="button"
-                   accessibilityLabel="Delete">
+                   accessibilityLabel="Delete" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                     <Ionicons name="trash-outline" size={20} color={colors.danger[500]} />
                   </TouchableOpacity>
                 </View>
