@@ -61,7 +61,7 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
               await api.delete(`/incidents/${id}`);
               dispatch(fetchIncidents({ page: 1, refresh: true }));
             } catch (err) {
-              Alert.alert('Error', 'Failed to delete incident.');
+              toast.error('Failed to delete incident.');
             }
           },
         },

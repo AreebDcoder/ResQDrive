@@ -182,7 +182,7 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
     console.log('[Emergency] Triggering alert with payload:', payload);
     const result = await dispatch(triggerEmergency(payload));
     if (result.error) {
-      Alert.alert('Failed', result.payload || 'Could not trigger alert');
+      toast.error(result.payload || 'Could not trigger alert');
     } else {
       console.log('[Emergency] Trigger successful:', result.payload);
     }
@@ -211,7 +211,7 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
 
     const result = await dispatch(cancelEmergency(sessionId));
     if (result.error) {
-      Alert.alert('Failed', result.payload || 'Could not cancel alert');
+      toast.error(result.payload || 'Could not cancel alert');
     } else {
       console.log('[Emergency] Cancel successful');
     }

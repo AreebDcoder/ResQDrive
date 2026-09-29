@@ -256,7 +256,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
               await api.delete(`/damage-assessment/${id}`);
               setHistory((prev) => prev.filter((item) => item.id !== id));
             } catch (err) {
-              Alert.alert('Error', 'Failed to delete assessment log.');
+              toast.error('Failed to delete assessment log.');
             }
           },
         },
@@ -278,7 +278,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
               await api.delete(`/repair-cost/report/${id}`);
               setCostHistory((prev) => prev.filter((item) => item.id !== id));
             } catch (err) {
-              Alert.alert('Error', 'Failed to delete repair cost report.');
+              toast.error('Failed to delete repair cost report.');
             }
           },
         },

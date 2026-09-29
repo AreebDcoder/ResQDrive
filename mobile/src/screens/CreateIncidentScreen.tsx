@@ -79,14 +79,14 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
     try {
       if (isEdit && id) {
         await dispatch(updateIncident({ id, data })).unwrap();
-        Alert.alert('Success', 'Incident updated successfully');
+        toast.success('Incident updated successfully');
       } else {
         await dispatch(createIncident(data)).unwrap();
-        Alert.alert('Success', 'Incident reported successfully');
+        toast.success('Incident reported successfully');
       }
       navigation.goBack();
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to save incident');
+      toast.error(err.message || 'Failed to save incident');
     }
   };
 

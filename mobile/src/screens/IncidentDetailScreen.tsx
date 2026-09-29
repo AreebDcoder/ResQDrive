@@ -37,7 +37,7 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
             await dispatch(deleteIncident(id)).unwrap();
             navigation.goBack();
           } catch (err: any) {
-            Alert.alert('Error', err.message || 'Failed to delete incident');
+            toast.error(err.message || 'Failed to delete incident');
           }
         },
       },

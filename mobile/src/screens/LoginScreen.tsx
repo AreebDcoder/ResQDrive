@@ -134,7 +134,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
     const idToken = userInfo.data?.idToken;
 
     if (!idToken) {
-      Alert.alert('Error', 'Failed to get Google ID token');
+      toast.error('Failed to get Google ID token');
       return;
     }
  

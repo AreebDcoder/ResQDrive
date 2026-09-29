@@ -113,11 +113,8 @@ export default function EmergencyContactsScreen({ navigation }: any) {
           })
         );
       } catch (err: any) {
-        Alert.alert(
-          'Error',
-          err.response?.data?.message ||
-            'Failed to delete contact.'
-        );
+        toast.error(err.response?.data?.message ||
+            'Failed to delete contact.');
       } finally {
         setIsUpdating(false);
       }

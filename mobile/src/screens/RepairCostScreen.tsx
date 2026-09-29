@@ -195,7 +195,7 @@ const handleShareReport = async () => {
                 setReport(null);
               }
             } catch (err) {
-              Alert.alert('Error', 'Failed to delete report.');
+              toast.error('Failed to delete report.');
             }
           },
         },
