@@ -1,13 +1,14 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
-  Alert, Linking, StatusBar,
+  View, Text, StyleSheet, ScrollView, ActivityIndicator,
+  Linking, StatusBar,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import { fetchIncident, deleteIncident } from '../store/slices/incidentsSlice';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '../components/ui/Toast';
+import { Button, ConfirmDialog } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
 
 const SEVERITY_COLORS: Record<string, string> = {
@@ -22,27 +23,25 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
   const { id } = route.params;
   const dispatch = useDispatch<any>();
   const { current, isLoading, isSubmitting } = useSelector((state: RootState) => state.incidents);
+  const [removeDialogVisible, setRemoveDialogVisible] = useState(false);
 
   useEffect(() => {
     dispatch(fetchIncident(id));
   }, [dispatch, id]);
 
   const handleDelete = () => {
-    Alert.alert('Delete Incident', 'Are you sure you want to delete this incident record?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await dispatch(deleteIncident(id)).unwrap();
-            navigation.goBack();
-          } catch (err: any) {
-            toast.error(err.message || 'Failed to delete incident');
-          }
-        },
-      },
-    ]);
+    // Phase 8: replaced destructive Alert.alert with ConfirmDialog primitive
+    setRemoveDialogVisible(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    setRemoveDialogVisible(false);
+    try {
+      await dispatch(deleteIncident(id)).unwrap();
+      navigation.goBack();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete incident');
+    }
   };
 
   const openInMaps = () => {
@@ -109,10 +108,16 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
           </View>
           <Text style={styles.value}>{current.address}</Text>
           {current.latitude && current.longitude ? (
-            <TouchableOpacity style={styles.mapsBtn} onPress={openInMaps} activeOpacity={0.7} accessibilityRole="button">
-              <Ionicons name="map-outline" size={16} color={darkColors.text} style={{ marginRight: 6 }} />
-              <Text style={styles.mapsBtnText}>Open in Google Maps</Text>
-            </TouchableOpacity>
+            <View style={styles.mapsBtnWrap}>
+              <Button
+                label="Open in Google Maps"
+                variant="secondary"
+                size="sm"
+                onPress={openInMaps}
+                icon="map-outline"
+                accessibilityHint="Open incident location in Google Maps"
+              />
+            </View>
           ) : null}
         </View>
       ) : null}
@@ -197,29 +202,39 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
 
       {/* Actions */}
       <View style={styles.actionsRow}>
-        <TouchableOpacity
-          style={styles.editBtn}
+        <Button
+          label="Edit"
+          variant="secondary"
+          size="md"
           onPress={() => navigation.navigate('CreateIncident', { mode: 'edit', id: current.id })}
           disabled={isSubmitting}
-          activeOpacity={0.7} accessibilityRole="button"
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            <Ionicons name="pencil-outline" size={18} color={darkColors.text} />
-            <Text style={styles.actionBtnText}>Edit</Text>
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.deleteBtn}
+          icon="pencil-outline"
+          accessibilityHint="Edit this incident record"
+          style={styles.actionBtn}
+        />
+        <Button
+          label="Delete"
+          variant="danger"
+          size="md"
           onPress={handleDelete}
           disabled={isSubmitting}
-          activeOpacity={0.7} accessibilityRole="button"
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            <Ionicons name="trash-outline" size={18} color={colors.danger[400]} />
-            <Text style={styles.actionBtnText}>Delete</Text>
-          </View>
-        </TouchableOpacity>
+          icon="trash-outline"
+          accessibilityHint="Delete this incident record"
+          style={styles.actionBtn}
+        />
       </View>
+
+      {/* Phase 8: ConfirmDialog replaces destructive Alert.alert */}
+      <ConfirmDialog
+        visible={removeDialogVisible}
+        title="Delete Incident"
+        description="Are you sure you want to delete this incident record?"
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setRemoveDialogVisible(false)}
+      />
     </ScrollView>
   );
 }
@@ -319,22 +334,16 @@ const styles = StyleSheet.create({
     borderColor: tints.whiteBorder,
   },
   jsonText: { color: colors.success[300], fontSize: 11, fontFamily: 'monospace', lineHeight: 16 },
-  mapsBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  mapsBtnWrap: {
     marginTop: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    backgroundColor: tints.infoSubtle,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: tints.infoMedium,
     alignSelf: 'flex-start',
   },
   mapsBtnIcon: { fontSize: 16 },
   mapsBtnText: { color: colors.info[500], fontSize: 13, fontWeight: '700' },
   actionsRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  actionBtn: {
+    flex: 1,
+  },
   editBtn: {
     flex: 1,
     flexDirection: 'row',

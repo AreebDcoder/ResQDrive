@@ -14,7 +14,6 @@ import {
   ActivityIndicator,
   FlatList,
   Dimensions,
-  Alert,
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
@@ -22,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import api, { API_URL } from '../api/axios';
 import { useToast } from '../components/ui/Toast';
+import { ConfirmDialog } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
 
 interface VehicleItem {
@@ -88,6 +88,12 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyPage, setHistoryPage] = useState(1);
   const [historyHasMore, setHistoryHasMore] = useState(true);
+
+  // Phase 8: ConfirmDialog state for destructive deletes
+  const [deleteAssessmentDialogVisible, setDeleteAssessmentDialogVisible] = useState(false);
+  const [pendingDeleteAssessmentId, setPendingDeleteAssessmentId] = useState<string | null>(null);
+  const [deleteCostReportDialogVisible, setDeleteCostReportDialogVisible] = useState(false);
+  const [pendingDeleteCostReportId, setPendingDeleteCostReportId] = useState<string | null>(null);
 
   // Initialize selected vehicle to primary or first available
   useEffect(() => {
@@ -244,47 +250,43 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
   };
 
   const handleDeleteAssessment = (id: string) => {
-    Alert.alert(
-      'Confirm Delete',
-      'Are you sure you want to delete this damage assessment log entry?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await api.delete(`/damage-assessment/${id}`);
-              setHistory((prev) => prev.filter((item) => item.id !== id));
-            } catch (err) {
-              toast.error('Failed to delete assessment log.');
-            }
-          },
-        },
-      ]
-    );
+    // Phase 8: replaced destructive Alert.alert with ConfirmDialog primitive
+    setPendingDeleteAssessmentId(id);
+    setDeleteAssessmentDialogVisible(true);
+  };
+
+  const handleConfirmDeleteAssessment = async () => {
+    setDeleteAssessmentDialogVisible(false);
+    if (!pendingDeleteAssessmentId) return;
+    try {
+      const id = pendingDeleteAssessmentId;
+      await api.delete(`/damage-assessment/${id}`);
+      setHistory((prev) => prev.filter((item) => item.id !== id));
+    } catch (err) {
+      toast.error('Failed to delete assessment log.');
+    } finally {
+      setPendingDeleteAssessmentId(null);
+    }
   };
 
   const handleDeleteCostReport = (id: string) => {
-    Alert.alert(
-      'Confirm Delete',
-      'Are you sure you want to delete this repair cost estimation report?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await api.delete(`/repair-cost/report/${id}`);
-              setCostHistory((prev) => prev.filter((item) => item.id !== id));
-            } catch (err) {
-              toast.error('Failed to delete repair cost report.');
-            }
-          },
-        },
-      ]
-    );
+    // Phase 8: replaced destructive Alert.alert with ConfirmDialog primitive
+    setPendingDeleteCostReportId(id);
+    setDeleteCostReportDialogVisible(true);
+  };
+
+  const handleConfirmDeleteCostReport = async () => {
+    setDeleteCostReportDialogVisible(false);
+    if (!pendingDeleteCostReportId) return;
+    try {
+      const id = pendingDeleteCostReportId;
+      await api.delete(`/repair-cost/report/${id}`);
+      setCostHistory((prev) => prev.filter((item) => item.id !== id));
+    } catch (err) {
+      toast.error('Failed to delete repair cost report.');
+    } finally {
+      setPendingDeleteCostReportId(null);
+    }
   };
 
   const getSeverityColor = (severity: 'minor' | 'moderate' | 'severe') => {
@@ -705,6 +707,30 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
           }
         />
       )}
+
+      {/* Phase 8: ConfirmDialog replaces destructive Alert.alert (assessment log) */}
+      <ConfirmDialog
+        visible={deleteAssessmentDialogVisible}
+        title="Confirm Delete"
+        description="Are you sure you want to delete this damage assessment log entry?"
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmDeleteAssessment}
+        onCancel={() => { setDeleteAssessmentDialogVisible(false); setPendingDeleteAssessmentId(null); }}
+      />
+
+      {/* Phase 8: ConfirmDialog replaces destructive Alert.alert (cost report) */}
+      <ConfirmDialog
+        visible={deleteCostReportDialogVisible}
+        title="Confirm Delete"
+        description="Are you sure you want to delete this repair cost estimation report?"
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmDeleteCostReport}
+        onCancel={() => { setDeleteCostReportDialogVisible(false); setPendingDeleteCostReportId(null); }}
+      />
     </View>
   );
 }

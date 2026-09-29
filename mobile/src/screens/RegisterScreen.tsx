@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   Easing,
   Keyboard,
@@ -9,12 +8,11 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { registerSchema, RegisterInput } from '../schemas/validation';
 import api from '../api/axios';
@@ -22,6 +20,7 @@ import { useDispatch } from 'react-redux';
 import { loginSuccess } from '../store/slices/authSlice';
 import { setItemAsync } from '../utils/secureStorage';
 import { Ionicons } from '@expo/vector-icons';
+import { Button, FormInput } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function RegisterScreen({ route, navigation }: { route: any; navigation: any }) {
@@ -31,9 +30,6 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'DRIVER' | 'MECHANIC'>('DRIVER');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   // Entrance animations
   const headerOpacity = useRef(new Animated.Value(0)).current;
@@ -205,72 +201,33 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
               </View>
 
               <View style={styles.form}>
-                <Text style={styles.label}>Full Name</Text>
-                <Controller
-                  control={control}
+                <FormInput
                   name="fullName"
-                  render={({ field: { onChange, onBlur, value } }) => (
-                    <View style={[styles.inputWrapper, focusedField === 'fullName' && styles.inputFocused, errors.fullName && styles.inputError]}>
-                      <Ionicons name="person-outline" size={20} color={darkColors.textTertiary} style={{ marginRight: 10 }} />
-                      <TextInput
-                        style={styles.input}
-                        placeholder="John Doe"
-                        placeholderTextColor={darkColors.textTertiary}
-                        onBlur={() => { onBlur(); setFocusedField(null); }}
-                        onChangeText={onChange}
-                        onFocus={() => setFocusedField('fullName')}
-                        value={value}
-                      />
-                    </View>
-                  )}
-                />
-                {errors.fullName && <Text style={styles.errorHelper}>{errors.fullName.message}</Text>}
-
-                <Text style={styles.label}>Email Address</Text>
-                <Controller
                   control={control}
+                  label="Full Name"
+                  placeholder="John Doe"
+                  leftIcon="person-outline"
+                />
+
+                <FormInput
                   name="email"
-                  render={({ field: { onChange, onBlur, value } }) => (
-                    <View style={[styles.inputWrapper, focusedField === 'email' && styles.inputFocused, errors.email && styles.inputError]}>
-                      <Ionicons name="mail-outline" size={20} color={darkColors.textTertiary} style={{ marginRight: 10 }} />
-                      <TextInput
-                        style={[styles.input, isGoogleUser && { opacity: 0.6 }]}
-                        placeholder="john@example.com"
-                        editable={!isGoogleUser}
-                        placeholderTextColor={darkColors.textTertiary}
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        onBlur={() => { onBlur(); setFocusedField(null); }}
-                        onChangeText={onChange}
-                        onFocus={() => setFocusedField('email')}
-                        value={value}
-                      />
-                    </View>
-                  )}
-                />
-                {errors.email && <Text style={styles.errorHelper}>{errors.email.message}</Text>}
-
-                <Text style={styles.label}>Phone Number</Text>
-                <Controller
                   control={control}
-                  name="phoneNumber"
-                  render={({ field: { onChange, onBlur, value } }) => (
-                    <View style={[styles.inputWrapper, focusedField === 'phone' && styles.inputFocused, errors.phoneNumber && styles.inputError]}>
-                      <Ionicons name="call-outline" size={20} color={darkColors.textTertiary} style={{ marginRight: 10 }} />
-                      <TextInput
-                        style={styles.input}
-                        placeholder="+923001234567"
-                        placeholderTextColor={darkColors.textTertiary}
-                        keyboardType="phone-pad"
-                        onBlur={() => { onBlur(); setFocusedField(null); }}
-                        onChangeText={onChange}
-                        onFocus={() => setFocusedField('phone')}
-                        value={value}
-                      />
-                    </View>
-                  )}
+                  label="Email Address"
+                  placeholder="john@example.com"
+                  leftIcon="mail-outline"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  editable={!isGoogleUser}
                 />
-                {errors.phoneNumber && <Text style={styles.errorHelper}>{errors.phoneNumber.message}</Text>}
+
+                <FormInput
+                  name="phoneNumber"
+                  control={control}
+                  label="Phone Number"
+                  placeholder="+923001234567"
+                  leftIcon="call-outline"
+                  keyboardType="phone-pad"
+                />
 
                 {/* DYNAMIC ROLE FIELDS: Driver Details */}
                 {selectedRole === 'DRIVER' && (
@@ -280,45 +237,19 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                       <Text style={styles.roleSectionTitle}>Driver Details</Text>
                     </View>
 
-                    <Text style={styles.label}>CNIC Number</Text>
-                    <Controller
-                      control={control}
+                    <FormInput
                       name="cnicNumber"
-                      render={({ field: { onChange, onBlur, value } }) => (
-                        <View style={[styles.inputWrapper, errors.cnicNumber && styles.inputError]}>
-                          <TextInput
-                            style={styles.input}
-                            placeholder="42101-XXXXXXX-X"
-                            placeholderTextColor={darkColors.textTertiary}
-                            onBlur={onBlur}
-                            onChangeText={onChange}
-                            value={value}
-                          />
-                        </View>
-                      )}
-                    />
-                    {errors.cnicNumber && <Text style={styles.errorHelper}>{errors.cnicNumber.message}</Text>}
-
-                    <Text style={styles.label}>Driving License Number</Text>
-                    <Controller
                       control={control}
-                      name="drivingLicenseNumber"
-                      render={({ field: { onChange, onBlur, value } }) => (
-                        <View style={[styles.inputWrapper, errors.drivingLicenseNumber && styles.inputError]}>
-                          <TextInput
-                            style={styles.input}
-                            placeholder="DL-XXXXXXX"
-                            placeholderTextColor={darkColors.textTertiary}
-                            onBlur={onBlur}
-                            onChangeText={onChange}
-                            value={value}
-                          />
-                        </View>
-                      )}
+                      label="CNIC Number"
+                      placeholder="42101-XXXXXXX-X"
                     />
-                    {errors.drivingLicenseNumber && (
-                      <Text style={styles.errorHelper}>{errors.drivingLicenseNumber.message}</Text>
-                    )}
+
+                    <FormInput
+                      name="drivingLicenseNumber"
+                      control={control}
+                      label="Driving License Number"
+                      placeholder="DL-XXXXXXX"
+                    />
                   </View>
                 )}
 
@@ -330,142 +261,63 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                       <Text style={styles.roleSectionTitle}>Workshop Details</Text>
                     </View>
 
-                    <Text style={styles.label}>Workshop Name</Text>
-                    <Controller
-                      control={control}
+                    <FormInput
                       name="workshopName"
-                      render={({ field: { onChange, onBlur, value } }) => (
-                        <View style={[styles.inputWrapper, errors.workshopName && styles.inputError]}>
-                          <TextInput
-                            style={styles.input}
-                            placeholder="Quick Fix Garage"
-                            placeholderTextColor={darkColors.textTertiary}
-                            onBlur={onBlur}
-                            onChangeText={onChange}
-                            value={value}
-                          />
-                        </View>
-                      )}
-                    />
-                    {errors.workshopName && <Text style={styles.errorHelper}>{errors.workshopName.message}</Text>}
-
-                    <Text style={styles.label}>Workshop Address</Text>
-                    <Controller
                       control={control}
+                      label="Workshop Name"
+                      placeholder="Quick Fix Garage"
+                    />
+
+                    <FormInput
                       name="workshopAddress"
-                      render={({ field: { onChange, onBlur, value } }) => (
-                        <View style={[styles.inputWrapper, errors.workshopAddress && styles.inputError]}>
-                          <TextInput
-                            style={styles.input}
-                            placeholder="Plot 45, Industrial Zone"
-                            placeholderTextColor={darkColors.textTertiary}
-                            onBlur={onBlur}
-                            onChangeText={onChange}
-                            value={value}
-                          />
-                        </View>
-                      )}
-                    />
-                    {errors.workshopAddress && (
-                      <Text style={styles.errorHelper}>{errors.workshopAddress.message}</Text>
-                    )}
-
-                    <Text style={styles.label}>Specialization</Text>
-                    <Controller
                       control={control}
-                      name="specialization"
-                      render={({ field: { onChange, onBlur, value } }) => (
-                        <View style={[styles.inputWrapper, errors.specialization && styles.inputError]}>
-                          <TextInput
-                            style={styles.input}
-                            placeholder="Engine, Electrical, Brake Repair"
-                            placeholderTextColor={darkColors.textTertiary}
-                            onBlur={onBlur}
-                            onChangeText={onChange}
-                            value={value}
-                          />
-                        </View>
-                      )}
+                      label="Workshop Address"
+                      placeholder="Plot 45, Industrial Zone"
                     />
-                    {errors.specialization && (
-                      <Text style={styles.errorHelper}>{errors.specialization.message}</Text>
-                    )}
+
+                    <FormInput
+                      name="specialization"
+                      control={control}
+                      label="Specialization"
+                      placeholder="Engine, Electrical, Brake Repair"
+                    />
                   </View>
                 )}
 
                 {!isGoogleUser && (
                   <>
-                    <Text style={styles.label}>Password</Text>
-                    <Controller
-                      control={control}
+                    <FormInput
                       name="password"
-                      render={({ field: { onChange, onBlur, value } }) => (
-                        <View style={[styles.inputWrapper, focusedField === 'password' && styles.inputFocused, errors.password && styles.inputError]}>
-                          <Ionicons name="lock-closed-outline" size={20} color={darkColors.textTertiary} style={{ marginRight: 10 }} />
-                          <TextInput
-                            style={[styles.input, { flex: 1 }]}
-                            placeholder="At least 8 chars, 1 num, 1 spec"
-                            placeholderTextColor={darkColors.textTertiary}
-                            secureTextEntry={!showPassword}
-                            autoCapitalize="none"
-                            onBlur={() => { onBlur(); setFocusedField(null); }}
-                            onChangeText={onChange}
-                            onFocus={() => setFocusedField('password')}
-                            value={value}
-                          />
-                          <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(!showPassword)} accessibilityRole="button">
-                            <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={darkColors.textTertiary} />
-                          </TouchableOpacity>
-                        </View>
-                      )}
-                    />
-                    {errors.password && <Text style={styles.errorHelper}>{errors.password.message}</Text>}
-
-                    <Text style={styles.label}>Confirm Password</Text>
-                    <Controller
                       control={control}
-                      name="confirmPassword"
-                      render={({ field: { onChange, onBlur, value } }) => (
-                        <View style={[styles.inputWrapper, focusedField === 'confirmPassword' && styles.inputFocused, errors.confirmPassword && styles.inputError]}>
-                          <Ionicons name="lock-closed-outline" size={20} color={darkColors.textTertiary} style={{ marginRight: 10 }} />
-                          <TextInput
-                            style={[styles.input, { flex: 1 }]}
-                            placeholder="Confirm your password"
-                            placeholderTextColor={darkColors.textTertiary}
-                            secureTextEntry={!showConfirmPassword}
-                            autoCapitalize="none"
-                            onBlur={() => { onBlur(); setFocusedField(null); }}
-                            onChangeText={onChange}
-                            onFocus={() => setFocusedField('confirmPassword')}
-                            value={value}
-                          />
-                          <TouchableOpacity
-                            style={styles.eyeBtn}
-                            onPress={() => setShowConfirmPassword(!showConfirmPassword)} accessibilityRole="button"
-                          >
-                            <Ionicons name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={darkColors.textTertiary} />
-                          </TouchableOpacity>
-                        </View>
-                      )}
+                      label="Password"
+                      placeholder="At least 8 chars, 1 num, 1 spec"
+                      leftIcon="lock-closed-outline"
+                      secureTextEntry
+                      autoCapitalize="none"
                     />
-                    {errors.confirmPassword && <Text style={styles.errorHelper}>{errors.confirmPassword.message}</Text>}
+
+                    <FormInput
+                      name="confirmPassword"
+                      control={control}
+                      label="Confirm Password"
+                      placeholder="Confirm your password"
+                      leftIcon="lock-closed-outline"
+                      secureTextEntry
+                      autoCapitalize="none"
+                    />
                   </>
                 )}
 
-                {/* CTA Button */}
-                <TouchableOpacity
-                  style={[styles.registerBtn, isLoading && styles.registerBtnDisabled]}
+                {/* CTA Button — using ui/Button primitive */}
+                <Button
+                  label="Create Account"
+                  variant="danger"
+                  size="lg"
                   onPress={handleSubmit(onSubmit)}
-                  disabled={isLoading}
-                  activeOpacity={0.85} accessibilityRole="button"
-                >
-                  <View style={styles.registerBtnGradient} />
-                  {isLoading ? (
-                    <ActivityIndicator color={darkColors.text} />
-                  ) : (
-                    <Text style={styles.registerBtnText}>Create Account</Text>
-                  )}
-                </TouchableOpacity>
+                  loading={isLoading}
+                  fullWidth
+                  accessibilityHint="Submit registration form"
+                />
               </View>
             </Animated.View>
 
@@ -473,9 +325,12 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
             {/* Footer */}
             <View style={styles.footer}>
               <Text style={styles.footerText}>Already have an account? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Login')} accessibilityRole="button">
-                <Text style={styles.loginText}>Log In</Text>
-              </TouchableOpacity>
+              <Button
+                label="Log In"
+                variant="ghost"
+                size="sm"
+                onPress={() => navigation.navigate('Login')}
+              />
             </View>
             </>)}
           </ScrollView>

@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import api from '../../api/axios';
 import { Ionicons } from '@expo/vector-icons';
+import { ConfirmDialog } from '../../components/ui';
 import { colors, darkColors } from '../../theme/tokens';
 
 interface RegionalNumber {
@@ -35,6 +36,11 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
   const [priorityOrder, setPriorityOrder] = useState('1');
   const [isActive, setIsActive] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Phase 8: ConfirmDialog state for destructive delete
+  const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [pendingDeleteName, setPendingDeleteName] = useState<string | null>(null);
 
   const fetchNumbers = async () => {
     setIsLoading(true);
@@ -94,25 +100,24 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
   };
 
   const handleDeleteNumber = (id: string, name: string) => {
-    Alert.alert(
-      'Delete Number',
-      `Are you sure you want to delete "${name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await api.delete(`/admin/emergency-numbers/${id}`);
-              fetchNumbers();
-            } catch (err) {
-              Alert.alert('Error', 'Failed to delete number.');
-            }
-          },
-        },
-      ]
-    );
+    // Phase 8: replaced destructive Alert.alert with ConfirmDialog primitive
+    setPendingDeleteId(id);
+    setPendingDeleteName(name);
+    setDeleteDialogVisible(true);
+  };
+
+  const handleConfirmDeleteNumber = async () => {
+    setDeleteDialogVisible(false);
+    if (!pendingDeleteId) return;
+    try {
+      await api.delete(`/admin/emergency-numbers/${pendingDeleteId}`);
+      fetchNumbers();
+    } catch (err) {
+      Alert.alert('Error', 'Failed to delete number.');
+    } finally {
+      setPendingDeleteId(null);
+      setPendingDeleteName(null);
+    }
   };
 
   return (
@@ -218,6 +223,18 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
             )}
           />
         )}
+
+        {/* Phase 8: ConfirmDialog replaces destructive Alert.alert */}
+        <ConfirmDialog
+          visible={deleteDialogVisible}
+          title="Delete Number"
+          description={pendingDeleteName ? `Are you sure you want to delete "${pendingDeleteName}"?` : undefined}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          variant="danger"
+          onConfirm={handleConfirmDeleteNumber}
+          onCancel={() => { setDeleteDialogVisible(false); setPendingDeleteId(null); setPendingDeleteName(null); }}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

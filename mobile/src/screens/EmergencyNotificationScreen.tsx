@@ -13,6 +13,7 @@ import {
 import { connectSocket, disconnectSocket, emitLocationUpdate } from '../services/socketService';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '../components/ui/Toast';
+import { ConfirmDialog } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
 
 const POLL_INTERVAL_MS = 5000;
@@ -38,6 +39,10 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
   const emergency = useSelector((state: RootState) => state.emergency);
   const [pollTimer, setPollTimer] = useState<ReturnType<typeof setInterval> | null>(null);
   const [gpsStatus, setGpsStatus] = useState<'idle' | 'connecting' | 'active' | 'error'>('idle');
+
+  // Phase 8: ConfirmDialog state for destructive emergency actions (replaces Promise-based Alert.alert)
+  const [triggerDialogVisible, setTriggerDialogVisible] = useState(false);
+  const [cancelDialogVisible, setCancelDialogVisible] = useState(false);
 
   const subscriptionRef = useRef<Location.LocationSubscription | null>(null);
   const trackingSessionIdRef = useRef<string | null>(null);
@@ -150,24 +155,7 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
     return `${baseUrl}${emergency.acknowledgeUrl}`;
   }
 
-  async function handleTrigger() {
-    const confirmed = Platform.OS === 'web'
-      ? window.confirm(
-          'TRIGGER EMERGENCY ALERT?\n\nThis will immediately notify your emergency contacts with your live location. Only use in real emergencies.\n\nClick OK to trigger, or Cancel to abort.'
-        )
-      : await new Promise<boolean>((resolve) => {
-          Alert.alert(
-            'Trigger Emergency Alert?',
-            'This will immediately notify your emergency contacts with your live location. Only use in real emergencies.',
-            [
-              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-              { text: 'Trigger Alert', style: 'destructive', onPress: () => resolve(true) },
-            ]
-          );
-        });
-
-    if (!confirmed) return;
-
+  async function performEmergencyTrigger() {
     const payload: any = { message: 'Emergency alert triggered from mobile app' };
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -189,33 +177,54 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
     }
   }
 
-  async function handleCancel() {
-    const sessionId = emergency.sessionId;
-    if (!sessionId) return;
+  async function handleTrigger() {
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        'TRIGGER EMERGENCY ALERT?\n\nThis will immediately notify your emergency contacts with your live location. Only use in real emergencies.\n\nClick OK to trigger, or Cancel to abort.'
+      );
+      if (!confirmed) return;
+      await performEmergencyTrigger();
+    } else {
+      // Phase 8: replaced destructive Alert.alert with ConfirmDialog primitive
+      setTriggerDialogVisible(true);
+    }
+  }
 
-    const confirmed = Platform.OS === 'web'
-      ? window.confirm(
-          'CANCEL EMERGENCY ALERT?\n\nThis will stop the escalation and mark the alert as cancelled. Your contacts will see "alert cancelled — they are safe".\n\nClick OK to cancel, or Cancel to keep the alert active.'
-        )
-      : await new Promise<boolean>((resolve) => {
-          Alert.alert(
-            'Cancel Emergency Alert?',
-            'This will stop the escalation and mark the alert as cancelled. Your contacts will see "alert cancelled".',
-            [
-              { text: 'Keep Alert Active', style: 'cancel', onPress: () => resolve(false) },
-              { text: 'Cancel Alert', style: 'destructive', onPress: () => resolve(true) },
-            ]
-          );
-        });
+  async function handleConfirmTrigger() {
+    setTriggerDialogVisible(false);
+    await performEmergencyTrigger();
+  }
 
-    if (!confirmed) return;
-
+  async function performEmergencyCancel(sessionId: string) {
     const result = await dispatch(cancelEmergency(sessionId));
     if (result.error) {
       toast.error(result.payload || 'Could not cancel alert');
     } else {
       console.log('[Emergency] Cancel successful');
     }
+  }
+
+  async function handleCancel() {
+    const sessionId = emergency.sessionId;
+    if (!sessionId) return;
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        'CANCEL EMERGENCY ALERT?\n\nThis will stop the escalation and mark the alert as cancelled. Your contacts will see "alert cancelled — they are safe".\n\nClick OK to cancel, or Cancel to keep the alert active.'
+      );
+      if (!confirmed) return;
+      await performEmergencyCancel(sessionId);
+    } else {
+      // Phase 8: replaced destructive Alert.alert with ConfirmDialog primitive
+      setCancelDialogVisible(true);
+    }
+  }
+
+  async function handleConfirmCancel() {
+    setCancelDialogVisible(false);
+    const sessionId = emergency.sessionId;
+    if (!sessionId) return;
+    await performEmergencyCancel(sessionId);
   }
 
   async function copyAcknowledgeLink() {
@@ -437,6 +446,30 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
           )}
         </ScrollView>
       </Animated.View>
+
+      {/* Phase 8: ConfirmDialog replaces destructive Alert.alert (trigger) */}
+      <ConfirmDialog
+        visible={triggerDialogVisible}
+        title="Trigger Emergency Alert?"
+        description="This will immediately notify your emergency contacts with your live location. Only use in real emergencies."
+        confirmLabel="Trigger Alert"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmTrigger}
+        onCancel={() => setTriggerDialogVisible(false)}
+      />
+
+      {/* Phase 8: ConfirmDialog replaces destructive Alert.alert (cancel) */}
+      <ConfirmDialog
+        visible={cancelDialogVisible}
+        title="Cancel Emergency Alert?"
+        description={'This will stop the escalation and mark the alert as cancelled. Your contacts will see "alert cancelled".'}
+        confirmLabel="Cancel Alert"
+        cancelLabel="Keep Alert Active"
+        variant="danger"
+        onConfirm={handleConfirmCancel}
+        onCancel={() => setCancelDialogVisible(false)}
+      />
     </View>
   );
 }

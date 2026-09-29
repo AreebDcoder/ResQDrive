@@ -19,6 +19,7 @@ import { addVehicleSuccess, updateVehicleSuccess, deleteVehicleSuccess } from '.
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '../components/ui/Toast';
+import { ConfirmDialog } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function AddEditVehicleScreen({ route, navigation }: any) {
@@ -29,6 +30,7 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
 
   const {
     control,
@@ -64,34 +66,33 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
     }
   };
 
-  const handleDelete = () => {
-    const doDelete = async () => {
-      setIsLoading(true);
-      setErrorMsg(null);
-      try {
-        await api.delete(`/vehicles/${vehicle.id}`);
-        dispatch(deleteVehicleSuccess(vehicle.id));
-        navigation.goBack();
-      } catch (err: any) {
-        setErrorMsg(err.response?.data?.message || 'Failed to delete vehicle.');
-        setIsLoading(false);
-      }
-    };
+  const doDelete = async () => {
+    setIsLoading(true);
+    setErrorMsg(null);
+    try {
+      await api.delete(`/vehicles/${vehicle.id}`);
+      dispatch(deleteVehicleSuccess(vehicle.id));
+      navigation.goBack();
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Failed to delete vehicle.');
+      setIsLoading(false);
+    }
+  };
 
+  const handleDelete = () => {
     if (Platform.OS === 'web') {
       if (typeof window !== 'undefined' && window.confirm(`Are you sure you want to delete ${vehicle.make} ${vehicle.model}?`)) {
         doDelete();
       }
     } else {
-      Alert.alert(
-        'Delete Vehicle',
-        `Are you sure you want to delete ${vehicle.make} ${vehicle.model} (${vehicle.licensePlate})?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Delete', style: 'destructive', onPress: doDelete },
-        ],
-      );
+      // Phase 8: replaced destructive Alert.alert with ConfirmDialog primitive
+      setDeleteDialogVisible(true);
     }
+  };
+
+  const handleConfirmDelete = () => {
+    setDeleteDialogVisible(false);
+    doDelete();
   };
 
   return (
@@ -264,6 +265,18 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
           )}
         </View>
       </ScrollView>
+
+      {/* Phase 8: ConfirmDialog replaces destructive Alert.alert */}
+      <ConfirmDialog
+        visible={deleteDialogVisible}
+        title="Delete Vehicle"
+        description={vehicle ? `Are you sure you want to delete ${vehicle.make} ${vehicle.model} (${vehicle.licensePlate})?` : undefined}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteDialogVisible(false)}
+      />
     </KeyboardAvoidingView>
   );
 }

@@ -15,6 +15,7 @@ import api from '../api/axios';
 import { VoiceCommandService } from '../services/voiceCommandService';
 import { TtsService } from '../services/ttsService';
 import { useToast } from '../components/ui/Toast';
+import { ConfirmDialog } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function VoiceCommandDemoScreen() {
@@ -27,6 +28,9 @@ export default function VoiceCommandDemoScreen() {
   const [locationText, setLocationText] = useState('Sector G-11/3, Islamabad');
   const [hospitalText, setHospitalText] = useState('Shifa International Hospital');
   const [etaValue, setEtaValue] = useState('8');
+
+  // Phase 8: ConfirmDialog state for cautionary SOS call confirm (triggered by voice callback)
+  const [callDialogVisible, setCallDialogVisible] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
@@ -45,55 +49,10 @@ export default function VoiceCommandDemoScreen() {
         Alert.alert('System Action', 'onCancelCountdown() successfully triggered via voice! Aborting accident warning.');
       },
       async () => {
-        triggerCallbackFlash('SOS Callback Fired (onTriggerSOS) 🚨');
-        Alert.alert(
-          'System Action',
-          'onTriggerSOS() successfully triggered via voice! Dialing emergency services immediately.',
-          [
-            {
-              text: 'Call Now',
-              style: 'destructive',
-              onPress: async () => {
-                try {
-                  const { status } = await Location.requestForegroundPermissionsAsync();
-                  if (status !== 'granted') {
-                    console.log('Location permission denied, dialing default.');
-                    Linking.openURL('tel:1122');
-                    return;
-                  }
-                  const location = await Promise.race([
-                    Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
-                    new Promise<any>((resolve) => setTimeout(() => resolve(null), 3000))
-                  ]);
-                  const latitude = location?.coords?.latitude ?? 33.6844;
-                  const longitude = location?.coords?.longitude ?? 73.0479;
-
-                  const response = await api.get('/emergency-sos/numbers', {
-                    params: { lat: latitude, lng: longitude },
-                  });
-
-                  const regional = response.data.regionalNumbers || [];
-                  const custom = response.data.customNumbers || [];
-                  const target = regional[0] || custom[0];
-
-                  if (target) {
-                    await api.post('/emergency-sos/log-call', {
-                      serviceName: target.serviceName || target.label || 'Rescue',
-                      autoDialed: false,
-                    });
-                    Linking.openURL(`tel:${target.phoneNumber}`);
-                  } else {
-                    Linking.openURL('tel:1122');
-                  }
-                } catch (err) {
-                  console.log('Voice SOS execution failed:', err);
-                  Linking.openURL('tel:1122');
-                }
-              },
-            },
-            { text: 'Cancel', style: 'cancel' },
-          ]
-        );
+        triggerCallbackFlash('SOS Callback Fired (onTriggerSOS)');
+        // Phase 8: replaced destructive Alert.alert with ConfirmDialog primitive.
+        // The actual call logic now lives in handleConfirmCall (extracted from onPress).
+        setCallDialogVisible(true);
       },
       (text, isFinal) => {
         setTranscript(text);
@@ -136,6 +95,46 @@ export default function VoiceCommandDemoScreen() {
   const handleTTSAnnouncement = async () => {
     const eta = parseInt(etaValue, 10) || 10;
     await TtsService.announceAccidentInfo(locationText, hospitalText, eta);
+  };
+
+  // Phase 8: extracted from destructive Alert.alert onPress — performs the actual SOS call
+  const handleConfirmCall = async () => {
+    setCallDialogVisible(false);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('Location permission denied, dialing default.');
+        Linking.openURL('tel:1122');
+        return;
+      }
+      const location = await Promise.race([
+        Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+        new Promise<any>((resolve) => setTimeout(() => resolve(null), 3000))
+      ]);
+      const latitude = location?.coords?.latitude ?? 33.6844;
+      const longitude = location?.coords?.longitude ?? 73.0479;
+
+      const response = await api.get('/emergency-sos/numbers', {
+        params: { lat: latitude, lng: longitude },
+      });
+
+      const regional = response.data.regionalNumbers || [];
+      const custom = response.data.customNumbers || [];
+      const target = regional[0] || custom[0];
+
+      if (target) {
+        await api.post('/emergency-sos/log-call', {
+          serviceName: target.serviceName || target.label || 'Rescue',
+          autoDialed: false,
+        });
+        Linking.openURL(`tel:${target.phoneNumber}`);
+      } else {
+        Linking.openURL('tel:1122');
+      }
+    } catch (err) {
+      console.log('Voice SOS execution failed:', err);
+      Linking.openURL('tel:1122');
+    }
   };
 
   return (
@@ -267,6 +266,18 @@ export default function VoiceCommandDemoScreen() {
           </View>
         </ScrollView>
       </Animated.View>
+
+      {/* Phase 8: ConfirmDialog replaces destructive Alert.alert (voice-triggered SOS call) */}
+      <ConfirmDialog
+        visible={callDialogVisible}
+        title="System Action"
+        description="onTriggerSOS() successfully triggered via voice! Dialing emergency services immediately."
+        confirmLabel="Call Now"
+        cancelLabel="Cancel"
+        variant="warning"
+        onConfirm={handleConfirmCall}
+        onCancel={() => setCallDialogVisible(false)}
+      />
     </View>
   );
 }

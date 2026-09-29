@@ -27,6 +27,7 @@ import {
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '../components/ui/Toast';
+import { ConfirmDialog } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function EmergencyContactsScreen({ navigation }: any) {
@@ -36,6 +37,8 @@ export default function EmergencyContactsScreen({ navigation }: any) {
     (state: RootState) => state.contacts
   );
   const [isUpdating, setIsUpdating] = useState(false);
+  const [removeDialogVisible, setRemoveDialogVisible] = useState(false);
+  const [pendingRemoveContact, setPendingRemoveContact] = useState<any>(null);
 
   const fetchContacts = async () => {
     dispatch(fetchContactsStart());
@@ -100,27 +103,6 @@ export default function EmergencyContactsScreen({ navigation }: any) {
   };
 
   const handleDeleteContact = (contact: any) => {
-    const doDelete = async () => {
-      setIsUpdating(true);
-
-      try {
-        await api.delete(
-          `/emergency-contacts/${contact.id}`
-        );
-
-        dispatch(
-          deleteContactSuccess({
-            id: contact.id,
-          })
-        );
-      } catch (err: any) {
-        toast.error(err.response?.data?.message ||
-            'Failed to delete contact.');
-      } finally {
-        setIsUpdating(false);
-      }
-    };
-
     if (Platform.OS === 'web') {
       if (
         typeof window !== 'undefined' &&
@@ -128,27 +110,42 @@ export default function EmergencyContactsScreen({ navigation }: any) {
           `Remove ${contact.name} from emergency contacts?`
         )
       ) {
-        doDelete();
+        doDeleteContact(contact);
       }
     } else {
-      Alert.alert(
-        'Remove Emergency Contact',
-        `Are you sure you want to remove ${contact.name} (${
-          contact.relationship || 'Contact'
-        }) from your emergency contacts?`,
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-          {
-            text: 'Remove',
-            style: 'destructive',
-            onPress: doDelete,
-          },
-        ]
-      );
+      // Phase 8: replaced destructive Alert.alert with ConfirmDialog primitive
+      setPendingRemoveContact(contact);
+      setRemoveDialogVisible(true);
     }
+  };
+
+  const doDeleteContact = async (contact: any) => {
+    setIsUpdating(true);
+
+    try {
+      await api.delete(
+        `/emergency-contacts/${contact.id}`
+      );
+
+      dispatch(
+        deleteContactSuccess({
+          id: contact.id,
+        })
+      );
+    } catch (err: any) {
+      toast.error(err.response?.data?.message ||
+          'Failed to delete contact.');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleConfirmRemove = () => {
+    setRemoveDialogVisible(false);
+    if (pendingRemoveContact) {
+      doDeleteContact(pendingRemoveContact);
+    }
+    setPendingRemoveContact(null);
   };
 
   return (
@@ -427,6 +424,17 @@ export default function EmergencyContactsScreen({ navigation }: any) {
           </Text>
         </View>
       )}
+      {/* Phase 8: ConfirmDialog replaces destructive Alert.alert */}
+      <ConfirmDialog
+        visible={removeDialogVisible}
+        title="Remove Emergency Contact"
+        description={pendingRemoveContact ? `Are you sure you want to remove ${pendingRemoveContact.name} (${pendingRemoveContact.relationship || 'Contact'}) from your emergency contacts?` : undefined}
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmRemove}
+        onCancel={() => { setRemoveDialogVisible(false); setPendingRemoveContact(null); }}
+      />
     </View>
   );
 }

@@ -21,6 +21,7 @@ import api, { API_URL } from '../api/axios';
 import { documentDirectory, writeAsStringAsync } from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { useToast } from '../components/ui/Toast';
+import { ConfirmDialog } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
 
 
@@ -71,6 +72,10 @@ export default function RepairCostScreen({ route, navigation }: any) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [hasGenerated, setHasGenerated] = useState(false);
+
+  // Phase 8: ConfirmDialog state for destructive delete
+  const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     const hasParams = Boolean(incidentId || (assessmentIds && assessmentIds.length > 0));
@@ -180,28 +185,26 @@ const handleShareReport = async () => {
   };
 
   const handleDeleteReport = (id: string) => {
-    Alert.alert(
-      'Confirm Delete',
-      'Are you sure you want to delete this repair cost estimation report?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await api.delete(`/repair-cost/report/${id}`);
-              setHistory((prev) => prev.filter((item) => item.id !== id));
-              if (report?.id === id) {
-                setReport(null);
-              }
-            } catch (err) {
-              toast.error('Failed to delete report.');
-            }
-          },
-        },
-      ]
-    );
+    // Phase 8: replaced destructive Alert.alert with ConfirmDialog primitive
+    setPendingDeleteId(id);
+    setDeleteDialogVisible(true);
+  };
+
+  const handleConfirmDeleteReport = async () => {
+    setDeleteDialogVisible(false);
+    if (!pendingDeleteId) return;
+    try {
+      const id = pendingDeleteId;
+      await api.delete(`/repair-cost/report/${id}`);
+      setHistory((prev) => prev.filter((item) => item.id !== id));
+      if (report?.id === id) {
+        setReport(null);
+      }
+    } catch (err) {
+      toast.error('Failed to delete report.');
+    } finally {
+      setPendingDeleteId(null);
+    }
   };
 
   const renderHistoryCard = ({ item }: { item: CostReport }) => {
@@ -483,6 +486,18 @@ const handleShareReport = async () => {
           }
         />
       )}
+
+      {/* Phase 8: ConfirmDialog replaces destructive Alert.alert */}
+      <ConfirmDialog
+        visible={deleteDialogVisible}
+        title="Confirm Delete"
+        description="Are you sure you want to delete this repair cost estimation report?"
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmDeleteReport}
+        onCancel={() => { setDeleteDialogVisible(false); setPendingDeleteId(null); }}
+      />
     </SafeAreaView>
   );
 }

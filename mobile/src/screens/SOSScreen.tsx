@@ -23,6 +23,7 @@ import { fetchContactsSuccess } from '../store/slices/contactsSlice';
 import { makeDirectPhoneCall, isAutoDialable } from '../utils/directCall';
 import { getSafeDeviceLocation } from '../utils/location';
 import { useToast } from '../components/ui/Toast';
+import { ConfirmDialog } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
 
 interface EmergencyNumberItem {
@@ -72,6 +73,10 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
     !!incidentId && (severity === 'moderate' || severity === 'severe')
   );
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Phase 8: ConfirmDialog state for cautionary call confirm
+  const [callDialogVisible, setCallDialogVisible] = useState(false);
+  const [pendingCallContact, setPendingCallContact] = useState<{ name: string; phone: string } | null>(null);
 
   // Refresh personal contacts on mount to guarantee fresh priority
   useEffect(() => {
@@ -304,30 +309,25 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
       setIsEscalationActive(false);
       if (timerRef.current) clearTimeout(timerRef.current);
     }
+    // Phase 8: replaced destructive Alert.alert with ConfirmDialog primitive
+    setPendingCallContact({ name, phone: number });
+    setCallDialogVisible(true);
+  };
 
-    Alert.alert(
-      `Call ${name}?`,
-      `This will dial ${number} using your phone's dialer.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Call Now',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // Log manual call
-              await api.post('/emergency-sos/log-call', {
-                serviceName: name,
-                autoDialed: false,
-              });
-            } catch (err) {
-              console.log('Failed to log emergency call:', err);
-            }
-            await makeDirectPhoneCall(number);
-          },
-        },
-      ]
-    );
+  const handleConfirmCall = async () => {
+    setCallDialogVisible(false);
+    if (!pendingCallContact) return;
+    try {
+      // Log manual call
+      await api.post('/emergency-sos/log-call', {
+        serviceName: pendingCallContact.name,
+        autoDialed: false,
+      });
+    } catch (err) {
+      console.log('Failed to log emergency call:', err);
+    }
+    await makeDirectPhoneCall(pendingCallContact.phone);
+    setPendingCallContact(null);
   };
 
   const sosGlow = sosPulse.interpolate({
@@ -427,6 +427,18 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
             </View>
           </ScrollView>
         </Animated.View>
+
+      {/* Phase 8: ConfirmDialog replaces destructive Alert.alert */}
+      <ConfirmDialog
+        visible={callDialogVisible}
+        title={pendingCallContact ? `Call ${pendingCallContact.name}?` : 'Call?'}
+        description={pendingCallContact ? `This will dial ${pendingCallContact.phone} using your phone's dialer.` : undefined}
+        confirmLabel="Call Now"
+        cancelLabel="Cancel"
+        variant="warning"
+        onConfirm={handleConfirmCall}
+        onCancel={() => { setCallDialogVisible(false); setPendingCallContact(null); }}
+      />
     </SafeAreaView>
   );
 }

@@ -5,16 +5,14 @@
 // ═══════════════════════════════════════════════════════════════
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
   Image,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useDispatch, useSelector } from 'react-redux';
 import { getItemAsync, deleteItemAsync } from '../utils/secureStorage';
@@ -24,6 +22,7 @@ import { updateProfileSchema, changePasswordSchema, UpdateProfileInput, ChangePa
 import { FCMService } from '../services/fcmService';
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
+import { Button, FormInput, Input } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function ProfileScreen() {
@@ -36,9 +35,6 @@ export default function ProfileScreen() {
   const [pwMessage, setPwMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isPwLoading, setIsPwLoading] = useState(false);
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
 
   // Profile Form
   const {
@@ -191,153 +187,101 @@ export default function ProfileScreen() {
             <Ionicons name="person-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
             <Text style={styles.cardTitle}>Account Details</Text>
           </View>
-          <TouchableOpacity onPress={() => { setIsEditing(!isEditing); setProfileMessage(null); }} accessibilityRole="button">
-            <View style={isEditing ? styles.cancelBtn : styles.editBtn}>
-              <Text style={isEditing ? styles.cancelBtnText : styles.editBtnText}>{isEditing ? 'Cancel' : 'Edit'}</Text>
-            </View>
-          </TouchableOpacity>
+          <Button
+            label={isEditing ? 'Cancel' : 'Edit'}
+            variant={isEditing ? 'ghost' : 'secondary'}
+            size="sm"
+            onPress={() => { setIsEditing(!isEditing); setProfileMessage(null); }}
+            accessibilityHint={isEditing ? 'Cancel profile editing' : 'Edit profile details'}
+          />
         </View>
 
-        <Text style={styles.label}>Email Address (Read-only)</Text>
-        <TextInput style={[styles.input, styles.inputDisabled]} value={user.email} editable={false} />
+        <Input
+          label="Email Address (Read-only)"
+          value={user.email}
+          onChangeText={() => {}}
+          editable={false}
+          leftIcon="mail-outline"
+        />
 
-        <Text style={styles.label}>Full Name</Text>
-        <Controller
-          control={profileControl}
+        <FormInput
           name="fullName"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={[styles.input, !isEditing && styles.inputDisabled, profileErrors.fullName && styles.inputError]}
-              editable={isEditing}
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-            />
-          )}
-        />
-        {profileErrors.fullName && <Text style={styles.errorHelper}>{profileErrors.fullName.message}</Text>}
-
-        <Text style={styles.label}>Phone Number</Text>
-        <Controller
           control={profileControl}
-          name="phoneNumber"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={[styles.input, !isEditing && styles.inputDisabled, profileErrors.phoneNumber && styles.inputError]}
-              editable={isEditing}
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-            />
-          )}
+          label="Full Name"
+          editable={isEditing}
+          leftIcon="person-outline"
         />
-        {profileErrors.phoneNumber && <Text style={styles.errorHelper}>{profileErrors.phoneNumber.message}</Text>}
+
+        <FormInput
+          name="phoneNumber"
+          control={profileControl}
+          label="Phone Number"
+          editable={isEditing}
+          leftIcon="call-outline"
+          keyboardType="phone-pad"
+        />
 
         {/* Dynamic Driver Fields */}
         {user.role === 'DRIVER' && (
           <View>
-            <Text style={styles.label}>CNIC Number</Text>
-            <Controller
-              control={profileControl}
+            <FormInput
               name="cnicNumber"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <TextInput
-                  style={[styles.input, !isEditing && styles.inputDisabled, profileErrors.cnicNumber && styles.inputError]}
-                  editable={isEditing}
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  value={value}
-                />
-              )}
-            />
-            {profileErrors.cnicNumber && <Text style={styles.errorHelper}>{profileErrors.cnicNumber.message}</Text>}
-
-            <Text style={styles.label}>Driving License Number</Text>
-            <Controller
               control={profileControl}
-              name="drivingLicenseNumber"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <TextInput
-                  style={[styles.input, !isEditing && styles.inputDisabled, profileErrors.drivingLicenseNumber && styles.inputError]}
-                  editable={isEditing}
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  value={value}
-                />
-              )}
+              label="CNIC Number"
+              editable={isEditing}
+              placeholder="42101-XXXXXXX-X"
             />
-            {profileErrors.drivingLicenseNumber && (
-              <Text style={styles.errorHelper}>{profileErrors.drivingLicenseNumber.message}</Text>
-            )}
+
+            <FormInput
+              name="drivingLicenseNumber"
+              control={profileControl}
+              label="Driving License Number"
+              editable={isEditing}
+              placeholder="DL-XXXXXXX"
+            />
           </View>
         )}
 
         {/* Dynamic Mechanic Fields */}
         {user.role === 'MECHANIC' && (
           <View>
-            <Text style={styles.label}>Workshop Name</Text>
-            <Controller
-              control={profileControl}
+            <FormInput
               name="workshopName"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <TextInput
-                  style={[styles.input, !isEditing && styles.inputDisabled, profileErrors.workshopName && styles.inputError]}
-                  editable={isEditing}
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  value={value}
-                />
-              )}
-            />
-            {profileErrors.workshopName && <Text style={styles.errorHelper}>{profileErrors.workshopName.message}</Text>}
-
-            <Text style={styles.label}>Workshop Address</Text>
-            <Controller
               control={profileControl}
+              label="Workshop Name"
+              editable={isEditing}
+              placeholder="Quick Fix Garage"
+            />
+
+            <FormInput
               name="workshopAddress"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <TextInput
-                  style={[styles.input, !isEditing && styles.inputDisabled, profileErrors.workshopAddress && styles.inputError]}
-                  editable={isEditing}
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  value={value}
-                />
-              )}
-            />
-            {profileErrors.workshopAddress && (
-              <Text style={styles.errorHelper}>{profileErrors.workshopAddress.message}</Text>
-            )}
-
-            <Text style={styles.label}>Specialization</Text>
-            <Controller
               control={profileControl}
-              name="specialization"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <TextInput
-                  style={[styles.input, !isEditing && styles.inputDisabled, profileErrors.specialization && styles.inputError]}
-                  editable={isEditing}
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  value={value}
-                />
-              )}
+              label="Workshop Address"
+              editable={isEditing}
+              placeholder="Plot 45, Industrial Zone"
             />
-            {profileErrors.specialization && (
-              <Text style={styles.errorHelper}>{profileErrors.specialization.message}</Text>
-            )}
+
+            <FormInput
+              name="specialization"
+              control={profileControl}
+              label="Specialization"
+              editable={isEditing}
+              placeholder="Engine, Electrical, Brake Repair"
+            />
           </View>
         )}
 
         {isEditing && (
-          <TouchableOpacity style={styles.saveBtn} onPress={handleProfileSubmit(onUpdateProfile)} disabled={isLoading} accessibilityRole="button">
-            {isLoading ? <ActivityIndicator color={darkColors.text} /> : (
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Ionicons name="save-outline" size={18} color={darkColors.text} style={{ marginRight: 6 }} />
-                <Text style={styles.saveBtnText}>Save Profile</Text>
-              </View>
-            )}
-          </TouchableOpacity>
+          <Button
+            label="Save Profile"
+            variant="danger"
+            size="lg"
+            onPress={handleProfileSubmit(onUpdateProfile)}
+            loading={isLoading}
+            fullWidth
+            icon="save-outline"
+            accessibilityHint="Save profile changes"
+          />
         )}
       </View>
 
@@ -361,105 +305,60 @@ export default function ProfileScreen() {
               </View>
             )}
 
-            <Text style={styles.label}>Current Password</Text>
-            <Controller
-              control={pwControl}
+            <FormInput
               name="currentPassword"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <View style={[styles.passwordContainer, pwErrors.currentPassword && styles.inputError]}>
-                  <TextInput
-                    style={styles.passwordInput}
-                    placeholder="Enter current password"
-                    placeholderTextColor={darkColors.textTertiary}
-                    secureTextEntry={!showCurrentPassword}
-                    autoCapitalize="none"
-                    onBlur={onBlur}
-                    onChangeText={onChange}
-                    value={value}
-                  />
-                  <TouchableOpacity
-                    style={styles.eyeBtn}
-                    onPress={() => setShowCurrentPassword(!showCurrentPassword)} accessibilityRole="button"
-                  >
-                    <Ionicons name={showCurrentPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color={darkColors.textTertiary} />
-                  </TouchableOpacity>
-                </View>
-              )}
-            />
-            {pwErrors.currentPassword && <Text style={styles.errorHelper}>{pwErrors.currentPassword.message}</Text>}
-
-            <Text style={styles.label}>New Password</Text>
-            <Controller
               control={pwControl}
+              label="Current Password"
+              placeholder="Enter current password"
+              secureTextEntry
+              autoCapitalize="none"
+              leftIcon="lock-closed-outline"
+            />
+
+            <FormInput
               name="newPassword"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <View style={[styles.passwordContainer, pwErrors.newPassword && styles.inputError]}>
-                  <TextInput
-                    style={styles.passwordInput}
-                    placeholder="At least 8 chars, 1 num, 1 spec"
-                    placeholderTextColor={darkColors.textTertiary}
-                    secureTextEntry={!showNewPassword}
-                    autoCapitalize="none"
-                    onBlur={onBlur}
-                    onChangeText={onChange}
-                    value={value}
-                  />
-                  <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowNewPassword(!showNewPassword)} accessibilityRole="button">
-                    <Ionicons name={showNewPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color={darkColors.textTertiary} />
-                  </TouchableOpacity>
-                </View>
-              )}
-            />
-            {pwErrors.newPassword && <Text style={styles.errorHelper}>{pwErrors.newPassword.message}</Text>}
-
-            <Text style={styles.label}>Confirm New Password</Text>
-            <Controller
               control={pwControl}
-              name="confirmNewPassword"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <View style={[styles.passwordContainer, pwErrors.confirmNewPassword && styles.inputError]}>
-                  <TextInput
-                    style={styles.passwordInput}
-                    placeholder="Confirm new password"
-                    placeholderTextColor={darkColors.textTertiary}
-                    secureTextEntry={!showConfirmNewPassword}
-                    autoCapitalize="none"
-                    onBlur={onBlur}
-                    onChangeText={onChange}
-                    value={value}
-                  />
-                  <TouchableOpacity
-                    style={styles.eyeBtn}
-                    onPress={() => setShowConfirmNewPassword(!showConfirmNewPassword)} accessibilityRole="button"
-                  >
-                    <Ionicons name={showConfirmNewPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color={darkColors.textTertiary} />
-                  </TouchableOpacity>
-                </View>
-              )}
+              label="New Password"
+              placeholder="At least 8 chars, 1 num, 1 spec"
+              secureTextEntry
+              autoCapitalize="none"
+              leftIcon="lock-closed-outline"
             />
-            {pwErrors.confirmNewPassword && (
-              <Text style={styles.errorHelper}>{pwErrors.confirmNewPassword.message}</Text>
-            )}
 
-            <TouchableOpacity style={styles.pwSubmitBtn} onPress={handlePwSubmit(onChangePassword)} disabled={isPwLoading} accessibilityRole="button">
-              {isPwLoading ? <ActivityIndicator color={colors.danger[500]} /> : (
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="refresh-outline" size={16} color={colors.danger[500]} style={{ marginRight: 6 }} />
-                  <Text style={styles.pwSubmitBtnText}>Update Password</Text>
-                </View>
-              )}
-            </TouchableOpacity>
+            <FormInput
+              name="confirmNewPassword"
+              control={pwControl}
+              label="Confirm New Password"
+              placeholder="Confirm new password"
+              secureTextEntry
+              autoCapitalize="none"
+              leftIcon="lock-closed-outline"
+            />
+
+            <Button
+              label="Update Password"
+              variant="secondary"
+              size="lg"
+              onPress={handlePwSubmit(onChangePassword)}
+              loading={isPwLoading}
+              fullWidth
+              icon="refresh-outline"
+              accessibilityHint="Submit password change form"
+            />
           </View>
         )}
       </View>
 
       {/* ── Logout ── */}
-      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} accessibilityRole="button">
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Ionicons name="log-out-outline" size={20} color={colors.danger[400]} style={{ marginRight: 8 }} />
-          <Text style={styles.logoutBtnText}>Log Out</Text>
-        </View>
-      </TouchableOpacity>
+      <Button
+        label="Log Out"
+        variant="ghost"
+        size="lg"
+        onPress={handleLogout}
+        fullWidth
+        icon="log-out-outline"
+        accessibilityHint="Log out of your account"
+      />
     </ScrollView>
   );
 }

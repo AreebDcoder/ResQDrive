@@ -1,7 +1,7 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator,
-  RefreshControl, SafeAreaView, Alert, StatusBar,
+  View, Text, StyleSheet, FlatList, TouchableOpacity,
+  RefreshControl, SafeAreaView, StatusBar,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store/store';
@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import api from '../api/axios';
 import { useToast } from '../components/ui/Toast';
+import { Button, ConfirmDialog, FAB, FilterChip } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
 
 const SEVERITY_COLORS: Record<string, string> = {
@@ -27,6 +28,8 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
   const { list, isLoading, isRefreshing, error, meta, filters } = useSelector(
     (state: RootState) => state.incidents
   );
+  const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     dispatch(clearCurrent());
@@ -49,25 +52,21 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
   };
 
   const handleDeleteIncident = (id: string) => {
-    Alert.alert(
-      'Confirm Delete',
-      'Are you sure you want to delete this incident record?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await api.delete(`/incidents/${id}`);
-              dispatch(fetchIncidents({ page: 1, refresh: true }));
-            } catch (err) {
-              toast.error('Failed to delete incident.');
-            }
-          },
-        },
-      ]
-    );
+    setPendingDeleteId(id);
+    setDeleteDialogVisible(true);
+  };
+
+  const handleConfirmDeleteIncident = async () => {
+    setDeleteDialogVisible(false);
+    if (!pendingDeleteId) return;
+    try {
+      await api.delete(`/incidents/${pendingDeleteId}`);
+      dispatch(fetchIncidents({ page: 1, refresh: true }));
+    } catch (err) {
+      toast.error('Failed to delete incident.');
+    } finally {
+      setPendingDeleteId(null);
+    }
   };
 
   const renderItem = ({ item }: { item: any }) => {
@@ -127,14 +126,12 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
         {SEVERITY_FILTERS.map((sev) => {
           const active = (sev === 'ALL' && !filters.severity) || filters.severity === sev;
           return (
-            <TouchableOpacity
+            <FilterChip
               key={sev}
-              style={[styles.filterChip, active && styles.filterChipActive]}
+              label={sev}
+              selected={active}
               onPress={() => onFilterChange(sev)}
-              activeOpacity={0.7} accessibilityRole="button"
-            >
-              <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{sev}</Text>
-            </TouchableOpacity>
+            />
           );
         })}
       </View>
@@ -145,9 +142,15 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
             <Ionicons name="alert-circle-outline" size={40} color={colors.danger[400]} />
           </View>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={onRefresh} accessibilityRole="button">
-            <Text style={styles.retryBtnText}>Retry</Text>
-          </TouchableOpacity>
+          <View style={styles.retryBtnWrap}>
+            <Button
+              label="Retry"
+              variant="danger"
+              size="md"
+              onPress={onRefresh}
+              accessibilityHint="Retry loading incidents"
+            />
+          </View>
         </View>
       ) : (
         <FlatList
@@ -176,27 +179,42 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
           }
           ListFooterComponent={
             meta.page < meta.totalPages ? (
-              <TouchableOpacity style={styles.loadMoreBtn} onPress={onLoadMore} disabled={isLoading} accessibilityRole="button">
-                {isLoading ? (
-                  <ActivityIndicator color={colors.danger[500]} />
-                ) : (
-                  <Text style={styles.loadMoreText}>Load More</Text>
-                )}
-              </TouchableOpacity>
+              <View style={styles.loadMoreWrap}>
+                <Button
+                  label="Load More"
+                  variant="secondary"
+                  size="md"
+                  onPress={onLoadMore}
+                  loading={isLoading}
+                  disabled={isLoading}
+                  fullWidth
+                  accessibilityHint="Load more incidents"
+                />
+              </View>
             ) : null
           }
         />
       )}
 
       {/* FAB */}
-      <TouchableOpacity
-        style={styles.fab}
+      <FAB
+        icon="add"
+        variant="danger"
         onPress={() => navigation.navigate('CreateIncident', { mode: 'create' })}
-        activeOpacity={0.85} accessibilityRole="button"
-      >
-        <View style={styles.fabGradient} />
-        <Text style={styles.fabText}>+</Text>
-      </TouchableOpacity>
+        label="New Incident"
+      />
+
+      {/* Phase 8: ConfirmDialog replaces destructive Alert.alert */}
+      <ConfirmDialog
+        visible={deleteDialogVisible}
+        title="Confirm Delete"
+        description="Are you sure you want to delete this incident record?"
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmDeleteIncident}
+        onCancel={() => { setDeleteDialogVisible(false); setPendingDeleteId(null); }}
+      />
     </SafeAreaView>
   );
 }
@@ -298,16 +316,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   errorText: { color: colors.danger[400], fontSize: 14, textAlign: 'center', marginBottom: 20 },
-  retryBtn: {
-    backgroundColor: colors.danger[500],
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 14,
-    shadowColor: colors.danger[500],
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+  retryBtnWrap: {
+    alignItems: 'center',
   },
   retryBtnText: { color: darkColors.text, fontWeight: '700', fontSize: 14, letterSpacing: 0.3 },
   emptyIconBg: {
@@ -323,33 +333,12 @@ const styles = StyleSheet.create({
   },
   emptyText: { color: darkColors.text, fontSize: 16, fontWeight: '700', marginBottom: 8 },
   emptySubtext: { color: darkColors.textTertiary, fontSize: 13, textAlign: 'center', lineHeight: 20 },
-  loadMoreBtn: {
-    paddingVertical: 14,
-    alignItems: 'center',
+  loadMoreWrap: {
     marginTop: 8,
     marginBottom: 80,
-    backgroundColor: tints.whiteSubtle,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: tints.whiteBorderStrong,
+    paddingHorizontal: 20,
   },
   loadMoreText: { color: colors.danger[500], fontSize: 14, fontWeight: '700' },
-  fab: {
-    position: 'absolute',
-    bottom: 24,
-    right: 24,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 8,
-    shadowColor: colors.danger[500],
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 14,
-    overflow: 'hidden',
-  },
   fabGradient: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.danger[500],

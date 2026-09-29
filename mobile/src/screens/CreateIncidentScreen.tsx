@@ -5,7 +5,7 @@
 // ═══════════════════════════════════════════════════════════════
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
   KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
@@ -20,6 +20,7 @@ import {
 } from '../schemas/incidentValidation';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '../components/ui/Toast';
+import { Button, FormInput } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
 
 const SEVERITY_COLORS: Record<string, string> = {
@@ -150,107 +151,65 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
           )}
         />
 
-        <Text style={styles.label}>Date & Time (YYYY-MM-DDTHH:MM)</Text>
-        <Controller
-          control={control}
+        <Text style={styles.sectionTitle} accessibilityRole="header">Date & Time (YYYY-MM-DDTHH:MM)</Text>
+        <FormInput
           name="occurredAt"
-          render={({ field: { onChange, value } }) => (
-            <TextInput
-              style={styles.input}
-              value={value}
-              onChangeText={onChange}
-              placeholderTextColor={darkColors.textTertiary}
-              autoCapitalize="none"
-            />
-          )}
-        />
-        {errors.occurredAt && <Text style={styles.errorHelper}>{errors.occurredAt.message}</Text>}
-
-        <Text style={styles.label}>Address (optional)</Text>
-        <Controller
           control={control}
+          label="Date & Time"
+          placeholder="YYYY-MM-DDTHH:MM"
+          autoCapitalize="none"
+          leftIcon="calendar-outline"
+        />
+
+        <FormInput
           name="address"
-          render={({ field: { onChange, value } }) => (
-            <TextInput
-              style={styles.input}
-              value={value}
-              onChangeText={onChange}
-              placeholder="e.g. Shahrah-e-Faisal, Karachi"
-              placeholderTextColor={darkColors.textTertiary}
-            />
-          )}
+          control={control}
+          label="Address (optional)"
+          placeholder="e.g. Shahrah-e-Faisal, Karachi"
+          leftIcon="location-outline"
         />
 
-        <Text style={styles.label}>Description (optional)</Text>
-        <Controller
-          control={control}
+        <FormInput
           name="description"
-          render={({ field: { onChange, value } }) => (
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={value}
-              onChangeText={onChange}
-              placeholder="Describe what happened..."
-              placeholderTextColor={darkColors.textTertiary}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
-          )}
+          control={control}
+          label="Description (optional)"
+          placeholder="Describe what happened..."
+          multiline
+          numberOfLines={4}
+          leftIcon="document-text-outline"
         />
 
         <View style={styles.row}>
           <View style={{ flex: 1, marginRight: 8 }}>
-            <Text style={styles.label}>Latitude</Text>
-            <Controller
-              control={control}
+            <FormInput
               name="latitude"
-              render={({ field: { onChange, value } }) => (
-                <TextInput
-                  style={styles.input}
-                  value={value !== undefined && value !== null ? String(value) : ''}
-                  onChangeText={onChange}
-                  placeholder="24.8607"
-                  placeholderTextColor={darkColors.textTertiary}
-                  keyboardType="numeric"
-                />
-              )}
+              control={control}
+              label="Latitude"
+              placeholder="24.8607"
+              keyboardType="numeric"
             />
           </View>
           <View style={{ flex: 1, marginLeft: 8 }}>
-            <Text style={styles.label}>Longitude</Text>
-            <Controller
-              control={control}
+            <FormInput
               name="longitude"
-              render={({ field: { onChange, value } }) => (
-                <TextInput
-                  style={styles.input}
-                  value={value !== undefined && value !== null ? String(value) : ''}
-                  onChangeText={onChange}
-                  placeholder="67.0011"
-                  placeholderTextColor={darkColors.textTertiary}
-                  keyboardType="numeric"
-                />
-              )}
+              control={control}
+              label="Longitude"
+              placeholder="67.0011"
+              keyboardType="numeric"
             />
           </View>
         </View>
-        {errors.latitude && <Text style={styles.errorHelper}>{errors.latitude.message}</Text>}
 
-        <TouchableOpacity
-          style={[styles.submitBtn, isSubmitting && { opacity: 0.6 }]}
+        <Button
+          label={isEdit ? 'Update Incident' : 'Save Incident'}
+          variant="danger"
+          size="lg"
           onPress={handleSubmit(onSubmit)}
-          disabled={isSubmitting} accessibilityRole="button"
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color={darkColors.text} />
-          ) : (
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              <Ionicons name={isEdit ? "save-outline" : "alert-circle-outline"} size={20} color={darkColors.text} />
-              <Text style={styles.submitBtnText}>{isEdit ? 'Update Incident' : 'Save Incident'}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+          loading={isSubmitting}
+          fullWidth
+          icon={isEdit ? 'save-outline' : 'alert-circle-outline'}
+          accessibilityHint={isEdit ? 'Update incident record' : 'Submit new incident record'}
+        />
       </ScrollView>
     </KeyboardAvoidingView>
   );

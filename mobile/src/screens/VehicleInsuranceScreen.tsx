@@ -19,6 +19,7 @@ import { upsertInsuranceSuccess, deleteInsuranceSuccess } from '../store/slices/
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '../components/ui/Toast';
+import { ConfirmDialog } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function VehicleInsuranceScreen({ route, navigation }: any) {
@@ -29,6 +30,7 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [removeDialogVisible, setRemoveDialogVisible] = useState(false);
 
   // Format Date ISO to YYYY-MM-DD for text input
   const getFormattedDate = (isoStr?: string) => {
@@ -66,34 +68,33 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
     }
   };
 
-  const handleDelete = () => {
-    const doDelete = async () => {
-      setIsLoading(true);
-      setErrorMsg(null);
-      try {
-        await api.delete(`/vehicles/${vehicleId}/insurance`);
-        dispatch(deleteInsuranceSuccess(vehicleId));
-        navigation.goBack();
-      } catch (err: any) {
-        setErrorMsg(err.response?.data?.message || 'Failed to remove insurance details.');
-        setIsLoading(false);
-      }
-    };
+  const doDelete = async () => {
+    setIsLoading(true);
+    setErrorMsg(null);
+    try {
+      await api.delete(`/vehicles/${vehicleId}/insurance`);
+      dispatch(deleteInsuranceSuccess(vehicleId));
+      navigation.goBack();
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Failed to remove insurance details.');
+      setIsLoading(false);
+    }
+  };
 
+  const handleDelete = () => {
     if (Platform.OS === 'web') {
       if (typeof window !== 'undefined' && window.confirm('Are you sure you want to remove these insurance details?')) {
         doDelete();
       }
     } else {
-      Alert.alert(
-        'Remove Insurance Details',
-        'Are you sure you want to remove these insurance details?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Remove', style: 'destructive', onPress: doDelete },
-        ],
-      );
+      // Phase 8: replaced destructive Alert.alert with ConfirmDialog primitive
+      setRemoveDialogVisible(true);
     }
+  };
+
+  const handleConfirmRemove = () => {
+    setRemoveDialogVisible(false);
+    doDelete();
   };
 
   return (
@@ -237,6 +238,18 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
           )}
         </View>
       </ScrollView>
+
+      {/* Phase 8: ConfirmDialog replaces destructive Alert.alert */}
+      <ConfirmDialog
+        visible={removeDialogVisible}
+        title="Remove Insurance Details"
+        description="Are you sure you want to remove these insurance details?"
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmRemove}
+        onCancel={() => setRemoveDialogVisible(false)}
+      />
     </KeyboardAvoidingView>
   );
 }
