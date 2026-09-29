@@ -1,3 +1,4 @@
+import { API_URL } from '../api/axios';
 import React, { useEffect, useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
@@ -142,9 +143,7 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
 
   function getAcknowledgeLink() {
     if (!emergency.acknowledgeUrl) return '';
-    const baseUrl = Platform.OS === 'web'
-      ? 'http://localhost:3000'
-      : (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000');
+    const baseUrl = API_URL; // Use centralized API_URL from axios.ts // was: Platform.OS === 'web'
     return `${baseUrl}${emergency.acknowledgeUrl}`;
   }
 

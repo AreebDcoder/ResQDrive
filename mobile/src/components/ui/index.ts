@@ -25,4 +25,5 @@ export { ToastProvider, useToast } from './Toast';
 export { Textarea, type TextareaProps } from './Textarea';
 export { FormInput, type FormInputProps } from './FormInput';
 export { FormSelect, type FormSelectProps } from './FormSelect';
+export { ScreenWrapper, type ScreenWrapperProps } from './ScreenWrapper';
 export type { IconName } from './types';

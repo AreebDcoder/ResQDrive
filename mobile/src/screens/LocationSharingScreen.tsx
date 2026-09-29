@@ -1,3 +1,4 @@
+import { API_URL } from '../api/axios';
 // ═══════════════════════════════════════════════════════════════
 // ResQDrive v2 — LOCATION SHARING SCREEN (Modernized)
 // All imports, logic, state, handlers preserved identically.
@@ -161,9 +162,7 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
 
   function getShareLink() {
     if (!session) return '';
-    const baseUrl = Platform.OS === 'web'
-      ? 'http://localhost:3000'
-      : (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000');
+    const baseUrl = API_URL; // Use centralized API_URL from axios.ts // was: Platform.OS === 'web'
     return `${baseUrl}${session.shareUrl}`;
   }
 

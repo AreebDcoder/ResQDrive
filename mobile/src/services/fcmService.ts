@@ -136,10 +136,6 @@ export class FCMService {
         }
 
         if (remoteMessage.notification) {
-          Alert.alert(
-            remoteMessage.notification.title || 'Notification',
-            remoteMessage.notification.body || ''
-          );
         }
       });
 

@@ -1,363 +1,205 @@
-// ═══════════════════════════════════════════════════════════════
-// ResQDrive v2 — MY VEHICLES SCREEN (Modernized)
-// All imports, logic, state, handlers preserved identically.
-// Only JSX structure + StyleSheet updated: dark glassmorphism theme.
-// ═══════════════════════════════════════════════════════════════
-import React, { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState } from '../store/store';
-import { fetchVehiclesStart, fetchVehiclesSuccess, fetchVehiclesFailure, setPrimaryVehicleSuccess } from '../store/slices/vehiclesSlice';
-import api from '../api/axios';
+import React from 'react';
+import { View, FlatList, Pressable, StyleSheet } from 'react-native';
+import { useGetVehiclesQuery, useSetPrimaryVehicleMutation } from '../store/api/vehiclesApi';
+import { useToast } from '../components/ui/Toast';
+import { useTheme } from '../theme/useTheme';
+import { colors, spacing, radius, typography, shadows } from '../theme/tokens';
+import type { AppNavigation } from '../navigation/types';
+import type { Vehicle } from '../store/api/vehiclesApi';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function MyVehiclesScreen({ navigation }: any) {
-  const dispatch = useDispatch();
-  const { list: vehicles, isLoading, error } = useSelector((state: RootState) => state.vehicles);
-
-  const fetchVehicles = async () => {
-    dispatch(fetchVehiclesStart());
-    try {
-      const response = await api.get('/vehicles');
-      dispatch(fetchVehiclesSuccess(response.data));
-    } catch (err: any) {
-      dispatch(fetchVehiclesFailure(err.response?.data?.message || 'Failed to fetch vehicles.'));
-    }
-  };
-
-  useEffect(() => {
-    // Fetch vehicles on component mount or focus
-    const unsubscribe = navigation.addListener('focus', () => {
-      fetchVehicles();
-    });
-    return unsubscribe;
-  }, [navigation]);
+// Local styles using theme tokens — will be replaced with tokens directly in Batch 7
+export default function MyVehiclesScreen({ navigation }: { navigation: AppNavigation }) {
+  const { data: vehicles, isLoading, error, refetch } = useGetVehiclesQuery();
+  const [setPrimary] = useSetPrimaryVehicleMutation();
+  const toast = useToast();
+  const { colors: tc } = useTheme();
 
   const handleSetPrimary = async (vehicleId: string) => {
     try {
-      await api.patch(`/vehicles/${vehicleId}/set-primary`);
-      dispatch(setPrimaryVehicleSuccess(vehicleId));
-    } catch (err) {
-      alert('Failed to set vehicle as primary.');
+      await setPrimary(vehicleId).unwrap();
+      toast.success('Vehicle set as primary.');
+    } catch {
+      toast.error('Failed to set vehicle as primary.');
     }
   };
 
-  return (
-    <View style={styles.container}>
-      {/* ── Header ── */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Vehicles</Text>
-        <Text style={styles.headerSub}>{vehicles.length} registered</Text>
+  const renderItem = ({ item }: { item: Vehicle }) => (
+    <Pressable
+      onPress={() => navigation.navigate('AddEditVehicle', { vehicleId: item.id })}
+      accessibilityRole="button"
+      accessibilityLabel={`${item.make} ${item.model}`}
+      style={({ pressed }) => [
+        styles.card,
+        { backgroundColor: tc.surface, borderColor: tc.border, opacity: pressed ? 0.85 : 1 },
+      ]}
+    >
+      {/* Card Header */}
+      <View style={styles.cardHeader}>
+        <View style={styles.headerInfo}>
+          <View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <Ionicons name="car" size={20} color={colors.primary[400]} />
+              <View style={[styles.titleRow, {}]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 }}>
+                  <View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={[styles.vehicleTitle, { color: tc.text }]}>{item.make} {item.model}</Text>
+                      {item.isPrimary && (
+                        <View style={[styles.primaryBadge, { backgroundColor: colors.success[100] }]}>
+                          <Ionicons name="star" size={10} color={colors.success[600]} />
+                          <Text style={[styles.primaryBadgeText, { color: colors.success[700] }]}>Primary</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={[styles.vehicleMeta, { color: tc.textSecondary }]}>{item.year} • {item.color || 'No color'}</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </View>
+        </View>
       </View>
 
-      {isLoading && vehicles.length === 0 ? (
-        <ActivityIndicator size="large" color="#E53935" style={styles.loader} />
-      ) : error ? (
-        <View style={styles.centerContainer}>
-          <Ionicons name="alert-circle-outline" size={36} color="#FF5252" style={{ marginBottom: 8 }} />
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={fetchVehicles}>
-            <Text style={styles.retryText}>Retry</Text>
-          </TouchableOpacity>
+      {/* Plate */}
+      <View style={[styles.plateContainer, { backgroundColor: tc.background }]}>
+        <Text style={[styles.plateLabel, { color: tc.textTertiary }]}>License Plate</Text>
+        <Text style={[styles.plateNumber, { color: tc.text }]}>{item.licensePlate.toUpperCase()}</Text>
+      </View>
+
+      {/* Card Actions */}
+      <View style={styles.cardActions}>
+        {item.isPrimary ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+            <Ionicons name="shield-checkmark" size={14} color={colors.success[500]} />
+            <Text style={[styles.activeLabel, { color: colors.success[600] }]}>Paired with crash sensor</Text>
+          </View>
+        ) : (
+          <Pressable
+            onPress={() => handleSetPrimary(item.id)}
+            accessibilityRole="button"
+            accessibilityLabel="Set as primary vehicle"
+            style={({ pressed }) => [
+              styles.setPrimaryBtn,
+              { backgroundColor: colors.primary[50], borderColor: colors.primary[200], opacity: pressed ? 0.85 : 1 },
+            ]}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+              <Ionicons name="flash-outline" size={14} color={colors.primary[500]} />
+              <Text style={[styles.setPrimaryText, { color: colors.primary[600] }]}>Activate</Text>
+            </View>
+          </Pressable>
+        )}
+
+        <Pressable
+          onPress={() => navigation.navigate('VehicleInsurance', { vehicleId: item.id })}
+          accessibilityRole="button"
+          accessibilityLabel={item.insurance ? 'View insurance' : 'Add insurance'}
+          style={({ pressed }) => [styles.insuranceBtn, { opacity: pressed ? 0.85 : 1 }]}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+            <Ionicons
+              name={item.insurance ? 'shield-checkmark-outline' : 'add-circle-outline'}
+              size={14}
+              color={item.insurance ? colors.success[500] : colors.primary[500]}
+            />
+            <Text style={{ color: item.insurance ? colors.success[600] : colors.primary[600], fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium }}>
+              {item.insurance ? 'Insured' : 'Add Insurance'}
+            </Text>
+          </View>
+        </Pressable>
+      </View>
+    </Pressable>
+  );
+
+  return (
+    <View style={{ flex: 1, backgroundColor: tc.background }}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={[styles.headerTitle, { color: tc.text }]}>My Vehicles</Text>
+        <Text style={[styles.headerSub, { color: tc.textSecondary }]}>{vehicles?.length || 0} registered</Text>
+      </View>
+
+      {/* Loading */}
+      {isLoading && (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={colors.primary[500]} />
         </View>
-      ) : vehicles.length === 0 ? (
-        <View style={styles.centerContainer}>
-          <Ionicons name="car-outline" size={48} color="#6B6B80" style={{ marginBottom: 12 }} />
-          <Text style={styles.emptyText}>No vehicles registered yet.</Text>
-          <Text style={styles.emptySubtitle}>Add a vehicle to enable automatic accident detection.</Text>
+      )}
+
+      {/* Error */}
+      {error != null && (
+        <View style={styles.center}>
+          <Ionicons name="alert-circle-outline" size={36} color={colors.danger[500]} style={{ marginBottom: spacing.sm }} />
+          <Text style={{ color: colors.danger[500], fontSize: typography.fontSize.md }}>Failed to load vehicles</Text>
+          <Pressable onPress={() => refetch()} accessibilityRole="button" accessibilityLabel="Retry" style={{ marginTop: spacing.md }}>
+            <Text style={{ color: colors.primary[500], fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold }}>Retry</Text>
+          </Pressable>
         </View>
-      ) : (
+      )}
+
+      {/* Empty */}
+      {!isLoading && !error && vehicles?.length === 0 && (
+        <View style={styles.center}>
+          <Ionicons name="car-outline" size={48} color={tc.textTertiary} style={{ marginBottom: spacing.md }} />
+          <Text style={{ color: tc.text, fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold }}>No vehicles registered</Text>
+          <Text style={{ color: tc.textSecondary, fontSize: typography.fontSize.sm, marginTop: spacing.xs, textAlign: 'center' }}>
+            Add a vehicle to enable automatic accident detection.
+          </Text>
+        </View>
+      )}
+
+      {/* List */}
+      {!isLoading && !error && vehicles && vehicles.length > 0 && (
         <FlatList
           data={vehicles}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() => navigation.navigate('AddEditVehicle', { vehicle: item })}
-              activeOpacity={0.7}
-            >
-              {/* Card Header */}
-              <View style={styles.cardHeader}>
-                <View style={styles.headerInfo}>
-                  <Text style={styles.vehicleTitle}>{item.make} {item.model}</Text>
-                  <Text style={styles.vehicleMeta}>{item.year} • {item.color || 'No Color'}</Text>
-                </View>
-                {item.isPrimary && (
-                  <View style={styles.primaryBadge}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <Ionicons name="flash" size={12} color="#00E676" />
-                      <Text style={styles.primaryBadgeText}>Active</Text>
-                    </View>
-                  </View>
-                )}
-              </View>
-
-              {/* Plate */}
-              <View style={styles.plateContainer}>
-                <Text style={styles.plateLabel}>License Plate</Text>
-                <Text style={styles.plateNumber}>{item.licensePlate.toUpperCase()}</Text>
-              </View>
-
-              {/* Card Actions */}
-              <View style={styles.cardActions}>
-                {item.isPrimary ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <Ionicons name="shield-checkmark" size={14} color="#00E676" />
-                    <Text style={styles.activeLabel}>Paired with crash sensor</Text>
-                  </View>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.setPrimaryBtn}
-                    onPress={() => handleSetPrimary(item.id)}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <Ionicons name="flash-outline" size={14} color="#E53935" />
-                      <Text style={styles.setPrimaryText}>Activate</Text>
-                    </View>
-                  </TouchableOpacity>
-                )}
-                
-                <TouchableOpacity
-                  style={styles.insuranceIndicator}
-                  onPress={() => navigation.navigate('VehicleInsurance', { vehicleId: item.id, insurance: item.insurance })}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <Ionicons name={item.insurance ? "shield-checkmark-outline" : "add-circle-outline"} size={14} color={item.insurance ? "#00E676" : "#E53935"} />
-                    <Text style={item.insurance ? styles.insuranceYes : styles.insuranceNo}>
-                      {item.insurance ? 'Insured' : 'Add Insurance'}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
-          )}
+          renderItem={renderItem}
         />
       )}
 
       {/* FAB */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate('AddEditVehicle')}
-        activeOpacity={0.8}
+      <Pressable
+        onPress={() => navigation.navigate('AddEditVehicle', {})}
+        accessibilityRole="button"
+        accessibilityLabel="Add new vehicle"
+        style={({ pressed }) => [
+          styles.fab,
+          { backgroundColor: colors.primary[600], opacity: pressed ? 0.85 : 1 },
+        ]}
       >
-        <Ionicons name="add" size={28} color="#FFFFFF" />
-      </TouchableOpacity>
+        <Ionicons name="add" size={28} color="#fff" />
+      </Pressable>
     </View>
   );
 }
 
+// Imports needed at bottom (React Native Text/ActivityIndicator)
+import { Text, ActivityIndicator } from 'react-native';
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0A0A0F',
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  headerSub: {
-    fontSize: 13,
-    color: '#6B6B80',
-    marginTop: 4,
-  },
-  loader: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  errorEmoji: {
-    fontSize: 40,
-    marginBottom: 12,
-  },
-  errorText: {
-    color: '#FF8A80',
-    fontSize: 15,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  retryBtn: {
-    backgroundColor: '#E53935',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
-    shadowColor: '#E53935',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  retryText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  emptyEmoji: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
-  emptyText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    color: '#6B6B80',
-    fontSize: 14,
-    textAlign: 'center',
-    paddingHorizontal: 20,
-  },
-  listContent: {
-    padding: 16,
-    paddingBottom: 100,
-  },
-  card: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 14,
-  },
-  headerInfo: {
-    flex: 1,
-  },
-  vehicleTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  vehicleMeta: {
-    fontSize: 13,
-    color: '#A0A0B8',
-    marginTop: 4,
-  },
-  primaryBadge: {
-    backgroundColor: 'rgba(229, 57, 53, 0.2)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(229, 57, 53, 0.3)',
-  },
-  primaryBadgeText: {
-    color: '#FF1744',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  plateContainer: {
-    backgroundColor: 'rgba(10, 10, 15, 0.5)',
-    padding: 12,
-    borderRadius: 10,
-    borderLeftWidth: 3,
-    borderLeftColor: '#2979FF',
-    marginBottom: 16,
-  },
-  plateLabel: {
-    fontSize: 11,
-    color: '#6B6B80',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  plateNumber: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginTop: 2,
-    letterSpacing: 1.5,
-  },
-  cardActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.06)',
-    paddingTop: 14,
-  },
-  activeLabel: {
-    color: '#00E676',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  setPrimaryBtn: {
-    backgroundColor: 'rgba(41, 121, 255, 0.12)',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(41, 121, 255, 0.3)',
-  },
-  setPrimaryText: {
-    color: '#2979FF',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  insuranceIndicator: {
-    padding: 4,
-  },
-  insuranceYes: {
-    color: '#00E676',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  insuranceNo: {
-    color: '#E53935',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 28,
-    right: 24,
-    backgroundColor: '#E53935',
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#E53935',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  fabText: {
-    color: '#FFFFFF',
-    fontSize: 32,
-    fontWeight: '300',
-    marginTop: -4,
-  },
+  container: { flex: 1 },
+  header: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerTitle: { fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.bold },
+  headerSub: { fontSize: typography.fontSize.sm },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl },
+  listContent: { paddingHorizontal: spacing.lg, paddingBottom: 80, gap: spacing.md },
+  card: { borderRadius: radius.lg, borderWidth: 1, padding: spacing.lg, ...shadows.sm },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md },
+  headerInfo: { flex: 1 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  vehicleTitle: { fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.bold },
+  vehicleMeta: { fontSize: typography.fontSize.sm, marginTop: spacing.xs },
+  primaryBadge: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.full, marginLeft: spacing.sm },
+  primaryBadgeText: { fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold, textTransform: 'uppercase' },
+  plateContainer: { borderRadius: radius.md, paddingVertical: spacing.md, paddingHorizontal: spacing.lg, marginBottom: spacing.md },
+  plateLabel: { fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.medium, textTransform: 'uppercase', marginBottom: spacing.xs },
+  plateNumber: { fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.bold, letterSpacing: 1 },
+  cardActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  activeLabel: { fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium },
+  setPrimaryBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.md, borderWidth: 1 },
+  setPrimaryText: { fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold },
+  insuranceBtn: { padding: spacing.xs },
+  fab: { position: 'absolute', bottom: spacing.xl, right: spacing.xl, width: 56, height: 56, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center', ...shadows.lg },
 });
