@@ -24,6 +24,7 @@ import { updateProfileSchema, changePasswordSchema, UpdateProfileInput, ChangePa
 import { FCMService } from '../services/fcmService';
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
+import { colors, darkColors } from '../theme/tokens';
 
 export default function ProfileScreen() {
   const dispatch = useDispatch();
@@ -466,7 +467,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
   },
   scrollContent: {
     padding: 20,
@@ -486,8 +487,8 @@ const styles = StyleSheet.create({
     borderRadius: 55,
     padding: 3,
     borderWidth: 3,
-    borderColor: '#E53935',
-    shadowColor: '#E53935',
+    borderColor: colors.danger[500],
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 12,
@@ -506,11 +507,11 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#2979FF',
+    backgroundColor: colors.info[500],
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#0A0A0F',
+    borderColor: darkColors.background,
   },
   editBadgeText: {
     fontSize: 14,
@@ -518,7 +519,7 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: darkColors.text,
     marginTop: 16,
   },
   roleRow: {
@@ -528,7 +529,7 @@ const styles = StyleSheet.create({
   },
   profileRole: {
     fontSize: 14,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
   },
   rolePill: {
     backgroundColor: 'rgba(229, 57, 53, 0.15)',
@@ -537,7 +538,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   roleLabel: {
-    color: '#E53935',
+    color: colors.danger[500],
     fontWeight: '700',
     fontSize: 13,
   },
@@ -546,7 +547,7 @@ const styles = StyleSheet.create({
   },
   verificationText: {
     fontSize: 13,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
   },
   card: {
     backgroundColor: 'rgba(28, 28, 46, 0.6)',
@@ -570,7 +571,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
   editBtn: {
     backgroundColor: 'rgba(41, 121, 255, 0.15)',
@@ -579,7 +580,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   editBtnText: {
-    color: '#2979FF',
+    color: colors.info[500],
     fontWeight: '700',
     fontSize: 13,
   },
@@ -590,24 +591,24 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   cancelBtnText: {
-    color: '#E53935',
+    color: colors.danger[500],
     fontWeight: '700',
     fontSize: 13,
   },
   expandIcon: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 14,
   },
   label: {
     fontSize: 12,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginBottom: 6,
     marginTop: 12,
     fontWeight: '600',
   },
   input: {
     backgroundColor: 'rgba(10, 10, 15, 0.6)',
-    color: '#FFFFFF',
+    color: darkColors.text,
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: 10,
@@ -616,31 +617,31 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   inputDisabled: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     borderColor: 'rgba(255, 255, 255, 0.03)',
   },
   inputError: {
-    borderColor: '#E53935',
+    borderColor: colors.danger[500],
   },
   errorHelper: {
-    color: '#FF8A80',
+    color: colors.danger[300],
     fontSize: 12,
     marginTop: 4,
   },
   saveBtn: {
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 20,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
   saveBtnText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 15,
     fontWeight: '700',
   },
@@ -649,7 +650,7 @@ const styles = StyleSheet.create({
   },
   pwSubmitBtn: {
     backgroundColor: 'rgba(41, 121, 255, 0.1)',
-    borderColor: '#2979FF',
+    borderColor: colors.info[500],
     borderWidth: 1,
     paddingVertical: 14,
     borderRadius: 10,
@@ -657,7 +658,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   pwSubmitBtnText: {
-    color: '#2979FF',
+    color: colors.info[500],
     fontSize: 15,
     fontWeight: '700',
   },
@@ -672,7 +673,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   logoutBtnText: {
-    color: '#E53935',
+    color: colors.danger[500],
     fontSize: 16,
     fontWeight: '700',
   },
@@ -693,12 +694,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   alertText: {
-    color: '#FF8A80',
+    color: colors.danger[300],
     fontSize: 14,
     textAlign: 'center',
   },
   successText: {
-    color: '#69F0AE',
+    color: colors.success[300],
     fontSize: 14,
     textAlign: 'center',
   },
@@ -713,7 +714,7 @@ const styles = StyleSheet.create({
   },
   passwordInput: {
     flex: 1,
-    color: '#FFFFFF',
+    color: darkColors.text,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,

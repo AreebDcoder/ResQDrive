@@ -19,6 +19,7 @@ import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../api/axios';
 import { useToast } from '../components/ui/Toast';
+import { colors, darkColors } from '../theme/tokens';
 
 interface Workshop {
   name: string;
@@ -264,7 +265,7 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
               refreshing={isRefreshing}
               onRefresh={() => fetchWorkshops(true)}
               tintColor="#E53935"
-              colors={['#E53935']}
+              colors={[colors.danger[500]]}
             />
           }
         />
@@ -276,7 +277,7 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
   },
   header: {
     flexDirection: 'row',
@@ -297,17 +298,17 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   backBtnText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 20,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
   subtitle: {
     fontSize: 13,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginTop: 2,
   },
   centerContainer: {
@@ -317,7 +318,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   loadingText: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 15,
     marginTop: 16,
   },
@@ -326,24 +327,24 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   errorText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 15,
     textAlign: 'center',
     marginBottom: 20,
   },
   retryBtn: {
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     paddingHorizontal: 28,
     paddingVertical: 12,
     borderRadius: 10,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
   retryBtnText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontWeight: '700',
     fontSize: 15,
   },
@@ -378,14 +379,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -1,
     right: 16,
-    backgroundColor: '#00E676',
+    backgroundColor: colors.success[500],
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderBottomLeftRadius: 8,
     borderBottomRightRadius: 8,
   },
   partnerBadgeText: {
-    color: '#0A0A0F',
+    color: darkColors.background,
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.5,
@@ -394,14 +395,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -1,
     right: 16,
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderBottomLeftRadius: 8,
     borderBottomRightRadius: 8,
   },
   nearestBadgeText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.5,
@@ -430,13 +431,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   workshopName: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 4,
   },
   workshopAddress: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 13,
     marginBottom: 6,
   },
@@ -454,12 +455,12 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0, 230, 118, 0.25)',
   },
   specializationText: {
-    color: '#FF8A80',
+    color: colors.danger[300],
     fontSize: 11,
     fontWeight: '700',
   },
   specializationTextPartner: {
-    color: '#00E676',
+    color: colors.success[500],
     fontSize: 11,
     fontWeight: '700',
   },
@@ -475,12 +476,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statValue: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 16,
     fontWeight: '700',
   },
   statLabel: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 11,
     marginTop: 2,
     textTransform: 'uppercase',
@@ -504,32 +505,32 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0, 230, 118, 0.25)',
   },
   callBtnText: {
-    color: '#00E676',
+    color: colors.success[500],
     fontWeight: '700',
     fontSize: 15,
   },
   navigateBtn: {
     flex: 1,
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     borderRadius: 10,
     paddingVertical: 13,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
   navigateBtnText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontWeight: '700',
     fontSize: 15,
     marginRight: 6,
   },
   navigateBtnArrow: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 16,
     fontWeight: '700',
   },

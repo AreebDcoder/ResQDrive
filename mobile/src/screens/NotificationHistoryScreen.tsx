@@ -25,6 +25,7 @@ import {
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '../components/ui/Toast';
+import { colors, darkColors } from '../theme/tokens';
 
 export default function NotificationHistoryScreen() {
   const toast = useToast();
@@ -184,7 +185,7 @@ const { history = [], pagination, isHistoryLoading, error } = useSelector(
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
   },
   header: {
     flexDirection: 'row',
@@ -199,7 +200,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
   markAllBtn: {
     paddingVertical: 6,
@@ -210,7 +211,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0, 230, 118, 0.25)',
   },
   markAllText: {
-    color: '#00E676',
+    color: colors.success[500],
     fontSize: 12,
     fontWeight: '700',
   },
@@ -230,24 +231,24 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   errorText: {
-    color: '#FF8A80',
+    color: colors.danger[300],
     fontSize: 15,
     textAlign: 'center',
     marginBottom: 16,
   },
   retryBtn: {
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 10,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
   retryText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontWeight: '700',
     fontSize: 14,
   },
@@ -256,13 +257,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   emptyText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 18,
     fontWeight: '700',
     marginBottom: 8,
   },
   emptySubtitle: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 14,
     textAlign: 'center',
   },
@@ -301,27 +302,27 @@ const styles = StyleSheet.create({
   cardTitleText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
   cardBodyText: {
     fontSize: 13,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginTop: 4,
     lineHeight: 18,
   },
   cardDate: {
     fontSize: 11,
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     marginTop: 8,
   },
   unreadDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     marginLeft: 8,
     marginTop: 6,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.5,
     shadowRadius: 4,

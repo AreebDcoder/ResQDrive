@@ -13,6 +13,7 @@ import { useDispatch } from 'react-redux';
 import { loginSuccess, logoutAction, setLoading } from '../store/slices/authSlice';
 import api from '../api/axios';
 import { getItemAsync, setItemAsync, deleteItemAsync } from '../utils/secureStorage';
+import { colors, darkColors } from '../theme/tokens';
 
 
 function AnimatedDot({ index }: { index: number }) {
@@ -255,7 +256,7 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -283,7 +284,7 @@ const styles = StyleSheet.create({
     height: 140,
     borderRadius: 70,
     borderWidth: 2,
-    borderColor: '#E53935',
+    borderColor: colors.danger[500],
   },
   logoBox: {
     width: 96,
@@ -295,7 +296,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 28,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
     shadowRadius: 20,
@@ -318,15 +319,15 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 40,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: darkColors.text,
     letterSpacing: 1.5,
   },
   highlight: {
-    color: '#E53935',
+    color: colors.danger[500],
   },
   subtitle: {
     fontSize: 14,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginTop: 6,
     textAlign: 'center',
     paddingHorizontal: 40,
@@ -342,7 +343,7 @@ const styles = StyleSheet.create({
     width: 9,
     height: 9,
     borderRadius: 5,
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
   },
     logoImage: {
     width: 60,

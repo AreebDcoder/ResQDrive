@@ -1,3 +1,4 @@
+import { colors, darkColors } from '../theme/tokens';
 import React, { useEffect, useState, useRef } from 'react';
 import {
   ScrollView,
@@ -91,7 +92,7 @@ export default function CrashSoundDemoScreen() {
   return (
     <View style={styles.outer}>
       <View style={StyleSheet.absoluteFillObject}>
-        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0A0F' }]} />
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: darkColors.background }]} />
         <View style={[StyleSheet.absoluteFillObject, styles.gradTop]} />
         <View style={[StyleSheet.absoluteFillObject, styles.gradBottom]} />
       </View>
@@ -176,7 +177,7 @@ export default function CrashSoundDemoScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <View style={{ flex: 1, marginRight: 12 }}>
                 <Text style={styles.cardLabel}>FYP Video Evaluation Mode</Text>
-                <Text style={{ fontSize: 13, color: '#A0A0B8', marginTop: 4, lineHeight: 18 }}>
+                <Text style={{ fontSize: 13, color: darkColors.textSecondary, marginTop: 4, lineHeight: 18 }}>
                   Enables acoustic speaker compensation & continuous video playback detection for video presentations.
                 </Text>
               </View>
@@ -186,8 +187,8 @@ export default function CrashSoundDemoScreen() {
                   setDemoMode(val);
                   setDemoModeActive(val);
                 }}
-                trackColor={{ false: 'rgba(255, 255, 255, 0.08)', true: '#E53935' }}
-                thumbColor={demoModeActive ? '#FFFFFF' : '#6B6B80'}
+                trackColor={{ false: 'rgba(255, 255, 255, 0.08)', true: colors.danger[500] }}
+                thumbColor={demoModeActive ? darkColors.text : darkColors.textTertiary}
               />
             </View>
           </View>
@@ -246,69 +247,69 @@ export default function CrashSoundDemoScreen() {
 }
 
 const styles = StyleSheet.create({
-  outer: { flex: 1, backgroundColor: '#0A0A0F' },
+  outer: { flex: 1, backgroundColor: darkColors.background },
   gradTop: { top: 0, height: 300, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
   gradBottom: { bottom: 0, height: 400, backgroundColor: 'rgba(41, 121, 255, 0.06)' },
   scrollContent: { padding: 24, paddingBottom: 40 },
   header: { marginBottom: 24 },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#FFFFFF' },
-  subtitle: { fontSize: 14, color: '#A0A0B8', marginTop: 6, lineHeight: 20 },
+  title: { fontSize: 24, fontWeight: 'bold', color: darkColors.text },
+  subtitle: { fontSize: 14, color: darkColors.textSecondary, marginTop: 6, lineHeight: 20 },
   transientBanner: {
     backgroundColor: 'rgba(255, 145, 0, 0.15)', padding: 12, borderRadius: 14, marginBottom: 16, alignItems: 'center',
     borderWidth: 1, borderColor: 'rgba(255, 145, 0, 0.3)',
   },
-  transientBannerText: { color: '#FF9100', fontSize: 14, fontWeight: 'bold', letterSpacing: 0.5 },
+  transientBannerText: { color: colors.warning[500], fontSize: 14, fontWeight: 'bold', letterSpacing: 0.5 },
   warningBanner: {
-    backgroundColor: '#E53935', padding: 16, borderRadius: 14, marginBottom: 20, alignItems: 'center',
-    shadowColor: '#E53935', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 6,
+    backgroundColor: colors.danger[500], padding: 16, borderRadius: 14, marginBottom: 20, alignItems: 'center',
+    shadowColor: colors.danger[500], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 6,
   },
-  warningText: { color: '#FFFFFF', fontSize: 15, fontWeight: 'bold', letterSpacing: 0.5 },
+  warningText: { color: darkColors.text, fontSize: 15, fontWeight: 'bold', letterSpacing: 0.5 },
   card: {
     backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 20, padding: 20, marginBottom: 20,
     borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 6,
+    shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 6,
   },
-  cardLabel: { fontSize: 13, fontWeight: 'bold', color: '#E53935', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 },
+  cardLabel: { fontSize: 13, fontWeight: 'bold', color: colors.danger[500], textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 },
   telemetryRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
-  telemetryTitle: { fontSize: 15, color: '#A0A0B8', flex: 1 },
-  telemetryValue: { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' },
+  telemetryTitle: { fontSize: 15, color: darkColors.textSecondary, flex: 1 },
+  telemetryValue: { fontSize: 16, fontWeight: 'bold', color: darkColors.text },
   statusDot: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
-  activeDot: { backgroundColor: '#00E676' },
-  idleDot: { backgroundColor: '#6B6B80' },
-  activeText: { color: '#00E676' },
-  idleText: { color: '#6B6B80' },
-  dangerValue: { color: '#FF1744' },
-  normalValue: { color: '#FFFFFF' },
+  activeDot: { backgroundColor: colors.success[500] },
+  idleDot: { backgroundColor: darkColors.textTertiary },
+  activeText: { color: colors.success[500] },
+  idleText: { color: darkColors.textTertiary },
+  dangerValue: { color: colors.danger[500] },
+  normalValue: { color: darkColors.text },
   actionBtn: { paddingVertical: 14, borderRadius: 14, alignItems: 'center', marginTop: 10 },
-  startBtn: { backgroundColor: '#E53935', shadowColor: '#E53935', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 3 },
+  startBtn: { backgroundColor: colors.danger[500], shadowColor: colors.danger[500], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 3 },
   stopBtn: { backgroundColor: 'rgba(28, 28, 46, 0.6)', borderWidth: 1, borderColor: 'rgba(229, 57, 53, 0.4)' },
-  actionBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: 'bold' },
-  simSubtitle: { color: '#A0A0B8', fontSize: 13, lineHeight: 18, marginBottom: 16 },
+  actionBtnText: { color: darkColors.text, fontSize: 15, fontWeight: 'bold' },
+  simSubtitle: { color: darkColors.textSecondary, fontSize: 13, lineHeight: 18, marginBottom: 16 },
   simGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   simBtn: {
     backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 14, paddingVertical: 12, paddingHorizontal: 8,
     width: '48%', marginBottom: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
   },
-  simBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: 'bold' },
+  simBtnText: { color: darkColors.text, fontSize: 13, fontWeight: 'bold' },
   historyCard: {
     backgroundColor: 'rgba(229, 57, 53, 0.08)', borderRadius: 20, padding: 20, marginBottom: 20,
     borderWidth: 1, borderColor: 'rgba(229, 57, 53, 0.3)',
-    shadowColor: '#E53935', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6,
+    shadowColor: colors.danger[500], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6,
   },
-  historyText: { fontSize: 14, color: '#A0A0B8', marginBottom: 8 },
-  highlightText: { color: '#FFFFFF', fontWeight: 'bold' },
+  historyText: { fontSize: 14, color: darkColors.textSecondary, marginBottom: 8 },
+  highlightText: { color: darkColors.text, fontWeight: 'bold' },
   infoCard: {
     backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 20, padding: 16,
     borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
+    shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
   },
-  infoTitle: { fontSize: 14, fontWeight: 'bold', color: '#A0A0B8', marginBottom: 6 },
-  infoDesc: { fontSize: 12, color: '#6B6B80', lineHeight: 18 },
+  infoTitle: { fontSize: 14, fontWeight: 'bold', color: darkColors.textSecondary, marginBottom: 6 },
+  infoDesc: { fontSize: 12, color: darkColors.textTertiary, lineHeight: 18 },
   webWarningBox: {
     marginTop: 14, padding: 12, backgroundColor: 'rgba(255, 145, 0, 0.08)', borderRadius: 14,
     borderWidth: 1, borderColor: 'rgba(255, 145, 0, 0.3)',
   },
-  webWarningTitle: { color: '#FF9100', fontSize: 13, fontWeight: 'bold', marginBottom: 6 },
-  webWarningDesc: { color: '#A0A0B8', fontSize: 11, lineHeight: 16, marginBottom: 8 },
-  webWarningFooter: { color: '#FF8A80', fontSize: 11, fontWeight: 'bold' },
+  webWarningTitle: { color: colors.warning[500], fontSize: 13, fontWeight: 'bold', marginBottom: 6 },
+  webWarningDesc: { color: darkColors.textSecondary, fontSize: 11, lineHeight: 16, marginBottom: 8 },
+  webWarningFooter: { color: colors.danger[300], fontSize: 11, fontWeight: 'bold' },
 });

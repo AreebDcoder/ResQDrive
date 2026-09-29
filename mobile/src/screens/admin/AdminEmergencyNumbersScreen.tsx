@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import api from '../../api/axios';
 import { Ionicons } from '@expo/vector-icons';
+import { colors, darkColors } from '../../theme/tokens';
 
 interface RegionalNumber {
   id: string;
@@ -162,7 +163,7 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
             style={styles.input}
           />
           <View style={styles.switchRow}>
-            <Text style={{ color: '#ffffff' }}>Active status:</Text>
+            <Text style={{ color: darkColors.text }}>Active status:</Text>
             <Switch value={isActive} onValueChange={setIsActive} />
           </View>
           <TouchableOpacity
@@ -225,14 +226,14 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: darkColors.surface,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#2e2e2e',
+    borderBottomColor: darkColors.surface,
   },
   backBtn: {
     marginRight: 16,
@@ -240,31 +241,31 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: darkColors.text,
   },
   formCard: {
-    backgroundColor: '#1e1e1e',
+    backgroundColor: darkColors.surface,
     borderRadius: 12,
     padding: 16,
     margin: 16,
     borderWidth: 1,
-    borderColor: '#2e2e2e',
+    borderColor: darkColors.surface,
   },
   formTitle: {
     fontSize: 15,
     fontWeight: 'bold',
-    color: '#d32f2f',
+    color: colors.danger[600],
     marginBottom: 12,
   },
   input: {
-    backgroundColor: '#121212',
-    color: '#ffffff',
+    backgroundColor: darkColors.surface,
+    color: darkColors.text,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#2e2e2e',
+    borderColor: darkColors.surface,
   },
   switchRow: {
     flexDirection: 'row',
@@ -273,20 +274,20 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   addBtn: {
-    backgroundColor: '#d32f2f',
+    backgroundColor: colors.danger[600],
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',
   },
   addBtnText: {
-    color: '#ffffff',
+    color: darkColors.text,
     fontWeight: 'bold',
     fontSize: 15,
   },
   listSectionTitle: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#888888',
+    color: darkColors.textTertiary,
     marginLeft: 16,
     marginBottom: 8,
     letterSpacing: 1,
@@ -299,12 +300,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#1e1e1e',
+    backgroundColor: darkColors.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#2e2e2e',
+    borderColor: darkColors.surface,
   },
   cardDetails: {
     flex: 1,
@@ -312,7 +313,7 @@ const styles = StyleSheet.create({
   },
   cardRegion: {
     fontSize: 12,
-    color: '#d32f2f',
+    color: colors.danger[600],
     fontWeight: 'bold',
     textTransform: 'uppercase',
     marginBottom: 4,
@@ -320,17 +321,17 @@ const styles = StyleSheet.create({
   cardService: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: darkColors.text,
     marginBottom: 4,
   },
   cardPhone: {
     fontSize: 14,
-    color: '#888888',
+    color: darkColors.textTertiary,
     marginBottom: 2,
   },
   cardPriority: {
     fontSize: 12,
-    color: '#888888',
+    color: darkColors.textTertiary,
   },
   actionsBlock: {
     alignItems: 'center',
@@ -347,7 +348,7 @@ const styles = StyleSheet.create({
     padding: 40,
   },
   emptyText: {
-    color: '#888888',
+    color: darkColors.textTertiary,
     textAlign: 'center',
     fontSize: 14,
   },

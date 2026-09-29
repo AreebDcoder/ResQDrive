@@ -21,6 +21,7 @@ import api, { API_URL } from '../api/axios';
 import { documentDirectory, writeAsStringAsync } from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { useToast } from '../components/ui/Toast';
+import { colors, darkColors } from '../theme/tokens';
 
 
 
@@ -346,7 +347,7 @@ const handleShareReport = async () => {
               ]}>
                 <Text style={[
                   styles.badgeText, 
-                  { color: item.action === 'repair' ? '#00E676' : '#FF1744' }
+                  { color: item.action === 'repair' ? colors.success[500] : colors.danger[500] }
                 ]}>
                   {item.action.toUpperCase()}
                 </Text>
@@ -436,7 +437,7 @@ const handleShareReport = async () => {
           style={[styles.segmentBtn, activeSegment === 'details' && styles.segmentBtnActive]}
           onPress={() => setActiveSegment('details')}
         >
-          <Ionicons name="document-text-outline" size={16} color={activeSegment === 'details' ? '#E53935' : '#888'} style={{ marginRight: 6 }} />
+          <Ionicons name="document-text-outline" size={16} color={activeSegment === 'details' ? colors.danger[500] : darkColors.textTertiary} style={{ marginRight: 6 }} />
           <Text style={[styles.segmentBtnText, activeSegment === 'details' && styles.segmentBtnTextActive]}>
             Estimate Report
           </Text>
@@ -446,7 +447,7 @@ const handleShareReport = async () => {
           style={[styles.segmentBtn, activeSegment === 'history' && styles.segmentBtnActive]}
           onPress={() => setActiveSegment('history')}
         >
-          <Ionicons name="folder-open-outline" size={16} color={activeSegment === 'history' ? '#E53935' : '#888'} style={{ marginRight: 6 }} />
+          <Ionicons name="folder-open-outline" size={16} color={activeSegment === 'history' ? colors.danger[500] : darkColors.textTertiary} style={{ marginRight: 6 }} />
           <Text style={[styles.segmentBtnText, activeSegment === 'history' && styles.segmentBtnTextActive]}>
             Reports History
           </Text>
@@ -489,7 +490,7 @@ const handleShareReport = async () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
   },
   headerBar: {
     flexDirection: 'row',
@@ -505,7 +506,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   headerBarTitle: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 18,
     fontWeight: '700',
   },
@@ -526,20 +527,20 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   segmentBtnActive: {
-    backgroundColor: '#E53935',
-    shadowColor: '#E53935',
+    backgroundColor: colors.danger[500],
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
   segmentBtnText: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 14,
     fontWeight: '600',
   },
   segmentBtnTextActive: {
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
   tabContent: {
     flex: 1,
@@ -553,7 +554,7 @@ const styles = StyleSheet.create({
     paddingTop: 100,
   },
   loadingText: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginTop: 16,
     fontSize: 14,
   },
@@ -562,7 +563,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   emptyText: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     marginTop: 0,
     fontSize: 14,
     textAlign: 'center',
@@ -575,7 +576,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(229, 57, 53, 0.3)',
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
@@ -583,19 +584,19 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   totalLabel: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1.5,
     marginBottom: 8,
   },
   totalValue: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 22,
     fontWeight: '700',
   },
   vehicleSubText: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 12,
     marginTop: 12,
   },
@@ -621,7 +622,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   sectionHeaderTitle: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 1,
@@ -648,7 +649,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   itemPartName: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 15,
     fontWeight: '700',
   },
@@ -662,7 +663,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   itemSubText: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 12,
     marginBottom: 12,
   },
@@ -679,11 +680,11 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   costLabel: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 12,
   },
   costVal: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 12,
   },
   totalRow: {
@@ -693,12 +694,12 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   totalRowLabel: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 13,
     fontWeight: '700',
   },
   totalRowVal: {
-    color: '#E53935',
+    color: colors.danger[500],
     fontSize: 14,
     fontWeight: '700',
   },
@@ -714,7 +715,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   shareBtnText: {
-    color: '#00E676',
+    color: colors.success[500],
     fontSize: 15,
     fontWeight: '700',
   },
@@ -734,7 +735,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   errorText: {
-    color: '#FF8A80',
+    color: colors.danger[300],
     fontSize: 13,
     flex: 1,
   },
@@ -766,25 +767,25 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   historyCarName: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 14,
     fontWeight: '700',
   },
   historyDateText: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 11,
   },
   historyCostBlock: {
     marginVertical: 4,
   },
   historyCostLabel: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 10,
     fontWeight: '600',
     letterSpacing: 1,
   },
   historyCostText: {
-    color: '#E53935',
+    color: colors.danger[500],
     fontSize: 16,
     fontWeight: '700',
     marginTop: 2,
@@ -807,12 +808,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   partCountText: {
-    color: '#82B1FF',
+    color: colors.info[300],
     fontSize: 11,
     fontWeight: '600',
   },
   viewDetailsText: {
-    color: '#E53935',
+    color: colors.danger[500],
     fontSize: 12,
     fontWeight: '700',
     marginRight: 2,
@@ -837,20 +838,20 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   emptySubText: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 12,
     textAlign: 'center',
     marginTop: 6,
     paddingHorizontal: 30,
   },
   partsSourceSubtext: {
-    color: '#82B1FF',
+    color: colors.info[300],
     fontSize: 11,
     marginTop: 2,
     fontWeight: '500',
   },
   historyItemsText: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 12,
   },
 });

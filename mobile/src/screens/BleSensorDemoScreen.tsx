@@ -13,6 +13,7 @@ import { sensorSourceManager } from '../services/sensorSourceManager';
 import { Ionicons } from '@expo/vector-icons';
 import { CrashSoundDetectionService } from '../services/crashSoundDetectionService';
 import { MultiModalFusionService } from '../services/multiModalFusionService';
+import { colors, darkColors } from '../theme/tokens';
 
 export default function BleSensorDemoScreen() {
   const { connectionStatus, activeSource, latestReading } = useSelector(
@@ -54,17 +55,17 @@ export default function BleSensorDemoScreen() {
 
   const getStatusColor = () => {
     switch (connectionStatus) {
-      case 'connected': return '#00E676';
-      case 'connecting': return '#FF9100';
-      case 'unavailable': return '#FF1744';
-      default: return '#6B6B80';
+      case 'connected': return colors.success[500];
+      case 'connecting': return colors.warning[500];
+      case 'unavailable': return colors.danger[500];
+      default: return darkColors.textTertiary;
     }
   };
 
   return (
     <View style={styles.outer}>
       <View style={StyleSheet.absoluteFillObject}>
-        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0A0F' }]} />
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: darkColors.background }]} />
         <View style={[StyleSheet.absoluteFillObject, styles.gradTop]} />
         <View style={[StyleSheet.absoluteFillObject, styles.gradBottom]} />
       </View>
@@ -168,43 +169,43 @@ export default function BleSensorDemoScreen() {
 }
 
 const styles = StyleSheet.create({
-  outer: { flex: 1, backgroundColor: '#0A0A0F' },
+  outer: { flex: 1, backgroundColor: darkColors.background },
   gradTop: { top: 0, height: 300, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
   gradBottom: { bottom: 0, height: 400, backgroundColor: 'rgba(41, 121, 255, 0.06)' },
   scrollContent: { padding: 24, paddingBottom: 40 },
   header: { marginBottom: 24 },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#FFFFFF' },
-  subtitle: { fontSize: 14, color: '#A0A0B8', marginTop: 6, lineHeight: 20 },
+  title: { fontSize: 24, fontWeight: 'bold', color: darkColors.text },
+  subtitle: { fontSize: 14, color: darkColors.textSecondary, marginTop: 6, lineHeight: 20 },
   card: {
     backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 20, padding: 20, marginBottom: 20,
     borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 6,
+    shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 6,
   },
   cardHeader: {
-    fontSize: 13, fontWeight: 'bold', color: '#E53935',
+    fontSize: 13, fontWeight: 'bold', color: colors.danger[500],
     textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16,
   },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  label: { fontSize: 14, color: '#A0A0B8' },
-  valueText: { fontSize: 15, fontWeight: 'bold', color: '#FFFFFF' },
+  label: { fontSize: 14, color: darkColors.textSecondary },
+  valueText: { fontSize: 15, fontWeight: 'bold', color: darkColors.text },
   statusBadge: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 8 },
-  statusText: { color: '#FFFFFF', fontSize: 11, fontWeight: 'bold' },
+  statusText: { color: darkColors.text, fontSize: 11, fontWeight: 'bold' },
   reconnectBtn: {
-    backgroundColor: '#E53935', flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
+    backgroundColor: colors.danger[500], flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
     paddingVertical: 12, borderRadius: 14, marginTop: 10,
-    shadowColor: '#E53935', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 3,
+    shadowColor: colors.danger[500], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 3,
   },
-  reconnectBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: 'bold' },
+  reconnectBtnText: { color: darkColors.text, fontSize: 14, fontWeight: 'bold' },
   simCrashBtn: {
-    backgroundColor: '#d32f2f', flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
+    backgroundColor: colors.danger[600], flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
     paddingVertical: 16, borderRadius: 20, marginBottom: 20,
-    shadowColor: '#d32f2f', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 6,
+    shadowColor: colors.danger[600], shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 6,
     borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.2)',
   },
-  simCrashBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: 'bold' },
+  simCrashBtnText: { color: darkColors.text, fontSize: 15, fontWeight: 'bold' },
   codeBlock: {
     backgroundColor: 'rgba(10, 10, 15, 0.8)', borderRadius: 14, padding: 14,
     borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.04)',
   },
-  codeText: { color: '#00E676', fontFamily: 'monospace', fontSize: 12, lineHeight: 18 },
+  codeText: { color: colors.success[500], fontFamily: 'monospace', fontSize: 12, lineHeight: 18 },
 });

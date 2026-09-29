@@ -15,6 +15,7 @@ import api from '../api/axios';
 import { VoiceCommandService } from '../services/voiceCommandService';
 import { TtsService } from '../services/ttsService';
 import { useToast } from '../components/ui/Toast';
+import { colors, darkColors } from '../theme/tokens';
 
 export default function VoiceCommandDemoScreen() {
   const toast = useToast();
@@ -140,7 +141,7 @@ export default function VoiceCommandDemoScreen() {
   return (
     <View style={styles.outer}>
       <View style={StyleSheet.absoluteFillObject}>
-        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0A0F' }]} />
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: darkColors.background }]} />
         <View style={[StyleSheet.absoluteFillObject, styles.gradTop]} />
         <View style={[StyleSheet.absoluteFillObject, styles.gradBottom]} />
       </View>
@@ -271,49 +272,49 @@ export default function VoiceCommandDemoScreen() {
 }
 
 const styles = StyleSheet.create({
-  outer: { flex: 1, backgroundColor: '#0A0A0F' },
+  outer: { flex: 1, backgroundColor: darkColors.background },
   gradTop: { top: 0, height: 300, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
   gradBottom: { bottom: 0, height: 400, backgroundColor: 'rgba(41, 121, 255, 0.06)' },
   scrollContent: { padding: 24, paddingBottom: 40 },
   header: { marginBottom: 24 },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#FFFFFF' },
-  subtitle: { fontSize: 14, color: '#A0A0B8', marginTop: 6, lineHeight: 20 },
+  title: { fontSize: 24, fontWeight: 'bold', color: darkColors.text },
+  subtitle: { fontSize: 14, color: darkColors.textSecondary, marginTop: 6, lineHeight: 20 },
   flashBanner: {
     backgroundColor: 'rgba(0, 230, 118, 0.15)', padding: 16, borderRadius: 14, marginBottom: 20, alignItems: 'center',
     borderWidth: 1, borderColor: 'rgba(0, 230, 118, 0.3)',
   },
-  flashBannerText: { color: '#00E676', fontSize: 15, fontWeight: 'bold' },
+  flashBannerText: { color: colors.success[500], fontSize: 15, fontWeight: 'bold' },
   card: {
     backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 20, padding: 20, marginBottom: 20,
     borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 6,
+    shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 6,
   },
   cardLabel: {
-    fontSize: 13, fontWeight: 'bold', color: '#E53935',
+    fontSize: 13, fontWeight: 'bold', color: colors.danger[500],
     textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16,
   },
   row: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  rowTitle: { fontSize: 15, color: '#A0A0B8', flex: 1 },
-  rowValue: { fontSize: 15, fontWeight: 'bold', color: '#FFFFFF' },
+  rowTitle: { fontSize: 15, color: darkColors.textSecondary, flex: 1 },
+  rowValue: { fontSize: 15, fontWeight: 'bold', color: darkColors.text },
   dot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
-  activeDot: { backgroundColor: '#00E676' },
-  idleDot: { backgroundColor: '#6B6B80' },
-  activeText: { color: '#00E676' },
-  idleText: { color: '#6B6B80' },
+  activeDot: { backgroundColor: colors.success[500] },
+  idleDot: { backgroundColor: darkColors.textTertiary },
+  activeText: { color: colors.success[500] },
+  idleText: { color: darkColors.textTertiary },
   transcriptBox: {
     backgroundColor: 'rgba(10, 10, 15, 0.6)', borderRadius: 14, padding: 12, marginVertical: 16,
     borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.04)',
   },
-  transcriptLabel: { fontSize: 12, color: '#A0A0B8', fontWeight: 'bold', marginBottom: 6 },
-  transcriptText: { color: '#FFFFFF', fontSize: 15, fontStyle: 'italic', lineHeight: 20 },
+  transcriptLabel: { fontSize: 12, color: darkColors.textSecondary, fontWeight: 'bold', marginBottom: 6 },
+  transcriptText: { color: darkColors.text, fontSize: 15, fontStyle: 'italic', lineHeight: 20 },
   actionBtn: { paddingVertical: 14, borderRadius: 14, alignItems: 'center' },
-  startBtn: { backgroundColor: '#E53935', shadowColor: '#E53935', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 3 },
+  startBtn: { backgroundColor: colors.danger[500], shadowColor: colors.danger[500], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 3 },
   stopBtn: {
     backgroundColor: 'rgba(28, 28, 46, 0.6)', borderWidth: 1, borderColor: 'rgba(229, 57, 53, 0.4)',
   },
-  actionBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: 'bold' },
-  desc: { color: '#A0A0B8', fontSize: 13, lineHeight: 18, marginBottom: 16 },
-  sectionSub: { fontSize: 12, fontWeight: 'bold', color: '#A0A0B8', marginBottom: 8, textTransform: 'uppercase' },
+  actionBtnText: { color: darkColors.text, fontSize: 15, fontWeight: 'bold' },
+  desc: { color: darkColors.textSecondary, fontSize: 13, lineHeight: 18, marginBottom: 16 },
+  sectionSub: { fontSize: 12, fontWeight: 'bold', color: darkColors.textSecondary, marginBottom: 8, textTransform: 'uppercase' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 14 },
   simBtn: {
     backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 14, paddingVertical: 12, paddingHorizontal: 8,
@@ -321,10 +322,10 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   sosSimBtn: { borderColor: 'rgba(255, 23, 68, 0.3)', backgroundColor: 'rgba(255, 23, 68, 0.08)' },
-  simBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: 'bold' },
-  inputLabel: { fontSize: 12, color: '#A0A0B8', fontWeight: 'bold', marginBottom: 6, marginTop: 12 },
+  simBtnText: { color: darkColors.text, fontSize: 13, fontWeight: 'bold' },
+  inputLabel: { fontSize: 12, color: darkColors.textSecondary, fontWeight: 'bold', marginBottom: 6, marginTop: 12 },
   input: {
-    backgroundColor: 'rgba(10, 10, 15, 0.6)', color: '#FFFFFF', borderRadius: 14,
+    backgroundColor: 'rgba(10, 10, 15, 0.6)', color: darkColors.text, borderRadius: 14,
     paddingHorizontal: 12, paddingVertical: 10, fontSize: 14,
     borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
   },
@@ -332,5 +333,5 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(28, 28, 46, 0.6)', borderWidth: 1, borderColor: 'rgba(229, 57, 53, 0.3)',
     paddingVertical: 12, borderRadius: 14, alignItems: 'center', marginTop: 20,
   },
-  ttsBtnText: { color: '#E53935', fontSize: 15, fontWeight: 'bold' },
+  ttsBtnText: { color: colors.danger[500], fontSize: 15, fontWeight: 'bold' },
 });

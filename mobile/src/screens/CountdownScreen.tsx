@@ -21,6 +21,7 @@ import { VoiceCommandService } from '../services/voiceCommandService';
 import { CrashSoundDetectionService } from '../services/crashSoundDetectionService';
 import { sendBulkBackgroundSMS } from '../utils/directSms';
 import { MultiModalFusionService } from '../services/multiModalFusionService';
+import { colors, darkColors } from '../theme/tokens';
 
 const COUNTDOWN_SECONDS = 10;
 
@@ -405,7 +406,7 @@ export default function CountdownScreen({ navigation, route }: any) {
     return (
       <SafeAreaView style={styles.cancelledContainer}>
         <View style={StyleSheet.absoluteFillObject}>
-          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0A0F' }]} />
+          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: darkColors.background }]} />
           <View style={[StyleSheet.absoluteFillObject, styles.cancelledGrad]} />
         </View>
         <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', opacity: fadeAnim }}>
@@ -436,7 +437,7 @@ export default function CountdownScreen({ navigation, route }: any) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={StyleSheet.absoluteFillObject}>
-          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0A0F' }]} />
+          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: darkColors.background }]} />
           <View style={[StyleSheet.absoluteFillObject, styles.gradTop]} />
           <View style={[StyleSheet.absoluteFillObject, styles.gradBottom]} />
         </View>
@@ -488,7 +489,7 @@ export default function CountdownScreen({ navigation, route }: any) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={StyleSheet.absoluteFillObject}>
-          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0A0F' }]} />
+          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: darkColors.background }]} />
           <View style={[StyleSheet.absoluteFillObject, styles.gradBottom]} />
         </View>
         <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', opacity: fadeAnim, paddingHorizontal: 24 }}>
@@ -511,7 +512,7 @@ export default function CountdownScreen({ navigation, route }: any) {
     <SafeAreaView style={styles.container}>
       {/* Background gradient layers */}
       <View style={StyleSheet.absoluteFillObject}>
-        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0A0F' }]} />
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: darkColors.background }]} />
         <View style={[StyleSheet.absoluteFillObject, styles.gradTop]} />
         <View style={[StyleSheet.absoluteFillObject, styles.gradBottom]} />
         <View style={[StyleSheet.absoluteFillObject, styles.gradCenter]} />
@@ -548,7 +549,7 @@ export default function CountdownScreen({ navigation, route }: any) {
               <Text style={styles.devSimText}>🗣️ Simulate Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.devSimBtn, { borderColor: '#d32f2f' }]}
+              style={[styles.devSimBtn, { borderColor: colors.danger[600] }]}
               onPress={() => VoiceCommandService.simulateSpeechInput('SOS')}
             >
               <Text style={[styles.devSimText, { color: '#ff1744' }]}>🗣️ Simulate SOS</Text>
@@ -563,13 +564,13 @@ export default function CountdownScreen({ navigation, route }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
   },
   gradTop: { top: 0, height: 400, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
   gradBottom: { bottom: 0, height: 400, backgroundColor: 'rgba(229, 57, 53, 0.06)' },
   gradCenter: { top: '30%', height: 300, backgroundColor: 'rgba(229, 57, 53, 0.05)' },
   warningLabel: {
-    color: '#FF8A80',
+    color: colors.danger[300],
     fontSize: 16,
     fontWeight: 'bold',
     letterSpacing: 2,
@@ -580,11 +581,11 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 40,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.7,
     shadowRadius: 40,
@@ -600,7 +601,7 @@ const styles = StyleSheet.create({
   countdownNumber: {
     fontSize: 96,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
   subLabel: {
     color: 'rgba(255, 205, 210, 0.8)',
@@ -615,14 +616,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 48,
     borderRadius: 16,
     marginBottom: 24,
-    shadowColor: '#FFFFFF',
+    shadowColor: darkColors.text,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 6,
   },
   cancelBtnText: {
-    color: '#0A0A0F',
+    color: darkColors.background,
     fontSize: 18,
     fontWeight: 'bold',
     letterSpacing: 1,
@@ -637,7 +638,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   dispatchingText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 18,
     fontWeight: '600',
   },
@@ -652,13 +653,13 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   statusRow: {
-    color: '#E0E0E0',
+    color: darkColors.text,
     fontSize: 14,
     paddingVertical: 6,
     fontFamily: 'monospace',
   },
   smsHint: {
-    color: '#FFB74D',
+    color: colors.warning[300],
     fontSize: 13,
     textAlign: 'center',
     marginTop: 20,
@@ -670,25 +671,25 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   completeTitle: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 12,
   },
   completeSubtext: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 24,
   },
   redirectHint: {
-    color: '#666680',
+    color: darkColors.textTertiary,
     fontSize: 12,
   },
   cancelledContainer: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
   },
   cancelledGrad: { top: 0, height: '100%', backgroundColor: 'rgba(0, 230, 118, 0.06)' },
   cancelledIcon: {
@@ -696,7 +697,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cancelledText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 18,
     fontWeight: '600',
   },
@@ -707,20 +708,20 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   devSimBtn: {
-    backgroundColor: '#1c1c2e',
-    borderColor: '#3e3e3e',
+    backgroundColor: darkColors.surfaceElevated,
+    borderColor: darkColors.surfaceElevated,
     borderWidth: 1,
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
   devSimText: {
-    color: '#ffffff',
+    color: darkColors.text,
     fontSize: 12,
     fontWeight: 'bold',
   },
     devModeBanner: {
-    color: '#FFB74D',
+    color: colors.warning[300],
     fontSize: 12,
     textAlign: 'center',
     marginTop: 8,

@@ -11,12 +11,13 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import api from '../api/axios';
 import { useToast } from '../components/ui/Toast';
+import { colors, darkColors } from '../theme/tokens';
 
 const SEVERITY_COLORS: Record<string, string> = {
-  NONE: '#6B6B80', MINOR: '#FFD600', MODERATE: '#FF9100', SEVERE: '#FF1744',
+  NONE: darkColors.textTertiary, MINOR: colors.warning[400], MODERATE: colors.warning[500], SEVERE: colors.danger[500],
 };
 const STATUS_COLORS: Record<string, string> = {
-  ACTIVE: '#FF1744', RESOLVED: '#00E676', FALSE_ALARM: '#6B6B80', ARCHIVED: '#4A4A5A',
+  ACTIVE: colors.danger[500], RESOLVED: colors.success[500], FALSE_ALARM: darkColors.textTertiary, ARCHIVED: darkColors.textTertiary,
 };
 const SEVERITY_FILTERS = ['ALL', 'MINOR', 'MODERATE', 'SEVERE'];
 
@@ -81,10 +82,10 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
         >
           <View style={styles.cardHeader}>
             <View style={styles.badgesRow}>
-              <View style={[styles.badge, { backgroundColor: SEVERITY_COLORS[item.severity] || '#6B6B80' }]}>
+              <View style={[styles.badge, { backgroundColor: SEVERITY_COLORS[item.severity] || darkColors.textTertiary }]}>
                 <Text style={styles.badgeText}>{item.severity}</Text>
               </View>
-              <View style={[styles.badge, { backgroundColor: STATUS_COLORS[item.status] || '#4A4A5A' }]}>
+              <View style={[styles.badge, { backgroundColor: STATUS_COLORS[item.status] || darkColors.textTertiary }]}>
                 <Text style={styles.badgeText}>{item.status.replace('_', ' ')}</Text>
               </View>
             </View>
@@ -157,7 +158,7 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={onRefresh}
-              colors={['#E53935']}
+              colors={[colors.danger[500]]}
               tintColor="#E53935"
             />
           }
@@ -201,7 +202,7 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0A0F' },
+  container: { flex: 1, backgroundColor: darkColors.background },
   bgGlow: {
     position: 'absolute',
     top: -80,
@@ -227,16 +228,16 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   filterChipActive: {
-    backgroundColor: '#E53935',
-    borderColor: '#E53935',
-    shadowColor: '#E53935',
+    backgroundColor: colors.danger[500],
+    borderColor: colors.danger[500],
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 3,
   },
-  filterChipText: { color: '#A0A0B8', fontSize: 12, fontWeight: '700' },
-  filterChipTextActive: { color: '#FFFFFF' },
+  filterChipText: { color: darkColors.textSecondary, fontSize: 12, fontWeight: '700' },
+  filterChipTextActive: { color: darkColors.text },
   card: {
     backgroundColor: 'rgba(28, 28, 46, 0.6)',
     borderRadius: 16,
@@ -247,7 +248,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    shadowColor: '#000000',
+    shadowColor: colors.neutral[950],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 10,
@@ -255,7 +256,7 @@ const styles = StyleSheet.create({
   },
   cardSevere: {
     borderColor: 'rgba(255, 23, 68, 0.3)',
-    shadowColor: '#FF1744',
+    shadowColor: colors.danger[500],
     shadowOpacity: 0.15,
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
@@ -265,11 +266,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 8,
   },
-  badgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
-  cardType: { color: '#6B6B80', fontSize: 11 },
-  cardDate: { color: '#FFFFFF', fontSize: 13, fontWeight: '600', marginBottom: 4 },
-  cardAddress: { color: '#A0A0B8', fontSize: 12, marginBottom: 4 },
-  cardDesc: { color: '#A0A0B8', fontSize: 13, lineHeight: 18 },
+  badgeText: { color: darkColors.text, fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
+  cardType: { color: darkColors.textTertiary, fontSize: 11 },
+  cardDate: { color: darkColors.text, fontSize: 13, fontWeight: '600', marginBottom: 4 },
+  cardAddress: { color: darkColors.textSecondary, fontSize: 12, marginBottom: 4 },
+  cardDesc: { color: darkColors.textSecondary, fontSize: 13, lineHeight: 18 },
   deleteCardBtn: {
     padding: 6,
     marginLeft: 12,
@@ -296,19 +297,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  errorText: { color: '#FF5252', fontSize: 14, textAlign: 'center', marginBottom: 20 },
+  errorText: { color: colors.danger[400], fontSize: 14, textAlign: 'center', marginBottom: 20 },
   retryBtn: {
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     paddingVertical: 14,
     paddingHorizontal: 32,
     borderRadius: 14,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
-  retryBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14, letterSpacing: 0.3 },
+  retryBtnText: { color: darkColors.text, fontWeight: '700', fontSize: 14, letterSpacing: 0.3 },
   emptyIconBg: {
     width: 88,
     height: 88,
@@ -320,8 +321,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  emptyText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700', marginBottom: 8 },
-  emptySubtext: { color: '#6B6B80', fontSize: 13, textAlign: 'center', lineHeight: 20 },
+  emptyText: { color: darkColors.text, fontSize: 16, fontWeight: '700', marginBottom: 8 },
+  emptySubtext: { color: darkColors.textTertiary, fontSize: 13, textAlign: 'center', lineHeight: 20 },
   loadMoreBtn: {
     paddingVertical: 14,
     alignItems: 'center',
@@ -332,7 +333,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
   },
-  loadMoreText: { color: '#E53935', fontSize: 14, fontWeight: '700' },
+  loadMoreText: { color: colors.danger[500], fontSize: 14, fontWeight: '700' },
   fab: {
     position: 'absolute',
     bottom: 24,
@@ -343,7 +344,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 8,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.4,
     shadowRadius: 14,
@@ -351,7 +352,7 @@ const styles = StyleSheet.create({
   },
   fabGradient: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
   },
-  fabText: { color: '#FFFFFF', fontSize: 30, fontWeight: '700', zIndex: 1, marginTop: -2 },
+  fabText: { color: darkColors.text, fontSize: 30, fontWeight: '700', zIndex: 1, marginTop: -2 },
 });

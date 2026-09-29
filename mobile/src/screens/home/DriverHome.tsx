@@ -20,6 +20,7 @@ import WorkshopsScreen from '../../screens/WorkshopsScreen';
 import SOSScreen from '../../screens/SOSScreen';
 import DamageAssessmentScreen from '../../screens/DamageAssessmentScreen';
 import type { AppNavigation } from '../../navigation/types';
+import { colors, darkColors } from '../../theme/tokens';
 
 // Fallback GPS coordinates (Islamabad) — used when user denies location permission
 const FALLBACK_LAT = 33.6844;
@@ -382,7 +383,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 <Ionicons
                   name="power"
                   size={48}
-                  color={(preferences?.drivingModeEnabled) ? '#ffffff' : '#b71c1c'}
+                  color={(preferences?.drivingModeEnabled) ? darkColors.text : colors.danger[700]}
                 />
               </TouchableOpacity>
 
@@ -399,7 +400,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#121212' }}>
+    <View style={{ flex: 1, backgroundColor: darkColors.surface }}>
       {/* Header */}
       <View style={styles.customHeader}>
         <TouchableOpacity onPress={() => setIsDrawerOpen(true)}>
@@ -415,10 +416,10 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
             size={24} 
             color={
               connectionStatus === 'connected' 
-                ? '#4caf50' 
+                ? colors.success[500] 
                 : connectionStatus === 'connecting' 
-                ? '#ff9800' 
-                : '#757575'
+                ? colors.warning[500] 
+                : darkColors.textTertiary
             } 
           />
         </TouchableOpacity>
@@ -433,31 +434,31 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
       <View style={tabStyles.tabBar}>
         <TouchableOpacity style={tabStyles.tabItem} onPress={() => handleTabPress('home')}>
           {activeTab === 'home' && <View style={tabStyles.activeIndicator} />}
-          <Ionicons name={activeTab === 'home' ? "home" : "home-outline"} size={22} color={activeTab === 'home' ? '#d32f2f' : '#888888'} />
+          <Ionicons name={activeTab === 'home' ? "home" : "home-outline"} size={22} color={activeTab === 'home' ? colors.danger[600] : darkColors.textTertiary} />
           <Text style={[tabStyles.tabLabel, activeTab === 'home' && tabStyles.activeTabLabel]}>Home</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={tabStyles.tabItem} onPress={() => handleTabPress('alert')}>
           {activeTab === 'alert' && <View style={tabStyles.activeIndicator} />}
-          <Ionicons name={activeTab === 'alert' ? "warning" : "warning-outline"} size={22} color={activeTab === 'alert' ? '#d32f2f' : '#888888'} />
+          <Ionicons name={activeTab === 'alert' ? "warning" : "warning-outline"} size={22} color={activeTab === 'alert' ? colors.danger[600] : darkColors.textTertiary} />
           <Text style={[tabStyles.tabLabel, activeTab === 'alert' && tabStyles.activeTabLabel]}>Alert</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={tabStyles.tabItem} onPress={() => handleTabPress('damage')}>
           {activeTab === 'damage' && <View style={tabStyles.activeIndicator} />}
-          <Ionicons name={activeTab === 'damage' ? "camera" : "camera-outline"} size={22} color={activeTab === 'damage' ? '#d32f2f' : '#888888'} />
+          <Ionicons name={activeTab === 'damage' ? "camera" : "camera-outline"} size={22} color={activeTab === 'damage' ? colors.danger[600] : darkColors.textTertiary} />
           <Text style={[tabStyles.tabLabel, activeTab === 'damage' && tabStyles.activeTabLabel]}>Damage</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={tabStyles.tabItem} onPress={() => handleTabPress('services')}>
           {activeTab === 'services' && <View style={tabStyles.activeIndicator} />}
-          <Ionicons name={activeTab === 'services' ? "location" : "location-outline"} size={22} color={activeTab === 'services' ? '#d32f2f' : '#888888'} />
+          <Ionicons name={activeTab === 'services' ? "location" : "location-outline"} size={22} color={activeTab === 'services' ? colors.danger[600] : darkColors.textTertiary} />
           <Text style={[tabStyles.tabLabel, activeTab === 'services' && tabStyles.activeTabLabel]}>Hospital</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={tabStyles.tabItem} onPress={() => handleTabPress('parts')}>
           {activeTab === 'parts' && <View style={tabStyles.activeIndicator} />}
-          <MaterialCommunityIcons name={activeTab === 'parts' ? "wrench" : "wrench-outline"} size={22} color={activeTab === 'parts' ? '#d32f2f' : '#888888'} />
+          <MaterialCommunityIcons name={activeTab === 'parts' ? "wrench" : "wrench-outline"} size={22} color={activeTab === 'parts' ? colors.danger[600] : darkColors.textTertiary} />
           <Text style={[tabStyles.tabLabel, activeTab === 'parts' && tabStyles.activeTabLabel]}>Workshop</Text>
         </TouchableOpacity>
       </View>
@@ -644,7 +645,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.menuItem, { borderColor: '#d32f2f', borderWidth: 1 }]}
+                style={[styles.menuItem, { borderColor: colors.danger[600], borderWidth: 1 }]}
                 onPress={() => {
                   setIsDrawerOpen(false);
                   navigation.navigate('SOS');
@@ -652,15 +653,15 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                   <Ionicons name="alert-circle-outline" size={18} color="#d32f2f" />
-                  <Text style={[styles.menuItemText, { color: '#d32f2f', fontWeight: 'bold' }]}>Send Emergency Alert</Text>
+                  <Text style={[styles.menuItemText, { color: colors.danger[600], fontWeight: 'bold' }]}>Send Emergency Alert</Text>
                 </View>
-                <Text style={[styles.menuItemArrow, { color: '#d32f2f' }]}>›</Text>
+                <Text style={[styles.menuItemArrow, { color: colors.danger[600] }]}>›</Text>
               </TouchableOpacity>
 
 
 
               <TouchableOpacity
-                style={[styles.menuItem, { backgroundColor: '#8b0000' }]}
+                style={[styles.menuItem, { backgroundColor: colors.danger[800] }]}
                 onPress={async () => {
                   setIsDrawerOpen(false);
                   let lat = FALLBACK_LAT;
@@ -704,7 +705,7 @@ const tabStyles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     paddingBottom: 5,
-    shadowColor: '#000000',
+    shadowColor: colors.neutral[950],
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -723,89 +724,89 @@ const tabStyles = StyleSheet.create({
     top: 0,
     width: 32,
     height: 3,
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     borderRadius: 2,
   },
-  tabLabel: { fontSize: 10, color: '#6B6B80', marginTop: 4 },
-  activeTabLabel: { color: '#E53935' },
+  tabLabel: { fontSize: 10, color: darkColors.textTertiary, marginTop: 4 },
+  activeTabLabel: { color: colors.danger[500] },
 });
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#0A0A0F', padding: 24 },
-  scrollContainer: { flex: 1, backgroundColor: '#0A0A0F', padding: 16 },
+    container: { flex: 1, backgroundColor: darkColors.background, padding: 24 },
+  scrollContainer: { flex: 1, backgroundColor: darkColors.background, padding: 16 },
   headerBlock: { alignItems: 'center', marginBottom: 20, marginTop: 10 },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#FFFFFF', textAlign: 'center', marginBottom: 8 },
-  subtitle: { fontSize: 14, color: '#A0A0B8', textAlign: 'center' },
-  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#E53935', marginBottom: 12 },
+  title: { fontSize: 24, fontWeight: 'bold', color: darkColors.text, textAlign: 'center', marginBottom: 8 },
+  subtitle: { fontSize: 14, color: darkColors.textSecondary, textAlign: 'center' },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: colors.danger[500], marginBottom: 12 },
   scrollList: { flex: 1, marginBottom: 20 },
   approvalCard: {
     backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 16, padding: 16, marginBottom: 14,
     borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
+    shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
   },
   cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  mechanicName: { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' },
+  mechanicName: { fontSize: 16, fontWeight: 'bold', color: darkColors.text },
   specializationBadge: {
-    backgroundColor: 'rgba(229, 57, 53, 0.12)', color: '#FF8A80', fontSize: 11, fontWeight: 'bold',
+    backgroundColor: 'rgba(229, 57, 53, 0.12)', color: colors.danger[300], fontSize: 11, fontWeight: 'bold',
     paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(229, 57, 53, 0.3)',
   },
-  cardInfo: { fontSize: 13, color: '#A0A0B8', marginBottom: 4 },
+  cardInfo: { fontSize: 13, color: darkColors.textSecondary, marginBottom: 4 },
   approveBtn: {
-    backgroundColor: '#00E676', paddingVertical: 10, borderRadius: 14, alignItems: 'center', marginTop: 12,
-    shadowColor: '#00E676', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 3,
+    backgroundColor: colors.success[500], paddingVertical: 10, borderRadius: 14, alignItems: 'center', marginTop: 12,
+    shadowColor: colors.success[500], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 3,
   },
-  approveBtnText: { color: '#0A0A0F', fontSize: 14, fontWeight: 'bold' },
+  approveBtnText: { color: darkColors.background, fontSize: 14, fontWeight: 'bold' },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, marginVertical: 40 },
-  emptyText: { color: '#A0A0B8', fontSize: 15, textAlign: 'center' },
-  errorText: { color: '#FF8A80', fontSize: 14, textAlign: 'center', marginVertical: 20 },
+  emptyText: { color: darkColors.textSecondary, fontSize: 15, textAlign: 'center' },
+  errorText: { color: colors.danger[300], fontSize: 14, textAlign: 'center', marginVertical: 20 },
   navBtn: {
-    backgroundColor: '#E53935', paddingVertical: 16, borderRadius: 14, alignItems: 'center', marginTop: 10,
-    shadowColor: '#E53935', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 3,
+    backgroundColor: colors.danger[500], paddingVertical: 16, borderRadius: 14, alignItems: 'center', marginTop: 10,
+    shadowColor: colors.danger[500], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 3,
   },
-  navBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
+  navBtnText: { color: darkColors.text, fontSize: 16, fontWeight: 'bold' },
   dashboardCard: {
     backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 20, padding: 16, marginBottom: 16,
     borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 6,
+    shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 6,
   },
   telemetryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  telemetryLabel: { fontSize: 14, color: '#A0A0B8' },
-  telemetryValue: { fontSize: 14, color: '#FFFFFF' },
-  telemetryValueBold: { fontSize: 14, fontWeight: 'bold', color: '#00E676' },
-  cardHeaderTitle: { fontSize: 15, fontWeight: 'bold', color: '#E53935', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
+  telemetryLabel: { fontSize: 14, color: darkColors.textSecondary },
+  telemetryValue: { fontSize: 14, color: darkColors.text },
+  telemetryValueBold: { fontSize: 14, fontWeight: 'bold', color: colors.success[500] },
+  cardHeaderTitle: { fontSize: 15, fontWeight: 'bold', color: colors.danger[500], marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
   vehicleDetailsBlock: { flexDirection: 'column', alignItems: 'flex-start' },
-  activeVehicleName: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 8 },
+  activeVehicleName: { fontSize: 18, fontWeight: 'bold', color: darkColors.text, marginBottom: 8 },
   activePlateBadge: {
     backgroundColor: 'rgba(10, 10, 15, 0.6)', borderWidth: 1, borderColor: 'rgba(229, 57, 53, 0.4)',
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8,
   },
-  activePlateText: { color: '#FFFFFF', fontSize: 14, fontWeight: 'bold', letterSpacing: 1 },
-  noVehicleText: { color: '#A0A0B8', fontSize: 14, marginBottom: 12 },
+  activePlateText: { color: darkColors.text, fontSize: 14, fontWeight: 'bold', letterSpacing: 1 },
+  noVehicleText: { color: darkColors.textSecondary, fontSize: 14, marginBottom: 12 },
   actionBtnSecondary: {
     backgroundColor: 'rgba(28, 28, 46, 0.6)', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
     borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
   },
-  actionBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: 'bold' },
+  actionBtnText: { color: darkColors.text, fontSize: 12, fontWeight: 'bold' },
   contactDetailsBlock: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  contactDisplayName: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF' },
-  contactDisplaySub: { fontSize: 13, color: '#A0A0B8', marginTop: 4 },
+  contactDisplayName: { fontSize: 18, fontWeight: 'bold', color: darkColors.text },
+  contactDisplaySub: { fontSize: 13, color: darkColors.textSecondary, marginTop: 4 },
   callNowBtn: {
-    backgroundColor: '#E53935', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 14,
-    shadowColor: '#E53935', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 3,
+    backgroundColor: colors.danger[500], paddingHorizontal: 16, paddingVertical: 10, borderRadius: 14,
+    shadowColor: colors.danger[500], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 3,
   },
-  callNowBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: 'bold' },
-  menuTitle: { fontSize: 16, fontWeight: 'bold', color: '#6B6B80', marginTop: 10, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
+  callNowBtnText: { color: darkColors.text, fontSize: 14, fontWeight: 'bold' },
+  menuTitle: { fontSize: 16, fontWeight: 'bold', color: darkColors.textTertiary, marginTop: 10, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
   menuItem: {
     backgroundColor: 'rgba(28, 28, 46, 0.6)', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: 16, paddingHorizontal: 20, borderRadius: 14, marginBottom: 12,
     borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3,
+    shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3,
   },
-  menuItemText: { color: '#FFFFFF', fontSize: 16, fontWeight: '500' },
-  menuItemArrow: { color: '#6B6B80', fontSize: 20, fontWeight: 'bold' },
-  centerContainer: { flex: 1, backgroundColor: '#0A0A0F', justifyContent: 'center', alignItems: 'center', padding: 24 },
-  mockTitle: { fontSize: 22, fontWeight: 'bold', color: '#FFFFFF', marginTop: 16, marginBottom: 8 },
-  mockSubtitle: { fontSize: 14, color: '#A0A0B8', textAlign: 'center', lineHeight: 20 },
+  menuItemText: { color: darkColors.text, fontSize: 16, fontWeight: '500' },
+  menuItemArrow: { color: darkColors.textTertiary, fontSize: 20, fontWeight: 'bold' },
+  centerContainer: { flex: 1, backgroundColor: darkColors.background, justifyContent: 'center', alignItems: 'center', padding: 24 },
+  mockTitle: { fontSize: 22, fontWeight: 'bold', color: darkColors.text, marginTop: 16, marginBottom: 8 },
+  mockSubtitle: { fontSize: 14, color: darkColors.textSecondary, textAlign: 'center', lineHeight: 20 },
   customHeader: {
     flexDirection: 'row',
     paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 12 : 44,
@@ -813,25 +814,25 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(28, 28, 46, 0.9)',
     alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16,
     borderBottomWidth: 1, borderBottomColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 6,
+    shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 6,
   },
   drivingModeCircle: {
     width: 120, height: 120, borderRadius: 60, justifyContent: 'center', alignItems: 'center',
     borderWidth: 3, marginVertical: 16, alignSelf: 'center',
   },
   circleActive: {
-    backgroundColor: '#E53935', borderColor: '#E53935',
-    shadowColor: '#E53935', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.6, shadowRadius: 16, elevation: 8,
+    backgroundColor: colors.danger[500], borderColor: colors.danger[500],
+    shadowColor: colors.danger[500], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.6, shadowRadius: 16, elevation: 8,
   },
   circleInactive: { backgroundColor: 'rgba(229, 57, 53, 0.08)', borderColor: 'rgba(229, 57, 53, 0.4)' },
   circleStateText: { fontSize: 28, fontWeight: 'bold' },
-  drivingModeStatusText: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF', marginTop: 8, textAlign: 'center' },
-  drivingModeActionText: { fontSize: 14, color: '#A0A0B8', marginTop: 4, textAlign: 'center' },
-  customHeaderTitle: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF' },
+  drivingModeStatusText: { fontSize: 20, fontWeight: 'bold', color: darkColors.text, marginTop: 8, textAlign: 'center' },
+  drivingModeActionText: { fontSize: 14, color: darkColors.textSecondary, marginTop: 4, textAlign: 'center' },
+  customHeaderTitle: { fontSize: 18, fontWeight: 'bold', color: darkColors.text },
   headerIconBtn: { padding: 4 },
   toggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12 },
-  toggleRowLabel: { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' },
-  toggleRowDesc: { fontSize: 12, color: '#A0A0B8', marginTop: 4 },
+  toggleRowLabel: { fontSize: 16, fontWeight: 'bold', color: darkColors.text },
+  toggleRowDesc: { fontSize: 12, color: darkColors.textSecondary, marginTop: 4 },
   });
 
 const drawerStyles = StyleSheet.create({
@@ -842,13 +843,13 @@ const drawerStyles = StyleSheet.create({
       backgroundColor: 'rgba(28, 28, 46, 0.95)',
       borderRightWidth: 1, borderRightColor: 'rgba(255, 255, 255, 0.06)',
       paddingTop: 40, paddingHorizontal: 16,
-      shadowColor: '#000000', shadowOffset: { width: 4, height: 0 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 10,
+      shadowColor: colors.neutral[950], shadowOffset: { width: 4, height: 0 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 10,
     },
     drawerHeader: {
       flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
       marginBottom: 24, paddingBottom: 12,
       borderBottomWidth: 1, borderBottomColor: 'rgba(255, 255, 255, 0.06)',
     },
-    drawerTitle: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF' },
+    drawerTitle: { fontSize: 18, fontWeight: 'bold', color: darkColors.text },
     drawerScroll: { flex: 1 },
   });

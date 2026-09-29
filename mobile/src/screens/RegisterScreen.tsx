@@ -22,6 +22,7 @@ import { useDispatch } from 'react-redux';
 import { loginSuccess } from '../store/slices/authSlice';
 import { setItemAsync } from '../utils/secureStorage';
 import { Ionicons } from '@expo/vector-icons';
+import { colors, darkColors } from '../theme/tokens';
 
 export default function RegisterScreen({ route, navigation }: { route: any; navigation: any }) {
   const dispatch = useDispatch();
@@ -186,7 +187,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                   onPress={() => handleRoleChange('DRIVER')}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="car-outline" size={18} color={selectedRole === 'DRIVER' ? '#FFFFFF' : '#6B6B80'} />
+                  <Ionicons name="car-outline" size={18} color={selectedRole === 'DRIVER' ? darkColors.text : darkColors.textTertiary} />
                   <Text style={[styles.roleTabText, selectedRole === 'DRIVER' && styles.activeRoleTabText]}>
                     Driver
                   </Text>
@@ -196,7 +197,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                   onPress={() => handleRoleChange('MECHANIC')}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="construct-outline" size={18} color={selectedRole === 'MECHANIC' ? '#FFFFFF' : '#6B6B80'} />
+                  <Ionicons name="construct-outline" size={18} color={selectedRole === 'MECHANIC' ? darkColors.text : darkColors.textTertiary} />
                   <Text style={[styles.roleTabText, selectedRole === 'MECHANIC' && styles.activeRoleTabText]}>
                     Mechanic
                   </Text>
@@ -487,7 +488,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
   },
   keyboardAvoid: {
     flex: 1,
@@ -513,12 +514,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: darkColors.text,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
   },
   formCard: {
     backgroundColor: 'rgba(28, 28, 46, 0.6)',
@@ -527,7 +528,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.06)',
     marginBottom: 24,
-    shadowColor: '#000000',
+    shadowColor: colors.neutral[950],
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
@@ -548,7 +549,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   errorText: {
-    color: '#FF5252',
+    color: colors.danger[400],
     fontSize: 13,
     flex: 1,
   },
@@ -572,8 +573,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   activeRoleTab: {
-    backgroundColor: '#E53935',
-    shadowColor: '#E53935',
+    backgroundColor: colors.danger[500],
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
@@ -583,12 +584,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   roleTabText: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 14,
     fontWeight: '700',
   },
   activeRoleTabText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
   form: {
     width: '100%',
@@ -613,13 +614,13 @@ const styles = StyleSheet.create({
   roleSectionTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
   label: {
     fontSize: 13,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginBottom: 8,
     fontWeight: '600',
     letterSpacing: 0.3,
@@ -636,11 +637,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   inputFocused: {
-    borderColor: '#E53935',
+    borderColor: colors.danger[500],
     backgroundColor: 'rgba(229, 57, 53, 0.05)',
   },
   inputError: {
-    borderColor: '#FF1744',
+    borderColor: colors.danger[500],
     borderWidth: 1.5,
   },
   inputIcon: {
@@ -649,12 +650,12 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 15,
     padding: 0,
   },
   errorHelper: {
-    color: '#FF5252',
+    color: colors.danger[400],
     fontSize: 12,
     marginTop: -4,
     marginBottom: 12,
@@ -674,7 +675,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     overflow: 'hidden',
     marginTop: 12,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 12,
@@ -682,13 +683,13 @@ const styles = StyleSheet.create({
   },
   registerBtnGradient: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
   },
   registerBtnDisabled: {
     opacity: 0.55,
   },
   registerBtnText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.5,
@@ -699,11 +700,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   footerText: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 14,
   },
   loginText: {
-    color: '#2979FF',
+    color: colors.info[500],
     fontSize: 14,
     fontWeight: '700',
   },

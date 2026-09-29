@@ -8,12 +8,13 @@ import { RootState } from '../store/store';
 import { fetchIncident, deleteIncident } from '../store/slices/incidentsSlice';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '../components/ui/Toast';
+import { colors, darkColors } from '../theme/tokens';
 
 const SEVERITY_COLORS: Record<string, string> = {
-  NONE: '#6B6B80', MINOR: '#FFD600', MODERATE: '#FF9100', SEVERE: '#FF1744',
+  NONE: darkColors.textTertiary, MINOR: colors.warning[400], MODERATE: colors.warning[500], SEVERE: colors.danger[500],
 };
 const STATUS_COLORS: Record<string, string> = {
-  ACTIVE: '#FF1744', RESOLVED: '#00E676', FALSE_ALARM: '#6B6B80', ARCHIVED: '#4A4A5A',
+  ACTIVE: colors.danger[500], RESOLVED: colors.success[500], FALSE_ALARM: darkColors.textTertiary, ARCHIVED: darkColors.textTertiary,
 };
 
 export default function IncidentDetailScreen({ route, navigation }: { route: any; navigation: any }) {
@@ -77,11 +78,11 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
       <View style={styles.heroCard}>
         <Text style={styles.heroId}>Incident #{current.id.slice(0, 8)}</Text>
         <View style={styles.badgesRow}>
-          <View style={[styles.badge, { backgroundColor: SEVERITY_COLORS[current.severity] || '#6B6B80' }]}>
-            <View style={[styles.badgeDot, { backgroundColor: '#FFFFFF' }]} />
+          <View style={[styles.badge, { backgroundColor: SEVERITY_COLORS[current.severity] || darkColors.textTertiary }]}>
+            <View style={[styles.badgeDot, { backgroundColor: darkColors.text }]} />
             <Text style={styles.badgeText}>{current.severity}</Text>
           </View>
-          <View style={[styles.badge, { backgroundColor: STATUS_COLORS[current.status] || '#4A4A5A' }]}>
+          <View style={[styles.badge, { backgroundColor: STATUS_COLORS[current.status] || darkColors.textTertiary }]}>
             <Text style={styles.badgeText}>{current.status.replace('_', ' ')}</Text>
           </View>
           <Text style={styles.typeText}>
@@ -224,9 +225,9 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0A0F', paddingHorizontal: 20, paddingTop: 16 },
-  center: { flex: 1, backgroundColor: '#0A0A0F', justifyContent: 'center', alignItems: 'center' },
-  errorText: { color: '#FF5252', fontSize: 16, textAlign: 'center' },
+  container: { flex: 1, backgroundColor: darkColors.background, paddingHorizontal: 20, paddingTop: 16 },
+  center: { flex: 1, backgroundColor: darkColors.background, justifyContent: 'center', alignItems: 'center' },
+  errorText: { color: colors.danger[400], fontSize: 16, textAlign: 'center' },
   heroCard: {
     backgroundColor: 'rgba(28, 28, 46, 0.6)',
     borderRadius: 16,
@@ -234,13 +235,13 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000000',
+    shadowColor: colors.neutral[950],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 4,
   },
-  heroId: { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 12 },
+  heroId: { fontSize: 16, fontWeight: 'bold', color: darkColors.text, marginBottom: 12 },
   loadingRing: {
     width: 72,
     height: 72,
@@ -252,7 +253,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  loadingLabel: { color: '#A0A0B8', fontSize: 14 },
+  loadingLabel: { color: darkColors.textSecondary, fontSize: 14 },
   bgGlow: {
     position: 'absolute',
     top: -60,
@@ -269,7 +270,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000000',
+    shadowColor: colors.neutral[950],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
@@ -285,8 +286,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   badgeDot: { width: 6, height: 6, borderRadius: 3 },
-  badgeText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', letterSpacing: 0.5 },
-  typeText: { color: '#6B6B80', fontSize: 12, marginLeft: 'auto' },
+  badgeText: { color: darkColors.text, fontSize: 12, fontWeight: '700', letterSpacing: 0.5 },
+  typeText: { color: darkColors.textTertiary, fontSize: 12, marginLeft: 'auto' },
   section: {
     backgroundColor: 'rgba(28, 28, 46, 0.4)',
     borderRadius: 16,
@@ -298,16 +299,16 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   sectionIcon: { fontSize: 14 },
   label: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
-  value: { color: '#FFFFFF', fontSize: 15, lineHeight: 22 },
+  value: { color: darkColors.text, fontSize: 15, lineHeight: 22 },
   timelineRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6 },
-  timelineLabel: { color: '#6B6B80', fontSize: 13 },
-  timelineValue: { color: '#A0A0B8', fontSize: 13 },
+  timelineLabel: { color: darkColors.textTertiary, fontSize: 13 },
+  timelineValue: { color: darkColors.textSecondary, fontSize: 13 },
   timelineDivider: { height: 1, backgroundColor: 'rgba(255, 255, 255, 0.04)' },
   jsonBox: {
     backgroundColor: 'rgba(10, 10, 15, 0.8)',
@@ -317,7 +318,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.06)',
   },
-  jsonText: { color: '#69F0AE', fontSize: 11, fontFamily: 'monospace', lineHeight: 16 },
+  jsonText: { color: colors.success[300], fontSize: 11, fontFamily: 'monospace', lineHeight: 16 },
   mapsBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -332,7 +333,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   mapsBtnIcon: { fontSize: 16 },
-  mapsBtnText: { color: '#2979FF', fontSize: 13, fontWeight: '700' },
+  mapsBtnText: { color: colors.info[500], fontSize: 13, fontWeight: '700' },
   actionsRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
   editBtn: {
     flex: 1,
@@ -360,5 +361,5 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 23, 68, 0.3)',
   },
   deleteBtnIcon: { fontSize: 16 },
-  actionBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  actionBtnText: { color: darkColors.text, fontSize: 14, fontWeight: '700' },
 });

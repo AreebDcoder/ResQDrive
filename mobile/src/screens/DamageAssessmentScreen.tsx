@@ -22,6 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import api, { API_URL } from '../api/axios';
 import { useToast } from '../components/ui/Toast';
+import { colors, darkColors } from '../theme/tokens';
 
 interface VehicleItem {
   id: string;
@@ -289,13 +290,13 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
   const getSeverityColor = (severity: 'minor' | 'moderate' | 'severe') => {
     switch (severity) {
       case 'minor':
-        return '#00E676';
+        return colors.success[500];
       case 'moderate':
-        return '#FF9100';
+        return colors.warning[500];
       case 'severe':
-        return '#FF1744';
+        return colors.danger[500];
       default:
-        return '#6B6B80';
+        return darkColors.textTertiary;
     }
   };
 
@@ -506,7 +507,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
           {/* Part Tag selector */}
           <View style={styles.dropdownContainer}>
             <Text style={styles.dropdownLabel}>
-              Select Damaged Part <Text style={{ color: '#FF1744' }}>* (Required)</Text>
+              Select Damaged Part <Text style={{ color: colors.danger[500] }}>* (Required)</Text>
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.vehicleScroll}>
               {PART_TAGS.map((pt) => (
@@ -610,7 +611,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
           style={[styles.segmentBtn, activeSegment === 'new' && styles.segmentBtnActive]}
           onPress={() => setActiveSegment('new')}
         >
-          <Ionicons name="camera-outline" size={16} color={activeSegment === 'new' ? '#E53935' : '#888'} style={{ marginRight: 6 }} />
+          <Ionicons name="camera-outline" size={16} color={activeSegment === 'new' ? colors.danger[500] : darkColors.textTertiary} style={{ marginRight: 6 }} />
           <Text style={[styles.segmentBtnText, activeSegment === 'new' && styles.segmentBtnTextActive]}>
             New
           </Text>
@@ -620,7 +621,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
           style={[styles.segmentBtn, activeSegment === 'history' && styles.segmentBtnActive]}
           onPress={() => setActiveSegment('history')}
         >
-          <Ionicons name="time-outline" size={16} color={activeSegment === 'history' ? '#E53935' : '#888'} style={{ marginRight: 6 }} />
+          <Ionicons name="time-outline" size={16} color={activeSegment === 'history' ? colors.danger[500] : darkColors.textTertiary} style={{ marginRight: 6 }} />
           <Text style={[styles.segmentBtnText, activeSegment === 'history' && styles.segmentBtnTextActive]}>
             History
           </Text>
@@ -630,7 +631,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
           style={[styles.segmentBtn, activeSegment === 'cost_history' && styles.segmentBtnActive]}
           onPress={() => setActiveSegment('cost_history')}
         >
-          <Ionicons name="receipt-outline" size={16} color={activeSegment === 'cost_history' ? '#E53935' : '#888'} style={{ marginRight: 6 }} />
+          <Ionicons name="receipt-outline" size={16} color={activeSegment === 'cost_history' ? colors.danger[500] : darkColors.textTertiary} style={{ marginRight: 6 }} />
           <Text style={[styles.segmentBtnText, activeSegment === 'cost_history' && styles.segmentBtnTextActive]}>
             Costs
           </Text>
@@ -709,7 +710,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0A0F' },
+  container: { flex: 1, backgroundColor: darkColors.background },
   segmentedHeader: {
     flexDirection: 'row',
     backgroundColor: 'rgba(28, 28, 46, 0.4)',
@@ -722,15 +723,15 @@ const styles = StyleSheet.create({
   },
   segmentBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
   segmentBtnActive: {
-    backgroundColor: '#E53935',
-    shadowColor: '#E53935',
+    backgroundColor: colors.danger[500],
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
-  segmentBtnText: { color: '#6B6B80', fontSize: 13, fontWeight: '600' },
-  segmentBtnTextActive: { color: '#FFFFFF' },
+  segmentBtnText: { color: darkColors.textTertiary, fontSize: 13, fontWeight: '600' },
+  segmentBtnTextActive: { color: darkColors.text },
   tabContent: { flex: 1, paddingTop: 16, paddingHorizontal: 16 },
   card: {
     backgroundColor: 'rgba(28, 28, 46, 0.6)',
@@ -745,8 +746,8 @@ const styles = StyleSheet.create({
     elevation: 3,
     marginBottom: 16,
   },
-  cardHeaderTitle: { fontSize: 16, fontWeight: '700', color: '#FFFFFF', marginBottom: 8 },
-  cardDescription: { fontSize: 13, color: '#A0A0B8', lineHeight: 18, marginBottom: 16 },
+  cardHeaderTitle: { fontSize: 16, fontWeight: '700', color: darkColors.text, marginBottom: 8 },
+  cardDescription: { fontSize: 13, color: darkColors.textSecondary, lineHeight: 18, marginBottom: 16 },
   placeholderContainer: {
     height: 180,
     backgroundColor: 'rgba(10, 10, 15, 0.5)',
@@ -759,7 +760,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   placeholderEmoji: { fontSize: 40, marginBottom: 8 },
-  placeholderText: { color: '#6B6B80', fontSize: 14 },
+  placeholderText: { color: darkColors.textTertiary, fontSize: 14 },
   previewImage: { width: '100%', height: 200, borderRadius: 12, marginBottom: 16, backgroundColor: 'rgba(10, 10, 15, 0.5)' },
   pickerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
   pickerBtn: {
@@ -773,14 +774,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(41, 121, 255, 0.25)',
   },
-  pickerBtnText: { color: '#FFFFFF', marginLeft: 8, fontSize: 14, fontWeight: '700' },
+  pickerBtnText: { color: darkColors.text, marginLeft: 8, fontSize: 14, fontWeight: '700' },
   actionBtnPrimary: {
     height: 48,
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -795,9 +796,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  actionBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  actionBtnText: { color: darkColors.text, fontSize: 14, fontWeight: '700' },
   dropdownContainer: { marginBottom: 16 },
-  dropdownLabel: { color: '#A0A0B8', fontSize: 12, marginBottom: 8, fontWeight: '600' },
+  dropdownLabel: { color: darkColors.textSecondary, fontSize: 12, marginBottom: 8, fontWeight: '600' },
   vehicleScroll: { flexDirection: 'row' },
   vehicleChip: {
     backgroundColor: 'rgba(255, 255, 255, 0.04)',
@@ -808,9 +809,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.06)',
   },
-  vehicleChipActive: { backgroundColor: '#E53935', borderColor: '#E53935' },
-  vehicleChipText: { color: '#6B6B80', fontSize: 13 },
-  vehicleChipTextActive: { color: '#FFFFFF', fontWeight: '600' },
+  vehicleChipActive: { backgroundColor: colors.danger[500], borderColor: colors.danger[500] },
+  vehicleChipText: { color: darkColors.textTertiary, fontSize: 13 },
+  vehicleChipTextActive: { color: darkColors.text, fontWeight: '600' },
   resultImage: { width: '100%', height: 220, borderRadius: 12, marginBottom: 16 },
   resultsContainer: {
     backgroundColor: 'rgba(10, 10, 15, 0.5)',
@@ -828,12 +829,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.04)',
   },
-  resultLabel: { color: '#A0A0B8', fontSize: 14 },
-  resultValue: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  resultLabel: { color: darkColors.textSecondary, fontSize: 14 },
+  resultValue: { color: darkColors.text, fontSize: 15, fontWeight: '700' },
   severityBadgeLarge: { paddingVertical: 4, paddingHorizontal: 12, borderRadius: 12 },
-  severityBadgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
+  severityBadgeText: { color: darkColors.text, fontSize: 11, fontWeight: '700' },
   scopeNoticeText: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 11,
     lineHeight: 16,
     textAlign: 'center',
@@ -852,7 +853,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 23, 68, 0.3)',
   },
   errorEmoji: { fontSize: 16, marginRight: 8 },
-  errorText: { color: '#FF8A80', fontSize: 13, flex: 1 },
+  errorText: { color: colors.danger[300], fontSize: 13, flex: 1 },
   loadingContainer: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(10, 10, 15, 0.92)',
@@ -860,7 +861,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 10,
   },
-  loadingText: { color: '#A0A0B8', marginTop: 16, fontSize: 14 },
+  loadingText: { color: darkColors.textSecondary, marginTop: 16, fontSize: 14 },
   historyListContent: { padding: 16 },
   historyCard: {
     flexDirection: 'row',
@@ -874,13 +875,13 @@ const styles = StyleSheet.create({
   historyThumb: { width: 80, height: 80, borderRadius: 10, backgroundColor: 'rgba(10, 10, 15, 0.5)' },
   historyCardInfo: { flex: 1, marginLeft: 12, justifyContent: 'center' },
   historyCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  historyTypeTitle: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  historyTypeTitle: { color: darkColors.text, fontSize: 14, fontWeight: '700' },
   severityBadge: { paddingVertical: 2, paddingHorizontal: 8, borderRadius: 8 },
-  historyConfText: { color: '#A0A0B8', fontSize: 12, marginTop: 2 },
-  historyDateText: { color: '#6B6B80', fontSize: 11, marginTop: 4 },
+  historyConfText: { color: darkColors.textSecondary, fontSize: 12, marginTop: 2 },
+  historyDateText: { color: darkColors.textTertiary, fontSize: 11, marginTop: 4 },
   emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
   emptyEmoji: { fontSize: 48, marginBottom: 12 },
-  emptyText: { color: '#6B6B80', marginTop: 0, fontSize: 14 },
+  emptyText: { color: darkColors.textTertiary, marginTop: 0, fontSize: 14 },
   deleteCardBtn: { padding: 8, justifyContent: 'center', alignItems: 'center' },
   costHistoryThumbContainer: {
     width: 80,
@@ -890,7 +891,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  historyCostText: { color: '#E53935', fontSize: 14, fontWeight: '700', marginTop: 2 },
+  historyCostText: { color: colors.danger[500], fontSize: 14, fontWeight: '700', marginTop: 2 },
   lowConfidenceBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -902,7 +903,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   lowConfidenceText: {
-    color: '#FFD600',
+    color: colors.warning[400],
     fontSize: 13,
     flex: 1,
     lineHeight: 18,
@@ -922,13 +923,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   carRejectionTitle: {
-    color: '#FF1744',
+    color: colors.danger[500],
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 8,
   },
   carRejectionMessage: {
-    color: '#D0D0E0',
+    color: darkColors.textSecondary,
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 19,
@@ -943,7 +944,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(41, 121, 255, 0.25)',
   },
   photoTipText: {
-    color: '#82B1FF',
+    color: colors.info[300],
     fontSize: 12,
     lineHeight: 17,
   },

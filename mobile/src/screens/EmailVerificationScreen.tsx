@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../api/axios';
+import { colors, darkColors } from '../theme/tokens';
 
 export default function EmailVerificationScreen({ route, navigation }: { route: any; navigation: any }) {
   const email = route.params?.email || 'your email';
@@ -80,7 +81,7 @@ export default function EmailVerificationScreen({ route, navigation }: { route: 
   return (
     <View style={styles.container}>
       <View style={StyleSheet.absoluteFillObject}>
-        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0A0F' }]} />
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: darkColors.background }]} />
         <View style={[StyleSheet.absoluteFillObject, styles.gradTop]} />
         <View style={[StyleSheet.absoluteFillObject, styles.gradBottom]} />
       </View>
@@ -161,7 +162,7 @@ export default function EmailVerificationScreen({ route, navigation }: { route: 
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0A0F' },
+  container: { flex: 1, backgroundColor: darkColors.background },
   gradTop: { top: 0, height: 300, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
   gradBottom: { bottom: 0, height: 400, backgroundColor: 'rgba(41, 121, 255, 0.06)' },
   iconCircle: {
@@ -176,9 +177,9 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(229, 57, 53, 0.25)',
   },
   header: { marginBottom: 28 },
-  title: { fontSize: 28, fontWeight: 'bold', color: '#FFFFFF' },
-  subtitle: { fontSize: 15, color: '#A0A0B8', marginTop: 10, lineHeight: 22 },
-  emailHighlight: { color: '#FFFFFF', fontWeight: 'bold' },
+  title: { fontSize: 28, fontWeight: 'bold', color: darkColors.text },
+  subtitle: { fontSize: 15, color: darkColors.textSecondary, marginTop: 10, lineHeight: 22 },
+  emailHighlight: { color: darkColors.text, fontWeight: 'bold' },
   alertError: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -199,13 +200,13 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0, 230, 118, 0.3)',
     marginBottom: 20,
   },
-  alertText: { color: '#FF8A80', fontSize: 14, flex: 1 },
-  successText: { color: '#00E676', fontSize: 14, flex: 1 },
+  alertText: { color: colors.danger[300], fontSize: 14, flex: 1 },
+  successText: { color: colors.success[500], fontSize: 14, flex: 1 },
   form: { width: '100%' },
-  label: { fontSize: 14, color: '#A0A0B8', marginBottom: 12, fontWeight: '600' },
+  label: { fontSize: 14, color: darkColors.textSecondary, marginBottom: 12, fontWeight: '600' },
   otpInput: {
     backgroundColor: 'rgba(28, 28, 46, 0.7)',
-    color: '#FFFFFF',
+    color: darkColors.text,
     paddingVertical: 18,
     borderRadius: 16,
     fontSize: 28,
@@ -215,18 +216,18 @@ const styles = StyleSheet.create({
     marginBottom: 22,
     borderWidth: 1.5,
     borderColor: 'rgba(229, 57, 53, 0.3)',
-    shadowColor: '#000000',
+    shadowColor: colors.neutral[950],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 3,
   },
   verifyBtn: {
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     paddingVertical: 16,
     borderRadius: 14,
     alignItems: 'center',
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -236,16 +237,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(229, 57, 53, 0.4)',
     shadowOpacity: 0,
   },
-  verifyBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
+  verifyBtnText: { color: darkColors.text, fontSize: 16, fontWeight: 'bold' },
   resendContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 22,
   },
-  resendText: { color: '#8E8EA8', fontSize: 14 },
-  countdownText: { color: '#E53935', fontSize: 14, fontWeight: '600' },
-  resendBtnText: { color: '#E53935', fontSize: 14, fontWeight: 'bold', textDecorationLine: 'underline' },
+  resendText: { color: darkColors.textSecondary, fontSize: 14 },
+  countdownText: { color: colors.danger[500], fontSize: 14, fontWeight: '600' },
+  resendBtnText: { color: colors.danger[500], fontSize: 14, fontWeight: 'bold', textDecorationLine: 'underline' },
   backBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 32 },
-  backText: { color: '#A0A0B8', fontSize: 14, fontWeight: '600' },
+  backText: { color: darkColors.textSecondary, fontSize: 14, fontWeight: '600' },
 });

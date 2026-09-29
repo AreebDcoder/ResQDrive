@@ -12,6 +12,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { forgotPasswordSchema, ForgotPasswordInput } from '../schemas/validation';
 import api from '../api/axios';
+import { colors, darkColors } from '../theme/tokens';
 
 export default function ForgotPasswordScreen({ navigation }: { navigation: any }) {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -57,7 +58,7 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: any }
   return (
     <View style={styles.container}>
       <View style={StyleSheet.absoluteFillObject}>
-        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0A0F' }]} />
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: darkColors.background }]} />
         <View style={[StyleSheet.absoluteFillObject, styles.gradTop]} />
         <View style={[StyleSheet.absoluteFillObject, styles.gradBottom]} />
       </View>
@@ -120,12 +121,12 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: any }
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0A0F' },
+  container: { flex: 1, backgroundColor: darkColors.background },
   gradTop: { top: 0, height: 300, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
   gradBottom: { bottom: 0, height: 400, backgroundColor: 'rgba(41, 121, 255, 0.06)' },
   header: { marginBottom: 32 },
-  title: { fontSize: 28, fontWeight: 'bold', color: '#FFFFFF' },
-  subtitle: { fontSize: 15, color: '#A0A0B8', marginTop: 10, lineHeight: 22 },
+  title: { fontSize: 28, fontWeight: 'bold', color: darkColors.text },
+  subtitle: { fontSize: 15, color: darkColors.textSecondary, marginTop: 10, lineHeight: 22 },
   alertError: {
     backgroundColor: 'rgba(255, 23, 68, 0.12)', padding: 12, borderRadius: 14,
     borderWidth: 1, borderColor: 'rgba(255, 23, 68, 0.3)', marginBottom: 20,
@@ -134,22 +135,22 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 230, 118, 0.1)', padding: 12, borderRadius: 14,
     borderWidth: 1, borderColor: 'rgba(0, 230, 118, 0.3)', marginBottom: 20,
   },
-  alertText: { color: '#FF8A80', fontSize: 14, textAlign: 'center' },
-  successText: { color: '#00E676', fontSize: 14, textAlign: 'center' },
+  alertText: { color: colors.danger[300], fontSize: 14, textAlign: 'center' },
+  successText: { color: colors.success[500], fontSize: 14, textAlign: 'center' },
   form: { width: '100%' },
-  label: { fontSize: 14, color: '#A0A0B8', marginBottom: 8, fontWeight: '600' },
+  label: { fontSize: 14, color: darkColors.textSecondary, marginBottom: 8, fontWeight: '600' },
   input: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)', color: '#FFFFFF', paddingHorizontal: 16, paddingVertical: 14,
+    backgroundColor: 'rgba(28, 28, 46, 0.6)', color: darkColors.text, paddingHorizontal: 16, paddingVertical: 14,
     borderRadius: 14, fontSize: 15, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3,
+    shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3,
   },
   inputError: { borderColor: 'rgba(255, 23, 68, 0.5)' },
-  errorHelper: { color: '#FF8A80', fontSize: 12, marginTop: -10, marginBottom: 16 },
+  errorHelper: { color: colors.danger[300], fontSize: 12, marginTop: -10, marginBottom: 16 },
   sendBtn: {
-    backgroundColor: '#E53935', paddingVertical: 16, borderRadius: 14, alignItems: 'center',
-    shadowColor: '#E53935', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 3,
+    backgroundColor: colors.danger[500], paddingVertical: 16, borderRadius: 14, alignItems: 'center',
+    shadowColor: colors.danger[500], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 3,
   },
-  sendBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
+  sendBtnText: { color: darkColors.text, fontSize: 16, fontWeight: 'bold' },
   backBtn: { alignItems: 'center', marginTop: 28 },
-  backText: { color: '#A0A0B8', fontSize: 14, fontWeight: '600' },
+  backText: { color: darkColors.textSecondary, fontSize: 14, fontWeight: '600' },
 });

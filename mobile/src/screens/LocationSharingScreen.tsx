@@ -15,6 +15,7 @@ import { RootState } from '../store/store';
 import api from '../api/axios';
 import { connectSocket, disconnectSocket, emitLocationUpdate } from '../services/socketService';
 import { useToast } from '../components/ui/Toast';
+import { colors, darkColors } from '../theme/tokens';
 
 const FAST_INTERVAL_MS = 5000;
 const SLOW_INTERVAL_MS = 30000;
@@ -295,7 +296,7 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
   },
   scrollContent: {
     padding: 20,
@@ -303,13 +304,13 @@ const styles = StyleSheet.create({
   },
   center: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
   },
   loadingText: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginTop: 12,
   },
   card: {
@@ -326,13 +327,13 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   title: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 22,
     fontWeight: '700',
     marginBottom: 8,
   },
   subtitle: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -351,7 +352,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   errorText: {
-    color: '#FF8A80',
+    color: colors.danger[300],
     fontSize: 13,
     textAlign: 'center',
     flex: 1,
@@ -372,7 +373,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   warnText: {
-    color: '#FFB74D',
+    color: colors.warning[300],
     fontSize: 13,
     flex: 1,
     lineHeight: 18,
@@ -384,7 +385,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: 'rgba(0, 230, 118, 0.25)',
-    shadowColor: '#00E676',
+    shadowColor: colors.success[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 10,
@@ -399,30 +400,30 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#00E676',
+    backgroundColor: colors.success[500],
     marginRight: 8,
-    shadowColor: '#00E676',
+    shadowColor: colors.success[500],
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.6,
     shadowRadius: 4,
   },
   activeTitle: {
-    color: '#00E676',
+    color: colors.success[500],
     fontSize: 16,
     fontWeight: '700',
   },
   activeSince: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 12,
     marginBottom: 4,
   },
   socketStatus: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 12,
     marginBottom: 4,
   },
   lastUpdate: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 12,
     marginBottom: 16,
   },
@@ -436,7 +437,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(41, 121, 255, 0.25)',
   },
   linkBtnText: {
-    color: '#2979FF',
+    color: colors.info[500],
     fontSize: 14,
     fontWeight: '700',
   },
@@ -450,7 +451,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   linkBtnSecondaryText: {
-    color: '#E53935',
+    color: colors.danger[500],
     fontSize: 14,
     fontWeight: '700',
   },
@@ -463,24 +464,24 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 23, 68, 0.3)',
   },
   stopBtnText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 14,
     fontWeight: '700',
   },
   startBtn: {
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 16,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 5,
   },
   startBtnText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 16,
     fontWeight: '700',
   },
@@ -492,7 +493,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   infoTitle: {
-    color: '#E53935',
+    color: colors.danger[500],
     fontSize: 12,
     fontWeight: '700',
     marginBottom: 8,
@@ -500,7 +501,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   infoText: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 13,
     lineHeight: 20,
   },

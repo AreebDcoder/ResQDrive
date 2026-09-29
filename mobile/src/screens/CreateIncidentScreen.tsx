@@ -20,12 +20,13 @@ import {
 } from '../schemas/incidentValidation';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '../components/ui/Toast';
+import { colors, darkColors } from '../theme/tokens';
 
 const SEVERITY_COLORS: Record<string, string> = {
-  NONE: '#6B6B80', MINOR: '#FFD600', MODERATE: '#FF9100', SEVERE: '#FF1744',
+  NONE: darkColors.textTertiary, MINOR: colors.warning[400], MODERATE: colors.warning[500], SEVERE: colors.danger[500],
 };
 const STATUS_COLORS: Record<string, string> = {
-  ACTIVE: '#FF1744', RESOLVED: '#00E676', FALSE_ALARM: '#6B6B80',
+  ACTIVE: colors.danger[500], RESOLVED: colors.success[500], FALSE_ALARM: darkColors.textTertiary,
 };
 
 const nowISO = () => new Date().toISOString().slice(0, 16);
@@ -256,10 +257,10 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0A0F' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: '#0A0A0F' },
-  sectionTitle: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', marginBottom: 10, marginTop: 18 },
-  label: { color: '#A0A0B8', fontSize: 13, fontWeight: '600', marginBottom: 8, marginTop: 14 },
+  container: { flex: 1, backgroundColor: darkColors.background },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: darkColors.background },
+  sectionTitle: { color: darkColors.text, fontSize: 14, fontWeight: '700', marginBottom: 10, marginTop: 18 },
+  label: { color: darkColors.textSecondary, fontSize: 13, fontWeight: '600', marginBottom: 8, marginTop: 14 },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     paddingVertical: 8,
@@ -267,10 +268,10 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
   },
-  chipText: { color: '#6B6B80', fontSize: 12, fontWeight: '600' },
+  chipText: { color: darkColors.textTertiary, fontSize: 12, fontWeight: '600' },
   input: {
     backgroundColor: 'rgba(10, 10, 15, 0.6)',
-    color: '#FFFFFF',
+    color: darkColors.text,
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: 10,
@@ -280,19 +281,19 @@ const styles = StyleSheet.create({
   },
   textArea: { minHeight: 100, paddingTop: 12 },
   row: { flexDirection: 'row' },
-  errorHelper: { color: '#FF8A80', fontSize: 11, marginTop: 4 },
-  errorText: { color: '#FF8A80', fontSize: 14, textAlign: 'center' },
+  errorHelper: { color: colors.danger[300], fontSize: 11, marginTop: 4 },
+  errorText: { color: colors.danger[300], fontSize: 14, textAlign: 'center' },
   submitBtn: {
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 24,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 5,
   },
-  submitBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  submitBtnText: { color: darkColors.text, fontSize: 16, fontWeight: '700' },
 });

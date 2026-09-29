@@ -19,6 +19,7 @@ import { addVehicleSuccess, updateVehicleSuccess, deleteVehicleSuccess } from '.
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '../components/ui/Toast';
+import { colors, darkColors } from '../theme/tokens';
 
 export default function AddEditVehicleScreen({ route, navigation }: any) {
   const toast = useToast();
@@ -270,7 +271,7 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
   },
   scrollContainer: {
     flexGrow: 1,
@@ -284,11 +285,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
   subtitle: {
     fontSize: 14,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginTop: 6,
     lineHeight: 20,
   },
@@ -307,7 +308,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   errorText: {
-    color: '#FF8A80',
+    color: colors.danger[300],
     fontSize: 14,
     textAlign: 'center',
     flex: 1,
@@ -317,13 +318,13 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginBottom: 8,
     fontWeight: '600',
   },
   input: {
     backgroundColor: 'rgba(10, 10, 15, 0.6)',
-    color: '#FFFFFF',
+    color: darkColors.text,
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderRadius: 10,
@@ -333,10 +334,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   inputError: {
-    borderColor: '#E53935',
+    borderColor: colors.danger[500],
   },
   errorHelper: {
-    color: '#FF8A80',
+    color: colors.danger[300],
     fontSize: 12,
     marginTop: -10,
     marginBottom: 16,
@@ -349,19 +350,19 @@ const styles = StyleSheet.create({
     flex: 0.48,
   },
   saveBtn: {
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 10,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 5,
   },
   saveBtnText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 16,
     fontWeight: '700',
   },
@@ -375,7 +376,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   insuranceBtnText: {
-    color: '#2979FF',
+    color: colors.info[500],
     fontSize: 14,
     fontWeight: '700',
   },
@@ -389,7 +390,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   deleteBtnText: {
-    color: '#FF5252',
+    color: colors.danger[400],
     fontSize: 14,
     fontWeight: '700',
   },

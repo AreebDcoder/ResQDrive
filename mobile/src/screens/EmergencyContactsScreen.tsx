@@ -27,6 +27,7 @@ import {
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '../components/ui/Toast';
+import { colors, darkColors } from '../theme/tokens';
 
 export default function EmergencyContactsScreen({ navigation }: any) {
   const toast = useToast();
@@ -325,7 +326,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
                         color={
                           index === 0
                             ? '#444'
-                            : '#FFFFFF'
+                            : darkColors.text
                         }
                       />
                     </TouchableOpacity>
@@ -353,7 +354,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
                           index ===
                           contacts.length - 1
                             ? '#444'
-                            : '#FFFFFF'
+                            : darkColors.text
                         }
                       />
                     </TouchableOpacity>
@@ -435,7 +436,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
   },
 
   infoBox: {
@@ -454,7 +455,7 @@ const styles = StyleSheet.create({
   },
 
   infoText: {
-    color: '#FF8A80',
+    color: colors.danger[300],
     fontSize: 12,
     lineHeight: 18,
     flex: 1,
@@ -471,12 +472,12 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
 
   headerSub: {
     fontSize: 13,
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     marginTop: 4,
   },
 
@@ -499,18 +500,18 @@ const styles = StyleSheet.create({
   },
 
   errorText: {
-    color: '#FF8A80',
+    color: colors.danger[300],
     fontSize: 15,
     textAlign: 'center',
     marginBottom: 16,
   },
 
   retryBtn: {
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 10,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: {
       width: 0,
       height: 4,
@@ -521,7 +522,7 @@ const styles = StyleSheet.create({
   },
 
   retryText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontWeight: '700',
     fontSize: 14,
   },
@@ -532,7 +533,7 @@ const styles = StyleSheet.create({
   },
 
   emptyText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 18,
     fontWeight: '700',
     marginBottom: 8,
@@ -540,7 +541,7 @@ const styles = StyleSheet.create({
   },
 
   emptySubtitle: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
@@ -558,7 +559,7 @@ const styles = StyleSheet.create({
   },
 
   updatingText: {
-    color: '#2979FF',
+    color: colors.info[500],
     fontSize: 12,
     marginLeft: 8,
     fontWeight: '600',
@@ -609,12 +610,12 @@ const styles = StyleSheet.create({
   priorityNum: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
 
   priorityLabel: {
     fontSize: 9,
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     textTransform: 'uppercase',
     marginTop: 1,
     fontWeight: '600',
@@ -627,18 +628,18 @@ const styles = StyleSheet.create({
   contactName: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
 
   contactMeta: {
     fontSize: 13,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginTop: 4,
   },
 
   contactEmail: {
     fontSize: 12,
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     marginTop: 2,
   },
 
@@ -684,17 +685,17 @@ const styles = StyleSheet.create({
   },
 
   arrowText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 12,
   },
 
   addBtn: {
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     margin: 16,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: {
       width: 0,
       height: 6,
@@ -705,7 +706,7 @@ const styles = StyleSheet.create({
   },
 
   addBtnText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 15,
     fontWeight: '700',
   },
@@ -720,7 +721,7 @@ const styles = StyleSheet.create({
   },
 
   limitBannerText: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 12,
     textAlign: 'center',
     lineHeight: 18,

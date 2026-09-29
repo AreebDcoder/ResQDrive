@@ -1,3 +1,4 @@
+import { colors, darkColors } from '../../theme/tokens';
 import React, { useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
@@ -11,7 +12,7 @@ import {
 } from '../../store/slices/adminSlice';
 
 const SEVERITY_COLORS: Record<string, string> = {
-  NONE: '#6B6B80', MINOR: '#FFD600', MODERATE: '#FF9100', SEVERE: '#FF1744',
+  NONE: darkColors.textTertiary, MINOR: colors.warning[400], MODERATE: colors.warning[500], SEVERE: colors.danger[500],
 };
 
 export default function AdminDashboardScreen({ navigation }: any) {
@@ -44,7 +45,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
     return (
       <View style={styles.outer}>
         <View style={StyleSheet.absoluteFillObject}>
-          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0A0F' }]} />
+          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: darkColors.background }]} />
           <View style={[StyleSheet.absoluteFillObject, styles.gradTop]} />
           <View style={[StyleSheet.absoluteFillObject, styles.gradBottom]} />
         </View>
@@ -62,7 +63,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
     return (
       <View style={styles.outer}>
         <View style={StyleSheet.absoluteFillObject}>
-          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0A0F' }]} />
+          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: darkColors.background }]} />
           <View style={[StyleSheet.absoluteFillObject, styles.gradTop]} />
         </View>
         <View style={styles.center}>
@@ -80,7 +81,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
   return (
     <View style={styles.outer}>
       <View style={StyleSheet.absoluteFillObject}>
-        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0A0F' }]} />
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: darkColors.background }]} />
         <View style={[StyleSheet.absoluteFillObject, styles.gradTop]} />
         <View style={[StyleSheet.absoluteFillObject, styles.gradBottom]} />
       </View>
@@ -89,7 +90,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#E53935']} tintColor="#E53935" />}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[colors.danger[500]]} tintColor="#E53935" />}
         >
           <TouchableOpacity
             style={styles.manageSosBtn}
@@ -100,19 +101,19 @@ export default function AdminDashboardScreen({ navigation }: any) {
 
           <Text style={styles.sectionTitle}>Overview</Text>
           <View style={styles.cardsRow}>
-            <View style={[styles.card, { borderLeftColor: '#E53935' }]}>
+            <View style={[styles.card, { borderLeftColor: colors.danger[500] }]}>
               <Text style={styles.cardValue}>{summary?.totalIncidents ?? 0}</Text>
               <Text style={styles.cardLabel}>Total</Text>
             </View>
-            <View style={[styles.card, { borderLeftColor: '#FF9100' }]}>
+            <View style={[styles.card, { borderLeftColor: colors.warning[500] }]}>
               <Text style={styles.cardValue}>{summary?.activeIncidents ?? 0}</Text>
               <Text style={styles.cardLabel}>Active</Text>
             </View>
-            <View style={[styles.card, { borderLeftColor: '#00E676' }]}>
+            <View style={[styles.card, { borderLeftColor: colors.success[500] }]}>
               <Text style={styles.cardValue}>{summary?.resolvedIncidents ?? 0}</Text>
               <Text style={styles.cardLabel}>Resolved</Text>
             </View>
-            <View style={[styles.card, { borderLeftColor: '#6B6B80' }]}>
+            <View style={[styles.card, { borderLeftColor: darkColors.textTertiary }]}>
               <Text style={styles.cardValue}>{summary?.falseAlarms ?? 0}</Text>
               <Text style={styles.cardLabel}>False Alarms</Text>
             </View>
@@ -146,7 +147,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
                       <View
                         style={[
                           styles.chartBar,
-                          { height: `${Math.max(heightPct, t.count > 0 ? 8 : 2)}%`, backgroundColor: t.count > 0 ? '#E53935' : 'rgba(255, 255, 255, 0.04)' },
+                          { height: `${Math.max(heightPct, t.count > 0 ? 8 : 2)}%`, backgroundColor: t.count > 0 ? colors.danger[500] : 'rgba(255, 255, 255, 0.04)' },
                         ]}
                       />
                     </View>
@@ -199,7 +200,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
             ) : (
               summary?.recentIncidents.map((inc) => (
                 <View key={inc.id} style={styles.recentRow}>
-                  <View style={[styles.recentBadge, { backgroundColor: SEVERITY_COLORS[inc.severity] || '#6B6B80' }]}>
+                  <View style={[styles.recentBadge, { backgroundColor: SEVERITY_COLORS[inc.severity] || darkColors.textTertiary }]}>
                     <Text style={styles.recentBadgeText}>{inc.severity}</Text>
                   </View>
                   <View style={styles.recentInfo}>
@@ -218,85 +219,85 @@ export default function AdminDashboardScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  outer: { flex: 1, backgroundColor: '#0A0A0F' },
+  outer: { flex: 1, backgroundColor: darkColors.background },
   gradTop: { top: 0, height: 300, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
   gradBottom: { bottom: 0, height: 400, backgroundColor: 'rgba(41, 121, 255, 0.06)' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   glassCard: {
     backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 20, padding: 32, alignItems: 'center',
     borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 6,
+    shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 6,
   },
-  loadingText: { color: '#A0A0B8', marginTop: 12 },
-  errorText: { color: '#FF8A80', fontSize: 14, textAlign: 'center', marginBottom: 16 },
+  loadingText: { color: darkColors.textSecondary, marginTop: 12 },
+  errorText: { color: colors.danger[300], fontSize: 14, textAlign: 'center', marginBottom: 16 },
   retryBtn: {
-    backgroundColor: '#E53935', paddingVertical: 10, paddingHorizontal: 24, borderRadius: 12,
-    shadowColor: '#E53935', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 3,
+    backgroundColor: colors.danger[500], paddingVertical: 10, paddingHorizontal: 24, borderRadius: 12,
+    shadowColor: colors.danger[500], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 3,
   },
-  retryBtnText: { color: '#FFFFFF', fontWeight: 'bold' },
-  sectionTitle: { color: '#E53935', fontSize: 14, fontWeight: 'bold', marginTop: 20, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
+  retryBtnText: { color: darkColors.text, fontWeight: 'bold' },
+  sectionTitle: { color: colors.danger[500], fontSize: 14, fontWeight: 'bold', marginTop: 20, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
   cardsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   card: {
     flex: 1, minWidth: '47%', backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 16, padding: 14,
     borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)', borderLeftWidth: 4,
-    shadowColor: '#000000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
+    shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
   },
-  cardValue: { color: '#FFFFFF', fontSize: 24, fontWeight: 'bold' },
-  cardLabel: { color: '#A0A0B8', fontSize: 11, marginTop: 4, textTransform: 'uppercase' },
+  cardValue: { color: darkColors.text, fontSize: 24, fontWeight: 'bold' },
+  cardLabel: { color: darkColors.textSecondary, fontSize: 11, marginTop: 4, textTransform: 'uppercase' },
   panel: {
     backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 16, padding: 14,
     borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
+    shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
   },
   barRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   barLabel: { width: 70, fontSize: 11, fontWeight: 'bold' },
   barTrack: { flex: 1, height: 12, backgroundColor: 'rgba(10, 10, 15, 0.6)', borderRadius: 6, marginRight: 8, overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: 6 },
-  barCount: { width: 70, fontSize: 11, color: '#A0A0B8', textAlign: 'right' },
+  barCount: { width: 70, fontSize: 11, color: darkColors.textSecondary, textAlign: 'right' },
   chartRow: { flexDirection: 'row', alignItems: 'flex-end', height: 100, gap: 2 },
   chartBarWrap: { flex: 1, height: '100%' },
   chartBarTrack: { flex: 1, justifyContent: 'flex-end', height: '100%' },
   chartBar: { width: '100%', minHeight: 2, borderRadius: 2 },
   chartLegend: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
-  chartLegendText: { color: '#6B6B80', fontSize: 10 },
+  chartLegendText: { color: darkColors.textTertiary, fontSize: 10 },
   hotspotCard: {
     backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 16, padding: 14, marginBottom: 10,
     borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
+    shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
   },
   hotspotHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  hotspotRank: { color: '#E53935', fontSize: 18, fontWeight: 'bold' },
-  hotspotCount: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
-  hotspotCoords: { color: '#A0A0B8', fontSize: 12, marginBottom: 4 },
-  hotspotAddr: { color: '#6B6B80', fontSize: 11, marginBottom: 8 },
+  hotspotRank: { color: colors.danger[500], fontSize: 18, fontWeight: 'bold' },
+  hotspotCount: { color: darkColors.text, fontSize: 13, fontWeight: '600' },
+  hotspotCoords: { color: darkColors.textSecondary, fontSize: 12, marginBottom: 4 },
+  hotspotAddr: { color: darkColors.textTertiary, fontSize: 11, marginBottom: 8 },
   mapsBtn: {
     alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 12,
     backgroundColor: 'rgba(41, 121, 255, 0.12)', borderRadius: 10, borderWidth: 1, borderColor: 'rgba(41, 121, 255, 0.3)',
   },
-  mapsBtnText: { color: '#2979FF', fontSize: 12, fontWeight: '600' },
+  mapsBtnText: { color: colors.info[500], fontSize: 12, fontWeight: '600' },
   recentRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255, 255, 255, 0.04)' },
   recentBadge: { paddingVertical: 3, paddingHorizontal: 8, borderRadius: 6, marginRight: 10 },
-  recentBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: 'bold' },
+  recentBadgeText: { color: darkColors.text, fontSize: 10, fontWeight: 'bold' },
   recentInfo: { flex: 1 },
-  recentDate: { color: '#A0A0B8', fontSize: 12 },
-  recentAddr: { color: '#6B6B80', fontSize: 11, marginTop: 2 },
-  recentStatus: { color: '#6B6B80', fontSize: 11, textTransform: 'capitalize' },
-  emptyText: { color: '#6B6B80', fontSize: 13, textAlign: 'center', paddingVertical: 12 },
+  recentDate: { color: darkColors.textSecondary, fontSize: 12 },
+  recentAddr: { color: darkColors.textTertiary, fontSize: 11, marginTop: 2 },
+  recentStatus: { color: darkColors.textTertiary, fontSize: 11, textTransform: 'capitalize' },
+  emptyText: { color: darkColors.textTertiary, fontSize: 13, textAlign: 'center', paddingVertical: 12 },
   manageSosBtn: {
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 12,
     marginBottom: 16,
     alignItems: 'center',
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 3,
   },
   manageSosBtnText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontWeight: 'bold',
     fontSize: 15,
   },

@@ -23,6 +23,7 @@ import { fetchContactsSuccess } from '../store/slices/contactsSlice';
 import { makeDirectPhoneCall, isAutoDialable } from '../utils/directCall';
 import { getSafeDeviceLocation } from '../utils/location';
 import { useToast } from '../components/ui/Toast';
+import { colors, darkColors } from '../theme/tokens';
 
 interface EmergencyNumberItem {
   id: string;
@@ -433,7 +434,7 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
   },
   sosGlow: {
     position: 'absolute',
@@ -461,11 +462,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
   subtitle: {
     fontSize: 13,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginTop: 3,
   },
   countdownBanner: {
@@ -481,7 +482,7 @@ const styles = StyleSheet.create({
   },
   countdownText: {
     flex: 1,
-    color: '#ff9800',
+    color: colors.warning[500],
     fontSize: 14,
     fontWeight: 'bold',
   },
@@ -503,7 +504,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   loadingText: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 15,
     textAlign: 'center',
   },
@@ -522,25 +523,25 @@ const styles = StyleSheet.create({
     fontSize: 32,
   },
   errorText: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 15,
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 22,
   },
   retryBtn: {
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 14,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 12,
     elevation: 6,
   },
   retryBtnText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontWeight: '700',
     fontSize: 15,
     letterSpacing: 0.3,
@@ -550,7 +551,7 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   sectionLabel: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1.5,
@@ -569,7 +570,7 @@ const styles = StyleSheet.create({
   },
   callCardFirst: {
     borderColor: 'rgba(229, 57, 53, 0.45)',
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
@@ -591,28 +592,28 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   callName: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 2,
   },
   callNumber: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 14,
   },
   callNowBadge: {
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 3,
   },
   callNowText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontWeight: '700',
     fontSize: 13,
     letterSpacing: 0.5,
@@ -632,7 +633,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   noteText: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 12,
     flex: 1,
     lineHeight: 18,
@@ -645,15 +646,15 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   devSimBtn: {
-    backgroundColor: '#1c1c2e',
-    borderColor: '#3e3e3e',
+    backgroundColor: darkColors.surfaceElevated,
+    borderColor: darkColors.surfaceElevated,
     borderWidth: 1,
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
   devSimText: {
-    color: '#ffffff',
+    color: darkColors.text,
     fontSize: 12,
     fontWeight: 'bold',
   },

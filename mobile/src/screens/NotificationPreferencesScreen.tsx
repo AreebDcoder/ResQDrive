@@ -18,6 +18,7 @@ import {
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '../components/ui/Toast';
+import { colors, darkColors } from '../theme/tokens';
 
 const CATEGORIES: Array<{
   key: string;
@@ -148,8 +149,8 @@ export default function NotificationPreferencesScreen() {
                   value={isEnabled}
                   onValueChange={() => handleToggle(category.key, isEnabled)}
                   disabled={isUpdating}
-                  trackColor={{ false: 'rgba(255, 255, 255, 0.08)', true: '#E53935' }}
-                  thumbColor={isEnabled ? '#FFFFFF' : '#6B6B80'}
+                  trackColor={{ false: 'rgba(255, 255, 255, 0.08)', true: colors.danger[500] }}
+                  thumbColor={isEnabled ? darkColors.text : darkColors.textTertiary}
                 />
               </View>
             );
@@ -163,14 +164,14 @@ export default function NotificationPreferencesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
   },
   scrollContent: {
     padding: 20,
   },
   centerContainer: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -180,11 +181,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
   subtitle: {
     fontSize: 14,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginTop: 6,
     lineHeight: 20,
   },
@@ -198,7 +199,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   updatingText: {
-    color: '#2979FF',
+    color: colors.info[500],
     fontSize: 13,
     fontWeight: '600',
     marginLeft: 6,
@@ -212,7 +213,7 @@ const styles = StyleSheet.create({
     marginVertical: 14,
   },
   errorText: {
-    color: '#FF8A80',
+    color: colors.danger[300],
     fontSize: 14,
     textAlign: 'center',
   },
@@ -250,11 +251,11 @@ const styles = StyleSheet.create({
   preferenceTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
   preferenceDesc: {
     fontSize: 12,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginTop: 4,
     lineHeight: 16,
   },

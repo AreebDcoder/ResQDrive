@@ -26,6 +26,7 @@ import api from '../api/axios';
 import { setItemAsync } from '../utils/secureStorage';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '../components/ui/Toast';
+import { colors, darkColors } from '../theme/tokens';
 
 export default function LoginScreen({ navigation }: { navigation: any }) {
   const toast = useToast();
@@ -366,7 +367,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
   },
   keyboardAvoid: {
     flex: 1,
@@ -404,7 +405,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
@@ -416,21 +417,21 @@ const styles = StyleSheet.create({
   brandText: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: darkColors.text,
     letterSpacing: 0.5,
   },
   brandAccent: {
-    color: '#E53935',
+    color: colors.danger[500],
   },
   title: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: darkColors.text,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
   },
   formCard: {
     backgroundColor: 'rgba(28, 28, 46, 0.6)',
@@ -439,7 +440,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.06)',
     marginBottom: 24,
-    shadowColor: '#000000',
+    shadowColor: colors.neutral[950],
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
@@ -460,13 +461,13 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   errorText: {
-    color: '#FF5252',
+    color: colors.danger[400],
     fontSize: 13,
     flex: 1,
   },
   label: {
     fontSize: 13,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginBottom: 8,
     fontWeight: '600',
     letterSpacing: 0.3,
@@ -483,11 +484,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   inputFocused: {
-    borderColor: '#E53935',
+    borderColor: colors.danger[500],
     backgroundColor: 'rgba(229, 57, 53, 0.05)',
   },
   inputError: {
-    borderColor: '#FF1744',
+    borderColor: colors.danger[500],
     borderWidth: 1.5,
   },
   inputIcon: {
@@ -495,12 +496,12 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   input: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 15,
     padding: 0,
   },
   errorHelper: {
-    color: '#FF5252',
+    color: colors.danger[400],
     fontSize: 12,
     marginTop: -4,
     marginBottom: 12,
@@ -518,7 +519,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   forgotText: {
-    color: '#2979FF',
+    color: colors.info[500],
     fontSize: 13,
     fontWeight: '600',
   },
@@ -528,7 +529,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 12,
@@ -536,13 +537,13 @@ const styles = StyleSheet.create({
   },
   loginBtnGradient: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
   },
   loginBtnDisabled: {
     opacity: 0.55,
   },
   loginBtnText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.5,
@@ -559,7 +560,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
   dividerText: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 12,
     paddingHorizontal: 16,
   },
@@ -585,11 +586,11 @@ const styles = StyleSheet.create({
   },
   socialIcon: {
     fontSize: 18,
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontWeight: '700',
   },
   socialLabel: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -598,11 +599,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   footerText: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 14,
   },
   signupText: {
-    color: '#2979FF',
+    color: colors.info[500],
     fontSize: 14,
     fontWeight: '700',
   },

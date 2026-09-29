@@ -3,10 +3,11 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../api/axios';
 import type { AppNavigation } from '../../navigation/types';
+import { colors, darkColors } from '../../theme/tokens';
 
 // Local styles — will be replaced with theme tokens in Batch 6
 const adminStyles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0A0F', padding: 24 },
+  container: { flex: 1, backgroundColor: darkColors.background, padding: 24 },
   customHeader: {
     flexDirection: 'row',
     paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 12 : 44,
@@ -15,21 +16,21 @@ const adminStyles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16,
     borderBottomWidth: 1, borderBottomColor: 'rgba(255, 255, 255, 0.06)',
   },
-  customHeaderTitle: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF' },
-  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#E53935', marginBottom: 12 },
+  customHeaderTitle: { fontSize: 18, fontWeight: 'bold', color: darkColors.text },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: colors.danger[500], marginBottom: 12 },
   scrollList: { flex: 1, marginBottom: 20 },
   approvalCard: { backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)' },
   cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  mechanicName: { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' },
-  specializationBadge: { backgroundColor: 'rgba(229, 57, 53, 0.12)', color: '#FF8A80', fontSize: 11, fontWeight: 'bold', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(229, 57, 53, 0.3)' },
-  cardInfo: { fontSize: 13, color: '#A0A0B8', marginBottom: 4 },
-  approveBtn: { backgroundColor: '#00E676', paddingVertical: 10, borderRadius: 14, alignItems: 'center', marginTop: 12 },
-  approveBtnText: { color: '#0A0A0F', fontSize: 14, fontWeight: 'bold' },
+  mechanicName: { fontSize: 16, fontWeight: 'bold', color: darkColors.text },
+  specializationBadge: { backgroundColor: 'rgba(229, 57, 53, 0.12)', color: colors.danger[300], fontSize: 11, fontWeight: 'bold', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(229, 57, 53, 0.3)' },
+  cardInfo: { fontSize: 13, color: darkColors.textSecondary, marginBottom: 4 },
+  approveBtn: { backgroundColor: colors.success[500], paddingVertical: 10, borderRadius: 14, alignItems: 'center', marginTop: 12 },
+  approveBtnText: { color: darkColors.background, fontSize: 14, fontWeight: 'bold' },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, marginVertical: 40 },
-  emptyText: { color: '#A0A0B8', fontSize: 15, textAlign: 'center' },
-  errorText: { color: '#FF8A80', fontSize: 14, textAlign: 'center', marginVertical: 20 },
-  navBtn: { backgroundColor: '#E53935', paddingVertical: 16, borderRadius: 14, alignItems: 'center', marginTop: 10 },
-  navBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
+  emptyText: { color: darkColors.textSecondary, fontSize: 15, textAlign: 'center' },
+  errorText: { color: colors.danger[300], fontSize: 14, textAlign: 'center', marginVertical: 20 },
+  navBtn: { backgroundColor: colors.danger[500], paddingVertical: 16, borderRadius: 14, alignItems: 'center', marginTop: 10 },
+  navBtnText: { color: darkColors.text, fontSize: 16, fontWeight: 'bold' },
 });
 
 export default function AdminHome({ navigation }: { navigation: AppNavigation }) {
@@ -68,7 +69,7 @@ export default function AdminHome({ navigation }: { navigation: AppNavigation })
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#121212' }}>
+    <View style={{ flex: 1, backgroundColor: darkColors.surface }}>
       <View style={adminStyles.customHeader}>
         <View style={{ width: 28 }} />
         <Text style={adminStyles.customHeaderTitle}>Admin Controls</Text>
@@ -95,7 +96,7 @@ export default function AdminHome({ navigation }: { navigation: AppNavigation })
                 </View>
                 <Text style={adminStyles.cardInfo}>Email: {mechanic.email}</Text>
                 <Text style={adminStyles.cardInfo}>Phone: {mechanic.phoneNumber}</Text>
-                <Text style={adminStyles.cardInfo}>Workshop: <Text style={{ fontWeight: 'bold', color: '#ffffff' }}>{mechanic.mechanicDetails?.workshopName}</Text></Text>
+                <Text style={adminStyles.cardInfo}>Workshop: <Text style={{ fontWeight: 'bold', color: darkColors.text }}>{mechanic.mechanicDetails?.workshopName}</Text></Text>
                 <Text style={adminStyles.cardInfo}>Address: {mechanic.mechanicDetails?.workshopAddress}</Text>
                 <TouchableOpacity style={adminStyles.approveBtn} onPress={() => handleApprove(mechanic.id)} accessibilityRole="button" accessibilityLabel={`Approve workshop for ${mechanic.fullName}`}>
                   <Text style={adminStyles.approveBtnText}>Approve & Verify Workshop</Text>
