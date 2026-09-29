@@ -20,7 +20,7 @@ export const getDynamicApiUrl = (): string => {
     }
   }
 
-  return process.env.EXPO_PUBLIC_API_URL || 'http://192.168.100.13:3000';
+  return process.env.EXPO_PUBLIC_API_URL || LOCALHOST_API_URL;
 };
 
 export const API_URL = getDynamicApiUrl();
