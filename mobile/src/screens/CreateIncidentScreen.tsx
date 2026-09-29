@@ -20,7 +20,7 @@ import {
 } from '../schemas/incidentValidation';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '../components/ui/Toast';
-import { colors, darkColors } from '../theme/tokens';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 const SEVERITY_COLORS: Record<string, string> = {
   NONE: darkColors.textTertiary, MINOR: colors.warning[400], MODERATE: colors.warning[500], SEVERE: colors.danger[500],
@@ -115,8 +115,8 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
                 <TouchableOpacity
                   key={opt}
                   style={[styles.chip, {
-                    backgroundColor: value === opt ? SEVERITY_COLORS[opt] + '25' : 'rgba(255, 255, 255, 0.04)',
-                    borderColor: value === opt ? SEVERITY_COLORS[opt] : 'rgba(255, 255, 255, 0.06)',
+                    backgroundColor: value === opt ? SEVERITY_COLORS[opt] + '25' : tints.whiteSubtle,
+                    borderColor: value === opt ? SEVERITY_COLORS[opt] : tints.whiteBorder,
                   }]}
                   onPress={() => onChange(opt)}
                 >
@@ -138,8 +138,8 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
                 <TouchableOpacity
                   key={opt}
                   style={[styles.chip, {
-                    backgroundColor: value === opt ? STATUS_COLORS[opt] + '25' : 'rgba(255, 255, 255, 0.04)',
-                    borderColor: value === opt ? STATUS_COLORS[opt] : 'rgba(255, 255, 255, 0.06)',
+                    backgroundColor: value === opt ? STATUS_COLORS[opt] + '25' : tints.whiteSubtle,
+                    borderColor: value === opt ? STATUS_COLORS[opt] : tints.whiteBorder,
                   }]}
                   onPress={() => onChange(opt)}
                 >
@@ -159,7 +159,7 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
               style={styles.input}
               value={value}
               onChangeText={onChange}
-              placeholderTextColor="#6B6B80"
+              placeholderTextColor={darkColors.textTertiary}
               autoCapitalize="none"
             />
           )}
@@ -176,7 +176,7 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
               value={value}
               onChangeText={onChange}
               placeholder="e.g. Shahrah-e-Faisal, Karachi"
-              placeholderTextColor="#6B6B80"
+              placeholderTextColor={darkColors.textTertiary}
             />
           )}
         />
@@ -191,7 +191,7 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
               value={value}
               onChangeText={onChange}
               placeholder="Describe what happened..."
-              placeholderTextColor="#6B6B80"
+              placeholderTextColor={darkColors.textTertiary}
               multiline
               numberOfLines={4}
               textAlignVertical="top"
@@ -211,7 +211,7 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
                   value={value !== undefined && value !== null ? String(value) : ''}
                   onChangeText={onChange}
                   placeholder="24.8607"
-                  placeholderTextColor="#6B6B80"
+                  placeholderTextColor={darkColors.textTertiary}
                   keyboardType="numeric"
                 />
               )}
@@ -228,7 +228,7 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
                   value={value !== undefined && value !== null ? String(value) : ''}
                   onChangeText={onChange}
                   placeholder="67.0011"
-                  placeholderTextColor="#6B6B80"
+                  placeholderTextColor={darkColors.textTertiary}
                   keyboardType="numeric"
                 />
               )}
@@ -243,10 +243,10 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
           disabled={isSubmitting}
         >
           {isSubmitting ? (
-            <ActivityIndicator color="#ffffff" />
+            <ActivityIndicator color={darkColors.text} />
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              <Ionicons name={isEdit ? "save-outline" : "alert-circle-outline"} size={20} color="#fff" />
+              <Ionicons name={isEdit ? "save-outline" : "alert-circle-outline"} size={20} color={darkColors.text} />
               <Text style={styles.submitBtnText}>{isEdit ? 'Update Incident' : 'Save Incident'}</Text>
             </View>
           )}
@@ -270,14 +270,14 @@ const styles = StyleSheet.create({
   },
   chipText: { color: darkColors.textTertiary, fontSize: 12, fontWeight: '600' },
   input: {
-    backgroundColor: 'rgba(10, 10, 15, 0.6)',
+    backgroundColor: tints.overlayStrong,
     color: darkColors.text,
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: 10,
     fontSize: 15,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
   textArea: { minHeight: 100, paddingTop: 12 },
   row: { flexDirection: 'row' },

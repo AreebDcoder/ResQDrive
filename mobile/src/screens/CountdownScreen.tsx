@@ -21,7 +21,7 @@ import { VoiceCommandService } from '../services/voiceCommandService';
 import { CrashSoundDetectionService } from '../services/crashSoundDetectionService';
 import { sendBulkBackgroundSMS } from '../utils/directSms';
 import { MultiModalFusionService } from '../services/multiModalFusionService';
-import { colors, darkColors } from '../theme/tokens';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 const COUNTDOWN_SECONDS = 10;
 
@@ -552,7 +552,7 @@ export default function CountdownScreen({ navigation, route }: any) {
               style={[styles.devSimBtn, { borderColor: colors.danger[600] }]}
               onPress={() => VoiceCommandService.simulateSpeechInput('SOS')}
             >
-              <Text style={[styles.devSimText, { color: '#ff1744' }]}>🗣️ Simulate SOS</Text>
+              <Text style={[styles.devSimText, { color: colors.danger[500] }]}>🗣️ Simulate SOS</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -566,9 +566,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: darkColors.background,
   },
-  gradTop: { top: 0, height: 400, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
-  gradBottom: { bottom: 0, height: 400, backgroundColor: 'rgba(229, 57, 53, 0.06)' },
-  gradCenter: { top: '30%', height: 300, backgroundColor: 'rgba(229, 57, 53, 0.05)' },
+  gradTop: { top: 0, height: 400, backgroundColor: tints.dangerSubtle },
+  gradBottom: { bottom: 0, height: 400, backgroundColor: tints.dangerSubtle },
+  gradCenter: { top: '30%', height: 300, backgroundColor: tints.dangerSubtle },
   warningLabel: {
     color: colors.danger[300],
     fontSize: 16,
@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
     shadowRadius: 40,
     elevation: 12,
     borderWidth: 2,
-    borderColor: 'rgba(255, 138, 128, 0.3)',
+    borderColor: tints.dangerErrorBorder,
   },
   numberCircleGrad: {
     borderRadius: 100,
@@ -604,14 +604,14 @@ const styles = StyleSheet.create({
     color: darkColors.text,
   },
   subLabel: {
-    color: 'rgba(255, 205, 210, 0.8)',
+    color: tints.dangerErrorBorder,
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 48,
     lineHeight: 24,
   },
   cancelBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: tints.whiteBorderStrong,
     paddingVertical: 20,
     paddingHorizontal: 48,
     borderRadius: 16,
@@ -629,7 +629,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   voiceHint: {
-    color: 'rgba(255, 138, 128, 0.5)',
+    color: tints.dangerErrorBorder,
     fontSize: 13,
     textAlign: 'center',
   },
@@ -646,10 +646,10 @@ const styles = StyleSheet.create({
     marginTop: 32,
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     width: '100%',
   },
   statusRow: {
@@ -691,7 +691,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: darkColors.background,
   },
-  cancelledGrad: { top: 0, height: '100%', backgroundColor: 'rgba(0, 230, 118, 0.06)' },
+  cancelledGrad: { top: 0, height: '100%', backgroundColor: tints.successSubtle },
   cancelledIcon: {
     fontSize: 60,
     marginBottom: 16,

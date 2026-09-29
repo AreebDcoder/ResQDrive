@@ -8,7 +8,7 @@ import { RootState } from '../store/store';
 import { fetchIncident, deleteIncident } from '../store/slices/incidentsSlice';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '../components/ui/Toast';
-import { colors, darkColors } from '../theme/tokens';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 const SEVERITY_COLORS: Record<string, string> = {
   NONE: darkColors.textTertiary, MINOR: colors.warning[400], MODERATE: colors.warning[500], SEVERE: colors.danger[500],
@@ -59,7 +59,7 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#E53935" />
+        <ActivityIndicator size="large" color={colors.danger[500]} />
       </View>
     );
   }
@@ -94,7 +94,7 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
       {/* Occurred At */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Ionicons name="time-outline" size={18} color="#E53935" style={{ marginRight: 8 }} />
+          <Ionicons name="time-outline" size={18} color={colors.danger[500]} style={{ marginRight: 8 }} />
           <Text style={styles.label}>Occurred At</Text>
         </View>
         <Text style={styles.value}>{fmtDate(current.occurredAt)}</Text>
@@ -104,13 +104,13 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
       {current.address ? (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="location-outline" size={18} color="#E53935" style={{ marginRight: 8 }} />
+            <Ionicons name="location-outline" size={18} color={colors.danger[500]} style={{ marginRight: 8 }} />
             <Text style={styles.label}>Address</Text>
           </View>
           <Text style={styles.value}>{current.address}</Text>
           {current.latitude && current.longitude ? (
             <TouchableOpacity style={styles.mapsBtn} onPress={openInMaps} activeOpacity={0.7}>
-              <Ionicons name="map-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Ionicons name="map-outline" size={16} color={darkColors.text} style={{ marginRight: 6 }} />
               <Text style={styles.mapsBtnText}>Open in Google Maps</Text>
             </TouchableOpacity>
           ) : null}
@@ -121,7 +121,7 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
       {current.latitude != null && current.longitude != null ? (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="globe-outline" size={18} color="#E53935" style={{ marginRight: 8 }} />
+            <Ionicons name="globe-outline" size={18} color={colors.danger[500]} style={{ marginRight: 8 }} />
             <Text style={styles.label}>Coordinates</Text>
           </View>
           <Text style={styles.value}>{current.latitude.toFixed(6)}, {current.longitude.toFixed(6)}</Text>
@@ -132,7 +132,7 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
       {current.description ? (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="document-text-outline" size={18} color="#E53935" style={{ marginRight: 8 }} />
+            <Ionicons name="document-text-outline" size={18} color={colors.danger[500]} style={{ marginRight: 8 }} />
             <Text style={styles.label}>Description</Text>
           </View>
           <Text style={styles.value}>{current.description}</Text>
@@ -143,7 +143,7 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
       {current.sensorSnapshot ? (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="hardware-chip-outline" size={18} color="#E53935" style={{ marginRight: 8 }} />
+            <Ionicons name="hardware-chip-outline" size={18} color={colors.danger[500]} style={{ marginRight: 8 }} />
             <Text style={styles.label}>Sensor Snapshot</Text>
           </View>
           <View style={styles.jsonBox}>
@@ -156,7 +156,7 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
       {current.alertDispatchStatus ? (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="alert-circle-outline" size={18} color="#E53935" style={{ marginRight: 8 }} />
+            <Ionicons name="alert-circle-outline" size={18} color={colors.danger[500]} style={{ marginRight: 8 }} />
             <Text style={styles.label}>Alert Dispatch Status</Text>
           </View>
           <View style={styles.jsonBox}>
@@ -169,7 +169,7 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
       {current.damageAssessmentResult ? (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="search-outline" size={18} color="#E53935" style={{ marginRight: 8 }} />
+            <Ionicons name="search-outline" size={18} color={colors.danger[500]} style={{ marginRight: 8 }} />
             <Text style={styles.label}>Damage Assessment</Text>
           </View>
           <View style={styles.jsonBox}>
@@ -181,7 +181,7 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
       {/* Timestamps */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Ionicons name="calendar-outline" size={18} color="#E53935" style={{ marginRight: 8 }} />
+          <Ionicons name="calendar-outline" size={18} color={colors.danger[500]} style={{ marginRight: 8 }} />
           <Text style={styles.label}>Record Timeline</Text>
         </View>
         <View style={styles.timelineRow}>
@@ -204,7 +204,7 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
           activeOpacity={0.7}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            <Ionicons name="pencil-outline" size={18} color="#FFFFFF" />
+            <Ionicons name="pencil-outline" size={18} color={darkColors.text} />
             <Text style={styles.actionBtnText}>Edit</Text>
           </View>
         </TouchableOpacity>
@@ -215,7 +215,7 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
           activeOpacity={0.7}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            <Ionicons name="trash-outline" size={18} color="#FF5252" />
+            <Ionicons name="trash-outline" size={18} color={colors.danger[400]} />
             <Text style={styles.actionBtnText}>Delete</Text>
           </View>
         </TouchableOpacity>
@@ -229,12 +229,12 @@ const styles = StyleSheet.create({
   center: { flex: 1, backgroundColor: darkColors.background, justifyContent: 'center', alignItems: 'center' },
   errorText: { color: colors.danger[400], fontSize: 16, textAlign: 'center' },
   heroCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 16,
     padding: 18,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     shadowColor: colors.neutral[950],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -246,9 +246,9 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: 'rgba(229, 57, 53, 0.08)',
+    backgroundColor: tints.dangerSubtle,
     borderWidth: 2,
-    borderColor: 'rgba(229, 57, 53, 0.25)',
+    borderColor: tints.dangerMedium,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -261,15 +261,15 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 110,
-    backgroundColor: 'rgba(229, 57, 53, 0.06)',
+    backgroundColor: tints.dangerSubtle,
   },
   badgesCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 16,
     padding: 18,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     shadowColor: colors.neutral[950],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -289,12 +289,12 @@ const styles = StyleSheet.create({
   badgeText: { color: darkColors.text, fontSize: 12, fontWeight: '700', letterSpacing: 0.5 },
   typeText: { color: darkColors.textTertiary, fontSize: 12, marginLeft: 'auto' },
   section: {
-    backgroundColor: 'rgba(28, 28, 46, 0.4)',
+    backgroundColor: tints.glassCard,
     borderRadius: 16,
     padding: 18,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.04)',
+    borderColor: tints.whiteSubtle,
   },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   sectionIcon: { fontSize: 14 },
@@ -309,14 +309,14 @@ const styles = StyleSheet.create({
   timelineRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6 },
   timelineLabel: { color: darkColors.textTertiary, fontSize: 13 },
   timelineValue: { color: darkColors.textSecondary, fontSize: 13 },
-  timelineDivider: { height: 1, backgroundColor: 'rgba(255, 255, 255, 0.04)' },
+  timelineDivider: { height: 1, backgroundColor: tints.whiteSubtle },
   jsonBox: {
-    backgroundColor: 'rgba(10, 10, 15, 0.8)',
+    backgroundColor: tints.overlayStrong,
     borderRadius: 12,
     padding: 16,
     marginTop: 6,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
   jsonText: { color: colors.success[300], fontSize: 11, fontFamily: 'monospace', lineHeight: 16 },
   mapsBtn: {
@@ -326,10 +326,10 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingVertical: 12,
     paddingHorizontal: 18,
-    backgroundColor: 'rgba(41, 121, 255, 0.1)',
+    backgroundColor: tints.infoSubtle,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(41, 121, 255, 0.2)',
+    borderColor: tints.infoMedium,
     alignSelf: 'flex-start',
   },
   mapsBtnIcon: { fontSize: 16 },
@@ -343,9 +343,9 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 16,
     borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: tints.whiteSubtle,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: tints.whiteBorderStrong,
   },
   editBtnIcon: { fontSize: 16 },
   deleteBtn: {
@@ -356,9 +356,9 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 16,
     borderRadius: 14,
-    backgroundColor: 'rgba(255, 23, 68, 0.1)',
+    backgroundColor: tints.dangerErrorBg,
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.3)',
+    borderColor: tints.dangerErrorBorder,
   },
   deleteBtnIcon: { fontSize: 16 },
   actionBtnText: { color: darkColors.text, fontSize: 14, fontWeight: '700' },

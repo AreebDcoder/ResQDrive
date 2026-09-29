@@ -22,7 +22,7 @@ import { useDispatch } from 'react-redux';
 import { loginSuccess } from '../store/slices/authSlice';
 import { setItemAsync } from '../utils/secureStorage';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, darkColors } from '../theme/tokens';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function RegisterScreen({ route, navigation }: { route: any; navigation: any }) {
   const dispatch = useDispatch();
@@ -175,7 +175,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
               {/* Error */}
               {errorMsg && (
                 <View style={styles.errorContainer}>
-                  <Ionicons name="alert-circle-outline" size={18} color="#FF5252" style={{ marginRight: 8 }} />
+                  <Ionicons name="alert-circle-outline" size={18} color={colors.danger[400]} style={{ marginRight: 8 }} />
                   <Text style={styles.errorText}>{errorMsg}</Text>
                 </View>
               )}
@@ -211,11 +211,11 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                   name="fullName"
                   render={({ field: { onChange, onBlur, value } }) => (
                     <View style={[styles.inputWrapper, focusedField === 'fullName' && styles.inputFocused, errors.fullName && styles.inputError]}>
-                      <Ionicons name="person-outline" size={20} color="#6B6B80" style={{ marginRight: 10 }} />
+                      <Ionicons name="person-outline" size={20} color={darkColors.textTertiary} style={{ marginRight: 10 }} />
                       <TextInput
                         style={styles.input}
                         placeholder="John Doe"
-                        placeholderTextColor="#6B6B80"
+                        placeholderTextColor={darkColors.textTertiary}
                         onBlur={() => { onBlur(); setFocusedField(null); }}
                         onChangeText={onChange}
                         onFocus={() => setFocusedField('fullName')}
@@ -232,12 +232,12 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                   name="email"
                   render={({ field: { onChange, onBlur, value } }) => (
                     <View style={[styles.inputWrapper, focusedField === 'email' && styles.inputFocused, errors.email && styles.inputError]}>
-                      <Ionicons name="mail-outline" size={20} color="#6B6B80" style={{ marginRight: 10 }} />
+                      <Ionicons name="mail-outline" size={20} color={darkColors.textTertiary} style={{ marginRight: 10 }} />
                       <TextInput
                         style={[styles.input, isGoogleUser && { opacity: 0.6 }]}
                         placeholder="john@example.com"
                         editable={!isGoogleUser}
-                        placeholderTextColor="#6B6B80"
+                        placeholderTextColor={darkColors.textTertiary}
                         keyboardType="email-address"
                         autoCapitalize="none"
                         onBlur={() => { onBlur(); setFocusedField(null); }}
@@ -256,11 +256,11 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                   name="phoneNumber"
                   render={({ field: { onChange, onBlur, value } }) => (
                     <View style={[styles.inputWrapper, focusedField === 'phone' && styles.inputFocused, errors.phoneNumber && styles.inputError]}>
-                      <Ionicons name="call-outline" size={20} color="#6B6B80" style={{ marginRight: 10 }} />
+                      <Ionicons name="call-outline" size={20} color={darkColors.textTertiary} style={{ marginRight: 10 }} />
                       <TextInput
                         style={styles.input}
                         placeholder="+923001234567"
-                        placeholderTextColor="#6B6B80"
+                        placeholderTextColor={darkColors.textTertiary}
                         keyboardType="phone-pad"
                         onBlur={() => { onBlur(); setFocusedField(null); }}
                         onChangeText={onChange}
@@ -276,7 +276,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                 {selectedRole === 'DRIVER' && (
                   <View style={styles.roleSection}>
                     <View style={styles.roleSectionHeader}>
-                      <Ionicons name="card-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
+                      <Ionicons name="card-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
                       <Text style={styles.roleSectionTitle}>Driver Details</Text>
                     </View>
 
@@ -289,7 +289,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                           <TextInput
                             style={styles.input}
                             placeholder="42101-XXXXXXX-X"
-                            placeholderTextColor="#6B6B80"
+                            placeholderTextColor={darkColors.textTertiary}
                             onBlur={onBlur}
                             onChangeText={onChange}
                             value={value}
@@ -308,7 +308,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                           <TextInput
                             style={styles.input}
                             placeholder="DL-XXXXXXX"
-                            placeholderTextColor="#6B6B80"
+                            placeholderTextColor={darkColors.textTertiary}
                             onBlur={onBlur}
                             onChangeText={onChange}
                             value={value}
@@ -326,7 +326,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                 {selectedRole === 'MECHANIC' && (
                   <View style={styles.roleSection}>
                     <View style={styles.roleSectionHeader}>
-                      <Ionicons name="business-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
+                      <Ionicons name="business-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
                       <Text style={styles.roleSectionTitle}>Workshop Details</Text>
                     </View>
 
@@ -339,7 +339,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                           <TextInput
                             style={styles.input}
                             placeholder="Quick Fix Garage"
-                            placeholderTextColor="#6B6B80"
+                            placeholderTextColor={darkColors.textTertiary}
                             onBlur={onBlur}
                             onChangeText={onChange}
                             value={value}
@@ -358,7 +358,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                           <TextInput
                             style={styles.input}
                             placeholder="Plot 45, Industrial Zone"
-                            placeholderTextColor="#6B6B80"
+                            placeholderTextColor={darkColors.textTertiary}
                             onBlur={onBlur}
                             onChangeText={onChange}
                             value={value}
@@ -379,7 +379,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                           <TextInput
                             style={styles.input}
                             placeholder="Engine, Electrical, Brake Repair"
-                            placeholderTextColor="#6B6B80"
+                            placeholderTextColor={darkColors.textTertiary}
                             onBlur={onBlur}
                             onChangeText={onChange}
                             value={value}
@@ -401,11 +401,11 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                       name="password"
                       render={({ field: { onChange, onBlur, value } }) => (
                         <View style={[styles.inputWrapper, focusedField === 'password' && styles.inputFocused, errors.password && styles.inputError]}>
-                          <Ionicons name="lock-closed-outline" size={20} color="#6B6B80" style={{ marginRight: 10 }} />
+                          <Ionicons name="lock-closed-outline" size={20} color={darkColors.textTertiary} style={{ marginRight: 10 }} />
                           <TextInput
                             style={[styles.input, { flex: 1 }]}
                             placeholder="At least 8 chars, 1 num, 1 spec"
-                            placeholderTextColor="#6B6B80"
+                            placeholderTextColor={darkColors.textTertiary}
                             secureTextEntry={!showPassword}
                             autoCapitalize="none"
                             onBlur={() => { onBlur(); setFocusedField(null); }}
@@ -414,7 +414,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                             value={value}
                           />
                           <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(!showPassword)}>
-                            <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#6B6B80" />
+                            <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={darkColors.textTertiary} />
                           </TouchableOpacity>
                         </View>
                       )}
@@ -427,11 +427,11 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                       name="confirmPassword"
                       render={({ field: { onChange, onBlur, value } }) => (
                         <View style={[styles.inputWrapper, focusedField === 'confirmPassword' && styles.inputFocused, errors.confirmPassword && styles.inputError]}>
-                          <Ionicons name="lock-closed-outline" size={20} color="#6B6B80" style={{ marginRight: 10 }} />
+                          <Ionicons name="lock-closed-outline" size={20} color={darkColors.textTertiary} style={{ marginRight: 10 }} />
                           <TextInput
                             style={[styles.input, { flex: 1 }]}
                             placeholder="Confirm your password"
-                            placeholderTextColor="#6B6B80"
+                            placeholderTextColor={darkColors.textTertiary}
                             secureTextEntry={!showConfirmPassword}
                             autoCapitalize="none"
                             onBlur={() => { onBlur(); setFocusedField(null); }}
@@ -443,7 +443,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                             style={styles.eyeBtn}
                             onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                           >
-                            <Ionicons name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#6B6B80" />
+                            <Ionicons name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={darkColors.textTertiary} />
                           </TouchableOpacity>
                         </View>
                       )}
@@ -461,7 +461,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                 >
                   <View style={styles.registerBtnGradient} />
                   {isLoading ? (
-                    <ActivityIndicator color="#fff" />
+                    <ActivityIndicator color={darkColors.text} />
                   ) : (
                     <Text style={styles.registerBtnText}>Create Account</Text>
                   )}
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
     width: 280,
     height: 280,
     borderRadius: 140,
-    backgroundColor: 'rgba(229, 57, 53, 0.07)',
+    backgroundColor: tints.overlayBrand,
   },
   header: {
     marginBottom: 28,
@@ -522,11 +522,11 @@ const styles = StyleSheet.create({
     color: darkColors.textSecondary,
   },
   formCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 20,
     padding: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     marginBottom: 24,
     shadowColor: colors.neutral[950],
     shadowOffset: { width: 0, height: 8 },
@@ -537,11 +537,11 @@ const styles = StyleSheet.create({
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 23, 68, 0.1)',
+    backgroundColor: tints.dangerErrorBg,
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.3)',
+    borderColor: tints.dangerErrorBorder,
     marginBottom: 20,
   },
   errorIcon: {
@@ -555,12 +555,12 @@ const styles = StyleSheet.create({
   },
   roleTabsContainer: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: tints.whiteSubtle,
     borderRadius: 14,
     padding: 4,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     gap: 4,
   },
   roleTab: {
@@ -595,12 +595,12 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   roleSection: {
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    backgroundColor: tints.whiteSubtle,
     borderRadius: 14,
     padding: 16,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.04)',
+    borderColor: tints.whiteSubtle,
   },
   roleSectionHeader: {
     flexDirection: 'row',
@@ -628,9 +628,9 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: tints.whiteSubtle,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: tints.whiteBorderStrong,
     borderRadius: 12,
     paddingHorizontal: 16,
     height: 52,
@@ -638,7 +638,7 @@ const styles = StyleSheet.create({
   },
   inputFocused: {
     borderColor: colors.danger[500],
-    backgroundColor: 'rgba(229, 57, 53, 0.05)',
+    backgroundColor: tints.dangerSubtle,
   },
   inputError: {
     borderColor: colors.danger[500],

@@ -15,7 +15,7 @@ import api from '../api/axios';
 import { VoiceCommandService } from '../services/voiceCommandService';
 import { TtsService } from '../services/ttsService';
 import { useToast } from '../components/ui/Toast';
-import { colors, darkColors } from '../theme/tokens';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function VoiceCommandDemoScreen() {
   const toast = useToast();
@@ -239,7 +239,7 @@ export default function VoiceCommandDemoScreen() {
               value={locationText}
               onChangeText={setLocationText}
               placeholder="e.g. Sector G-11/3, Islamabad"
-              placeholderTextColor="#6B6B80"
+              placeholderTextColor={darkColors.textTertiary}
             />
 
             <Text style={styles.inputLabel}>Nearest Target Hospital</Text>
@@ -248,7 +248,7 @@ export default function VoiceCommandDemoScreen() {
               value={hospitalText}
               onChangeText={setHospitalText}
               placeholder="e.g. Shifa International Hospital"
-              placeholderTextColor="#6B6B80"
+              placeholderTextColor={darkColors.textTertiary}
             />
 
             <Text style={styles.inputLabel}>Estimated Responder ETA (Minutes)</Text>
@@ -258,7 +258,7 @@ export default function VoiceCommandDemoScreen() {
               onChangeText={setEtaValue}
               keyboardType="numeric"
               placeholder="e.g. 8"
-              placeholderTextColor="#6B6B80"
+              placeholderTextColor={darkColors.textTertiary}
             />
 
             <TouchableOpacity style={styles.ttsBtn} onPress={handleTTSAnnouncement}>
@@ -273,20 +273,20 @@ export default function VoiceCommandDemoScreen() {
 
 const styles = StyleSheet.create({
   outer: { flex: 1, backgroundColor: darkColors.background },
-  gradTop: { top: 0, height: 300, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
-  gradBottom: { bottom: 0, height: 400, backgroundColor: 'rgba(41, 121, 255, 0.06)' },
+  gradTop: { top: 0, height: 300, backgroundColor: tints.dangerSubtle },
+  gradBottom: { bottom: 0, height: 400, backgroundColor: tints.infoSubtle },
   scrollContent: { padding: 24, paddingBottom: 40 },
   header: { marginBottom: 24 },
   title: { fontSize: 24, fontWeight: 'bold', color: darkColors.text },
   subtitle: { fontSize: 14, color: darkColors.textSecondary, marginTop: 6, lineHeight: 20 },
   flashBanner: {
-    backgroundColor: 'rgba(0, 230, 118, 0.15)', padding: 16, borderRadius: 14, marginBottom: 20, alignItems: 'center',
-    borderWidth: 1, borderColor: 'rgba(0, 230, 118, 0.3)',
+    backgroundColor: tints.successSubtle, padding: 16, borderRadius: 14, marginBottom: 20, alignItems: 'center',
+    borderWidth: 1, borderColor: tints.successMedium,
   },
   flashBannerText: { color: colors.success[500], fontSize: 15, fontWeight: 'bold' },
   card: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 20, padding: 20, marginBottom: 20,
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: tints.glassCard, borderRadius: 20, padding: 20, marginBottom: 20,
+    borderWidth: 1, borderColor: tints.whiteBorder,
     shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 6,
   },
   cardLabel: {
@@ -302,35 +302,35 @@ const styles = StyleSheet.create({
   activeText: { color: colors.success[500] },
   idleText: { color: darkColors.textTertiary },
   transcriptBox: {
-    backgroundColor: 'rgba(10, 10, 15, 0.6)', borderRadius: 14, padding: 12, marginVertical: 16,
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: tints.overlayStrong, borderRadius: 14, padding: 12, marginVertical: 16,
+    borderWidth: 1, borderColor: tints.whiteSubtle,
   },
   transcriptLabel: { fontSize: 12, color: darkColors.textSecondary, fontWeight: 'bold', marginBottom: 6 },
   transcriptText: { color: darkColors.text, fontSize: 15, fontStyle: 'italic', lineHeight: 20 },
   actionBtn: { paddingVertical: 14, borderRadius: 14, alignItems: 'center' },
   startBtn: { backgroundColor: colors.danger[500], shadowColor: colors.danger[500], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 3 },
   stopBtn: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)', borderWidth: 1, borderColor: 'rgba(229, 57, 53, 0.4)',
+    backgroundColor: tints.glassCard, borderWidth: 1, borderColor: tints.dangerMedium,
   },
   actionBtnText: { color: darkColors.text, fontSize: 15, fontWeight: 'bold' },
   desc: { color: darkColors.textSecondary, fontSize: 13, lineHeight: 18, marginBottom: 16 },
   sectionSub: { fontSize: 12, fontWeight: 'bold', color: darkColors.textSecondary, marginBottom: 8, textTransform: 'uppercase' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 14 },
   simBtn: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 14, paddingVertical: 12, paddingHorizontal: 8,
+    backgroundColor: tints.glassCard, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 8,
     width: '48%', marginBottom: 10, alignItems: 'center',
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderWidth: 1, borderColor: tints.whiteBorder,
   },
-  sosSimBtn: { borderColor: 'rgba(255, 23, 68, 0.3)', backgroundColor: 'rgba(255, 23, 68, 0.08)' },
+  sosSimBtn: { borderColor: tints.dangerErrorBorder, backgroundColor: tints.dangerErrorBg },
   simBtnText: { color: darkColors.text, fontSize: 13, fontWeight: 'bold' },
   inputLabel: { fontSize: 12, color: darkColors.textSecondary, fontWeight: 'bold', marginBottom: 6, marginTop: 12 },
   input: {
-    backgroundColor: 'rgba(10, 10, 15, 0.6)', color: darkColors.text, borderRadius: 14,
+    backgroundColor: tints.overlayStrong, color: darkColors.text, borderRadius: 14,
     paddingHorizontal: 12, paddingVertical: 10, fontSize: 14,
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderWidth: 1, borderColor: tints.whiteBorder,
   },
   ttsBtn: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)', borderWidth: 1, borderColor: 'rgba(229, 57, 53, 0.3)',
+    backgroundColor: tints.glassCard, borderWidth: 1, borderColor: tints.dangerMedium,
     paddingVertical: 12, borderRadius: 14, alignItems: 'center', marginTop: 20,
   },
   ttsBtnText: { color: colors.danger[500], fontSize: 15, fontWeight: 'bold' },

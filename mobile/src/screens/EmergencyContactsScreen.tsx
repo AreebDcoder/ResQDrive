@@ -27,7 +27,7 @@ import {
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '../components/ui/Toast';
-import { colors, darkColors } from '../theme/tokens';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function EmergencyContactsScreen({ navigation }: any) {
   const toast = useToast();
@@ -158,7 +158,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
         <Ionicons
           name="information-circle-outline"
           size={20}
-          color="#E53935"
+          color={colors.danger[500]}
           style={{
             marginRight: 8,
             marginTop: 2,
@@ -187,7 +187,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
       {isLoading && contacts.length === 0 ? (
         <ActivityIndicator
           size="large"
-          color="#E53935"
+          color={colors.danger[500]}
           style={styles.loader}
         />
       ) : error ? (
@@ -195,7 +195,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
           <Ionicons
             name="alert-circle-outline"
             size={36}
-            color="#FF5252"
+            color={colors.danger[400]}
             style={{ marginBottom: 8 }}
           />
 
@@ -217,7 +217,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
           <Ionicons
             name="people-outline"
             size={48}
-            color="#6B6B80"
+            color={darkColors.textTertiary}
             style={{ marginBottom: 12 }}
           />
 
@@ -235,7 +235,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
           {isUpdating && (
             <View style={styles.updatingOverlay}>
               <ActivityIndicator
-                color="#E53935"
+                color={colors.danger[500]}
                 size="small"
               />
 
@@ -325,7 +325,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
                         size={16}
                         color={
                           index === 0
-                            ? '#444'
+                            ? darkColors.border
                             : darkColors.text
                         }
                       />
@@ -353,7 +353,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
                         color={
                           index ===
                           contacts.length - 1
-                            ? '#444'
+                            ? darkColors.border
                             : darkColors.text
                         }
                       />
@@ -406,7 +406,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
             <Ionicons
               name="person-add-outline"
               size={18}
-              color="#FFFFFF"
+              color={darkColors.text}
             />
 
             <Text style={styles.addBtnText}>
@@ -419,7 +419,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
           <Ionicons
             name="lock-closed-outline"
             size={16}
-            color="#A0A0B8"
+            color={darkColors.textSecondary}
             style={{ marginRight: 6 }}
           />
 
@@ -442,10 +442,10 @@ const styles = StyleSheet.create({
   infoBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: 'rgba(229, 57, 53, 0.1)',
+    backgroundColor: tints.dangerLight,
     padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(229, 57, 53, 0.2)',
+    borderBottomColor: tints.dangerMedium,
   },
 
   infoEmoji: {
@@ -466,7 +466,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    borderBottomColor: tints.whiteBorder,
   },
 
   headerTitle: {
@@ -552,10 +552,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(41, 121, 255, 0.08)',
+    backgroundColor: tints.infoSubtle,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    borderBottomColor: tints.whiteBorder,
   },
 
   updatingText: {
@@ -570,15 +570,15 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
     padding: 14,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000',
+    borderColor: tints.whiteBorder,
+    shadowColor: darkColors.background,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -589,12 +589,12 @@ const styles = StyleSheet.create({
   },
 
   primaryCard: {
-    borderColor: 'rgba(229, 57, 53, 0.25)',
-    backgroundColor: 'rgba(229, 57, 53, 0.06)',
+    borderColor: tints.dangerMedium,
+    backgroundColor: tints.dangerSubtle,
   },
 
   priorityIndicator: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: tints.whiteBorder,
     borderRadius: 10,
     width: 48,
     height: 48,
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
   },
 
   primaryPriority: {
-    backgroundColor: 'rgba(229, 57, 53, 0.2)',
+    backgroundColor: tints.dangerMedium,
   },
 
   priorityNum: {
@@ -650,9 +650,9 @@ const styles = StyleSheet.create({
   },
 
   cardDeleteBtn: {
-    backgroundColor: 'rgba(255, 82, 82, 0.1)',
+    backgroundColor: tints.dangerErrorBg,
     borderWidth: 1,
-    borderColor: 'rgba(255, 82, 82, 0.25)',
+    borderColor: tints.dangerErrorBorder,
     width: 34,
     height: 34,
     borderRadius: 8,
@@ -671,7 +671,7 @@ const styles = StyleSheet.create({
   },
 
   arrowBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: tints.whiteBorder,
     width: 32,
     height: 32,
     borderRadius: 8,
@@ -712,12 +712,12 @@ const styles = StyleSheet.create({
   },
 
   limitBanner: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     margin: 16,
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
 
   limitBannerText: {

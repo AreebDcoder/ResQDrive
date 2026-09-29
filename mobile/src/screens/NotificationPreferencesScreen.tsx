@@ -18,7 +18,7 @@ import {
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '../components/ui/Toast';
-import { colors, darkColors } from '../theme/tokens';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 const CATEGORIES: Array<{
   key: string;
@@ -96,7 +96,7 @@ export default function NotificationPreferencesScreen() {
   if (isLoading && !preferences) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#E53935" />
+        <ActivityIndicator size="large" color={colors.danger[500]} />
       </View>
     );
   }
@@ -106,7 +106,7 @@ export default function NotificationPreferencesScreen() {
       {/* ── Header ── */}
       <View style={styles.header}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <Ionicons name="settings-outline" size={26} color="#E53935" />
+          <Ionicons name="settings-outline" size={26} color={colors.danger[500]} />
           <Text style={styles.title}>Notification Preferences</Text>
         </View>
         <Text style={styles.subtitle}>
@@ -117,7 +117,7 @@ export default function NotificationPreferencesScreen() {
       {/* ── Updating indicator ── */}
       {isUpdating && (
         <View style={styles.updatingBanner}>
-          <ActivityIndicator size="small" color="#2979FF" />
+          <ActivityIndicator size="small" color={colors.info[500]} />
           <Text style={styles.updatingText}> Syncing...</Text>
         </View>
       )}
@@ -139,7 +139,7 @@ export default function NotificationPreferencesScreen() {
                 isEnabled && styles.preferenceRowActive,
               ]}>
                 <View style={styles.textContainer}>
-                  <Ionicons name={category.icon} size={22} color="#E53935" style={{ marginRight: 12 }} />
+                  <Ionicons name={category.icon} size={22} color={colors.danger[500]} style={{ marginRight: 12 }} />
                   <View style={styles.textInner}>
                     <Text style={styles.preferenceTitle}>{category.title}</Text>
                     <Text style={styles.preferenceDesc}>{category.description}</Text>
@@ -149,7 +149,7 @@ export default function NotificationPreferencesScreen() {
                   value={isEnabled}
                   onValueChange={() => handleToggle(category.key, isEnabled)}
                   disabled={isUpdating}
-                  trackColor={{ false: 'rgba(255, 255, 255, 0.08)', true: colors.danger[500] }}
+                  trackColor={{ false: tints.whiteBorderStrong, true: colors.danger[500] }}
                   thumbColor={isEnabled ? darkColors.text : darkColors.textTertiary}
                 />
               </View>
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(41, 121, 255, 0.08)',
+    backgroundColor: tints.infoSubtle,
     paddingVertical: 8,
     borderRadius: 10,
     marginBottom: 16,
@@ -205,11 +205,11 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   errorBanner: {
-    backgroundColor: 'rgba(255, 23, 68, 0.12)',
+    backgroundColor: tints.dangerErrorBg,
     padding: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.3)',
+    borderColor: tints.dangerErrorBorder,
     marginVertical: 14,
   },
   errorText: {
@@ -224,16 +224,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(28, 28, 46, 0.4)',
+    backgroundColor: tints.glassCard,
     borderRadius: 14,
     padding: 16,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
   preferenceRowActive: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: tints.glassCard,
+    borderColor: tints.whiteBorderStrong,
   },
   textContainer: {
     flex: 0.8,

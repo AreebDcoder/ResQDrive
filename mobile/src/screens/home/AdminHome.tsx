@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../api/axios';
 import type { AppNavigation } from '../../navigation/types';
-import { colors, darkColors } from '../../theme/tokens';
+import { colors, darkColors, tints } from '../../theme/tokens';
 
 // Local styles — will be replaced with theme tokens in Batch 6
 const adminStyles = StyleSheet.create({
@@ -12,17 +12,17 @@ const adminStyles = StyleSheet.create({
     flexDirection: 'row',
     paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 12 : 44,
     height: Platform.OS === 'android' ? 56 + (StatusBar.currentHeight || 0) + 12 : 56 + 44,
-    backgroundColor: 'rgba(28, 28, 46, 0.9)',
+    backgroundColor: tints.glassCardStrong,
     alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16,
-    borderBottomWidth: 1, borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    borderBottomWidth: 1, borderBottomColor: tints.whiteBorder,
   },
   customHeaderTitle: { fontSize: 18, fontWeight: 'bold', color: darkColors.text },
   sectionTitle: { fontSize: 16, fontWeight: 'bold', color: colors.danger[500], marginBottom: 12 },
   scrollList: { flex: 1, marginBottom: 20 },
-  approvalCard: { backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)' },
+  approvalCard: { backgroundColor: tints.glassCard, borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: tints.whiteBorder },
   cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   mechanicName: { fontSize: 16, fontWeight: 'bold', color: darkColors.text },
-  specializationBadge: { backgroundColor: 'rgba(229, 57, 53, 0.12)', color: colors.danger[300], fontSize: 11, fontWeight: 'bold', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(229, 57, 53, 0.3)' },
+  specializationBadge: { backgroundColor: tints.dangerLight, color: colors.danger[300], fontSize: 11, fontWeight: 'bold', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: tints.dangerMedium },
   cardInfo: { fontSize: 13, color: darkColors.textSecondary, marginBottom: 4 },
   approveBtn: { backgroundColor: colors.success[500], paddingVertical: 10, borderRadius: 14, alignItems: 'center', marginTop: 12 },
   approveBtnText: { color: darkColors.background, fontSize: 14, fontWeight: 'bold' },
@@ -79,7 +79,7 @@ export default function AdminHome({ navigation }: { navigation: AppNavigation })
         <Text style={adminStyles.sectionTitle}>Pending Workshop Approvals ({pendingMechanics.length})</Text>
 
         {isLoading ? (
-          <ActivityIndicator color="#d32f2f" size="large" style={{ marginTop: 20 }} />
+          <ActivityIndicator color={colors.danger[600]} size="large" style={{ marginTop: 20 }} />
         ) : message ? (
           <Text style={adminStyles.errorText}>{message}</Text>
         ) : pendingMechanics.length === 0 ? (
@@ -108,7 +108,7 @@ export default function AdminHome({ navigation }: { navigation: AppNavigation })
 
         <TouchableOpacity style={adminStyles.navBtn} onPress={() => navigation.navigate('AdminDashboard')} accessibilityRole="button" accessibilityLabel="Analytics Dashboard">
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            <Ionicons name="analytics-outline" size={18} color="#ffffff" />
+            <Ionicons name="analytics-outline" size={18} color={darkColors.text} />
             <Text style={adminStyles.navBtnText}>Analytics Dashboard</Text>
           </View>
         </TouchableOpacity>

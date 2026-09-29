@@ -25,7 +25,7 @@ import {
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '../components/ui/Toast';
-import { colors, darkColors } from '../theme/tokens';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function NotificationHistoryScreen() {
   const toast = useToast();
@@ -102,7 +102,7 @@ const { history = [], pagination, isHistoryLoading, error } = useSelector(
         iconName = 'settings-outline';
         break;
     }
-    return <Ionicons name={iconName} size={20} color="#E53935" style={{ marginRight: 10 }} />;
+    return <Ionicons name={iconName} size={20} color={colors.danger[500]} style={{ marginRight: 10 }} />;
   };
 
   const formatDate = (dateStr: string) => {
@@ -120,13 +120,13 @@ const { history = [], pagination, isHistoryLoading, error } = useSelector(
       {/* ── Header ── */}
       <View style={styles.header}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Ionicons name="mail-unread-outline" size={24} color="#E53935" />
+          <Ionicons name="mail-unread-outline" size={24} color={colors.danger[500]} />
           <Text style={styles.title}>History Inbox</Text>
         </View>
         {logs?.some((l: NotificationLog) => !l.isRead) && (
           <TouchableOpacity style={styles.markAllBtn} onPress={handleMarkAllRead}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Ionicons name="checkmark-done" size={16} color="#00E676" />
+              <Ionicons name="checkmark-done" size={16} color={colors.success[400]} />
               <Text style={styles.markAllText}>Mark all read</Text>
             </View>
           </TouchableOpacity>
@@ -134,10 +134,10 @@ const { history = [], pagination, isHistoryLoading, error } = useSelector(
       </View>
 
       {isHistoryLoading && logs.length === 0 ? (
-        <ActivityIndicator size="large" color="#E53935" style={styles.loader} />
+        <ActivityIndicator size="large" color={colors.danger[500]} style={styles.loader} />
       ) : error ? (
         <View style={styles.centerContainer}>
-          <Ionicons name="alert-circle-outline" size={36} color="#FF5252" style={{ marginBottom: 8 }} />
+          <Ionicons name="alert-circle-outline" size={36} color={colors.danger[400]} style={{ marginBottom: 8 }} />
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={() => fetchHistory(1, false)}>
             <Text style={styles.retryText}>Retry</Text>
@@ -145,7 +145,7 @@ const { history = [], pagination, isHistoryLoading, error } = useSelector(
         </View>
       ) : logs.length === 0 ? (
         <View style={styles.centerContainer}>
-          <Ionicons name="mail-open-outline" size={48} color="#6B6B80" style={{ marginBottom: 12 }} />
+          <Ionicons name="mail-open-outline" size={48} color={darkColors.textTertiary} style={{ marginBottom: 12 }} />
           <Text style={styles.emptyText}>Your inbox is empty.</Text>
           <Text style={styles.emptySubtitle}>Pushes and logs will show up here.</Text>
         </View>
@@ -157,7 +157,7 @@ const { history = [], pagination, isHistoryLoading, error } = useSelector(
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.2}
           ListFooterComponent={
-            isHistoryLoading ? <ActivityIndicator size="small" color="#E53935" style={{ marginVertical: 12 }} /> : null
+            isHistoryLoading ? <ActivityIndicator size="small" color={colors.danger[500]} style={{ marginVertical: 12 }} /> : null
           }
           renderItem={({ item }) => (
             <TouchableOpacity
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    borderBottomColor: tints.whiteBorder,
   },
   title: {
     fontSize: 22,
@@ -205,10 +205,10 @@ const styles = StyleSheet.create({
   markAllBtn: {
     paddingVertical: 6,
     paddingHorizontal: 12,
-    backgroundColor: 'rgba(0, 230, 118, 0.1)',
+    backgroundColor: tints.successSubtle,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(0, 230, 118, 0.25)',
+    borderColor: tints.successMedium,
   },
   markAllText: {
     color: colors.success[500],
@@ -271,21 +271,21 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   card: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 14,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000',
+    borderColor: tints.whiteBorder,
+    shadowColor: darkColors.background,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 10,
     elevation: 3,
   },
   unreadCard: {
-    backgroundColor: 'rgba(229, 57, 53, 0.06)',
-    borderColor: 'rgba(229, 57, 53, 0.2)',
+    backgroundColor: tints.dangerSubtle,
+    borderColor: tints.dangerMedium,
   },
   cardHeader: {
     flexDirection: 'row',

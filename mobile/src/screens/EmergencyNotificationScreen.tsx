@@ -13,7 +13,7 @@ import {
 import { connectSocket, disconnectSocket, emitLocationUpdate } from '../services/socketService';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '../components/ui/Toast';
-import { colors, darkColors } from '../theme/tokens';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -280,7 +280,7 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
 
           {emergency.error && (
             <View style={styles.errorBox}>
-              <Ionicons name="alert-circle-outline" size={18} color="#FF5252" style={{ marginRight: 8 }} />
+              <Ionicons name="alert-circle-outline" size={18} color={colors.danger[400]} style={{ marginRight: 8 }} />
               <Text style={styles.errorText}>{emergency.error}</Text>
             </View>
           )}
@@ -292,10 +292,10 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
               disabled={emergency.isTriggering}
             >
               {emergency.isTriggering ? (
-                <ActivityIndicator color="#FFFFFF" size="large" />
+                <ActivityIndicator color={darkColors.text} size="large" />
               ) : (
                 <>
-                  <Ionicons name="alert-circle" size={36} color="#FFFFFF" style={{ marginBottom: 4 }} />
+                  <Ionicons name="alert-circle" size={36} color={darkColors.text} style={{ marginBottom: 4 }} />
                   <Text style={styles.triggerBtnText}>TRIGGER EMERGENCY ALERT</Text>
                   <Text style={styles.triggerBtnSubtext}>Tap to notify all contacts</Text>
                 </>
@@ -327,13 +327,13 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
               <View style={styles.actionsRow}>
                 <TouchableOpacity style={styles.linkBtn} onPress={copyAcknowledgeLink}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Ionicons name="copy-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                    <Ionicons name="copy-outline" size={16} color={darkColors.text} style={{ marginRight: 6 }} />
                     <Text style={styles.linkBtnText}>Copy Link</Text>
                   </View>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.linkBtn} onPress={openAcknowledgePage}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Ionicons name="globe-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                    <Ionicons name="globe-outline" size={16} color={darkColors.text} style={{ marginRight: 6 }} />
                     <Text style={styles.linkBtnText}>Open Page</Text>
                   </View>
                 </TouchableOpacity>
@@ -345,7 +345,7 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
                 disabled={emergency.isCancelling}
               >
                 {emergency.isCancelling ? (
-                  <ActivityIndicator color="#FFFFFF" />
+                  <ActivityIndicator color={darkColors.text} />
                 ) : (
                   <Text style={styles.cancelBtnText}>Cancel Alert (False Alarm)</Text>
                 )}
@@ -355,7 +355,7 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
 
           {emergency.status === 'ACKNOWLEDGED' && (
             <View style={styles.acknowledgedCard}>
-              <Ionicons name="checkmark-circle-outline" size={40} color="#00E676" style={{ marginBottom: 8 }} />
+              <Ionicons name="checkmark-circle-outline" size={40} color={colors.success[400]} style={{ marginBottom: 8 }} />
               <Text style={styles.acknowledgedTitle}>Alert Acknowledged</Text>
               <Text style={styles.acknowledgedText}>
                 Your emergency contact has acknowledged the alert. Escalation has stopped.
@@ -372,7 +372,7 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
 
           {emergency.status === 'CANCELLED' && (
             <View style={styles.cancelledCard}>
-              <Ionicons name="checkmark-circle-outline" size={40} color="#00E676" style={{ marginBottom: 8 }} />
+              <Ionicons name="checkmark-circle-outline" size={40} color={colors.success[400]} style={{ marginBottom: 8 }} />
               <Text style={styles.cancelledTitle}>Alert Cancelled</Text>
               <Text style={styles.cancelledText}>
                 The emergency alert has been cancelled. Your contacts have been notified.
@@ -404,13 +404,13 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
                       {isCurrent && <Text style={styles.currentBadge}>● CURRENT</Text>}
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                      <Ionicons name="call-outline" size={14} color="#A0A0B8" style={{ marginRight: 4 }} />
+                      <Ionicons name="call-outline" size={14} color={darkColors.textSecondary} style={{ marginRight: 4 }} />
                       <Text style={styles.priorityPhone}>{firstAttempt.contactPhone}</Text>
                     </View>
                     <View style={styles.channelsRow}>
                       {attempts.map((a: any, i: number) => (
                         <View key={i} style={styles.channelChip}>
-                          <Ionicons name={CHANNEL_ICONS[a.channel] || "mail-outline"} size={14} color="#A0A0B8" style={{ marginRight: 4 }} />
+                          <Ionicons name={CHANNEL_ICONS[a.channel] || "mail-outline"} size={14} color={darkColors.textSecondary} style={{ marginRight: 4 }} />
                           <Text style={[styles.channelStatus, { color: STATUS_COLORS[a.status] || darkColors.textTertiary }]}>
                             {a.status}
                           </Text>
@@ -443,15 +443,15 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: darkColors.background },
-gradTop: { top: 0, height: 300, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
-  gradBottom: { bottom: 0, height: 400, backgroundColor: 'rgba(41, 121, 255, 0.06)' },
+gradTop: { top: 0, height: 300, backgroundColor: tints.dangerSubtle },
+  gradBottom: { bottom: 0, height: 400, backgroundColor: tints.infoSubtle },
   glassCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 20,
     padding: 20,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     shadowColor: colors.neutral[950],
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
@@ -461,11 +461,11 @@ gradTop: { top: 0, height: 300, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
   headerTitle: { color: darkColors.text, fontSize: 22, fontWeight: 'bold', marginBottom: 8 },
   headerSubtitle: { color: darkColors.textSecondary, fontSize: 13, lineHeight: 18 },
   errorBox: {
-    backgroundColor: 'rgba(255, 23, 68, 0.12)',
+    backgroundColor: tints.dangerErrorBg,
     padding: 12,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.3)',
+    borderColor: tints.dangerErrorBorder,
     marginBottom: 16,
   },
   errorText: { color: colors.danger[300], fontSize: 13, textAlign: 'center' },
@@ -476,7 +476,7 @@ gradTop: { top: 0, height: 300, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
     alignItems: 'center',
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: 'rgba(255, 82, 82, 0.5)',
+    borderColor: tints.dangerErrorBorder,
     shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.5,
@@ -485,14 +485,14 @@ gradTop: { top: 0, height: 300, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
   },
   triggerBtnIcon: { fontSize: 48, marginBottom: 8 },
   triggerBtnText: { color: darkColors.text, fontSize: 18, fontWeight: 'bold', letterSpacing: 0.5 },
-  triggerBtnSubtext: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 4 },
+  triggerBtnSubtext: { color: tints.whiteBorderStrong, fontSize: 12, marginTop: 4 },
   activeCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 20,
     padding: 20,
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: 'rgba(229, 57, 53, 0.5)',
+    borderColor: tints.dangerMedium,
     shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
@@ -509,12 +509,12 @@ gradTop: { top: 0, height: 300, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
   actionsRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   linkBtn: {
     flex: 1,
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     paddingVertical: 12,
     borderRadius: 14,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     shadowColor: colors.neutral[950],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
@@ -523,21 +523,21 @@ gradTop: { top: 0, height: 300, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
   },
   linkBtnText: { color: darkColors.text, fontSize: 13, fontWeight: '600' },
   cancelBtn: {
-    backgroundColor: 'rgba(255, 23, 68, 0.12)',
+    backgroundColor: tints.dangerErrorBg,
     paddingVertical: 14,
     borderRadius: 14,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.3)',
+    borderColor: tints.dangerErrorBorder,
   },
   cancelBtnText: { color: colors.danger[300], fontSize: 14, fontWeight: 'bold' },
   acknowledgedCard: {
-    backgroundColor: 'rgba(0, 230, 118, 0.08)',
+    backgroundColor: tints.successSubtle,
     borderRadius: 20,
     padding: 24,
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: 'rgba(0, 230, 118, 0.4)',
+    borderColor: tints.successMedium,
     alignItems: 'center',
     shadowColor: colors.success[500],
     shadowOffset: { width: 0, height: 4 },
@@ -549,12 +549,12 @@ gradTop: { top: 0, height: 300, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
   acknowledgedTitle: { color: colors.success[500], fontSize: 20, fontWeight: 'bold', marginBottom: 8 },
   acknowledgedText: { color: darkColors.textSecondary, fontSize: 13, textAlign: 'center', marginBottom: 16, lineHeight: 18 },
   cancelledCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 20,
     padding: 24,
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: 'rgba(107, 107, 128, 0.4)',
+    borderColor: tints.whiteBorder,
     alignItems: 'center',
     shadowColor: colors.neutral[950],
     shadowOffset: { width: 0, height: 8 },
@@ -566,12 +566,12 @@ gradTop: { top: 0, height: 300, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
   cancelledTitle: { color: darkColors.text, fontSize: 20, fontWeight: 'bold', marginBottom: 8 },
   cancelledText: { color: darkColors.textSecondary, fontSize: 13, textAlign: 'center', marginBottom: 16, lineHeight: 18 },
   resetBtn: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     paddingVertical: 10,
     paddingHorizontal: 24,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     shadowColor: colors.neutral[950],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
@@ -580,12 +580,12 @@ gradTop: { top: 0, height: 300, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
   },
   resetBtnText: { color: darkColors.text, fontSize: 14, fontWeight: '600' },
   progressCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 20,
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     shadowColor: colors.neutral[950],
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
@@ -594,15 +594,15 @@ gradTop: { top: 0, height: 300, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
   },
   progressTitle: { color: colors.danger[500], fontSize: 13, fontWeight: 'bold', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
   priorityBlock: {
-    backgroundColor: 'rgba(10, 10, 15, 0.6)',
+    backgroundColor: tints.overlayStrong,
     borderRadius: 14,
     padding: 12,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.04)',
+    borderColor: tints.whiteSubtle,
   },
   priorityBlockCurrent: {
-    borderColor: 'rgba(229, 57, 53, 0.5)',
+    borderColor: tints.dangerMedium,
     borderWidth: 2,
     shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 2 },
@@ -619,21 +619,21 @@ gradTop: { top: 0, height: 300, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
   channelChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
   channelIcon: { fontSize: 12, marginRight: 4 },
   channelStatus: { fontSize: 10, fontWeight: 'bold' },
   infoCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     shadowColor: colors.neutral[950],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,

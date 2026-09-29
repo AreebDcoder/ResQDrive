@@ -26,7 +26,7 @@ import api from '../api/axios';
 import { setItemAsync } from '../utils/secureStorage';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '../components/ui/Toast';
-import { colors, darkColors } from '../theme/tokens';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function LoginScreen({ navigation }: { navigation: any }) {
   const toast = useToast();
@@ -171,7 +171,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#0A0A0F" />
+        <StatusBar barStyle="light-content" backgroundColor={darkColors.background} />
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardAvoid}
@@ -197,7 +197,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
               {/* Logo mark */}
               <View style={styles.logoRow}>
                 <View style={styles.logoBadge}>
-                  <Ionicons name="shield-checkmark" size={24} color="#E53935" />
+                  <Ionicons name="shield-checkmark" size={24} color={colors.danger[500]} />
                 </View>
                 <Text style={styles.brandText}>
                   ResQ<Text style={styles.brandAccent}>Drive</Text>
@@ -220,7 +220,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
               {/* Error */}
               {errorMsg && (
                 <View style={styles.errorContainer}>
-                  <Ionicons name="alert-circle-outline" size={18} color="#FF5252" style={{ marginRight: 6 }} />
+                  <Ionicons name="alert-circle-outline" size={18} color={colors.danger[400]} style={{ marginRight: 6 }} />
                   <Text style={styles.errorText}>{errorMsg}</Text>
                 </View>
               )}
@@ -237,11 +237,11 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
                       errors.emailOrPhone && styles.inputError,
                     ]}
                   >
-                    <Ionicons name="mail-outline" size={18} color="#6B6B80" style={{ marginRight: 10 }} />
+                    <Ionicons name="mail-outline" size={18} color={darkColors.textTertiary} style={{ marginRight: 10 }} />
                     <TextInput
                       style={styles.input}
                       placeholder="Enter email or phone number"
-                      placeholderTextColor="#6B6B80"
+                      placeholderTextColor={darkColors.textTertiary}
                       keyboardType="email-address"
                       autoCapitalize="none"
                       onBlur={() => { onBlur(); setFocusedField(null); }}
@@ -268,11 +268,11 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
                       errors.password && styles.inputError,
                     ]}
                   >
-                    <Ionicons name="lock-closed-outline" size={18} color="#6B6B80" style={{ marginRight: 10 }} />
+                    <Ionicons name="lock-closed-outline" size={18} color={darkColors.textTertiary} style={{ marginRight: 10 }} />
                     <TextInput
                       style={[styles.input, { flex: 1 }]}
                       placeholder="Enter your password"
-                      placeholderTextColor="#6B6B80"
+                      placeholderTextColor={darkColors.textTertiary}
                       secureTextEntry={!showPassword}
                       autoCapitalize="none"
                       onBlur={() => { onBlur(); setFocusedField(null); }}
@@ -287,7 +287,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
                       <Ionicons
                         name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                         size={20}
-                        color="#888899"
+                        color={darkColors.textTertiary}
                       />
                     </TouchableOpacity>
                   </View>
@@ -313,7 +313,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
               >
                 <View style={styles.loginBtnGradient} />
                 {isLoading ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={darkColors.text} />
                 ) : (
                   <Text style={styles.loginBtnText}>Log In</Text>
                 )}
@@ -336,7 +336,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
                 activeOpacity={0.7}
               >
                 {isGoogleLoading ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <ActivityIndicator size="small" color={darkColors.text} />
                 ) : (
                   <Text style={styles.socialIcon}>G</Text>
                 )}
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
     width: 280,
     height: 280,
     borderRadius: 140,
-    backgroundColor: 'rgba(229, 57, 53, 0.07)',
+    backgroundColor: tints.overlayBrand,
   },
   header: {
     marginBottom: 32,
@@ -399,9 +399,9 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: 'rgba(229, 57, 53, 0.15)',
+    backgroundColor: tints.dangerLight,
     borderWidth: 1.5,
-    borderColor: 'rgba(229, 57, 53, 0.4)',
+    borderColor: tints.dangerMedium,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -434,11 +434,11 @@ const styles = StyleSheet.create({
     color: darkColors.textSecondary,
   },
   formCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 20,
     padding: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     marginBottom: 24,
     shadowColor: colors.neutral[950],
     shadowOffset: { width: 0, height: 8 },
@@ -449,11 +449,11 @@ const styles = StyleSheet.create({
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 23, 68, 0.1)',
+    backgroundColor: tints.dangerErrorBg,
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.3)',
+    borderColor: tints.dangerErrorBorder,
     marginBottom: 20,
   },
   errorIcon: {
@@ -475,9 +475,9 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: tints.whiteSubtle,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: tints.whiteBorderStrong,
     borderRadius: 12,
     paddingHorizontal: 16,
     height: 54,
@@ -485,7 +485,7 @@ const styles = StyleSheet.create({
   },
   inputFocused: {
     borderColor: colors.danger[500],
-    backgroundColor: 'rgba(229, 57, 53, 0.05)',
+    backgroundColor: tints.dangerSubtle,
   },
   inputError: {
     borderColor: colors.danger[500],
@@ -557,7 +557,7 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: tints.whiteBorderStrong,
   },
   dividerText: {
     color: darkColors.textTertiary,
@@ -576,9 +576,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     height: 50,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: tints.whiteSubtle,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: tints.whiteBorderStrong,
     gap: 8,
   },
   socialBtnDisabled: {

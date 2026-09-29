@@ -124,7 +124,7 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color="#ffffff" />
+            <Ionicons name="arrow-back" size={24} color={darkColors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Manage Regional Numbers</Text>
         </View>
@@ -134,21 +134,21 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
           <Text style={styles.formTitle}>➕ Add Regional Number</Text>
           <TextInput
             placeholder="Region Name (e.g. Punjab / Islamabad, Karachi)"
-            placeholderTextColor="#888"
+            placeholderTextColor={darkColors.textTertiary}
             value={regionName}
             onChangeText={setRegionName}
             style={styles.input}
           />
           <TextInput
             placeholder="Service Name (e.g. Rescue 1122)"
-            placeholderTextColor="#888"
+            placeholderTextColor={darkColors.textTertiary}
             value={serviceName}
             onChangeText={setServiceName}
             style={styles.input}
           />
           <TextInput
             placeholder="Phone Number (e.g. 1122, 115)"
-            placeholderTextColor="#888"
+            placeholderTextColor={darkColors.textTertiary}
             value={phoneNumber}
             onChangeText={setPhoneNumber}
             keyboardType="phone-pad"
@@ -156,7 +156,7 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
           />
           <TextInput
             placeholder="Priority Order (e.g. 1, 2)"
-            placeholderTextColor="#888"
+            placeholderTextColor={darkColors.textTertiary}
             value={priorityOrder}
             onChangeText={setPriorityOrder}
             keyboardType="number-pad"
@@ -172,7 +172,7 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
             disabled={isSubmitting}
           >
             {isSubmitting ? (
-              <ActivityIndicator color="#ffffff" />
+              <ActivityIndicator color={darkColors.text} />
             ) : (
               <Text style={styles.addBtnText}>Add Regional Number</Text>
             )}
@@ -183,7 +183,7 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
         <Text style={styles.listSectionTitle}>📋 DATABASE ENTRIES</Text>
         {isLoading ? (
           <View style={styles.center}>
-            <ActivityIndicator size="large" color="#d32f2f" />
+            <ActivityIndicator size="large" color={colors.danger[600]} />
           </View>
         ) : numbers.length === 0 ? (
           <View style={styles.center}>
@@ -211,7 +211,7 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
                     style={styles.deleteBtn}
                     onPress={() => handleDeleteNumber(item.id, item.serviceName)}
                   >
-                    <Ionicons name="trash-outline" size={20} color="#ff1744" />
+                    <Ionicons name="trash-outline" size={20} color={colors.danger[500]} />
                   </TouchableOpacity>
                 </View>
               </View>

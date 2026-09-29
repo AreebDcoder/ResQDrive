@@ -174,3 +174,70 @@ export const zIndex = {
   toast: 50,
   banner: 60,
 } as const;
+
+// ─── Tints — semi-transparent color washes ──────────────────────────────────
+// Used for: glass cards, focus rings, subtle backgrounds, error containers,
+// modal overlays. Replaces the dozens of inline `rgba(...)` literals that
+// were scattered across screens before Phase 5.
+//
+// Naming convention: <semanticColor><intensity>
+//   - subtle      → 0.04–0.06 alpha (barely visible wash, borders)
+//   - light      → 0.10–0.12 alpha (subtle fill, focus bg)
+//   - medium     → 0.25–0.40 alpha (badge / tinted border)
+//   - strong     → 0.50+ alpha (overlay / scrim)
+//
+// NOTE: The exact RGB values are deliberately kept as raw rgba() strings
+// (NOT computed from `colors.*` at runtime) so that consumers reading the
+// stylesheet can immediately see the resulting color without mental math.
+
+export const tints = {
+  // White washes — used as subtle borders/backgrounds on dark surfaces
+  whiteSubtle: 'rgba(255, 255, 255, 0.04)',
+  whiteBorder: 'rgba(255, 255, 255, 0.06)',
+  whiteBorderStrong: 'rgba(255, 255, 255, 0.08)',
+
+  // Glass cards (warm dark blue-purple, the existing "formCard" treatment)
+  glassCard: 'rgba(28, 28, 46, 0.6)',
+  glassCardStrong: 'rgba(28, 28, 46, 0.9)',
+
+  // Overlays / scrims (for modal backdrops, drawer shadows)
+  overlayLight: 'rgba(10, 10, 15, 0.5)',
+  overlayStrong: 'rgba(10, 10, 15, 0.6)',
+  overlayBrand: 'rgba(229, 57, 53, 0.07)', // brand glow accent
+
+  // Danger tints — error containers, focused danger input bg, badges
+  dangerSubtle: 'rgba(229, 57, 53, 0.05)',
+  dangerLight: 'rgba(229, 57, 53, 0.12)',
+  dangerMedium: 'rgba(229, 57, 53, 0.4)',
+  dangerErrorBg: 'rgba(255, 23, 68, 0.1)',
+  dangerErrorBorder: 'rgba(255, 23, 68, 0.3)',
+
+  // Success tints — confirmation backgrounds, success badges
+  successSubtle: 'rgba(0, 230, 118, 0.12)',
+  successMedium: 'rgba(0, 230, 118, 0.25)',
+
+  // Info tints — informational badges, link backgrounds
+  infoSubtle: 'rgba(41, 121, 255, 0.1)',
+  infoMedium: 'rgba(41, 121, 255, 0.3)',
+
+  // Warning tints — cautionary badges, pending state bg
+  warningSubtle: 'rgba(255, 152, 0, 0.12)',
+  warningMedium: 'rgba(255, 152, 0, 0.25)',
+} as const;
+
+// ─── Alpha helper ────────────────────────────────────────────────────────────
+// For one-off alpha values not covered by the `tints` table above.
+// Slower than a static string (parses hex at runtime), so prefer `tints.*`
+// for the common patterns and reserve `withAlpha` for rare cases.
+
+export function withAlpha(hex: string, alpha: number): string {
+  const clean = hex.replace('#', '');
+  const full =
+    clean.length === 3
+      ? clean.split('').map((c) => c + c).join('')
+      : clean;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}

@@ -3,7 +3,7 @@ import { View, FlatList, Pressable, StyleSheet } from 'react-native';
 import { useGetVehiclesQuery, useSetPrimaryVehicleMutation } from '../store/api/vehiclesApi';
 import { useToast } from '../components/ui/Toast';
 import { useTheme } from '../theme/useTheme';
-import { colors, spacing, radius, typography, shadows } from '../theme/tokens';
+import { colors, darkColors, radius, shadows, spacing, typography } from '../theme/tokens';
 import type { AppNavigation } from '../navigation/types';
 import type { Vehicle } from '../store/api/vehiclesApi';
 import { Ionicons } from '@expo/vector-icons';
@@ -169,7 +169,7 @@ export default function MyVehiclesScreen({ navigation }: { navigation: AppNaviga
           { backgroundColor: colors.primary[600], opacity: pressed ? 0.85 : 1 },
         ]}
       >
-        <Ionicons name="add" size={28} color="#fff" />
+        <Ionicons name="add" size={28} color={darkColors.text} />
       </Pressable>
     </View>
   );

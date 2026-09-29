@@ -24,7 +24,7 @@ import { updateProfileSchema, changePasswordSchema, UpdateProfileInput, ChangePa
 import { FCMService } from '../services/fcmService';
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, darkColors } from '../theme/tokens';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function ProfileScreen() {
   const dispatch = useDispatch();
@@ -156,7 +156,7 @@ export default function ProfileScreen() {
             />
           </View>
           <View style={styles.editBadge}>
-            <Ionicons name="camera" size={14} color="#FFF" />
+            <Ionicons name="camera" size={14} color={darkColors.text} />
           </View>
         </TouchableOpacity>
         <Text style={styles.profileName}>{user.fullName}</Text>
@@ -188,7 +188,7 @@ export default function ProfileScreen() {
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Ionicons name="person-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
+            <Ionicons name="person-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
             <Text style={styles.cardTitle}>Account Details</Text>
           </View>
           <TouchableOpacity onPress={() => { setIsEditing(!isEditing); setProfileMessage(null); }}>
@@ -331,9 +331,9 @@ export default function ProfileScreen() {
 
         {isEditing && (
           <TouchableOpacity style={styles.saveBtn} onPress={handleProfileSubmit(onUpdateProfile)} disabled={isLoading}>
-            {isLoading ? <ActivityIndicator color="#fff" /> : (
+            {isLoading ? <ActivityIndicator color={darkColors.text} /> : (
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Ionicons name="save-outline" size={18} color="#FFF" style={{ marginRight: 6 }} />
+                <Ionicons name="save-outline" size={18} color={darkColors.text} style={{ marginRight: 6 }} />
                 <Text style={styles.saveBtnText}>Save Profile</Text>
               </View>
             )}
@@ -345,10 +345,10 @@ export default function ProfileScreen() {
       <View style={styles.card}>
         <TouchableOpacity style={styles.cardHeader} onPress={() => { setIsChangingPassword(!isChangingPassword); setPwMessage(null); }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Ionicons name="lock-closed-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
+            <Ionicons name="lock-closed-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
             <Text style={styles.cardTitle}>Security & Password</Text>
           </View>
-          <Ionicons name={isChangingPassword ? 'chevron-up-outline' : 'chevron-down-outline'} size={20} color="#888899" />
+          <Ionicons name={isChangingPassword ? 'chevron-up-outline' : 'chevron-down-outline'} size={20} color={darkColors.textTertiary} />
         </TouchableOpacity>
 
         {isChangingPassword && (
@@ -370,7 +370,7 @@ export default function ProfileScreen() {
                   <TextInput
                     style={styles.passwordInput}
                     placeholder="Enter current password"
-                    placeholderTextColor="#6B6B80"
+                    placeholderTextColor={darkColors.textTertiary}
                     secureTextEntry={!showCurrentPassword}
                     autoCapitalize="none"
                     onBlur={onBlur}
@@ -381,7 +381,7 @@ export default function ProfileScreen() {
                     style={styles.eyeBtn}
                     onPress={() => setShowCurrentPassword(!showCurrentPassword)}
                   >
-                    <Ionicons name={showCurrentPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color="#888899" />
+                    <Ionicons name={showCurrentPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color={darkColors.textTertiary} />
                   </TouchableOpacity>
                 </View>
               )}
@@ -397,7 +397,7 @@ export default function ProfileScreen() {
                   <TextInput
                     style={styles.passwordInput}
                     placeholder="At least 8 chars, 1 num, 1 spec"
-                    placeholderTextColor="#6B6B80"
+                    placeholderTextColor={darkColors.textTertiary}
                     secureTextEntry={!showNewPassword}
                     autoCapitalize="none"
                     onBlur={onBlur}
@@ -405,7 +405,7 @@ export default function ProfileScreen() {
                     value={value}
                   />
                   <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowNewPassword(!showNewPassword)}>
-                    <Ionicons name={showNewPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color="#888899" />
+                    <Ionicons name={showNewPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color={darkColors.textTertiary} />
                   </TouchableOpacity>
                 </View>
               )}
@@ -421,7 +421,7 @@ export default function ProfileScreen() {
                   <TextInput
                     style={styles.passwordInput}
                     placeholder="Confirm new password"
-                    placeholderTextColor="#6B6B80"
+                    placeholderTextColor={darkColors.textTertiary}
                     secureTextEntry={!showConfirmNewPassword}
                     autoCapitalize="none"
                     onBlur={onBlur}
@@ -432,7 +432,7 @@ export default function ProfileScreen() {
                     style={styles.eyeBtn}
                     onPress={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
                   >
-                    <Ionicons name={showConfirmNewPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color="#888899" />
+                    <Ionicons name={showConfirmNewPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color={darkColors.textTertiary} />
                   </TouchableOpacity>
                 </View>
               )}
@@ -442,9 +442,9 @@ export default function ProfileScreen() {
             )}
 
             <TouchableOpacity style={styles.pwSubmitBtn} onPress={handlePwSubmit(onChangePassword)} disabled={isPwLoading}>
-              {isPwLoading ? <ActivityIndicator color="#E53935" /> : (
+              {isPwLoading ? <ActivityIndicator color={colors.danger[500]} /> : (
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="refresh-outline" size={16} color="#E53935" style={{ marginRight: 6 }} />
+                  <Ionicons name="refresh-outline" size={16} color={colors.danger[500]} style={{ marginRight: 6 }} />
                   <Text style={styles.pwSubmitBtnText}>Update Password</Text>
                 </View>
               )}
@@ -456,7 +456,7 @@ export default function ProfileScreen() {
       {/* ── Logout ── */}
       <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Ionicons name="log-out-outline" size={20} color="#FF5252" style={{ marginRight: 8 }} />
+          <Ionicons name="log-out-outline" size={20} color={colors.danger[400]} style={{ marginRight: 8 }} />
           <Text style={styles.logoutBtnText}>Log Out</Text>
         </View>
       </TouchableOpacity>
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 12,
     elevation: 8,
-    backgroundColor: '#1C1C2E',
+    backgroundColor: darkColors.surfaceElevated,
   },
   avatar: {
     width: 104,
@@ -532,7 +532,7 @@ const styles = StyleSheet.create({
     color: darkColors.textSecondary,
   },
   rolePill: {
-    backgroundColor: 'rgba(229, 57, 53, 0.15)',
+    backgroundColor: tints.dangerLight,
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: 12,
@@ -550,13 +550,13 @@ const styles = StyleSheet.create({
     color: darkColors.textSecondary,
   },
   card: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000',
+    borderColor: tints.whiteBorder,
+    shadowColor: darkColors.background,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 16,
@@ -574,7 +574,7 @@ const styles = StyleSheet.create({
     color: darkColors.text,
   },
   editBtn: {
-    backgroundColor: 'rgba(41, 121, 255, 0.15)',
+    backgroundColor: tints.infoSubtle,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 10,
@@ -585,7 +585,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   cancelBtn: {
-    backgroundColor: 'rgba(229, 57, 53, 0.15)',
+    backgroundColor: tints.dangerLight,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 10,
@@ -607,18 +607,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   input: {
-    backgroundColor: 'rgba(10, 10, 15, 0.6)',
+    backgroundColor: tints.overlayStrong,
     color: darkColors.text,
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: 10,
     fontSize: 15,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
   inputDisabled: {
     color: darkColors.textTertiary,
-    borderColor: 'rgba(255, 255, 255, 0.03)',
+    borderColor: tints.whiteSubtle,
   },
   inputError: {
     borderColor: colors.danger[500],
@@ -649,7 +649,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   pwSubmitBtn: {
-    backgroundColor: 'rgba(41, 121, 255, 0.1)',
+    backgroundColor: tints.infoSubtle,
     borderColor: colors.info[500],
     borderWidth: 1,
     paddingVertical: 14,
@@ -663,8 +663,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   logoutBtn: {
-    backgroundColor: 'rgba(229, 57, 53, 0.12)',
-    borderColor: 'rgba(229, 57, 53, 0.3)',
+    backgroundColor: tints.dangerLight,
+    borderColor: tints.dangerMedium,
     borderWidth: 1,
     paddingVertical: 16,
     borderRadius: 10,
@@ -678,19 +678,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   alertError: {
-    backgroundColor: 'rgba(255, 23, 68, 0.12)',
+    backgroundColor: tints.dangerErrorBg,
     padding: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.3)',
+    borderColor: tints.dangerErrorBorder,
     marginBottom: 20,
   },
   alertSuccess: {
-    backgroundColor: 'rgba(0, 230, 118, 0.1)',
+    backgroundColor: tints.successSubtle,
     padding: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(0, 230, 118, 0.3)',
+    borderColor: tints.successMedium,
     marginBottom: 20,
   },
   alertText: {
@@ -706,10 +706,10 @@ const styles = StyleSheet.create({
   passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(10, 10, 15, 0.6)',
+    backgroundColor: tints.overlayStrong,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     paddingRight: 14,
   },
   passwordInput: {

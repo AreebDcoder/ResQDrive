@@ -19,7 +19,7 @@ import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../api/axios';
 import { useToast } from '../components/ui/Toast';
-import { colors, darkColors } from '../theme/tokens';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 interface Workshop {
   name: string;
@@ -156,7 +156,7 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
 
       <View style={styles.cardHeader}>
         <View style={[styles.iconCircle, item.isVerifiedPartner && styles.iconCirclePartner]}>
-          <Ionicons name="construct-outline" size={24} color={item.isVerifiedPartner ? "#00E676" : "#E53935"} />
+          <Ionicons name="construct-outline" size={24} color={item.isVerifiedPartner ? colors.success[400] : colors.danger[500]} />
         </View>
         <View style={styles.cardHeaderText}>
           <Text style={styles.workshopName} numberOfLines={2}>
@@ -193,7 +193,7 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
             activeOpacity={0.8}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Ionicons name="call-outline" size={16} color="#00E676" style={{ marginRight: 6 }} />
+              <Ionicons name="call-outline" size={16} color={colors.success[400]} style={{ marginRight: 6 }} />
               <Text style={styles.callBtnText}>Call</Text>
             </View>
           </TouchableOpacity>
@@ -204,7 +204,7 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
           activeOpacity={0.8}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Ionicons name="navigate-outline" size={16} color="#FFF" style={{ marginRight: 6 }} />
+            <Ionicons name="navigate-outline" size={16} color={darkColors.text} style={{ marginRight: 6 }} />
             <Text style={styles.navigateBtnText}>Navigate</Text>
           </View>
         </TouchableOpacity>
@@ -218,7 +218,7 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
       <View style={styles.header}>
         {!isInline && (
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+            <Ionicons name="arrow-back" size={20} color={darkColors.text} />
           </TouchableOpacity>
         )}
         <View>
@@ -229,18 +229,18 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
 
       {isLoading && (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#E53935" />
+          <ActivityIndicator size="large" color={colors.danger[500]} />
           <Text style={styles.loadingText}>Finding nearby workshops...</Text>
         </View>
       )}
 
       {!isLoading && errorMsg && (
         <View style={styles.centerContainer}>
-          <Ionicons name="warning-outline" size={48} color="#FF5252" style={{ marginBottom: 12 }} />
+          <Ionicons name="warning-outline" size={48} color={colors.danger[400]} style={{ marginBottom: 12 }} />
           <Text style={styles.errorText}>{errorMsg}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={() => fetchWorkshops()}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Ionicons name="refresh-outline" size={16} color="#FFF" style={{ marginRight: 6 }} />
+              <Ionicons name="refresh-outline" size={16} color={darkColors.text} style={{ marginRight: 6 }} />
               <Text style={styles.retryBtnText}>Try Again</Text>
             </View>
           </TouchableOpacity>
@@ -249,7 +249,7 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
 
       {!isLoading && !errorMsg && workshops.length === 0 && (
         <View style={styles.centerContainer}>
-          <Ionicons name="search-outline" size={48} color="#6B6B80" style={{ marginBottom: 12 }} />
+          <Ionicons name="search-outline" size={48} color={darkColors.textTertiary} style={{ marginBottom: 12 }} />
           <Text style={styles.errorText}>No verified workshops found nearby yet.</Text>
         </View>
       )}
@@ -264,7 +264,7 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={() => fetchWorkshops(true)}
-              tintColor="#E53935"
+              tintColor={colors.danger[500]}
               colors={[colors.danger[500]]}
             />
           }
@@ -290,12 +290,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
   backBtnText: {
     color: darkColors.text,
@@ -353,27 +353,27 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   card: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 16,
     padding: 18,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000',
+    borderColor: tints.whiteBorder,
+    shadowColor: darkColors.background,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2,
     shadowRadius: 12,
     elevation: 4,
   },
   cardNearest: {
-    borderColor: 'rgba(229, 57, 53, 0.35)',
+    borderColor: tints.dangerMedium,
     borderWidth: 1.5,
-    backgroundColor: 'rgba(229, 57, 53, 0.04)',
+    backgroundColor: tints.dangerSubtle,
   },
   cardPartner: {
-    borderColor: 'rgba(0, 230, 118, 0.35)',
+    borderColor: tints.successMedium,
     borderWidth: 1.5,
-    backgroundColor: 'rgba(0, 230, 118, 0.04)',
+    backgroundColor: tints.successSubtle,
   },
   partnerBadge: {
     position: 'absolute',
@@ -416,13 +416,13 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(229, 57, 53, 0.12)',
+    backgroundColor: tints.dangerLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
   },
   iconCirclePartner: {
-    backgroundColor: 'rgba(0, 230, 118, 0.12)',
+    backgroundColor: tints.successSubtle,
   },
   iconText: {
     fontSize: 22,
@@ -442,17 +442,17 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   specializationBadge: {
-    backgroundColor: 'rgba(229, 57, 53, 0.12)',
+    backgroundColor: tints.dangerLight,
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: 'rgba(229, 57, 53, 0.25)',
+    borderColor: tints.dangerMedium,
   },
   specializationBadgePartner: {
-    backgroundColor: 'rgba(0, 230, 118, 0.12)',
-    borderColor: 'rgba(0, 230, 118, 0.25)',
+    backgroundColor: tints.successSubtle,
+    borderColor: tints.successMedium,
   },
   specializationText: {
     color: colors.danger[300],
@@ -466,7 +466,7 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(10, 10, 15, 0.5)',
+    backgroundColor: tints.overlayLight,
     borderRadius: 12,
     paddingVertical: 12,
     marginBottom: 14,
@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
   },
   statDivider: {
     width: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: tints.whiteBorder,
   },
   actionRow: {
     flexDirection: 'row',
@@ -497,12 +497,12 @@ const styles = StyleSheet.create({
   },
   callBtn: {
     flex: 1,
-    backgroundColor: 'rgba(0, 230, 118, 0.08)',
+    backgroundColor: tints.successSubtle,
     borderRadius: 10,
     paddingVertical: 13,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(0, 230, 118, 0.25)',
+    borderColor: tints.successMedium,
   },
   callBtnText: {
     color: colors.success[500],

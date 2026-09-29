@@ -11,7 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import api from '../api/axios';
 import { useToast } from '../components/ui/Toast';
-import { colors, darkColors } from '../theme/tokens';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 const SEVERITY_COLORS: Record<string, string> = {
   NONE: darkColors.textTertiary, MINOR: colors.warning[400], MODERATE: colors.warning[500], SEVERE: colors.danger[500],
@@ -107,7 +107,7 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <View style={styles.deleteIconBg}>
-              <Ionicons name="trash-outline" size={16} color="#FF5252" />
+              <Ionicons name="trash-outline" size={16} color={colors.danger[400]} />
             </View>
           </TouchableOpacity>
         )}
@@ -117,7 +117,7 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0A0A0F" />
+      <StatusBar barStyle="light-content" backgroundColor={darkColors.background} />
 
       {/* Background glow */}
       <View style={styles.bgGlow} />
@@ -142,7 +142,7 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
       {error && !isLoading ? (
         <View style={styles.centerContent}>
           <View style={styles.errorBadge}>
-            <Ionicons name="alert-circle-outline" size={40} color="#FF5252" />
+            <Ionicons name="alert-circle-outline" size={40} color={colors.danger[400]} />
           </View>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={onRefresh}>
@@ -159,7 +159,7 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
               refreshing={isRefreshing}
               onRefresh={onRefresh}
               colors={[colors.danger[500]]}
-              tintColor="#E53935"
+              tintColor={colors.danger[500]}
             />
           }
           contentContainerStyle={list.length === 0 ? { flex: 1, justifyContent: 'center' } : { padding: 20 }}
@@ -167,7 +167,7 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
             !isLoading ? (
               <View style={styles.centerContent}>
                 <View style={styles.emptyIconBg}>
-                  <Ionicons name="document-text-outline" size={48} color="#6B6B80" />
+                  <Ionicons name="document-text-outline" size={48} color={darkColors.textTertiary} />
                 </View>
                 <Text style={styles.emptyText}>No incidents recorded yet.</Text>
                 <Text style={styles.emptySubtext}>Tap the + button to log your first incident.</Text>
@@ -178,7 +178,7 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
             meta.page < meta.totalPages ? (
               <TouchableOpacity style={styles.loadMoreBtn} onPress={onLoadMore} disabled={isLoading}>
                 {isLoading ? (
-                  <ActivityIndicator color="#E53935" />
+                  <ActivityIndicator color={colors.danger[500]} />
                 ) : (
                   <Text style={styles.loadMoreText}>Load More</Text>
                 )}
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
     width: 240,
     height: 240,
     borderRadius: 120,
-    backgroundColor: 'rgba(229, 57, 53, 0.06)',
+    backgroundColor: tints.dangerSubtle,
   },
   filterRow: {
     flexDirection: 'row',
@@ -223,9 +223,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: tints.whiteSubtle,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: tints.whiteBorderStrong,
   },
   filterChipActive: {
     backgroundColor: colors.danger[500],
@@ -239,12 +239,12 @@ const styles = StyleSheet.create({
   filterChipText: { color: darkColors.textSecondary, fontSize: 12, fontWeight: '700' },
   filterChipTextActive: { color: darkColors.text },
   card: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 16,
     padding: 18,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   cardSevere: {
-    borderColor: 'rgba(255, 23, 68, 0.3)',
+    borderColor: tints.dangerErrorBorder,
     shadowColor: colors.danger[500],
     shadowOpacity: 0.15,
   },
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: 'rgba(255, 82, 82, 0.1)',
+    backgroundColor: tints.dangerErrorBg,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -290,9 +290,9 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: 'rgba(255, 82, 82, 0.1)',
+    backgroundColor: tints.dangerErrorBg,
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 82, 82, 0.25)',
+    borderColor: tints.dangerErrorBorder,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -314,9 +314,9 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: tints.whiteSubtle,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -328,10 +328,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
     marginBottom: 80,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: tints.whiteSubtle,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: tints.whiteBorderStrong,
   },
   loadMoreText: { color: colors.danger[500], fontSize: 14, fontWeight: '700' },
   fab: {

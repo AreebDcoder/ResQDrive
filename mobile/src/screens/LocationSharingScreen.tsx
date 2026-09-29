@@ -15,7 +15,7 @@ import { RootState } from '../store/store';
 import api from '../api/axios';
 import { connectSocket, disconnectSocket, emitLocationUpdate } from '../services/socketService';
 import { useToast } from '../components/ui/Toast';
-import { colors, darkColors } from '../theme/tokens';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 const FAST_INTERVAL_MS = 5000;
 const SLOW_INTERVAL_MS = 30000;
@@ -192,7 +192,7 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color="#E53935" size="large" />
+        <ActivityIndicator color={colors.danger[500]} size="large" />
         <Text style={styles.loadingText}>Checking session status…</Text>
       </View>
     );
@@ -257,7 +257,7 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
             disabled={isStopping}
           >
             {isStopping ? (
-              <ActivityIndicator color="#ffffff" />
+              <ActivityIndicator color={darkColors.text} />
             ) : (
               <Text style={styles.stopBtnText}>⏹️ Stop Sharing</Text>
             )}
@@ -273,7 +273,7 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
           disabled={isStarting}
         >
           {isStarting ? (
-            <ActivityIndicator color="#ffffff" />
+            <ActivityIndicator color={darkColors.text} />
           ) : (
             <Text style={styles.startBtnText}>🚀 Start Live Location Sharing</Text>
           )}
@@ -314,13 +314,13 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   card: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000',
+    borderColor: tints.whiteBorder,
+    shadowColor: darkColors.background,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2,
     shadowRadius: 12,
@@ -340,11 +340,11 @@ const styles = StyleSheet.create({
   errorBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 23, 68, 0.12)',
+    backgroundColor: tints.dangerErrorBg,
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.3)',
+    borderColor: tints.dangerErrorBorder,
     marginBottom: 16,
   },
   errorEmoji: {
@@ -360,11 +360,11 @@ const styles = StyleSheet.create({
   warnBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: 'rgba(255, 167, 38, 0.1)',
+    backgroundColor: tints.warningSubtle,
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 167, 38, 0.25)',
+    borderColor: tints.warningMedium,
     marginBottom: 16,
   },
   warnEmoji: {
@@ -379,12 +379,12 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   activeCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(0, 230, 118, 0.25)',
+    borderColor: tints.successMedium,
     shadowColor: colors.success[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -428,13 +428,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   linkBtn: {
-    backgroundColor: 'rgba(41, 121, 255, 0.1)',
+    backgroundColor: tints.infoSubtle,
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: 'rgba(41, 121, 255, 0.25)',
+    borderColor: tints.infoMedium,
   },
   linkBtnText: {
     color: colors.info[500],
@@ -442,13 +442,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   linkBtnSecondary: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: tints.whiteSubtle,
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
   linkBtnSecondaryText: {
     color: colors.danger[500],
@@ -456,12 +456,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   stopBtn: {
-    backgroundColor: 'rgba(255, 23, 68, 0.12)',
+    backgroundColor: tints.dangerErrorBg,
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.3)',
+    borderColor: tints.dangerErrorBorder,
   },
   stopBtnText: {
     color: darkColors.text,
@@ -486,11 +486,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   infoCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.4)',
+    backgroundColor: tints.glassCard,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
   infoTitle: {
     color: colors.danger[500],

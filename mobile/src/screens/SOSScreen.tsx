@@ -23,7 +23,7 @@ import { fetchContactsSuccess } from '../store/slices/contactsSlice';
 import { makeDirectPhoneCall, isAutoDialable } from '../utils/directCall';
 import { getSafeDeviceLocation } from '../utils/location';
 import { useToast } from '../components/ui/Toast';
-import { colors, darkColors } from '../theme/tokens';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 interface EmergencyNumberItem {
   id: string;
@@ -342,7 +342,7 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0A0A0F" />
+      <StatusBar barStyle="light-content" backgroundColor={darkColors.background} />
 
       {/* Pulsing SOS background glow */}
       <Animated.View
@@ -359,17 +359,17 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
       <Animated.View style={[styles.header, { opacity: headerOpacity }]}>
         {!isInline && (
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color="#ffffff" />
+            <Ionicons name="arrow-back" size={24} color={darkColors.text} />
           </TouchableOpacity>
         )}
         <View style={styles.headerContent}>
           <Text style={styles.title}>Emergency SOS</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
-            <Ionicons name="location-sharp" size={14} color="#E53935" />
+            <Ionicons name="location-sharp" size={14} color={colors.danger[500]} />
             <Text style={styles.subtitle}>
               {isLocating ? 'Detecting local services...' : regionName}
             </Text>
-            {isLocating && <ActivityIndicator size="small" color="#E53935" style={{ marginLeft: 6 }} />}
+            {isLocating && <ActivityIndicator size="small" color={colors.danger[500]} style={{ marginLeft: 6 }} />}
           </View>
         </View>
       </Animated.View>
@@ -377,7 +377,7 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
       {/* Escalation Countdown Indicator */}
       {isEscalationActive && (
         <View style={styles.countdownBanner}>
-          <Ionicons name="warning" size={24} color="#ff9800" style={{ marginRight: 8 }} />
+          <Ionicons name="warning" size={24} color={colors.warning[500]} style={{ marginRight: 8 }} />
           <Text style={styles.countdownText}>
             Auto-dialing {pendingCallTarget?.name || 'rescue'} in {escalationTimeLeft}s if no response...
           </Text>
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
     right: '15%',
     height: 260,
     borderRadius: 130,
-    backgroundColor: 'rgba(229, 57, 53, 0.15)',
+    backgroundColor: tints.dangerLight,
   },
   header: {
     flexDirection: 'row',
@@ -472,9 +472,9 @@ const styles = StyleSheet.create({
   countdownBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 152, 0, 0.15)',
+    backgroundColor: tints.warningSubtle,
     borderWidth: 1,
-    borderColor: 'rgba(255, 152, 0, 0.3)',
+    borderColor: tints.warningMedium,
     borderRadius: 12,
     padding: 12,
     marginHorizontal: 20,
@@ -496,9 +496,9 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(229, 57, 53, 0.08)',
+    backgroundColor: tints.dangerSubtle,
     borderWidth: 2,
-    borderColor: 'rgba(229, 57, 53, 0.3)',
+    borderColor: tints.dangerMedium,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
@@ -512,9 +512,9 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: 'rgba(255, 214, 0, 0.1)',
+    backgroundColor: tints.warningSubtle,
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 214, 0, 0.3)',
+    borderColor: tints.warningMedium,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -561,15 +561,15 @@ const styles = StyleSheet.create({
   callCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: tints.whiteBorderStrong,
   },
   callCardFirst: {
-    borderColor: 'rgba(229, 57, 53, 0.45)',
+    borderColor: tints.dangerMedium,
     shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -580,7 +580,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(229, 57, 53, 0.12)',
+    backgroundColor: tints.dangerLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
@@ -621,12 +621,12 @@ const styles = StyleSheet.create({
   noteBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: tints.whiteSubtle,
     borderRadius: 12,
     padding: 16,
     marginTop: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     gap: 10,
   },
   noteIcon: {

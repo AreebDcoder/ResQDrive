@@ -24,7 +24,7 @@ import { addContactSuccess, updateContactSuccess, deleteContactSuccess } from '.
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '../components/ui/Toast';
-import { colors, darkColors } from '../theme/tokens';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 const RELATIONSHIPS = ['Spouse', 'Parent', 'Sibling', 'Friend', 'Other'];
 
@@ -121,7 +121,7 @@ export default function AddEditContactScreen({ route, navigation }: any) {
         {/* ── Header ── */}
         <View style={styles.header}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <Ionicons name={isEditing ? 'pencil-outline' : 'person-add-outline'} size={26} color="#E53935" />
+            <Ionicons name={isEditing ? 'pencil-outline' : 'person-add-outline'} size={26} color={colors.danger[500]} />
             <Text style={styles.title}>
               {isEditing ? 'Edit Contact' : 'Add Contact'}
             </Text>
@@ -134,7 +134,7 @@ export default function AddEditContactScreen({ route, navigation }: any) {
         {/* ── Error ── */}
         {errorMsg && (
           <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle-outline" size={18} color="#FF8A80" style={{ marginRight: 8 }} />
+            <Ionicons name="alert-circle-outline" size={18} color={colors.danger[300]} style={{ marginRight: 8 }} />
             <Text style={styles.errorText}>{errorMsg}</Text>
           </View>
         )}
@@ -148,7 +148,7 @@ export default function AddEditContactScreen({ route, navigation }: any) {
               <TextInput
                 style={[styles.input, errors.name && styles.inputError]}
                 placeholder="e.g. John Doe"
-                placeholderTextColor="#6B6B80"
+                placeholderTextColor={darkColors.textTertiary}
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
@@ -165,7 +165,7 @@ export default function AddEditContactScreen({ route, navigation }: any) {
               <TextInput
                 style={[styles.input, errors.phoneNumber && styles.inputError]}
                 placeholder="e.g. +923001234567"
-                placeholderTextColor="#6B6B80"
+                placeholderTextColor={darkColors.textTertiary}
                 keyboardType="phone-pad"
                 onBlur={onBlur}
                 onChangeText={onChange}
@@ -183,7 +183,7 @@ export default function AddEditContactScreen({ route, navigation }: any) {
               <TextInput
                 style={[styles.input, errors.email && styles.inputError]}
                 placeholder="e.g. john@example.com"
-                placeholderTextColor="#6B6B80"
+                placeholderTextColor={darkColors.textTertiary}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 onBlur={onBlur}
@@ -232,7 +232,7 @@ export default function AddEditContactScreen({ route, navigation }: any) {
             disabled={isLoading}
           >
             {isLoading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={darkColors.text} />
             ) : (
               <Text style={styles.saveBtnText}>
                 {isEditing ? 'Save Changes' : 'Add Contact'}
@@ -248,7 +248,7 @@ export default function AddEditContactScreen({ route, navigation }: any) {
               disabled={isLoading}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                <Ionicons name="trash-outline" size={18} color="#FF5252" />
+                <Ionicons name="trash-outline" size={18} color={colors.danger[400]} />
                 <Text style={styles.deleteBtnText}>Remove Contact</Text>
               </View>
             </TouchableOpacity>
@@ -287,11 +287,11 @@ const styles = StyleSheet.create({
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 23, 68, 0.12)',
+    backgroundColor: tints.dangerErrorBg,
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.3)',
+    borderColor: tints.dangerErrorBorder,
     marginBottom: 20,
   },
   errorEmoji: {
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   input: {
-    backgroundColor: 'rgba(10, 10, 15, 0.6)',
+    backgroundColor: tints.overlayStrong,
     color: darkColors.text,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
   inputError: {
     borderColor: colors.danger[500],
@@ -340,9 +340,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   tag: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
@@ -352,8 +352,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   tagSelected: {
-    backgroundColor: 'rgba(229, 57, 53, 0.2)',
-    borderColor: 'rgba(229, 57, 53, 0.5)',
+    backgroundColor: tints.dangerMedium,
+    borderColor: tints.dangerMedium,
   },
   tagEmoji: {
     fontSize: 14,
@@ -385,9 +385,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   deleteBtn: {
-    backgroundColor: 'rgba(255, 23, 68, 0.08)',
+    backgroundColor: tints.dangerErrorBg,
     borderWidth: 1,
-    borderColor: 'rgba(255, 82, 82, 0.3)',
+    borderColor: tints.dangerErrorBorder,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',

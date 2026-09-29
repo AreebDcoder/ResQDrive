@@ -13,7 +13,7 @@ import { useDispatch } from 'react-redux';
 import { loginSuccess, logoutAction, setLoading } from '../store/slices/authSlice';
 import api from '../api/axios';
 import { getItemAsync, setItemAsync, deleteItemAsync } from '../utils/secureStorage';
-import { colors, darkColors } from '../theme/tokens';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 
 function AnimatedDot({ index }: { index: number }) {
@@ -189,7 +189,7 @@ export default function SplashScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0A0A0F" />
+      <StatusBar barStyle="light-content" backgroundColor={darkColors.background} />
 
       {/* Background ambient glow */}
       <View style={styles.bgGlow1} />
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
     right: '12%',
     height: 280,
     borderRadius: 140,
-    backgroundColor: 'rgba(229, 57, 53, 0.08)',
+    backgroundColor: tints.dangerSubtle,
   },
   bgGlow2: {
     position: 'absolute',
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: 'rgba(41, 121, 255, 0.05)',
+    backgroundColor: tints.infoSubtle,
   },
   pulseRing: {
     position: 'absolute',
@@ -290,9 +290,9 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 28,
-    backgroundColor: 'rgba(229, 57, 53, 0.12)',
+    backgroundColor: tints.dangerLight,
     borderWidth: 1.5,
-    borderColor: 'rgba(229, 57, 53, 0.35)',
+    borderColor: tints.dangerMedium,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 28,
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 18,
-    backgroundColor: 'rgba(229, 57, 53, 0.18)',
+    backgroundColor: tints.dangerLight,
     justifyContent: 'center',
     alignItems: 'center',
   },

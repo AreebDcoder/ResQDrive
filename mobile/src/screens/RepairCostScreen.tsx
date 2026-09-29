@@ -21,7 +21,7 @@ import api, { API_URL } from '../api/axios';
 import { documentDirectory, writeAsStringAsync } from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { useToast } from '../components/ui/Toast';
-import { colors, darkColors } from '../theme/tokens';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 
 
@@ -226,7 +226,7 @@ const handleShareReport = async () => {
         >
           <View style={styles.historyCardHeader}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Ionicons name="car-sport-outline" size={18} color="#E53935" style={{ marginRight: 6 }} />
+              <Ionicons name="car-sport-outline" size={18} color={colors.danger[500]} style={{ marginRight: 6 }} />
               <Text style={styles.historyCarName}>{carText}</Text>
             </View>
             <Text style={styles.historyDateText}>{formattedDate}</Text>
@@ -241,12 +241,12 @@ const handleShareReport = async () => {
 
           <View style={styles.historyFooter}>
             <View style={styles.partCountBadge}>
-              <Ionicons name="construct-outline" size={13} color="#82B1FF" style={{ marginRight: 4 }} />
+              <Ionicons name="construct-outline" size={13} color={colors.info[300]} style={{ marginRight: 4 }} />
               <Text style={styles.partCountText}>{item.lineItems.length} Part{item.lineItems.length > 1 ? 's' : ''} Assessed</Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text style={styles.viewDetailsText}>View Report</Text>
-              <Ionicons name="chevron-forward" size={16} color="#E53935" />
+              <Ionicons name="chevron-forward" size={16} color={colors.danger[500]} />
             </View>
           </View>
         </TouchableOpacity>
@@ -255,7 +255,7 @@ const handleShareReport = async () => {
           style={styles.deleteReportIconBtn} 
           onPress={() => handleDeleteReport(item.id)}
         >
-          <Ionicons name="trash-outline" size={18} color="#FF5252" />
+          <Ionicons name="trash-outline" size={18} color={colors.danger[400]} />
         </TouchableOpacity>
       </View>
     );
@@ -265,7 +265,7 @@ const handleShareReport = async () => {
     if (isLoading) {
       return (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#E53935" />
+          <ActivityIndicator size="large" color={colors.danger[500]} />
           <Text style={styles.loadingText}>Generating auto repair estimates...</Text>
         </View>
       );
@@ -274,7 +274,7 @@ const handleShareReport = async () => {
     if (!report) {
       return (
         <View style={styles.centerContainer}>
-          <Ionicons name="receipt-outline" size={48} color="#6B6B80" style={{ marginBottom: 12 }} />
+          <Ionicons name="receipt-outline" size={48} color={darkColors.textTertiary} style={{ marginBottom: 12 }} />
           <Text style={styles.emptyText}>No cost report loaded. Check history to open past estimates.</Text>
         </View>
       );
@@ -306,7 +306,7 @@ const handleShareReport = async () => {
         {/* ── Total Estimate Card ── */}
         <View style={styles.totalCard}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-            <Ionicons name="cash-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
+            <Ionicons name="cash-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
             <Text style={styles.totalLabel}>TOTAL ESTIMATED COST RANGE</Text>
           </View>
           <Text style={styles.totalValue}>
@@ -314,7 +314,7 @@ const handleShareReport = async () => {
           </Text>
           {report.vehicle && (
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
-              <Ionicons name="car-outline" size={16} color="#A0A0B0" style={{ marginRight: 6 }} />
+              <Ionicons name="car-outline" size={16} color={darkColors.textSecondary} style={{ marginRight: 6 }} />
               <Text style={styles.vehicleSubText}>
                 {report.vehicle.year} {report.vehicle.make} {report.vehicle.model} ({report.vehicle.licensePlate.toUpperCase()})
               </Text>
@@ -325,7 +325,7 @@ const handleShareReport = async () => {
         {/* ── Warning banner for Fallback estimates ── */}
         {hasFallbackItems && (
           <View style={styles.warningBanner}>
-            <Ionicons name="information-circle-outline" size={20} color="#FF9100" style={{ marginRight: 8 }} />
+            <Ionicons name="information-circle-outline" size={20} color={colors.warning[500]} style={{ marginRight: 8 }} />
             <Text style={styles.warningText}>
               Note: Certain parts are priced using static default averages because live marketplace listings and market fallback were unreachable.
             </Text>
@@ -334,7 +334,7 @@ const handleShareReport = async () => {
 
         {/* ── Line Items ── */}
         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 24, marginBottom: 12 }}>
-          <Ionicons name="construct-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
+          <Ionicons name="construct-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
           <Text style={styles.sectionHeaderTitle}>DAMAGED PARTS BREAKDOWN</Text>
         </View>
         {report.lineItems.map((item, index) => (
@@ -343,7 +343,7 @@ const handleShareReport = async () => {
               <Text style={styles.itemPartName}>{getPartName(item.partTag)}</Text>
               <View style={[
                 styles.badge, 
-                { backgroundColor: item.action === 'repair' ? 'rgba(0, 230, 118, 0.12)' : 'rgba(255, 23, 68, 0.12)' }
+                { backgroundColor: item.action === 'repair' ? 'tints.successSubtle' : tints.dangerErrorBg }
               ]}>
                 <Text style={[
                   styles.badgeText, 
@@ -359,7 +359,7 @@ const handleShareReport = async () => {
             <View style={styles.costDetailsBox}>
               <View style={styles.costRow}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="build-outline" size={15} color="#A0A0B0" style={{ marginRight: 6 }} />
+                  <Ionicons name="build-outline" size={15} color={darkColors.textSecondary} style={{ marginRight: 6 }} />
                   <Text style={styles.costLabel}>Workshop Labor Cost</Text>
                 </View>
                 <Text style={styles.costVal}>PKR {item.laborCost.min.toLocaleString()} - {item.laborCost.max.toLocaleString()}</Text>
@@ -368,7 +368,7 @@ const handleShareReport = async () => {
               <View style={styles.costRow}>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Ionicons name="cube-outline" size={15} color="#A0A0B0" style={{ marginRight: 6 }} />
+                    <Ionicons name="cube-outline" size={15} color={darkColors.textSecondary} style={{ marginRight: 6 }} />
                     <Text style={styles.costLabel}>Spare Parts Price</Text>
                   </View>
                   <Text style={styles.partsSourceSubtext}>
@@ -397,10 +397,10 @@ const handleShareReport = async () => {
           disabled={isSharing}
         >
           {isSharing ? (
-            <ActivityIndicator size="small" color="#ffffff" />
+            <ActivityIndicator size="small" color={darkColors.text} />
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Ionicons name="share-social-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
+              <Ionicons name="share-social-outline" size={20} color={darkColors.text} style={{ marginRight: 8 }} />
               <Text style={styles.shareBtnText}>Share Breakdown Report (PDF)</Text>
             </View>
           )}
@@ -411,7 +411,7 @@ const handleShareReport = async () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor="#0A0A0F" />
+      <StatusBar barStyle="light-content" backgroundColor={darkColors.background} />
       {/* ── Header bar ── */}
       <View style={styles.headerBar}>
         <TouchableOpacity 
@@ -425,7 +425,7 @@ const handleShareReport = async () => {
           style={styles.backBtn}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          <Ionicons name="arrow-back" size={24} color={darkColors.text} />
         </TouchableOpacity>
         <Text style={styles.headerBarTitle}>Repair Estimation</Text>
         <View style={{ width: 24 }} />
@@ -457,7 +457,7 @@ const handleShareReport = async () => {
       {/* ── Error display ── */}
       {errorMsg && (
         <View style={styles.errorBanner}>
-          <Ionicons name="warning-outline" size={20} color="#FF5252" style={{ marginRight: 8 }} />
+          <Ionicons name="warning-outline" size={20} color={colors.danger[400]} style={{ marginRight: 8 }} />
           <Text style={styles.errorText}>{errorMsg}</Text>
         </View>
       )}
@@ -476,7 +476,7 @@ const handleShareReport = async () => {
           ListEmptyComponent={
             !historyLoading ? (
               <View style={styles.centerContainer}>
-                <Ionicons name="folder-open-outline" size={48} color="#6B6B80" style={{ marginBottom: 12 }} />
+                <Ionicons name="folder-open-outline" size={48} color={darkColors.textTertiary} style={{ marginBottom: 12 }} />
                 <Text style={styles.emptyText}>No repair estimates generated yet.</Text>
               </View>
             ) : null
@@ -498,9 +498,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    borderBottomColor: tints.whiteBorder,
   },
   backBtn: {
     padding: 4,
@@ -512,13 +512,13 @@ const styles = StyleSheet.create({
   },
   segmentedHeader: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(28, 28, 46, 0.4)',
+    backgroundColor: tints.glassCard,
     marginHorizontal: 16,
     marginTop: 12,
     borderRadius: 12,
     padding: 4,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
   segmentBtn: {
     flex: 1,
@@ -570,12 +570,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   totalCard: {
-    backgroundColor: 'rgba(229, 57, 53, 0.15)',
+    backgroundColor: tints.dangerLight,
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(229, 57, 53, 0.3)',
+    borderColor: tints.dangerMedium,
     shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,
@@ -601,14 +601,14 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   warningBanner: {
-    backgroundColor: 'rgba(255, 167, 38, 0.1)',
+    backgroundColor: tints.warningSubtle,
     borderRadius: 10,
     padding: 12,
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 167, 38, 0.2)',
+    borderColor: tints.warningMedium,
   },
   warningEmoji: {
     fontSize: 16,
@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   warningText: {
-    color: '#FFA726',
+    color: colors.warning[400],
     fontSize: 12,
     flex: 1,
     lineHeight: 16,
@@ -630,13 +630,13 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   lineItemCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: darkColors.background,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
@@ -668,11 +668,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   costDetailsBox: {
-    backgroundColor: 'rgba(10, 10, 15, 0.5)',
+    backgroundColor: tints.overlayLight,
     borderRadius: 10,
     padding: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.04)',
+    borderColor: tints.whiteSubtle,
   },
   costRow: {
     flexDirection: 'row',
@@ -689,7 +689,7 @@ const styles = StyleSheet.create({
   },
   totalRow: {
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+    borderTopColor: tints.whiteBorder,
     marginTop: 6,
     paddingTop: 8,
   },
@@ -704,8 +704,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   shareBtn: {
-    backgroundColor: 'rgba(0, 230, 118, 0.12)',
-    borderColor: 'rgba(0, 230, 118, 0.3)',
+    backgroundColor: tints.successSubtle,
+    borderColor: tints.successMedium,
     borderWidth: 1,
     height: 52,
     borderRadius: 12,
@@ -722,13 +722,13 @@ const styles = StyleSheet.create({
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 23, 68, 0.12)',
+    backgroundColor: tints.dangerErrorBg,
     marginHorizontal: 16,
     marginTop: 12,
     padding: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.3)',
+    borderColor: tints.dangerErrorBorder,
   },
   errorEmoji: {
     fontSize: 16,
@@ -749,12 +749,12 @@ const styles = StyleSheet.create({
   },
   historyCardMain: {
     flex: 1,
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     padding: 16,
-    shadowColor: '#000',
+    shadowColor: darkColors.background,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
@@ -797,12 +797,12 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.04)',
+    borderTopColor: tints.whiteSubtle,
   },
   partCountBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(41, 121, 255, 0.1)',
+    backgroundColor: tints.infoSubtle,
     paddingVertical: 3,
     paddingHorizontal: 8,
     borderRadius: 8,
@@ -821,21 +821,21 @@ const styles = StyleSheet.create({
   deleteReportIconBtn: {
     padding: 12,
     marginLeft: 8,
-    backgroundColor: 'rgba(255, 23, 68, 0.08)',
+    backgroundColor: tints.dangerErrorBg,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.2)',
+    borderColor: tints.dangerErrorBorder,
   },
   vehicleInfoChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: tints.whiteSubtle,
     paddingVertical: 4,
     paddingHorizontal: 12,
     borderRadius: 12,
     marginTop: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
   emptySubText: {
     color: darkColors.textSecondary,

@@ -15,7 +15,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { resetPasswordSchema, ResetPasswordInput } from '../schemas/validation';
 import api from '../api/axios';
-import { colors, darkColors } from '../theme/tokens';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function ResetPasswordScreen({ navigation }: { navigation: any }) {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -106,7 +106,7 @@ export default function ResetPasswordScreen({ navigation }: { navigation: any })
                 <TextInput
                   style={[styles.input, errors.token && styles.inputError]}
                   placeholder="Enter reset token"
-                  placeholderTextColor="#6B6B80"
+                  placeholderTextColor={darkColors.textTertiary}
                   autoCapitalize="none"
                   onBlur={onBlur}
                   onChangeText={onChange}
@@ -125,7 +125,7 @@ export default function ResetPasswordScreen({ navigation }: { navigation: any })
                   <TextInput
                     style={styles.passwordInput}
                     placeholder="At least 8 characters, 1 number, 1 special char"
-                    placeholderTextColor="#6B6B80"
+                    placeholderTextColor={darkColors.textTertiary}
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
                     onBlur={onBlur}
@@ -149,7 +149,7 @@ export default function ResetPasswordScreen({ navigation }: { navigation: any })
                   <TextInput
                     style={styles.passwordInput}
                     placeholder="Confirm your new password"
-                    placeholderTextColor="#6B6B80"
+                    placeholderTextColor={darkColors.textTertiary}
                     secureTextEntry={!showConfirmPassword}
                     autoCapitalize="none"
                     onBlur={onBlur}
@@ -169,7 +169,7 @@ export default function ResetPasswordScreen({ navigation }: { navigation: any })
 
             <TouchableOpacity style={styles.resetBtn} onPress={handleSubmit(onSubmit)} disabled={isLoading}>
               {isLoading ? (
-                <ActivityIndicator color="#FFFFFF" />
+                <ActivityIndicator color={darkColors.text} />
               ) : (
                 <Text style={styles.resetBtnText}>Reset Password</Text>
               )}
@@ -187,30 +187,30 @@ export default function ResetPasswordScreen({ navigation }: { navigation: any })
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: darkColors.background },
-  gradTop: { top: 0, height: 300, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
-  gradBottom: { bottom: 0, height: 400, backgroundColor: 'rgba(41, 121, 255, 0.06)' },
+  gradTop: { top: 0, height: 300, backgroundColor: tints.dangerSubtle },
+  gradBottom: { bottom: 0, height: 400, backgroundColor: tints.infoSubtle },
   scrollContainer: { flexGrow: 1, paddingHorizontal: 24, justifyContent: 'center', paddingBottom: 40 },
   header: { marginBottom: 32 },
   title: { fontSize: 28, fontWeight: 'bold', color: darkColors.text },
   subtitle: { fontSize: 15, color: darkColors.textSecondary, marginTop: 10, lineHeight: 22 },
   alertError: {
-    backgroundColor: 'rgba(255, 23, 68, 0.12)', padding: 12, borderRadius: 14,
-    borderWidth: 1, borderColor: 'rgba(255, 23, 68, 0.3)', marginBottom: 20,
+    backgroundColor: tints.dangerErrorBg, padding: 12, borderRadius: 14,
+    borderWidth: 1, borderColor: tints.dangerErrorBorder, marginBottom: 20,
   },
   alertSuccess: {
-    backgroundColor: 'rgba(0, 230, 118, 0.1)', padding: 12, borderRadius: 14,
-    borderWidth: 1, borderColor: 'rgba(0, 230, 118, 0.3)', marginBottom: 20,
+    backgroundColor: tints.successSubtle, padding: 12, borderRadius: 14,
+    borderWidth: 1, borderColor: tints.successMedium, marginBottom: 20,
   },
   alertText: { color: colors.danger[300], fontSize: 14, textAlign: 'center' },
   successText: { color: colors.success[500], fontSize: 14, textAlign: 'center' },
   form: { width: '100%' },
   label: { fontSize: 14, color: darkColors.textSecondary, marginBottom: 8, fontWeight: '600' },
   input: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)', color: darkColors.text, paddingHorizontal: 16, paddingVertical: 14,
-    borderRadius: 14, fontSize: 15, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: tints.glassCard, color: darkColors.text, paddingHorizontal: 16, paddingVertical: 14,
+    borderRadius: 14, fontSize: 15, marginBottom: 16, borderWidth: 1, borderColor: tints.whiteBorder,
     shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3,
   },
-  inputError: { borderColor: 'rgba(255, 23, 68, 0.5)' },
+  inputError: { borderColor: tints.dangerErrorBorder },
   errorHelper: { color: colors.danger[300], fontSize: 12, marginTop: -10, marginBottom: 16 },
   resetBtn: {
     backgroundColor: colors.danger[500], paddingVertical: 16, borderRadius: 14, alignItems: 'center', marginTop: 10,
@@ -220,8 +220,8 @@ const styles = StyleSheet.create({
   backBtn: { alignItems: 'center', marginTop: 28 },
   backText: { color: darkColors.textSecondary, fontSize: 14, fontWeight: '600' },
   passwordContainer: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(28, 28, 46, 0.6)',
-    borderRadius: 14, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)', paddingRight: 16,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: tints.glassCard,
+    borderRadius: 14, marginBottom: 16, borderWidth: 1, borderColor: tints.whiteBorder, paddingRight: 16,
     shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3,
   },
   passwordInput: { flex: 1, color: darkColors.text, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15 },

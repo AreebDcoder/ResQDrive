@@ -13,7 +13,7 @@ import { sensorSourceManager } from '../services/sensorSourceManager';
 import { Ionicons } from '@expo/vector-icons';
 import { CrashSoundDetectionService } from '../services/crashSoundDetectionService';
 import { MultiModalFusionService } from '../services/multiModalFusionService';
-import { colors, darkColors } from '../theme/tokens';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function BleSensorDemoScreen() {
   const { connectionStatus, activeSource, latestReading } = useSelector(
@@ -95,7 +95,7 @@ export default function BleSensorDemoScreen() {
                 <Ionicons
                   name={activeSource === 'ble' ? 'hardware-chip-outline' : activeSource === 'phone' ? 'phone-portrait-outline' : 'flask-outline'}
                   size={16}
-                  color="#00E676"
+                  color={colors.success[400]}
                   style={{ marginRight: 6 }}
                 />
                 <Text style={styles.valueText}>
@@ -109,7 +109,7 @@ export default function BleSensorDemoScreen() {
             </View>
 
             <TouchableOpacity style={styles.reconnectBtn} onPress={handleForceReconnect}>
-              <Ionicons name="refresh" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Ionicons name="refresh" size={18} color={darkColors.text} style={{ marginRight: 6 }} />
               <Text style={styles.reconnectBtnText}>Force Reconnect BLE</Text>
             </TouchableOpacity>
           </View>
@@ -152,7 +152,7 @@ export default function BleSensorDemoScreen() {
               }, 1000);
             }}
           >
-            <Ionicons name="flash" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+            <Ionicons name="flash" size={18} color={darkColors.text} style={{ marginRight: 8 }} />
             <Text style={styles.simCrashBtnText}>🧪 DEV: Trigger Confirmed Accident</Text>
           </TouchableOpacity>
 
@@ -170,15 +170,15 @@ export default function BleSensorDemoScreen() {
 
 const styles = StyleSheet.create({
   outer: { flex: 1, backgroundColor: darkColors.background },
-  gradTop: { top: 0, height: 300, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
-  gradBottom: { bottom: 0, height: 400, backgroundColor: 'rgba(41, 121, 255, 0.06)' },
+  gradTop: { top: 0, height: 300, backgroundColor: tints.dangerSubtle },
+  gradBottom: { bottom: 0, height: 400, backgroundColor: tints.infoSubtle },
   scrollContent: { padding: 24, paddingBottom: 40 },
   header: { marginBottom: 24 },
   title: { fontSize: 24, fontWeight: 'bold', color: darkColors.text },
   subtitle: { fontSize: 14, color: darkColors.textSecondary, marginTop: 6, lineHeight: 20 },
   card: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 20, padding: 20, marginBottom: 20,
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: tints.glassCard, borderRadius: 20, padding: 20, marginBottom: 20,
+    borderWidth: 1, borderColor: tints.whiteBorder,
     shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 6,
   },
   cardHeader: {
@@ -200,12 +200,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.danger[600], flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
     paddingVertical: 16, borderRadius: 20, marginBottom: 20,
     shadowColor: colors.danger[600], shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 6,
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 1, borderColor: tints.whiteBorderStrong,
   },
   simCrashBtnText: { color: darkColors.text, fontSize: 15, fontWeight: 'bold' },
   codeBlock: {
-    backgroundColor: 'rgba(10, 10, 15, 0.8)', borderRadius: 14, padding: 14,
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: tints.overlayStrong, borderRadius: 14, padding: 14,
+    borderWidth: 1, borderColor: tints.whiteSubtle,
   },
   codeText: { color: colors.success[500], fontFamily: 'monospace', fontSize: 12, lineHeight: 18 },
 });

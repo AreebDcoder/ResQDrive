@@ -1,4 +1,4 @@
-import { colors, darkColors } from '../theme/tokens';
+import { colors, darkColors, tints } from '../theme/tokens';
 import React, { useEffect, useState, useRef } from 'react';
 import {
   ScrollView,
@@ -187,7 +187,7 @@ export default function CrashSoundDemoScreen() {
                   setDemoMode(val);
                   setDemoModeActive(val);
                 }}
-                trackColor={{ false: 'rgba(255, 255, 255, 0.08)', true: colors.danger[500] }}
+                trackColor={{ false: tints.whiteBorderStrong, true: colors.danger[500] }}
                 thumbColor={demoModeActive ? darkColors.text : darkColors.textTertiary}
               />
             </View>
@@ -248,15 +248,15 @@ export default function CrashSoundDemoScreen() {
 
 const styles = StyleSheet.create({
   outer: { flex: 1, backgroundColor: darkColors.background },
-  gradTop: { top: 0, height: 300, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
-  gradBottom: { bottom: 0, height: 400, backgroundColor: 'rgba(41, 121, 255, 0.06)' },
+  gradTop: { top: 0, height: 300, backgroundColor: tints.dangerSubtle },
+  gradBottom: { bottom: 0, height: 400, backgroundColor: tints.infoSubtle },
   scrollContent: { padding: 24, paddingBottom: 40 },
   header: { marginBottom: 24 },
   title: { fontSize: 24, fontWeight: 'bold', color: darkColors.text },
   subtitle: { fontSize: 14, color: darkColors.textSecondary, marginTop: 6, lineHeight: 20 },
   transientBanner: {
-    backgroundColor: 'rgba(255, 145, 0, 0.15)', padding: 12, borderRadius: 14, marginBottom: 16, alignItems: 'center',
-    borderWidth: 1, borderColor: 'rgba(255, 145, 0, 0.3)',
+    backgroundColor: tints.warningSubtle, padding: 12, borderRadius: 14, marginBottom: 16, alignItems: 'center',
+    borderWidth: 1, borderColor: tints.warningMedium,
   },
   transientBannerText: { color: colors.warning[500], fontSize: 14, fontWeight: 'bold', letterSpacing: 0.5 },
   warningBanner: {
@@ -265,8 +265,8 @@ const styles = StyleSheet.create({
   },
   warningText: { color: darkColors.text, fontSize: 15, fontWeight: 'bold', letterSpacing: 0.5 },
   card: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 20, padding: 20, marginBottom: 20,
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: tints.glassCard, borderRadius: 20, padding: 20, marginBottom: 20,
+    borderWidth: 1, borderColor: tints.whiteBorder,
     shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 6,
   },
   cardLabel: { fontSize: 13, fontWeight: 'bold', color: colors.danger[500], textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 },
@@ -282,32 +282,32 @@ const styles = StyleSheet.create({
   normalValue: { color: darkColors.text },
   actionBtn: { paddingVertical: 14, borderRadius: 14, alignItems: 'center', marginTop: 10 },
   startBtn: { backgroundColor: colors.danger[500], shadowColor: colors.danger[500], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 3 },
-  stopBtn: { backgroundColor: 'rgba(28, 28, 46, 0.6)', borderWidth: 1, borderColor: 'rgba(229, 57, 53, 0.4)' },
+  stopBtn: { backgroundColor: tints.glassCard, borderWidth: 1, borderColor: tints.dangerMedium },
   actionBtnText: { color: darkColors.text, fontSize: 15, fontWeight: 'bold' },
   simSubtitle: { color: darkColors.textSecondary, fontSize: 13, lineHeight: 18, marginBottom: 16 },
   simGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   simBtn: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 14, paddingVertical: 12, paddingHorizontal: 8,
-    width: '48%', marginBottom: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: tints.glassCard, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 8,
+    width: '48%', marginBottom: 12, alignItems: 'center', borderWidth: 1, borderColor: tints.whiteBorder,
   },
   simBtnText: { color: darkColors.text, fontSize: 13, fontWeight: 'bold' },
   historyCard: {
-    backgroundColor: 'rgba(229, 57, 53, 0.08)', borderRadius: 20, padding: 20, marginBottom: 20,
-    borderWidth: 1, borderColor: 'rgba(229, 57, 53, 0.3)',
+    backgroundColor: tints.dangerSubtle, borderRadius: 20, padding: 20, marginBottom: 20,
+    borderWidth: 1, borderColor: tints.dangerMedium,
     shadowColor: colors.danger[500], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6,
   },
   historyText: { fontSize: 14, color: darkColors.textSecondary, marginBottom: 8 },
   highlightText: { color: darkColors.text, fontWeight: 'bold' },
   infoCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 20, padding: 16,
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: tints.glassCard, borderRadius: 20, padding: 16,
+    borderWidth: 1, borderColor: tints.whiteBorder,
     shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
   },
   infoTitle: { fontSize: 14, fontWeight: 'bold', color: darkColors.textSecondary, marginBottom: 6 },
   infoDesc: { fontSize: 12, color: darkColors.textTertiary, lineHeight: 18 },
   webWarningBox: {
-    marginTop: 14, padding: 12, backgroundColor: 'rgba(255, 145, 0, 0.08)', borderRadius: 14,
-    borderWidth: 1, borderColor: 'rgba(255, 145, 0, 0.3)',
+    marginTop: 14, padding: 12, backgroundColor: tints.warningSubtle, borderRadius: 14,
+    borderWidth: 1, borderColor: tints.warningMedium,
   },
   webWarningTitle: { color: colors.warning[500], fontSize: 13, fontWeight: 'bold', marginBottom: 6 },
   webWarningDesc: { color: darkColors.textSecondary, fontSize: 11, lineHeight: 16, marginBottom: 8 },

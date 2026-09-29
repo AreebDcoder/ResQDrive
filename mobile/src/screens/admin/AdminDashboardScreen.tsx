@@ -1,4 +1,4 @@
-import { colors, darkColors } from '../../theme/tokens';
+import { colors, darkColors, tints } from '../../theme/tokens';
 import React, { useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
@@ -51,7 +51,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
         </View>
         <View style={styles.center}>
           <View style={styles.glassCard}>
-            <ActivityIndicator color="#E53935" size="large" />
+            <ActivityIndicator color={colors.danger[500]} size="large" />
             <Text style={styles.loadingText}>Loading dashboard...</Text>
           </View>
         </View>
@@ -90,7 +90,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[colors.danger[500]]} tintColor="#E53935" />}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[colors.danger[500]]} tintColor={colors.danger[500]} />}
         >
           <TouchableOpacity
             style={styles.manageSosBtn}
@@ -147,7 +147,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
                       <View
                         style={[
                           styles.chartBar,
-                          { height: `${Math.max(heightPct, t.count > 0 ? 8 : 2)}%`, backgroundColor: t.count > 0 ? colors.danger[500] : 'rgba(255, 255, 255, 0.04)' },
+                          { height: `${Math.max(heightPct, t.count > 0 ? 8 : 2)}%`, backgroundColor: t.count > 0 ? colors.danger[500] : tints.whiteSubtle },
                         ]}
                       />
                     </View>
@@ -220,12 +220,12 @@ export default function AdminDashboardScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   outer: { flex: 1, backgroundColor: darkColors.background },
-  gradTop: { top: 0, height: 300, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
-  gradBottom: { bottom: 0, height: 400, backgroundColor: 'rgba(41, 121, 255, 0.06)' },
+  gradTop: { top: 0, height: 300, backgroundColor: tints.dangerSubtle },
+  gradBottom: { bottom: 0, height: 400, backgroundColor: tints.infoSubtle },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   glassCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 20, padding: 32, alignItems: 'center',
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: tints.glassCard, borderRadius: 20, padding: 32, alignItems: 'center',
+    borderWidth: 1, borderColor: tints.whiteBorder,
     shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 6,
   },
   loadingText: { color: darkColors.textSecondary, marginTop: 12 },
@@ -238,20 +238,20 @@ const styles = StyleSheet.create({
   sectionTitle: { color: colors.danger[500], fontSize: 14, fontWeight: 'bold', marginTop: 20, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
   cardsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   card: {
-    flex: 1, minWidth: '47%', backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 16, padding: 14,
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)', borderLeftWidth: 4,
+    flex: 1, minWidth: '47%', backgroundColor: tints.glassCard, borderRadius: 16, padding: 14,
+    borderWidth: 1, borderColor: tints.whiteBorder, borderLeftWidth: 4,
     shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
   },
   cardValue: { color: darkColors.text, fontSize: 24, fontWeight: 'bold' },
   cardLabel: { color: darkColors.textSecondary, fontSize: 11, marginTop: 4, textTransform: 'uppercase' },
   panel: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 16, padding: 14,
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: tints.glassCard, borderRadius: 16, padding: 14,
+    borderWidth: 1, borderColor: tints.whiteBorder,
     shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
   },
   barRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   barLabel: { width: 70, fontSize: 11, fontWeight: 'bold' },
-  barTrack: { flex: 1, height: 12, backgroundColor: 'rgba(10, 10, 15, 0.6)', borderRadius: 6, marginRight: 8, overflow: 'hidden' },
+  barTrack: { flex: 1, height: 12, backgroundColor: tints.overlayStrong, borderRadius: 6, marginRight: 8, overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: 6 },
   barCount: { width: 70, fontSize: 11, color: darkColors.textSecondary, textAlign: 'right' },
   chartRow: { flexDirection: 'row', alignItems: 'flex-end', height: 100, gap: 2 },
@@ -261,8 +261,8 @@ const styles = StyleSheet.create({
   chartLegend: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
   chartLegendText: { color: darkColors.textTertiary, fontSize: 10 },
   hotspotCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 16, padding: 14, marginBottom: 10,
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: tints.glassCard, borderRadius: 16, padding: 14, marginBottom: 10,
+    borderWidth: 1, borderColor: tints.whiteBorder,
     shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
   },
   hotspotHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
@@ -272,10 +272,10 @@ const styles = StyleSheet.create({
   hotspotAddr: { color: darkColors.textTertiary, fontSize: 11, marginBottom: 8 },
   mapsBtn: {
     alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 12,
-    backgroundColor: 'rgba(41, 121, 255, 0.12)', borderRadius: 10, borderWidth: 1, borderColor: 'rgba(41, 121, 255, 0.3)',
+    backgroundColor: tints.infoSubtle, borderRadius: 10, borderWidth: 1, borderColor: tints.infoMedium,
   },
   mapsBtnText: { color: colors.info[500], fontSize: 12, fontWeight: '600' },
-  recentRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255, 255, 255, 0.04)' },
+  recentRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: tints.whiteSubtle },
   recentBadge: { paddingVertical: 3, paddingHorizontal: 8, borderRadius: 6, marginRight: 10 },
   recentBadgeText: { color: darkColors.text, fontSize: 10, fontWeight: 'bold' },
   recentInfo: { flex: 1 },

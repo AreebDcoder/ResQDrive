@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../api/axios';
-import { colors, darkColors } from '../theme/tokens';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function EmailVerificationScreen({ route, navigation }: { route: any; navigation: any }) {
   const email = route.params?.email || 'your email';
@@ -89,7 +89,7 @@ export default function EmailVerificationScreen({ route, navigation }: { route: 
       <Animated.View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 24, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
         <View style={styles.header}>
           <View style={styles.iconCircle}>
-            <Ionicons name="mail-unread-outline" size={36} color="#E53935" />
+            <Ionicons name="mail-unread-outline" size={36} color={colors.danger[500]} />
           </View>
           <Text style={styles.title}>Verify Your Email</Text>
           <Text style={styles.subtitle}>
@@ -99,14 +99,14 @@ export default function EmailVerificationScreen({ route, navigation }: { route: 
 
         {errorMsg && (
           <View style={styles.alertError}>
-            <Ionicons name="alert-circle-outline" size={18} color="#FF5252" style={{ marginRight: 8 }} />
+            <Ionicons name="alert-circle-outline" size={18} color={colors.danger[400]} style={{ marginRight: 8 }} />
             <Text style={styles.alertText}>{errorMsg}</Text>
           </View>
         )}
 
         {successMsg && (
           <View style={styles.alertSuccess}>
-            <Ionicons name="checkmark-circle-outline" size={18} color="#00E676" style={{ marginRight: 8 }} />
+            <Ionicons name="checkmark-circle-outline" size={18} color={colors.success[400]} style={{ marginRight: 8 }} />
             <Text style={styles.successText}>{successMsg}</Text>
           </View>
         )}
@@ -116,7 +116,7 @@ export default function EmailVerificationScreen({ route, navigation }: { route: 
           <TextInput
             style={styles.otpInput}
             placeholder="• • • • • •"
-            placeholderTextColor="#4B4B60"
+            placeholderTextColor={darkColors.textTertiary}
             keyboardType="number-pad"
             maxLength={6}
             value={otp}
@@ -130,7 +130,7 @@ export default function EmailVerificationScreen({ route, navigation }: { route: 
             disabled={isLoading || otp.trim().length < 6}
           >
             {isLoading ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color={darkColors.text} />
             ) : (
               <Text style={styles.verifyBtnText}>Verify & Continue</Text>
             )}
@@ -143,7 +143,7 @@ export default function EmailVerificationScreen({ route, navigation }: { route: 
             ) : (
               <TouchableOpacity onPress={handleResend} disabled={isResending}>
                 {isResending ? (
-                  <ActivityIndicator size="small" color="#E53935" />
+                  <ActivityIndicator size="small" color={colors.danger[500]} />
                 ) : (
                   <Text style={styles.resendBtnText}>Resend Code</Text>
                 )}
@@ -153,7 +153,7 @@ export default function EmailVerificationScreen({ route, navigation }: { route: 
         </View>
 
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate('Login')}>
-          <Ionicons name="arrow-back-outline" size={16} color="#A0A0B8" style={{ marginRight: 6 }} />
+          <Ionicons name="arrow-back-outline" size={16} color={darkColors.textSecondary} style={{ marginRight: 6 }} />
           <Text style={styles.backText}>Back to Log In</Text>
         </TouchableOpacity>
       </Animated.View>
@@ -163,18 +163,18 @@ export default function EmailVerificationScreen({ route, navigation }: { route: 
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: darkColors.background },
-  gradTop: { top: 0, height: 300, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
-  gradBottom: { bottom: 0, height: 400, backgroundColor: 'rgba(41, 121, 255, 0.06)' },
+  gradTop: { top: 0, height: 300, backgroundColor: tints.dangerSubtle },
+  gradBottom: { bottom: 0, height: 400, backgroundColor: tints.infoSubtle },
   iconCircle: {
     width: 68,
     height: 68,
     borderRadius: 34,
-    backgroundColor: 'rgba(229, 57, 53, 0.12)',
+    backgroundColor: tints.dangerLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(229, 57, 53, 0.25)',
+    borderColor: tints.dangerMedium,
   },
   header: { marginBottom: 28 },
   title: { fontSize: 28, fontWeight: 'bold', color: darkColors.text },
@@ -183,21 +183,21 @@ const styles = StyleSheet.create({
   alertError: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 23, 68, 0.12)',
+    backgroundColor: tints.dangerErrorBg,
     padding: 12,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.3)',
+    borderColor: tints.dangerErrorBorder,
     marginBottom: 20,
   },
   alertSuccess: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 230, 118, 0.1)',
+    backgroundColor: tints.successSubtle,
     padding: 12,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(0, 230, 118, 0.3)',
+    borderColor: tints.successMedium,
     marginBottom: 20,
   },
   alertText: { color: colors.danger[300], fontSize: 14, flex: 1 },
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
   form: { width: '100%' },
   label: { fontSize: 14, color: darkColors.textSecondary, marginBottom: 12, fontWeight: '600' },
   otpInput: {
-    backgroundColor: 'rgba(28, 28, 46, 0.7)',
+    backgroundColor: tints.glassCardStrong,
     color: darkColors.text,
     paddingVertical: 18,
     borderRadius: 16,
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 22,
     borderWidth: 1.5,
-    borderColor: 'rgba(229, 57, 53, 0.3)',
+    borderColor: tints.dangerMedium,
     shadowColor: colors.neutral[950],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   verifyBtnDisabled: {
-    backgroundColor: 'rgba(229, 57, 53, 0.4)',
+    backgroundColor: tints.dangerMedium,
     shadowOpacity: 0,
   },
   verifyBtnText: { color: darkColors.text, fontSize: 16, fontWeight: 'bold' },

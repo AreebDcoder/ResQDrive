@@ -20,7 +20,7 @@ import WorkshopsScreen from '../../screens/WorkshopsScreen';
 import SOSScreen from '../../screens/SOSScreen';
 import DamageAssessmentScreen from '../../screens/DamageAssessmentScreen';
 import type { AppNavigation } from '../../navigation/types';
-import { colors, darkColors } from '../../theme/tokens';
+import { colors, darkColors, tints } from '../../theme/tokens';
 
 // Fallback GPS coordinates (Islamabad) — used when user denies location permission
 const FALLBACK_LAT = 33.6844;
@@ -33,7 +33,7 @@ const LiveTelemetryWidget = React.memo(function LiveTelemetryWidget({ drivingMod
   return (
     <View style={styles.dashboardCard}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-        <Ionicons name="pulse-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
+        <Ionicons name="pulse-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
         <Text style={styles.cardHeaderTitle}>Live Telemetry</Text>
       </View>
       {drivingModeEnabled ? (
@@ -307,7 +307,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
             {/* Paired Vehicle Widget */}
             <View style={styles.dashboardCard}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                <Ionicons name="car-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
+                <Ionicons name="car-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
                 <Text style={styles.cardHeaderTitle}>Paired Vehicle</Text>
               </View>
               {activeVehicle ? (
@@ -326,7 +326,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                     style={styles.actionBtnSecondary}
                     onPress={() => navigation.navigate('MyVehicles')}
                   >
-                    <Ionicons name="add" size={16} color="#FFF" style={{ marginRight: 4 }} />
+                    <Ionicons name="add" size={16} color={darkColors.text} style={{ marginRight: 4 }} />
                     <Text style={styles.actionBtnText}>Add Vehicle</Text>
                   </TouchableOpacity>
                 </View>
@@ -336,7 +336,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
             {/* Emergency Contact Quick Access Widget */}
             <View style={styles.dashboardCard}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                <Ionicons name="shield-checkmark-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
+                <Ionicons name="shield-checkmark-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
                 <Text style={styles.cardHeaderTitle}>Quick-Access Contact</Text>
               </View>
               {primaryContact ? (
@@ -348,7 +348,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                     </Text>
                   </View>
                   <TouchableOpacity style={styles.callNowBtn} onPress={handleQuickCall}>
-                    <Ionicons name="call" size={14} color="#FFF" style={{ marginRight: 4 }} />
+                    <Ionicons name="call" size={14} color={darkColors.text} style={{ marginRight: 4 }} />
                     <Text style={styles.callNowBtnText}>CALL</Text>
                   </TouchableOpacity>
                 </View>
@@ -359,7 +359,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                     style={styles.actionBtnSecondary}
                     onPress={() => navigation.navigate('EmergencyContacts')}
                   >
-                    <Ionicons name="add" size={16} color="#FFF" style={{ marginRight: 4 }} />
+                    <Ionicons name="add" size={16} color={darkColors.text} style={{ marginRight: 4 }} />
                     <Text style={styles.actionBtnText}>Add Contact</Text>
                   </TouchableOpacity>
                 </View>
@@ -404,7 +404,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
       {/* Header */}
       <View style={styles.customHeader}>
         <TouchableOpacity onPress={() => setIsDrawerOpen(true)}>
-          <Ionicons name="menu" size={28} color="#ffffff" />
+          <Ionicons name="menu" size={28} color={darkColors.text} />
         </TouchableOpacity>
         <Text style={styles.customHeaderTitle}>ResQDrive</Text>
         <TouchableOpacity 
@@ -471,7 +471,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
             <View style={drawerStyles.drawerHeader}>
               <Text style={drawerStyles.drawerTitle}>Menu Options</Text>
               <TouchableOpacity onPress={() => setIsDrawerOpen(false)}>
-                <Ionicons name="close-outline" size={24} color="#ffffff" />
+                <Ionicons name="close-outline" size={24} color={darkColors.text} />
               </TouchableOpacity>
             </View>
 
@@ -484,7 +484,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 }}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="car-outline" size={20} color="#E53935" style={{ marginRight: 12 }} />
+                  <Ionicons name="car-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
                   <Text style={styles.menuItemText}>My Vehicles</Text>
                 </View>
                 <Text style={styles.menuItemArrow}>›</Text>
@@ -498,7 +498,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 }}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="call-outline" size={20} color="#E53935" style={{ marginRight: 12 }} />
+                  <Ionicons name="call-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
                   <Text style={styles.menuItemText}>Emergency Contacts</Text>
                 </View>
                 <Text style={styles.menuItemArrow}>›</Text>
@@ -512,7 +512,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 }}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="notifications-outline" size={20} color="#E53935" style={{ marginRight: 12 }} />
+                  <Ionicons name="notifications-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
                   <Text style={styles.menuItemText}>Notification History</Text>
                 </View>
                 <Text style={styles.menuItemArrow}>›</Text>
@@ -526,7 +526,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 }}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="settings-outline" size={20} color="#E53935" style={{ marginRight: 12 }} />
+                  <Ionicons name="settings-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
                   <Text style={styles.menuItemText}>Notification Preferences</Text>
                 </View>
                 <Text style={styles.menuItemArrow}>›</Text>
@@ -540,7 +540,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 }}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="mic-outline" size={20} color="#E53935" style={{ marginRight: 12 }} />
+                  <Ionicons name="mic-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
                   <Text style={styles.menuItemText}>Crash Sound Detection</Text>
                 </View>
                 <Text style={styles.menuItemArrow}>›</Text>
@@ -554,7 +554,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 }}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="bluetooth-outline" size={20} color="#E53935" style={{ marginRight: 12 }} />
+                  <Ionicons name="bluetooth-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
                   <Text style={styles.menuItemText}>BLE Sensor Diagnostics</Text>
                 </View>
                 <Text style={styles.menuItemArrow}>›</Text>
@@ -568,7 +568,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 }}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="volume-high-outline" size={20} color="#E53935" style={{ marginRight: 12 }} />
+                  <Ionicons name="volume-high-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
                   <Text style={styles.menuItemText}>Voice Commands</Text>
                 </View>
                 <Text style={styles.menuItemArrow}>›</Text>
@@ -582,7 +582,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 }}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="person-outline" size={20} color="#E53935" style={{ marginRight: 12 }} />
+                  <Ionicons name="person-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
                   <Text style={styles.menuItemText}>My Profile Details</Text>
                 </View>
                 <Text style={styles.menuItemArrow}>›</Text>
@@ -596,7 +596,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 }}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="document-text-outline" size={20} color="#E53935" style={{ marginRight: 12 }} />
+                  <Ionicons name="document-text-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
                   <Text style={styles.menuItemText}>Incident History</Text>
                 </View>
                 <Text style={styles.menuItemArrow}>›</Text>
@@ -610,7 +610,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 }}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="location-outline" size={20} color="#E53935" style={{ marginRight: 12 }} />
+                  <Ionicons name="location-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
                   <Text style={styles.menuItemText}>Share Live Location</Text>
                 </View>
                 <Text style={styles.menuItemArrow}>›</Text>
@@ -624,7 +624,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 }}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="warning-outline" size={20} color="#E53935" style={{ marginRight: 12 }} />
+                  <Ionicons name="warning-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
                   <Text style={styles.menuItemText}>Emergency Alert</Text>
                 </View>
                 <Text style={styles.menuItemArrow}>›</Text>
@@ -638,7 +638,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 }}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                  <Ionicons name="flask-outline" size={18} color="#aaa" />
+                  <Ionicons name="flask-outline" size={18} color={darkColors.textTertiary} />
                   <Text style={styles.menuItemText}>Test Emergency Fallback</Text>
                 </View>
                 <Text style={styles.menuItemArrow}>›</Text>
@@ -652,7 +652,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 }}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                  <Ionicons name="alert-circle-outline" size={18} color="#d32f2f" />
+                  <Ionicons name="alert-circle-outline" size={18} color={colors.danger[600]} />
                   <Text style={[styles.menuItemText, { color: colors.danger[600], fontWeight: 'bold' }]}>Send Emergency Alert</Text>
                 </View>
                 <Text style={[styles.menuItemArrow, { color: colors.danger[600] }]}>›</Text>
@@ -682,10 +682,10 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 }}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                  <Ionicons name="warning-outline" size={18} color="#fff" />
-                  <Text style={[styles.menuItemText, { color: '#fff' }]}>Simulate Crash (Test Countdown)</Text>
+                  <Ionicons name="warning-outline" size={18} color={darkColors.text} />
+                  <Text style={[styles.menuItemText, { color: darkColors.text }]}>Simulate Crash (Test Countdown)</Text>
                 </View>
-                <Text style={[styles.menuItemArrow, { color: '#fff' }]}>›</Text>
+                <Text style={[styles.menuItemArrow, { color: darkColors.text }]}>›</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -699,9 +699,9 @@ const tabStyles = StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
     height: 60,
-    backgroundColor: 'rgba(28, 28, 46, 0.9)',
+    backgroundColor: tints.glassCardStrong,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+    borderTopColor: tints.whiteBorder,
     justifyContent: 'space-around',
     alignItems: 'center',
     paddingBottom: 5,
@@ -740,15 +740,15 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 16, fontWeight: 'bold', color: colors.danger[500], marginBottom: 12 },
   scrollList: { flex: 1, marginBottom: 20 },
   approvalCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 16, padding: 16, marginBottom: 14,
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: tints.glassCard, borderRadius: 16, padding: 16, marginBottom: 14,
+    borderWidth: 1, borderColor: tints.whiteBorder,
     shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
   },
   cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   mechanicName: { fontSize: 16, fontWeight: 'bold', color: darkColors.text },
   specializationBadge: {
-    backgroundColor: 'rgba(229, 57, 53, 0.12)', color: colors.danger[300], fontSize: 11, fontWeight: 'bold',
-    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(229, 57, 53, 0.3)',
+    backgroundColor: tints.dangerLight, color: colors.danger[300], fontSize: 11, fontWeight: 'bold',
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: tints.dangerMedium,
   },
   cardInfo: { fontSize: 13, color: darkColors.textSecondary, marginBottom: 4 },
   approveBtn: {
@@ -765,8 +765,8 @@ const styles = StyleSheet.create({
   },
   navBtnText: { color: darkColors.text, fontSize: 16, fontWeight: 'bold' },
   dashboardCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 20, padding: 16, marginBottom: 16,
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: tints.glassCard, borderRadius: 20, padding: 16, marginBottom: 16,
+    borderWidth: 1, borderColor: tints.whiteBorder,
     shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 6,
   },
   telemetryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
@@ -777,14 +777,14 @@ const styles = StyleSheet.create({
   vehicleDetailsBlock: { flexDirection: 'column', alignItems: 'flex-start' },
   activeVehicleName: { fontSize: 18, fontWeight: 'bold', color: darkColors.text, marginBottom: 8 },
   activePlateBadge: {
-    backgroundColor: 'rgba(10, 10, 15, 0.6)', borderWidth: 1, borderColor: 'rgba(229, 57, 53, 0.4)',
+    backgroundColor: tints.overlayStrong, borderWidth: 1, borderColor: tints.dangerMedium,
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8,
   },
   activePlateText: { color: darkColors.text, fontSize: 14, fontWeight: 'bold', letterSpacing: 1 },
   noVehicleText: { color: darkColors.textSecondary, fontSize: 14, marginBottom: 12 },
   actionBtnSecondary: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: tints.glassCard, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
+    borderWidth: 1, borderColor: tints.whiteBorder,
   },
   actionBtnText: { color: darkColors.text, fontSize: 12, fontWeight: 'bold' },
   contactDetailsBlock: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -797,9 +797,9 @@ const styles = StyleSheet.create({
   callNowBtnText: { color: darkColors.text, fontSize: 14, fontWeight: 'bold' },
   menuTitle: { fontSize: 16, fontWeight: 'bold', color: darkColors.textTertiary, marginTop: 10, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
   menuItem: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    backgroundColor: tints.glassCard, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: 16, paddingHorizontal: 20, borderRadius: 14, marginBottom: 12,
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderWidth: 1, borderColor: tints.whiteBorder,
     shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3,
   },
   menuItemText: { color: darkColors.text, fontSize: 16, fontWeight: '500' },
@@ -811,9 +811,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 12 : 44,
     height: Platform.OS === 'android' ? 56 + (StatusBar.currentHeight || 0) + 12 : 56 + 44,
-    backgroundColor: 'rgba(28, 28, 46, 0.9)',
+    backgroundColor: tints.glassCardStrong,
     alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16,
-    borderBottomWidth: 1, borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    borderBottomWidth: 1, borderBottomColor: tints.whiteBorder,
     shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 6,
   },
   drivingModeCircle: {
@@ -824,7 +824,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.danger[500], borderColor: colors.danger[500],
     shadowColor: colors.danger[500], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.6, shadowRadius: 16, elevation: 8,
   },
-  circleInactive: { backgroundColor: 'rgba(229, 57, 53, 0.08)', borderColor: 'rgba(229, 57, 53, 0.4)' },
+  circleInactive: { backgroundColor: tints.dangerSubtle, borderColor: tints.dangerMedium },
   circleStateText: { fontSize: 28, fontWeight: 'bold' },
   drivingModeStatusText: { fontSize: 20, fontWeight: 'bold', color: darkColors.text, marginTop: 8, textAlign: 'center' },
   drivingModeActionText: { fontSize: 14, color: darkColors.textSecondary, marginTop: 4, textAlign: 'center' },
@@ -837,18 +837,18 @@ const styles = StyleSheet.create({
 
 const drawerStyles = StyleSheet.create({
     overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, flexDirection: 'row' },
-    backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.7)' },
+    backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: tints.overlayStrong },
     drawerContainer: {
       width: 290, height: '100%',
-      backgroundColor: 'rgba(28, 28, 46, 0.95)',
-      borderRightWidth: 1, borderRightColor: 'rgba(255, 255, 255, 0.06)',
+      backgroundColor: tints.glassCardStrong,
+      borderRightWidth: 1, borderRightColor: tints.whiteBorder,
       paddingTop: 40, paddingHorizontal: 16,
       shadowColor: colors.neutral[950], shadowOffset: { width: 4, height: 0 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 10,
     },
     drawerHeader: {
       flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
       marginBottom: 24, paddingBottom: 12,
-      borderBottomWidth: 1, borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+      borderBottomWidth: 1, borderBottomColor: tints.whiteBorder,
     },
     drawerTitle: { fontSize: 18, fontWeight: 'bold', color: darkColors.text },
     drawerScroll: { flex: 1 },

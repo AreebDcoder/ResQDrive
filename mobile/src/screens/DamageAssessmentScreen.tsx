@@ -22,7 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import api, { API_URL } from '../api/axios';
 import { useToast } from '../components/ui/Toast';
-import { colors, darkColors } from '../theme/tokens';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 interface VehicleItem {
   id: string;
@@ -329,7 +329,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
           style={styles.deleteCardBtn}
           onPress={() => handleDeleteAssessment(item.id)}
         >
-          <Ionicons name="trash-outline" size={20} color="#FF5252" />
+          <Ionicons name="trash-outline" size={20} color={colors.danger[400]} />
         </TouchableOpacity>
       </View>
     );
@@ -355,7 +355,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
           }}
         >
           <View style={styles.costHistoryThumbContainer}>
-            <Ionicons name="receipt-outline" size={24} color="#E53935" />
+            <Ionicons name="receipt-outline" size={24} color={colors.danger[500]} />
           </View>
           <View style={styles.historyCardInfo}>
             <View style={styles.historyCardHeader}>
@@ -372,7 +372,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
           style={styles.deleteCardBtn}
           onPress={() => handleDeleteCostReport(item.id)}
         >
-          <Ionicons name="trash-outline" size={20} color="#FF5252" />
+          <Ionicons name="trash-outline" size={20} color={colors.danger[400]} />
         </TouchableOpacity>
       </View>
     );
@@ -385,7 +385,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
       return (
         <ScrollView style={styles.tabContent} contentContainerStyle={{ paddingBottom: 40 }}>
           <View style={styles.carRejectionCard}>
-            <Ionicons name="car-outline" size={48} color="#FF5252" style={{ marginBottom: 12, alignSelf: 'center' }} />
+            <Ionicons name="car-outline" size={48} color={colors.danger[400]} style={{ marginBottom: 12, alignSelf: 'center' }} />
             <Text style={styles.carRejectionTitle}>Vehicle Verification Failed</Text>
             <Text style={styles.carRejectionMessage}>{errorMsg}</Text>
 
@@ -398,7 +398,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
                 setImageFile(null);
               }}
             >
-              <Ionicons name="camera-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
+              <Ionicons name="camera-outline" size={20} color={darkColors.text} style={{ marginRight: 8 }} />
               <Text style={styles.actionBtnText}>Retake Photo</Text>
             </TouchableOpacity>
           </View>
@@ -415,14 +415,14 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
         <ScrollView style={styles.tabContent} contentContainerStyle={{ paddingBottom: 40 }}>
           <View style={styles.card}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-              <Ionicons name="analytics-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
+              <Ionicons name="analytics-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
               <Text style={styles.cardHeaderTitle}>ASSESSMENT RESULTS</Text>
             </View>
 
             {/* Low-Confidence Warning Banner */}
             {isLowConfidence && (
               <View style={styles.lowConfidenceBanner}>
-                <Ionicons name="warning" size={22} color="#FFD600" style={{ marginRight: 10 }} />
+                <Ionicons name="warning" size={22} color={colors.warning[300]} style={{ marginRight: 10 }} />
                 <Text style={styles.lowConfidenceText}>
                   Low confidence result — consider retaking the photo with better lighting or a closer, clearer angle of the damage.
                 </Text>
@@ -468,7 +468,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
                   setIsCarRejection(false);
                 }}
               >
-                <Ionicons name="add-circle-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
+                <Ionicons name="add-circle-outline" size={20} color={darkColors.text} style={{ marginRight: 8 }} />
                 <Text style={styles.actionBtnText}>Add Another Damaged Area</Text>
               </TouchableOpacity>
 
@@ -482,7 +482,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
                   });
                 }}
               >
-                <Ionicons name="cash-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
+                <Ionicons name="cash-outline" size={20} color={darkColors.text} style={{ marginRight: 8 }} />
                 <Text style={styles.actionBtnText}>Finish & View Repair Cost</Text>
               </TouchableOpacity>
             </View>
@@ -497,7 +497,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
         {/* ── Photo Selection Card ── */}
         <View style={styles.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-            <Ionicons name="camera-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
+            <Ionicons name="camera-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
             <Text style={styles.cardHeaderTitle}>Upload Damage Image</Text>
           </View>
           <Text style={styles.cardDescription}>
@@ -531,7 +531,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
             <Image source={{ uri: selectedImage }} style={styles.previewImage} />
           ) : (
             <View style={styles.placeholderContainer}>
-              <Ionicons name="image-outline" size={42} color="#6B6B80" style={{ marginBottom: 8 }} />
+              <Ionicons name="image-outline" size={42} color={darkColors.textTertiary} style={{ marginBottom: 8 }} />
               <Text style={styles.placeholderText}>No image selected</Text>
             </View>
           )}
@@ -561,19 +561,19 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
 
           <View style={styles.pickerRow}>
             <TouchableOpacity style={styles.pickerBtn} onPress={() => handlePickImage(true)}>
-              <Ionicons name="camera-outline" size={20} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Ionicons name="camera-outline" size={20} color={darkColors.text} style={{ marginRight: 6 }} />
               <Text style={styles.pickerBtnText}>Camera</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.pickerBtn} onPress={() => handlePickImage(false)}>
-              <Ionicons name="images-outline" size={20} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Ionicons name="images-outline" size={20} color={darkColors.text} style={{ marginRight: 6 }} />
               <Text style={styles.pickerBtnText}>Gallery</Text>
             </TouchableOpacity>
           </View>
 
           {/* User Photo Capture Guidance Tip */}
           <View style={styles.photoTipCard}>
-            <Ionicons name="information-circle-outline" size={18} color="#FF9100" style={{ marginRight: 8, marginTop: 2 }} />
+            <Ionicons name="information-circle-outline" size={18} color={colors.warning[500]} style={{ marginRight: 8, marginTop: 2 }} />
             <Text style={styles.photoTipText}>
               <Text style={{ fontWeight: '700' }}>Tip:</Text> Include some recognizable part of the car (wheel, mirror, body shape) in frame, not just an extreme close-up of the damage.
             </Text>
@@ -583,12 +583,12 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
             <TouchableOpacity
               style={[
                 styles.actionBtnPrimary,
-                !selectedPartTag && { opacity: 0.45, backgroundColor: 'rgba(229, 57, 53, 0.4)' },
+                !selectedPartTag && { opacity: 0.45, backgroundColor: tints.dangerMedium },
               ]}
               onPress={handleAnalyze}
               disabled={!selectedPartTag || isAnalyzing}
             >
-              <Ionicons name="hardware-chip-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
+              <Ionicons name="hardware-chip-outline" size={20} color={darkColors.text} style={{ marginRight: 8 }} />
               <Text style={styles.actionBtnText}>
                 {!selectedPartTag ? 'Select Damaged Part Above First' : 'Analyze Damage'}
               </Text>
@@ -641,7 +641,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
       {/* ── Error Banner ── */}
       {errorMsg && (
         <View style={styles.errorBanner}>
-          <Ionicons name="alert-circle-outline" size={18} color="#FF5252" style={{ marginRight: 8 }} />
+          <Ionicons name="alert-circle-outline" size={18} color={colors.danger[400]} style={{ marginRight: 8 }} />
           <Text style={styles.errorText} numberOfLines={3}>{errorMsg}</Text>
         </View>
       )}
@@ -649,7 +649,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
       {/* ── Loading Overlay ── */}
       {isAnalyzing && (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#E53935" />
+          <ActivityIndicator size="large" color={colors.danger[500]} />
           <Text style={styles.loadingText}>{analysisStage}</Text>
         </View>
       )}
@@ -673,13 +673,13 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
           onEndReachedThreshold={0.3}
           ListFooterComponent={
             historyLoading ? (
-              <ActivityIndicator size="small" color="#E53935" style={{ marginVertical: 16 }} />
+              <ActivityIndicator size="small" color={colors.danger[500]} style={{ marginVertical: 16 }} />
             ) : null
           }
           ListEmptyComponent={
             !historyLoading ? (
               <View style={styles.emptyContainer}>
-                <Ionicons name="folder-open-outline" size={44} color="#6B6B80" style={{ marginBottom: 12 }} />
+                <Ionicons name="folder-open-outline" size={44} color={darkColors.textTertiary} style={{ marginBottom: 12 }} />
                 <Text style={styles.emptyText}>No damage logs recorded yet.</Text>
               </View>
             ) : null
@@ -698,7 +698,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
           ListEmptyComponent={
             !costHistoryLoading ? (
               <View style={styles.emptyContainer}>
-                <Ionicons name="receipt-outline" size={44} color="#6B6B80" style={{ marginBottom: 12 }} />
+                <Ionicons name="receipt-outline" size={44} color={darkColors.textTertiary} style={{ marginBottom: 12 }} />
                 <Text style={styles.emptyText}>No repair cost reports saved yet.</Text>
               </View>
             ) : null
@@ -713,13 +713,13 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: darkColors.background },
   segmentedHeader: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(28, 28, 46, 0.4)',
+    backgroundColor: tints.glassCard,
     marginHorizontal: 16,
     marginTop: 12,
     borderRadius: 12,
     padding: 4,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
   segmentBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
   segmentBtnActive: {
@@ -734,12 +734,12 @@ const styles = StyleSheet.create({
   segmentBtnTextActive: { color: darkColors.text },
   tabContent: { flex: 1, paddingTop: 16, paddingHorizontal: 16 },
   card: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000',
+    borderColor: tints.whiteBorder,
+    shadowColor: darkColors.background,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2,
     shadowRadius: 12,
@@ -750,29 +750,29 @@ const styles = StyleSheet.create({
   cardDescription: { fontSize: 13, color: darkColors.textSecondary, lineHeight: 18, marginBottom: 16 },
   placeholderContainer: {
     height: 180,
-    backgroundColor: 'rgba(10, 10, 15, 0.5)',
+    backgroundColor: tints.overlayLight,
     borderRadius: 12,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: tints.whiteBorderStrong,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
   },
   placeholderEmoji: { fontSize: 40, marginBottom: 8 },
   placeholderText: { color: darkColors.textTertiary, fontSize: 14 },
-  previewImage: { width: '100%', height: 200, borderRadius: 12, marginBottom: 16, backgroundColor: 'rgba(10, 10, 15, 0.5)' },
+  previewImage: { width: '100%', height: 200, borderRadius: 12, marginBottom: 16, backgroundColor: tints.overlayLight },
   pickerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
   pickerBtn: {
     flex: 0.48,
     flexDirection: 'row',
     height: 48,
-    backgroundColor: 'rgba(41, 121, 255, 0.1)',
+    backgroundColor: tints.infoSubtle,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(41, 121, 255, 0.25)',
+    borderColor: tints.infoMedium,
   },
   pickerBtnText: { color: darkColors.text, marginLeft: 8, fontSize: 14, fontWeight: '700' },
   actionBtnPrimary: {
@@ -789,9 +789,9 @@ const styles = StyleSheet.create({
   },
   actionBtnSecondary: {
     height: 48,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: tints.whiteSubtle,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -801,24 +801,24 @@ const styles = StyleSheet.create({
   dropdownLabel: { color: darkColors.textSecondary, fontSize: 12, marginBottom: 8, fontWeight: '600' },
   vehicleScroll: { flexDirection: 'row' },
   vehicleChip: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: tints.whiteSubtle,
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 16,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
   vehicleChipActive: { backgroundColor: colors.danger[500], borderColor: colors.danger[500] },
   vehicleChipText: { color: darkColors.textTertiary, fontSize: 13 },
   vehicleChipTextActive: { color: darkColors.text, fontWeight: '600' },
   resultImage: { width: '100%', height: 220, borderRadius: 12, marginBottom: 16 },
   resultsContainer: {
-    backgroundColor: 'rgba(10, 10, 15, 0.5)',
+    backgroundColor: tints.overlayLight,
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     marginBottom: 16,
   },
   resultField: {
@@ -827,7 +827,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.04)',
+    borderBottomColor: tints.whiteSubtle,
   },
   resultLabel: { color: darkColors.textSecondary, fontSize: 14 },
   resultValue: { color: darkColors.text, fontSize: 15, fontWeight: '700' },
@@ -844,19 +844,19 @@ const styles = StyleSheet.create({
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 23, 68, 0.12)',
+    backgroundColor: tints.dangerErrorBg,
     marginHorizontal: 16,
     marginTop: 12,
     padding: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.3)',
+    borderColor: tints.dangerErrorBorder,
   },
   errorEmoji: { fontSize: 16, marginRight: 8 },
   errorText: { color: colors.danger[300], fontSize: 13, flex: 1 },
   loadingContainer: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(10, 10, 15, 0.92)',
+    backgroundColor: tints.overlayStrong,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
@@ -865,14 +865,14 @@ const styles = StyleSheet.create({
   historyListContent: { padding: 16 },
   historyCard: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 14,
     padding: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
-  historyThumb: { width: 80, height: 80, borderRadius: 10, backgroundColor: 'rgba(10, 10, 15, 0.5)' },
+  historyThumb: { width: 80, height: 80, borderRadius: 10, backgroundColor: tints.overlayLight },
   historyCardInfo: { flex: 1, marginLeft: 12, justifyContent: 'center' },
   historyCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   historyTypeTitle: { color: darkColors.text, fontSize: 14, fontWeight: '700' },
@@ -887,7 +887,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 10,
-    backgroundColor: 'rgba(229, 57, 53, 0.1)',
+    backgroundColor: tints.dangerLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -895,11 +895,11 @@ const styles = StyleSheet.create({
   lowConfidenceBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 214, 0, 0.12)',
+    backgroundColor: tints.warningSubtle,
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 214, 0, 0.4)',
+    borderColor: tints.warningMedium,
     marginBottom: 16,
   },
   lowConfidenceText: {
@@ -910,12 +910,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   carRejectionCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 20,
     padding: 24,
     marginVertical: 16,
     borderWidth: 2,
-    borderColor: 'rgba(255, 23, 68, 0.4)',
+    borderColor: tints.dangerErrorBorder,
     alignItems: 'center',
   },
   carRejectionIcon: {
@@ -936,12 +936,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   photoTipCard: {
-    backgroundColor: 'rgba(41, 121, 255, 0.1)',
+    backgroundColor: tints.infoSubtle,
     borderRadius: 12,
     padding: 12,
     marginVertical: 10,
     borderWidth: 1,
-    borderColor: 'rgba(41, 121, 255, 0.25)',
+    borderColor: tints.infoMedium,
   },
   photoTipText: {
     color: colors.info[300],
