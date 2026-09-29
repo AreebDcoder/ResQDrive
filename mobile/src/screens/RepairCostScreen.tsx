@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import api, { API_URL } from '../api/axios';
 import { documentDirectory, writeAsStringAsync } from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import { useToast } from '../components/ui/Toast';
 
 
 
@@ -53,6 +54,7 @@ interface CostReport {
 }
 
 export default function RepairCostScreen({ route, navigation }: any) {
+  const toast = useToast();
   const incidentId = route?.params?.incidentId;
   const reportId = route?.params?.reportId;
   const assessmentIds = route?.params?.assessmentIds;

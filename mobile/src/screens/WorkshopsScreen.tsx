@@ -18,6 +18,7 @@ import {
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../api/axios';
+import { useToast } from '../components/ui/Toast';
 
 interface Workshop {
   name: string;
@@ -35,6 +36,7 @@ interface Workshop {
 let memoryWorkshopsCache: Workshop[] = [];
 
 export default function WorkshopsScreen({ navigation, isInline }: { navigation: any; isInline?: boolean }) {
+  const toast = useToast();
   const [workshops, setWorkshops] = useState<Workshop[]>(memoryWorkshopsCache);
   const [isLoading, setIsLoading] = useState(memoryWorkshopsCache.length === 0);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -133,7 +135,7 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
 
   const callWorkshop = (phoneNumber: string) => {
     if (!phoneNumber || phoneNumber.includes('Navigation') || phoneNumber.includes('N/A')) {
-      alert('Direct phone number is not listed for this public garage. Please tap Navigate for directions.');
+      toast.error('Direct phone number is not listed for this public garage. Please tap Navigate for directions.');
       return;
     }
     Linking.openURL(`tel:${phoneNumber}`);

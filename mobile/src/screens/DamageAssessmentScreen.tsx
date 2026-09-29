@@ -21,6 +21,7 @@ import { RootState } from '../store/store';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import api, { API_URL } from '../api/axios';
+import { useToast } from '../components/ui/Toast';
 
 interface VehicleItem {
   id: string;
@@ -58,6 +59,7 @@ const PART_TAGS = [
 ];
 
 function DamageAssessmentScreen({ route, navigation, isInline }: any) {
+  const toast = useToast();
   const incidentId = route?.params?.incidentId;
   const vehicles = useSelector((state: RootState) => state.vehicles.list) as VehicleItem[];
 

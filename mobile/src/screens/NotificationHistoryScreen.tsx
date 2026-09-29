@@ -24,8 +24,10 @@ import {
 } from '../store/slices/notificationsSlice';
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
+import { useToast } from '../components/ui/Toast';
 
 export default function NotificationHistoryScreen() {
+  const toast = useToast();
   const dispatch = useDispatch();
 const { history = [], pagination, isHistoryLoading, error } = useSelector(
     (state: RootState) => state.notifications
@@ -79,7 +81,7 @@ const { history = [], pagination, isHistoryLoading, error } = useSelector(
       await api.patch('/notifications/read-all');
       dispatch(markAllReadSuccess());
     } catch (err) {
-      alert('Failed to mark all as read.');
+      toast.error('Failed to mark all as read.');
     }
   };
 

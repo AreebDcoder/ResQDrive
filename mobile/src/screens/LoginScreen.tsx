@@ -25,8 +25,10 @@ import { loginSuccess } from '../store/slices/authSlice';
 import api from '../api/axios';
 import { setItemAsync } from '../utils/secureStorage';
 import { Ionicons } from '@expo/vector-icons';
+import { useToast } from '../components/ui/Toast';
 
 export default function LoginScreen({ navigation }: { navigation: any }) {
+  const toast = useToast();
   const dispatch = useDispatch();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);

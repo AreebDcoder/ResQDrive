@@ -19,6 +19,7 @@ import {
   createIncidentSchema, CreateIncidentInput, SEVERITY_OPTIONS, STATUS_OPTIONS,
 } from '../schemas/incidentValidation';
 import { Ionicons } from '@expo/vector-icons';
+import { useToast } from '../components/ui/Toast';
 
 const SEVERITY_COLORS: Record<string, string> = {
   NONE: '#6B6B80', MINOR: '#FFD600', MODERATE: '#FF9100', SEVERE: '#FF1744',
@@ -30,6 +31,7 @@ const STATUS_COLORS: Record<string, string> = {
 const nowISO = () => new Date().toISOString().slice(0, 16);
 
 export default function CreateIncidentScreen({ route, navigation }: { route: any; navigation: any }) {
+  const toast = useToast();
   const { mode, id } = route.params;
   const isEdit = mode === 'edit';
   const dispatch = useDispatch<any>();

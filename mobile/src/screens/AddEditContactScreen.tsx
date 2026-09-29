@@ -23,6 +23,7 @@ import { contactSchema, ContactInput } from '../schemas/validation';
 import { addContactSuccess, updateContactSuccess, deleteContactSuccess } from '../store/slices/contactsSlice';
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
+import { useToast } from '../components/ui/Toast';
 
 const RELATIONSHIPS = ['Spouse', 'Parent', 'Sibling', 'Friend', 'Other'];
 
@@ -35,6 +36,7 @@ const RELATIONSHIP_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
 };
 
 export default function AddEditContactScreen({ route, navigation }: any) {
+  const toast = useToast();
   const dispatch = useDispatch();
   const contact = route.params?.contact; // If defined, we are editing
   const isEditing = !!contact;

@@ -14,12 +14,14 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import api from '../api/axios';
 import { connectSocket, disconnectSocket, emitLocationUpdate } from '../services/socketService';
+import { useToast } from '../components/ui/Toast';
 
 const FAST_INTERVAL_MS = 5000;
 const SLOW_INTERVAL_MS = 30000;
 const BACKOFF_AFTER_MS = 10 * 60 * 1000;
 
 export default function LocationSharingScreen({ navigation }: { navigation: any }) {
+  const toast = useToast();
   const { user } = useSelector((state: RootState) => state.auth);
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<any>(null);

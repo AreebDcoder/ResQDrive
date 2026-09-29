@@ -26,8 +26,10 @@ import {
 } from '../store/slices/contactsSlice';
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
+import { useToast } from '../components/ui/Toast';
 
 export default function EmergencyContactsScreen({ navigation }: any) {
+  const toast = useToast();
   const dispatch = useDispatch();
   const { list: contacts, isLoading, error } = useSelector(
     (state: RootState) => state.contacts
@@ -90,7 +92,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
 
       dispatch(reorderContactsSuccess(response.data));
     } catch (err) {
-      alert('Failed to reorder contacts.');
+      toast.error('Failed to reorder contacts.');
     } finally {
       setIsUpdating(false);
     }

@@ -17,6 +17,7 @@ import {
 } from '../store/slices/notificationsSlice';
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
+import { useToast } from '../components/ui/Toast';
 
 const CATEGORIES: Array<{
   key: string;
@@ -51,6 +52,7 @@ const CATEGORIES: Array<{
 ];
 
 export default function NotificationPreferencesScreen() {
+  const toast = useToast();
   const dispatch = useDispatch();
   const { preferences, isLoading, error } = useSelector((state: RootState) => state.notifications);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -82,7 +84,7 @@ export default function NotificationPreferencesScreen() {
       // 2. Persist update on backend
       await api.patch('/notifications/preferences', { [key]: newValue });
     } catch (err) {
-      alert('Failed to update preference. Reverting...');
+      toast.error('Failed to update preference. Reverting...');
       // 3. Revert on failure
       dispatch(updatePreferenceOptimistic({ [key]: currentValue }));
     } finally {

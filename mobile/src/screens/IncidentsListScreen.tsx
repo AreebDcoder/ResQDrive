@@ -10,6 +10,7 @@ import {
 } from '../store/slices/incidentsSlice';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../api/axios';
+import { useToast } from '../components/ui/Toast';
 
 const SEVERITY_COLORS: Record<string, string> = {
   NONE: '#6B6B80', MINOR: '#FFD600', MODERATE: '#FF9100', SEVERE: '#FF1744',
@@ -20,6 +21,7 @@ const STATUS_COLORS: Record<string, string> = {
 const SEVERITY_FILTERS = ['ALL', 'MINOR', 'MODERATE', 'SEVERE'];
 
 export default function IncidentsListScreen({ navigation }: { navigation: any }) {
+  const toast = useToast();
   const dispatch = useDispatch<any>();
   const { list, isLoading, isRefreshing, error, meta, filters } = useSelector(
     (state: RootState) => state.incidents

@@ -22,6 +22,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { fetchContactsSuccess } from '../store/slices/contactsSlice';
 import { makeDirectPhoneCall, isAutoDialable } from '../utils/directCall';
 import { getSafeDeviceLocation } from '../utils/location';
+import { useToast } from '../components/ui/Toast';
 
 interface EmergencyNumberItem {
   id: string;
@@ -48,6 +49,7 @@ const DEFAULT_RESCUE_NUMBERS: EmergencyNumberItem[] = [
 ];
 
 export default function SOSScreen({ route, navigation, isInline }: any) {
+  const toast = useToast();
   const dispatch = useDispatch();
   // Extract params from countdown trigger if navigated dynamically
   const severity = route?.params?.severity || 'moderate';

@@ -7,6 +7,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import { fetchIncident, deleteIncident } from '../store/slices/incidentsSlice';
 import { Ionicons } from '@expo/vector-icons';
+import { useToast } from '../components/ui/Toast';
 
 const SEVERITY_COLORS: Record<string, string> = {
   NONE: '#6B6B80', MINOR: '#FFD600', MODERATE: '#FF9100', SEVERE: '#FF1744',
@@ -16,6 +17,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function IncidentDetailScreen({ route, navigation }: { route: any; navigation: any }) {
+  const toast = useToast();
   const { id } = route.params;
   const dispatch = useDispatch<any>();
   const { current, isLoading, isSubmitting } = useSelector((state: RootState) => state.incidents);

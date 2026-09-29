@@ -18,8 +18,10 @@ import { insuranceSchema, InsuranceInput } from '../schemas/validation';
 import { upsertInsuranceSuccess, deleteInsuranceSuccess } from '../store/slices/vehiclesSlice';
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
+import { useToast } from '../components/ui/Toast';
 
 export default function VehicleInsuranceScreen({ route, navigation }: any) {
+  const toast = useToast();
   const dispatch = useDispatch();
   const { vehicleId, insurance } = route.params;
   const isEditing = !!insurance;

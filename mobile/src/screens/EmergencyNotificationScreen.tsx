@@ -12,6 +12,7 @@ import {
 } from '../store/slices/emergencySlice';
 import { connectSocket, disconnectSocket, emitLocationUpdate } from '../services/socketService';
 import { Ionicons } from '@expo/vector-icons';
+import { useToast } from '../components/ui/Toast';
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -31,6 +32,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function EmergencyNotificationScreen({ navigation }: { navigation: any }) {
+  const toast = useToast();
   const dispatch = useDispatch<any>();
   const emergency = useSelector((state: RootState) => state.emergency);
   const [pollTimer, setPollTimer] = useState<ReturnType<typeof setInterval> | null>(null);

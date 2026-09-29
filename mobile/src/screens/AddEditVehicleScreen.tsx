@@ -18,8 +18,10 @@ import { vehicleSchema, VehicleInput } from '../schemas/validation';
 import { addVehicleSuccess, updateVehicleSuccess, deleteVehicleSuccess } from '../store/slices/vehiclesSlice';
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
+import { useToast } from '../components/ui/Toast';
 
 export default function AddEditVehicleScreen({ route, navigation }: any) {
+  const toast = useToast();
   const dispatch = useDispatch();
   const vehicle = route.params?.vehicle; // If defined, we are editing
   const isEditing = !!vehicle;

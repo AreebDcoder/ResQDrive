@@ -14,8 +14,10 @@ import * as Location from 'expo-location';
 import api from '../api/axios';
 import { VoiceCommandService } from '../services/voiceCommandService';
 import { TtsService } from '../services/ttsService';
+import { useToast } from '../components/ui/Toast';
 
 export default function VoiceCommandDemoScreen() {
+  const toast = useToast();
   const [status, setStatus] = useState('Idle');
   const [engine, setEngine] = useState('Mock Simulator');
   const [transcript, setTranscript] = useState('');
