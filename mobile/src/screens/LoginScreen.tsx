@@ -12,12 +12,10 @@ import {
   StatusBar,
   StyleSheet,
   Text,
-  TextInput,
-  TouchableOpacity,
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useDispatch } from 'react-redux';
 import { loginSchema, LoginInput } from '../schemas/validation';
@@ -26,6 +24,7 @@ import api from '../api/axios';
 import { setItemAsync } from '../utils/secureStorage';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '../components/ui/Toast';
+import { Button, FormInput } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function LoginScreen({ navigation }: { navigation: any }) {
@@ -34,8 +33,6 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   // Entrance animations
   const cardY = useRef(new Animated.Value(24)).current;
@@ -225,99 +222,45 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
                 </View>
               )}
 
-              <Text style={styles.label}>Email or Phone Number</Text>
-              <Controller
-                control={control}
+              <FormInput
                 name="emailOrPhone"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <View
-                    style={[
-                      styles.inputWrapper,
-                      focusedField === 'email' && styles.inputFocused,
-                      errors.emailOrPhone && styles.inputError,
-                    ]}
-                  >
-                    <Ionicons name="mail-outline" size={18} color={darkColors.textTertiary} style={{ marginRight: 10 }} />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Enter email or phone number"
-                      placeholderTextColor={darkColors.textTertiary}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      onBlur={() => { onBlur(); setFocusedField(null); }}
-                      onChangeText={onChange}
-                      onFocus={() => setFocusedField('email')}
-                      value={value}
-                    />
-                  </View>
-                )}
-              />
-              {errors.emailOrPhone && (
-                <Text style={styles.errorHelper}>{errors.emailOrPhone.message}</Text>
-              )}
-
-              <Text style={styles.label}>Password</Text>
-              <Controller
                 control={control}
-                name="password"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <View
-                    style={[
-                      styles.inputWrapper,
-                      focusedField === 'password' && styles.inputFocused,
-                      errors.password && styles.inputError,
-                    ]}
-                  >
-                    <Ionicons name="lock-closed-outline" size={18} color={darkColors.textTertiary} style={{ marginRight: 10 }} />
-                    <TextInput
-                      style={[styles.input, { flex: 1 }]}
-                      placeholder="Enter your password"
-                      placeholderTextColor={darkColors.textTertiary}
-                      secureTextEntry={!showPassword}
-                      autoCapitalize="none"
-                      onBlur={() => { onBlur(); setFocusedField(null); }}
-                      onChangeText={onChange}
-                      onFocus={() => setFocusedField('password')}
-                      value={value}
-                    />
-                    <TouchableOpacity
-                      style={styles.eyeBtn}
-                      onPress={() => setShowPassword(!showPassword)} accessibilityRole="button"
-                    >
-                      <Ionicons
-                        name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                        size={20}
-                        color={darkColors.textTertiary}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                )}
+                label="Email or Phone Number"
+                placeholder="Enter email or phone number"
+                leftIcon="mail-outline"
+                keyboardType="email-address"
+                autoCapitalize="none"
               />
-              {errors.password && (
-                <Text style={styles.errorHelper}>{errors.password.message}</Text>
-              )}
 
-              <TouchableOpacity
-                style={styles.forgotBtn}
-                onPress={() => navigation.navigate('ForgotPassword')} accessibilityRole="button"
-              >
-                <Text style={styles.forgotText}>Forgot Password? →</Text>
-              </TouchableOpacity>
+              <FormInput
+                name="password"
+                control={control}
+                label="Password"
+                placeholder="Enter your password"
+                leftIcon="lock-closed-outline"
+                secureTextEntry
+                autoCapitalize="none"
+              />
 
-              {/* CTA Button with layered gradient effect */}
-              <TouchableOpacity
-                style={[styles.loginBtn, isLoading && styles.loginBtnDisabled]}
+              <View style={styles.forgotBtnRow}>
+                <Button
+                  label="Forgot Password?"
+                  variant="ghost"
+                  size="sm"
+                  onPress={() => navigation.navigate('ForgotPassword')}
+                />
+              </View>
+
+              {/* CTA Button — using ui/Button primitive */}
+              <Button
+                label="Log In"
+                variant="danger"
+                size="lg"
                 onPress={handleSubmit(onSubmit)}
-                disabled={isLoading}
-                activeOpacity={0.85} accessibilityRole="button"
-              >
-                <View style={styles.loginBtnGradient} />
-                {isLoading ? (
-                  <ActivityIndicator color={darkColors.text} />
-                ) : (
-                  <Text style={styles.loginBtnText}>Log In</Text>
-                )}
-              </TouchableOpacity>
+                loading={isLoading}
+                fullWidth
+                accessibilityHint="Submit login form"
+              />
             </Animated.View>
 
             {/* Divider */}
@@ -327,31 +270,29 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
               <View style={styles.dividerLine} />
             </View>
 
-            {/* Social buttons */}
+            {/* Social buttons — Google Sign-In via ui/Button primitive */}
             <View style={styles.socialRow}>
-              <TouchableOpacity
-                style={[styles.socialBtn, isGoogleLoading && styles.socialBtnDisabled]}
+              <Button
+                label={isGoogleLoading ? 'Signing in...' : 'Continue with Google'}
+                variant="secondary"
+                size="md"
                 onPress={onGoogleSignIn}
-                disabled={isGoogleLoading}
-                activeOpacity={0.7} accessibilityRole="button"
-              >
-                {isGoogleLoading ? (
-                  <ActivityIndicator size="small" color={darkColors.text} />
-                ) : (
-                  <Text style={styles.socialIcon}>G</Text>
-                )}
-                <Text style={styles.socialLabel}>
-                  {isGoogleLoading ? 'Signing in...' : 'Google'}
-                </Text>
-              </TouchableOpacity>
+                loading={isGoogleLoading}
+                fullWidth
+                icon="logo-google"
+                accessibilityHint="Sign in with Google account"
+              />
             </View>
 
             {/* Footer */}
             <View style={styles.footer}>
               <Text style={styles.footerText}>Don't have an account? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Register')} accessibilityRole="button">
-                <Text style={styles.signupText}>Sign Up</Text>
-              </TouchableOpacity>
+              <Button
+                label="Sign Up"
+                variant="ghost"
+                size="sm"
+                onPress={() => navigation.navigate('Register')}
+              />
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -510,9 +451,10 @@ const styles = StyleSheet.create({
   eyeBtnText: {
     fontSize: 18,
   },
-  forgotBtn: {
+  forgotBtnRow: {
     alignSelf: 'flex-end',
     marginBottom: 20,
+    marginTop: -4,
   },
   forgotText: {
     color: colors.info[500],

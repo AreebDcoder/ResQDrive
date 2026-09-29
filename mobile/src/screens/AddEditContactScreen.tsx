@@ -24,6 +24,7 @@ import { addContactSuccess, updateContactSuccess, deleteContactSuccess } from '.
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '../components/ui/Toast';
+import { ConfirmDialog } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
 
 const RELATIONSHIPS = ['Spouse', 'Parent', 'Sibling', 'Friend', 'Other'];
@@ -44,6 +45,7 @@ export default function AddEditContactScreen({ route, navigation }: any) {
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [removeDialogVisible, setRemoveDialogVisible] = useState(false);
 
   const {
     control,
@@ -82,34 +84,33 @@ export default function AddEditContactScreen({ route, navigation }: any) {
     }
   };
 
-  const handleDelete = () => {
-    const doDelete = async () => {
-      setIsLoading(true);
-      setErrorMsg(null);
-      try {
-        await api.delete(`/emergency-contacts/${contact.id}`);
-        dispatch(deleteContactSuccess({ id: contact.id }));
-        navigation.goBack();
-      } catch (err: any) {
-        setErrorMsg(err.response?.data?.message || 'Failed to delete contact.');
-        setIsLoading(false);
-      }
-    };
+const doDelete = async () => {
+    setIsLoading(true);
+    setErrorMsg(null);
+    try {
+      await api.delete(`/emergency-contacts/${contact.id}`);
+      dispatch(deleteContactSuccess({ id: contact.id }));
+      navigation.goBack();
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Failed to delete contact.');
+      setIsLoading(false);
+    }
+  };
 
+  const handleDelete = () => {
     if (Platform.OS === 'web') {
       if (typeof window !== 'undefined' && window.confirm(`Are you sure you want to remove ${contact.name}?`)) {
         doDelete();
       }
     } else {
-      Alert.alert(
-        'Remove Emergency Contact',
-        `Are you sure you want to remove ${contact.name} from your emergency contacts?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Remove', style: 'destructive', onPress: doDelete },
-        ],
-      );
+      // Phase 8: replaced destructive Alert.alert with ConfirmDialog primitive
+      setRemoveDialogVisible(true);
     }
+  };
+
+  const handleConfirmRemove = () => {
+    setRemoveDialogVisible(false);
+    doDelete();
   };
 
   return (
@@ -255,6 +256,18 @@ export default function AddEditContactScreen({ route, navigation }: any) {
           )}
         </View>
       </ScrollView>
+
+      {/* Phase 8: ConfirmDialog replaces destructive Alert.alert */}
+      <ConfirmDialog
+        visible={removeDialogVisible}
+        title="Remove Emergency Contact"
+        description={contact ? `Are you sure you want to remove ${contact.name} from your emergency contacts?` : undefined}
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmRemove}
+        onCancel={() => setRemoveDialogVisible(false)}
+      />
     </KeyboardAvoidingView>
   );
 }
