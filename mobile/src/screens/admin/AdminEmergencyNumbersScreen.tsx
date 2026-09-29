@@ -131,7 +131,7 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
 
         {/* Input Form Card */}
         <View style={styles.formCard}>
-          <Text style={styles.formTitle}>➕ Add Regional Number</Text>
+          <Text style={styles.formTitle}>Add Regional Number</Text>
           <TextInput
             placeholder="Region Name (e.g. Punjab / Islamabad, Karachi)"
             placeholderTextColor={darkColors.textTertiary}
@@ -180,7 +180,7 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
         </View>
 
         {/* List of Numbers */}
-        <Text style={styles.listSectionTitle}>📋 DATABASE ENTRIES</Text>
+        <Text style={styles.listSectionTitle}>DATABASE ENTRIES</Text>
         {isLoading ? (
           <View style={styles.center}>
             <ActivityIndicator size="large" color={colors.danger[600]} />

@@ -22,6 +22,7 @@ import { CrashSoundDetectionService } from '../services/crashSoundDetectionServi
 import { sendBulkBackgroundSMS } from '../utils/directSms';
 import { MultiModalFusionService } from '../services/multiModalFusionService';
 import { colors, darkColors, tints } from '../theme/tokens';
+import { Ionicons } from '@expo/vector-icons';
 
 const COUNTDOWN_SECONDS = 10;
 
@@ -321,7 +322,7 @@ export default function CountdownScreen({ navigation, route }: any) {
     try {
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: '🚨 ResQDrive Emergency Alert',
+          title: 'ResQDrive Emergency Alert',
           body: `Emergency alert dispatched! Live GPS tracking active. Acknowledgement link sent to contacts.`,
           sound: true,
           data: { mapsLink, severity },
@@ -419,10 +420,10 @@ export default function CountdownScreen({ navigation, route }: any) {
 
   if (isDispatching && !dispatchComplete) {
     const statusIcon = (s: string) => {
-      if (s === 'sent' || s === 'sent-via-device' || s === 'triggered' || s === 'logged') return '✅';
-      if (s === 'sending') return '⏳';
-      if (s === 'failed') return '❌';
-      return '⏸️';
+      if (s === 'sent' || s === 'sent-via-device' || s === 'triggered' || s === 'logged') return 'checkmark-circle';
+      if (s === 'sending') return 'hourglass-outline';
+      if (s === 'failed') return 'close-circle';
+      return 'pause-circle-outline';
     };
     const statusText = (s: string, devMode?: boolean) => {
       if (s === 'sent') return 'Sent';
@@ -442,41 +443,39 @@ export default function CountdownScreen({ navigation, route }: any) {
           <View style={[StyleSheet.absoluteFillObject, styles.gradBottom]} />
         </View>
         <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', opacity: fadeAnim, paddingHorizontal: 24 }}>
-          <Text style={styles.dispatchingIcon}>🚨</Text>
+          <Ionicons name="warning-outline" size={24} color={darkColors.text} />
           <Text style={styles.dispatchingText}>Dispatching Emergency Alert</Text>
                     {isDevMode && (
-            <Text style={styles.devModeBanner}>
-              ⚠️ DEV MODE: Some channels not configured. Real delivery limited.
+            <Text style={styles.devModeBanner}>DEV MODE: Some channels not configured. Real delivery limited.
             </Text>
           )}
 
           <View style={styles.statusList}>
             <Text style={styles.statusRow}>
-              {statusIcon(dispatchStatus.backend)} Backend Dispatch: {statusText(dispatchStatus.backend)}
+              <Ionicons name={statusIcon(dispatchStatus.backend)} size={14} color={darkColors.text} /> Backend Dispatch: {statusText(dispatchStatus.backend)}
             </Text>
             <Text style={styles.statusRow}>
-              {statusIcon(dispatchStatus.push)} Push Notification: {statusText(dispatchStatus.push, backendChannels?.push?.devMode)}
+              <Ionicons name={statusIcon(dispatchStatus.push)} size={14} color={darkColors.text} /> Push Notification: {statusText(dispatchStatus.push, backendChannels?.push?.devMode)}
             </Text>
             <Text style={styles.statusRow}>
-              {statusIcon(dispatchStatus.sms)} SMS: {statusText(dispatchStatus.sms, backendChannels?.sms?.devMode)}
+              <Ionicons name={statusIcon(dispatchStatus.sms)} size={14} color={darkColors.text} /> SMS: {statusText(dispatchStatus.sms, backendChannels?.sms?.devMode)}
             </Text>
                         <Text style={styles.statusRow}>
-              {statusIcon(dispatchStatus.whatsapp)} WhatsApp: {statusText(dispatchStatus.whatsapp, backendChannels?.whatsapp?.devMode)}
+              <Ionicons name={statusIcon(dispatchStatus.whatsapp)} size={14} color={darkColors.text} /> WhatsApp: {statusText(dispatchStatus.whatsapp, backendChannels?.whatsapp?.devMode)}
             </Text>
             <Text style={styles.statusRow}>
-              {statusIcon(dispatchStatus.email)} Email: {statusText(dispatchStatus.email, backendChannels?.email?.devMode)}
+              <Ionicons name={statusIcon(dispatchStatus.email)} size={14} color={darkColors.text} /> Email: {statusText(dispatchStatus.email, backendChannels?.email?.devMode)}
             </Text>
             <Text style={styles.statusRow}>
-              {statusIcon(dispatchStatus.incident)} Incident Log: {statusText(dispatchStatus.incident)}
+              <Ionicons name={statusIcon(dispatchStatus.incident)} size={14} color={darkColors.text} /> Incident Log: {statusText(dispatchStatus.incident)}
             </Text>
             <Text style={styles.statusRow}>
-              {statusIcon(dispatchStatus.module68)} Contact Escalation: {statusText(dispatchStatus.module68)}
+              <Ionicons name={statusIcon(dispatchStatus.module68)} size={14} color={darkColors.text} /> Contact Escalation: {statusText(dispatchStatus.module68)}
             </Text>
           </View>
 
           {dispatchStatus.sms === 'sent-via-device' && (
-            <Text style={styles.smsHint}>
-              📱 Your SMS app opened. Tap "Send" to deliver the alert to your contacts.
+            <Text style={styles.smsHint}>Your SMS app opened. Tap "Send" to deliver the alert to your contacts.
             </Text>
           )}
         </Animated.View>
@@ -493,7 +492,7 @@ export default function CountdownScreen({ navigation, route }: any) {
           <View style={[StyleSheet.absoluteFillObject, styles.gradBottom]} />
         </View>
         <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', opacity: fadeAnim, paddingHorizontal: 24 }}>
-          <Text style={styles.completeIcon}>{allGood ? '✅' : '⚠️'}</Text>
+          <Ionicons name={allGood ? "checkmark-circle" : "warning-outline"} size={48} color={darkColors.text} />
           <Text style={styles.completeTitle}>
             {allGood ? 'Alert Dispatched' : 'Partially Dispatched'}
           </Text>
@@ -546,13 +545,13 @@ export default function CountdownScreen({ navigation, route }: any) {
               style={styles.devSimBtn}
               onPress={() => VoiceCommandService.simulateSpeechInput('Cancel')} accessibilityRole="button"
             >
-              <Text style={styles.devSimText}>🗣️ Simulate Cancel</Text>
+              <Text style={styles.devSimText}>Simulate Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.devSimBtn, { borderColor: colors.danger[600] }]}
               onPress={() => VoiceCommandService.simulateSpeechInput('SOS')} accessibilityRole="button"
             >
-              <Text style={[styles.devSimText, { color: colors.danger[500] }]}>🗣️ Simulate SOS</Text>
+              <Text style={[styles.devSimText, { color: colors.danger[500] }]}>Simulate SOS</Text>
             </TouchableOpacity>
           </View>
         )}

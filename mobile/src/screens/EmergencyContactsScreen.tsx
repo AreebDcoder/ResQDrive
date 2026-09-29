@@ -375,9 +375,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
                       right: 8,
                     }} accessibilityRole="button"
                   >
-                    <Text style={styles.cardDeleteIcon}>
-                      🗑️
-                    </Text>
+                    <Ionicons name="trash-outline" size={24} color={darkColors.text} />
                   </TouchableOpacity>
                 </View>
               </View>

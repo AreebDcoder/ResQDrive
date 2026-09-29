@@ -108,16 +108,14 @@ export default function CrashSoundDemoScreen() {
 
           {transientFlash && (
             <View style={styles.transientBanner}>
-              <Text style={styles.transientBannerText}>
-                ⚡ ACOUSTIC TRANSIENT DETECTED (Ratio: {telemetry.transientRatio.toFixed(1)}x)
+              <Text style={styles.transientBannerText}>ACOUSTIC TRANSIENT DETECTED (Ratio: {telemetry.transientRatio.toFixed(1)}x)
               </Text>
             </View>
           )}
 
           {flashWarning && lastAlert && (
             <View style={styles.warningBanner}>
-              <Text style={styles.warningText}>
-                💥 CRASH SOUND CONFIRMED: {lastAlert.className.toUpperCase()} ({Math.round(lastAlert.confidence * 100)}%)
+              <Text style={styles.warningText}>CRASH SOUND CONFIRMED: {lastAlert.className.toUpperCase()} ({Math.round(lastAlert.confidence * 100)}%)
               </Text>
             </View>
           )}
@@ -202,7 +200,7 @@ export default function CrashSoundDemoScreen() {
             <View style={styles.simGrid}>
               {CRASH_RELEVANT_CLASS_NAMES.map((name) => (
                 <TouchableOpacity key={name} style={styles.simBtn} onPress={() => handleSimulateCrash(name)} accessibilityRole="button">
-                  <Text style={styles.simBtnText}>🔊 {name}</Text>
+                  <Text style={styles.simBtnText}>{name}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -230,7 +228,7 @@ export default function CrashSoundDemoScreen() {
             </Text>
             {!CrashSoundDetectionService.isNativeSupported() && (
               <View style={styles.webWarningBox}>
-                <Text style={styles.webWarningTitle}>⚠️ Running in Web/Mock Simulator Mode</Text>
+                <Text style={styles.webWarningTitle}>Running in Web/Mock Simulator Mode</Text>
                 <Text style={styles.webWarningDesc}>
                   Since standard web browsers cannot run native TensorFlow Lite models directly, clapping or other loud noise spikes will trigger simulated crash classifications (like Explosion, Shatter, Skidding) for database logging and telemetry testing.
                 </Text>

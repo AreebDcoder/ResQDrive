@@ -16,6 +16,7 @@ import api from '../api/axios';
 import { connectSocket, disconnectSocket, emitLocationUpdate } from '../services/socketService';
 import { useToast } from '../components/ui/Toast';
 import { colors, darkColors, tints } from '../theme/tokens';
+import { Ionicons } from '@expo/vector-icons';
 
 const FAST_INTERVAL_MS = 5000;
 const SLOW_INTERVAL_MS = 30000;
@@ -202,7 +203,7 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       {/* ── Intro Card ── */}
       <View style={styles.card}>
-        <Text style={styles.title} accessibilityRole="header">📍 Real-Time Location Sharing</Text>
+        <Text style={styles.title} accessibilityRole="header">Real-Time Location Sharing</Text>
         <Text style={styles.subtitle}>
           Share your live location with emergency contacts via a simple link.
           No app install required for them.
@@ -212,7 +213,7 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
       {/* ── Error ── */}
       {error && (
         <View style={styles.errorBox}>
-          <Text style={styles.errorEmoji}>⚠️</Text>
+          <Ionicons name="warning-outline" size={24} color={darkColors.text} />
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
@@ -220,7 +221,7 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
       {/* ── Permission Warning ── */}
       {permissionDenied && (
         <View style={styles.warnBox}>
-          <Text style={styles.warnEmoji}>🔒</Text>
+          <Ionicons name="lock-closed-outline" size={24} color={darkColors.text} />
           <Text style={styles.warnText}>
             Location permission denied. Please enable it in your device settings to share your location.
           </Text>
@@ -235,20 +236,19 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
             <Text style={styles.activeTitle}>LIVE — Sharing</Text>
           </View>
           <Text style={styles.activeSince}>⏱️ Started: {new Date(session.startedAt).toLocaleString()}</Text>
-          <Text style={styles.socketStatus}>
-            🔌 Socket: {socketStatus === 'connected' ? '🟢 Connected' : socketStatus === 'connecting' ? '🟡 Connecting…' : '🔴 Disconnected'}
+          <Text style={styles.socketStatus}>Socket: {socketStatus === 'connected' ? 'Connected' : socketStatus === 'connecting' ? 'Connecting…' : 'Disconnected'}
           </Text>
           {lastSent ? (
-            <Text style={styles.lastUpdate}>📡 Last GPS ping: {lastSent}</Text>
+            <Text style={styles.lastUpdate}>Last GPS ping: {lastSent}</Text>
           ) : (
-            <Text style={styles.lastUpdate}>📡 Waiting for first GPS fix…</Text>
+            <Text style={styles.lastUpdate}>Waiting for first GPS fix…</Text>
           )}
 
           <TouchableOpacity style={styles.linkBtn} onPress={copyShareLink} accessibilityRole="button">
-            <Text style={styles.linkBtnText}>📋 Copy Share Link</Text>
+            <Text style={styles.linkBtnText}>Copy Share Link</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.linkBtnSecondary} onPress={openInBrowser} accessibilityRole="button">
-            <Text style={styles.linkBtnSecondaryText}>🌐 Open Tracking Page</Text>
+            <Text style={styles.linkBtnSecondaryText}>Open Tracking Page</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -275,7 +275,7 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
           {isStarting ? (
             <ActivityIndicator color={darkColors.text} />
           ) : (
-            <Text style={styles.startBtnText}>🚀 Start Live Location Sharing</Text>
+            <Text style={styles.startBtnText}>Start Live Location Sharing</Text>
           )}
         </TouchableOpacity>
       )}

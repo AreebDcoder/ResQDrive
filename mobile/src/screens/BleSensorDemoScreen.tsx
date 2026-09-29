@@ -153,7 +153,7 @@ export default function BleSensorDemoScreen() {
             }} accessibilityRole="button"
           >
             <Ionicons name="flash" size={18} color={darkColors.text} style={{ marginRight: 8 }} />
-            <Text style={styles.simCrashBtnText}>🧪 DEV: Trigger Confirmed Accident</Text>
+            <Text style={styles.simCrashBtnText}>DEV: Trigger Confirmed Accident</Text>
           </TouchableOpacity>
 
           <View style={styles.card}>

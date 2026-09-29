@@ -344,10 +344,6 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
                   {isGoogleLoading ? 'Signing in...' : 'Google'}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.socialBtn} activeOpacity={0.7} accessibilityRole="button">
-                <Text style={styles.socialIcon}>🍎</Text>
-                <Text style={styles.socialLabel}>Apple</Text>
-              </TouchableOpacity>
             </View>
 
             {/* Footer */}

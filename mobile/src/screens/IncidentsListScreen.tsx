@@ -89,11 +89,11 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
                 <Text style={styles.badgeText}>{item.status.replace('_', ' ')}</Text>
               </View>
             </View>
-            <Text style={styles.cardType}>{item.type === 'AUTO' ? '🤖 Auto' : '✍️ Manual'}</Text>
+            <Text style={styles.cardType}>{item.type === 'AUTO' ? 'Auto' : 'Manual'}</Text>
           </View>
           <Text style={styles.cardDate}>{date}</Text>
           {item.address ? (
-            <Text style={styles.cardAddress} numberOfLines={1}>📍 {item.address}</Text>
+            <Text style={styles.cardAddress} numberOfLines={1}>{item.address}</Text>
           ) : null}
           {item.description ? (
             <Text style={styles.cardDesc} numberOfLines={2}>{item.description}</Text>

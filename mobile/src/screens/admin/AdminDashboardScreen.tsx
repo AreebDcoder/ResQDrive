@@ -96,7 +96,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
             style={styles.manageSosBtn}
             onPress={() => navigation.navigate('AdminEmergencyNumbers')} accessibilityRole="button"
           >
-            <Text style={styles.manageSosBtnText}>📞 Manage SOS Emergency Numbers</Text>
+            <Text style={styles.manageSosBtnText}>Manage SOS Emergency Numbers</Text>
           </TouchableOpacity>
 
           <Text style={styles.sectionTitle} accessibilityRole="header">Overview</Text>
@@ -175,8 +175,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
                   <Text style={styles.hotspotRank}>#{i + 1}</Text>
                   <Text style={styles.hotspotCount}>{h.incidentCount} incidents</Text>
                 </View>
-                <Text style={styles.hotspotCoords}>
-                  📍 {h.latitude.toFixed(4)}, {h.longitude.toFixed(4)}
+                <Text style={styles.hotspotCoords}>{h.latitude.toFixed(4)}, {h.longitude.toFixed(4)}
                 </Text>
                 {h.sampleAddresses.length > 0 && (
                   <Text style={styles.hotspotAddr} numberOfLines={2}>

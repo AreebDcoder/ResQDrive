@@ -405,7 +405,7 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
                 activeOpacity={0.85} accessibilityRole="button"
               >
                 <View style={styles.callIconCircle}>
-                  <Text style={styles.callIcon}>📞</Text>
+                  <Ionicons name="call-outline" size={24} color={darkColors.text} />
                 </View>
                 <View style={styles.callCardText}>
                   <Text style={styles.callName}>{item.serviceName}</Text>

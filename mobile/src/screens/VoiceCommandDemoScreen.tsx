@@ -208,7 +208,7 @@ export default function VoiceCommandDemoScreen() {
                   style={styles.simBtn}
                   onPress={() => handleSimulatePhrase(phrase)} accessibilityRole="button"
                 >
-                  <Text style={styles.simBtnText}>❌ "{phrase}"</Text>
+                  <Text style={styles.simBtnText}>"{phrase}"</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -221,7 +221,7 @@ export default function VoiceCommandDemoScreen() {
                   style={[styles.simBtn, styles.sosSimBtn]}
                   onPress={() => handleSimulatePhrase(phrase)} accessibilityRole="button"
                 >
-                  <Text style={styles.simBtnText}>🚨 "{phrase}"</Text>
+                  <Text style={styles.simBtnText}>"{phrase}"</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -262,7 +262,7 @@ export default function VoiceCommandDemoScreen() {
             />
 
             <TouchableOpacity style={styles.ttsBtn} onPress={handleTTSAnnouncement} accessibilityRole="button">
-              <Text style={styles.ttsBtnText}>🔊 Speak Announcement</Text>
+              <Text style={styles.ttsBtnText}>Speak Announcement</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
