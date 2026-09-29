@@ -533,7 +533,7 @@ export default function CountdownScreen({ navigation, route }: any) {
         <TouchableOpacity
           style={styles.cancelBtn}
           onPress={() => handleCancel('BUTTON')}
-          activeOpacity={0.85}
+          activeOpacity={0.85} accessibilityRole="button"
         >
           <Text style={styles.cancelBtnText}>I AM OK CANCEL</Text>
         </TouchableOpacity>
@@ -544,13 +544,13 @@ export default function CountdownScreen({ navigation, route }: any) {
           <View style={styles.devSimRow}>
             <TouchableOpacity
               style={styles.devSimBtn}
-              onPress={() => VoiceCommandService.simulateSpeechInput('Cancel')}
+              onPress={() => VoiceCommandService.simulateSpeechInput('Cancel')} accessibilityRole="button"
             >
               <Text style={styles.devSimText}>🗣️ Simulate Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.devSimBtn, { borderColor: colors.danger[600] }]}
-              onPress={() => VoiceCommandService.simulateSpeechInput('SOS')}
+              onPress={() => VoiceCommandService.simulateSpeechInput('SOS')} accessibilityRole="button"
             >
               <Text style={[styles.devSimText, { color: colors.danger[500] }]}>🗣️ Simulate SOS</Text>
             </TouchableOpacity>

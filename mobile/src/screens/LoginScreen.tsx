@@ -169,7 +169,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
 };
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessibilityRole="button">
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor={darkColors.background} />
         <KeyboardAvoidingView
@@ -199,11 +199,11 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
                 <View style={styles.logoBadge}>
                   <Ionicons name="shield-checkmark" size={24} color={colors.danger[500]} />
                 </View>
-                <Text style={styles.brandText}>
+                <Text style={styles.brandText} accessibilityRole="header">
                   ResQ<Text style={styles.brandAccent}>Drive</Text>
                 </Text>
               </View>
-              <Text style={styles.title}>Welcome Back</Text>
+              <Text style={styles.title} accessibilityRole="header">Welcome Back</Text>
               <Text style={styles.subtitle}>Log in to your ResQDrive account</Text>
             </Animated.View>
 
@@ -282,7 +282,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
                     />
                     <TouchableOpacity
                       style={styles.eyeBtn}
-                      onPress={() => setShowPassword(!showPassword)}
+                      onPress={() => setShowPassword(!showPassword)} accessibilityRole="button"
                     >
                       <Ionicons
                         name={showPassword ? 'eye-off-outline' : 'eye-outline'}
@@ -299,7 +299,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
 
               <TouchableOpacity
                 style={styles.forgotBtn}
-                onPress={() => navigation.navigate('ForgotPassword')}
+                onPress={() => navigation.navigate('ForgotPassword')} accessibilityRole="button"
               >
                 <Text style={styles.forgotText}>Forgot Password? →</Text>
               </TouchableOpacity>
@@ -309,7 +309,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
                 style={[styles.loginBtn, isLoading && styles.loginBtnDisabled]}
                 onPress={handleSubmit(onSubmit)}
                 disabled={isLoading}
-                activeOpacity={0.85}
+                activeOpacity={0.85} accessibilityRole="button"
               >
                 <View style={styles.loginBtnGradient} />
                 {isLoading ? (
@@ -333,7 +333,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
                 style={[styles.socialBtn, isGoogleLoading && styles.socialBtnDisabled]}
                 onPress={onGoogleSignIn}
                 disabled={isGoogleLoading}
-                activeOpacity={0.7}
+                activeOpacity={0.7} accessibilityRole="button"
               >
                 {isGoogleLoading ? (
                   <ActivityIndicator size="small" color={darkColors.text} />
@@ -344,7 +344,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
                   {isGoogleLoading ? 'Signing in...' : 'Google'}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.socialBtn} activeOpacity={0.7}>
+              <TouchableOpacity style={styles.socialBtn} activeOpacity={0.7} accessibilityRole="button">
                 <Text style={styles.socialIcon}>🍎</Text>
                 <Text style={styles.socialLabel}>Apple</Text>
               </TouchableOpacity>
@@ -353,7 +353,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
             {/* Footer */}
             <View style={styles.footer}>
               <Text style={styles.footerText}>Don't have an account? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+              <TouchableOpacity onPress={() => navigation.navigate('Register')} accessibilityRole="button">
                 <Text style={styles.signupText}>Sign Up</Text>
               </TouchableOpacity>
             </View>

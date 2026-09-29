@@ -123,10 +123,10 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Back">
             <Ionicons name="arrow-back" size={24} color={darkColors.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Manage Regional Numbers</Text>
+          <Text style={styles.headerTitle} accessibilityRole="header">Manage Regional Numbers</Text>
         </View>
 
         {/* Input Form Card */}
@@ -169,7 +169,7 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
           <TouchableOpacity
             style={styles.addBtn}
             onPress={handleAddNumber}
-            disabled={isSubmitting}
+            disabled={isSubmitting} accessibilityRole="button"
           >
             {isSubmitting ? (
               <ActivityIndicator color={darkColors.text} />
@@ -209,8 +209,8 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
                   />
                   <TouchableOpacity
                     style={styles.deleteBtn}
-                    onPress={() => handleDeleteNumber(item.id, item.serviceName)}
-                  >
+                    onPress={() => handleDeleteNumber(item.id, item.serviceName)} accessibilityRole="button"
+                   accessibilityLabel="Delete">
                     <Ionicons name="trash-outline" size={20} color={colors.danger[500]} />
                   </TouchableOpacity>
                 </View>

@@ -121,10 +121,10 @@ const { history = [], pagination, isHistoryLoading, error } = useSelector(
       <View style={styles.header}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Ionicons name="mail-unread-outline" size={24} color={colors.danger[500]} />
-          <Text style={styles.title}>History Inbox</Text>
+          <Text style={styles.title} accessibilityRole="header">History Inbox</Text>
         </View>
         {logs?.some((l: NotificationLog) => !l.isRead) && (
-          <TouchableOpacity style={styles.markAllBtn} onPress={handleMarkAllRead}>
+          <TouchableOpacity style={styles.markAllBtn} onPress={handleMarkAllRead} accessibilityRole="button">
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <Ionicons name="checkmark-done" size={16} color={colors.success[400]} />
               <Text style={styles.markAllText}>Mark all read</Text>
@@ -139,7 +139,7 @@ const { history = [], pagination, isHistoryLoading, error } = useSelector(
         <View style={styles.centerContainer}>
           <Ionicons name="alert-circle-outline" size={36} color={colors.danger[400]} style={{ marginBottom: 8 }} />
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={() => fetchHistory(1, false)}>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => fetchHistory(1, false)} accessibilityRole="button">
             <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -163,7 +163,7 @@ const { history = [], pagination, isHistoryLoading, error } = useSelector(
             <TouchableOpacity
               style={[styles.card, !item.isRead && styles.unreadCard]}
               onPress={() => handleMarkRead(item.id, item.isRead)}
-              activeOpacity={0.7}
+              activeOpacity={0.7} accessibilityRole="button"
             >
               <View style={styles.cardHeader}>
                 {renderCategoryIcon(item.category)}

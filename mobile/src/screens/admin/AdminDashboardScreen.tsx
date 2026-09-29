@@ -69,7 +69,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
         <View style={styles.center}>
           <View style={styles.glassCard}>
             <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.retryBtn} onPress={() => onRefresh()}>
+            <TouchableOpacity style={styles.retryBtn} onPress={() => onRefresh()} accessibilityRole="button">
               <Text style={styles.retryBtnText}>Retry</Text>
             </TouchableOpacity>
           </View>
@@ -94,12 +94,12 @@ export default function AdminDashboardScreen({ navigation }: any) {
         >
           <TouchableOpacity
             style={styles.manageSosBtn}
-            onPress={() => navigation.navigate('AdminEmergencyNumbers')}
+            onPress={() => navigation.navigate('AdminEmergencyNumbers')} accessibilityRole="button"
           >
             <Text style={styles.manageSosBtnText}>📞 Manage SOS Emergency Numbers</Text>
           </TouchableOpacity>
 
-          <Text style={styles.sectionTitle}>Overview</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header">Overview</Text>
           <View style={styles.cardsRow}>
             <View style={[styles.card, { borderLeftColor: colors.danger[500] }]}>
               <Text style={styles.cardValue}>{summary?.totalIncidents ?? 0}</Text>
@@ -119,7 +119,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
             </View>
           </View>
 
-          <Text style={styles.sectionTitle}>Severity Breakdown</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header">Severity Breakdown</Text>
           <View style={styles.panel}>
             {['NONE', 'MINOR', 'MODERATE', 'SEVERE'].map((sev) => {
               const pct = summary?.severityPercentages?.[sev as keyof typeof summary.severityPercentages] ?? 0;
@@ -136,7 +136,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
             })}
           </View>
 
-          <Text style={styles.sectionTitle}>Incident Trends (Last 30 Days)</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header">Incident Trends (Last 30 Days)</Text>
           <View style={styles.panel}>
             <View style={styles.chartRow}>
               {trends.map((t, i) => {
@@ -163,7 +163,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
             </View>
           </View>
 
-          <Text style={styles.sectionTitle}>Top Incident Hotspots</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header">Top Incident Hotspots</Text>
           {hotspots.length === 0 ? (
             <View style={styles.panel}>
               <Text style={styles.emptyText}>No geotagged incidents yet.</Text>
@@ -185,7 +185,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
                 )}
                 <TouchableOpacity
                   style={styles.mapsBtn}
-                  onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${h.latitude},${h.longitude}`)}
+                  onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${h.latitude},${h.longitude}`)} accessibilityRole="button"
                 >
                   <Text style={styles.mapsBtnText}>Open in Google Maps</Text>
                 </TouchableOpacity>
@@ -193,7 +193,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
             ))
           )}
 
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header">Recent Activity</Text>
           <View style={styles.panel}>
             {summary?.recentIncidents.length === 0 ? (
               <Text style={styles.emptyText}>No recent incidents.</Text>

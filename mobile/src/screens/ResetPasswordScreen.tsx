@@ -81,7 +81,7 @@ export default function ResetPasswordScreen({ navigation }: { navigation: any })
       <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
-            <Text style={styles.title}>Reset Password</Text>
+            <Text style={styles.title} accessibilityRole="header">Reset Password</Text>
             <Text style={styles.subtitle}>Enter the reset token sent to your email and your new password</Text>
           </View>
 
@@ -132,7 +132,7 @@ export default function ResetPasswordScreen({ navigation }: { navigation: any })
                     onChangeText={onChange}
                     value={value}
                   />
-                  <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(!showPassword)}>
+                  <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(!showPassword)} accessibilityRole="button">
                     <Text style={styles.eyeBtnText}>{showPassword ? 'Hide' : 'Show'}</Text>
                   </TouchableOpacity>
                 </View>
@@ -158,7 +158,7 @@ export default function ResetPasswordScreen({ navigation }: { navigation: any })
                   />
                   <TouchableOpacity
                     style={styles.eyeBtn}
-                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)} accessibilityRole="button"
                   >
                     <Text style={styles.eyeBtnText}>{showConfirmPassword ? 'Hide' : 'Show'}</Text>
                   </TouchableOpacity>
@@ -167,7 +167,7 @@ export default function ResetPasswordScreen({ navigation }: { navigation: any })
             />
             {errors.confirmPassword && <Text style={styles.errorHelper}>{errors.confirmPassword.message}</Text>}
 
-            <TouchableOpacity style={styles.resetBtn} onPress={handleSubmit(onSubmit)} disabled={isLoading}>
+            <TouchableOpacity style={styles.resetBtn} onPress={handleSubmit(onSubmit)} disabled={isLoading} accessibilityRole="button">
               {isLoading ? (
                 <ActivityIndicator color={darkColors.text} />
               ) : (
@@ -176,7 +176,7 @@ export default function ResetPasswordScreen({ navigation }: { navigation: any })
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate('Login')}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate('Login')} accessibilityRole="button">
             <Text style={styles.backText}>Back to Log In</Text>
           </TouchableOpacity>
         </ScrollView>

@@ -106,7 +106,7 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
         <View style={styles.header}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Ionicons name="shield-checkmark-outline" size={26} color={colors.danger[500]} />
-            <Text style={styles.title}>Insurance Details</Text>
+            <Text style={styles.title} accessibilityRole="header">Insurance Details</Text>
           </View>
           <Text style={styles.subtitle}>
             Optional reference details shown on crash screens and auto-filled in accident exports
@@ -213,7 +213,7 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
           <TouchableOpacity
             style={styles.saveBtn}
             onPress={handleSubmit(onSubmit)}
-            disabled={isLoading}
+            disabled={isLoading} accessibilityRole="button"
           >
             {isLoading ? (
               <ActivityIndicator color={darkColors.text} />
@@ -227,7 +227,7 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
             <TouchableOpacity
               style={styles.deleteBtn}
               onPress={handleDelete}
-              disabled={isLoading}
+              disabled={isLoading} accessibilityRole="button"
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                 <Ionicons name="trash-outline" size={18} color={colors.danger[400]} />

@@ -202,7 +202,7 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       {/* ── Intro Card ── */}
       <View style={styles.card}>
-        <Text style={styles.title}>📍 Real-Time Location Sharing</Text>
+        <Text style={styles.title} accessibilityRole="header">📍 Real-Time Location Sharing</Text>
         <Text style={styles.subtitle}>
           Share your live location with emergency contacts via a simple link.
           No app install required for them.
@@ -244,17 +244,17 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
             <Text style={styles.lastUpdate}>📡 Waiting for first GPS fix…</Text>
           )}
 
-          <TouchableOpacity style={styles.linkBtn} onPress={copyShareLink}>
+          <TouchableOpacity style={styles.linkBtn} onPress={copyShareLink} accessibilityRole="button">
             <Text style={styles.linkBtnText}>📋 Copy Share Link</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.linkBtnSecondary} onPress={openInBrowser}>
+          <TouchableOpacity style={styles.linkBtnSecondary} onPress={openInBrowser} accessibilityRole="button">
             <Text style={styles.linkBtnSecondaryText}>🌐 Open Tracking Page</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.stopBtn, isStopping && { opacity: 0.5 }]}
             onPress={handleStop}
-            disabled={isStopping}
+            disabled={isStopping} accessibilityRole="button"
           >
             {isStopping ? (
               <ActivityIndicator color={darkColors.text} />
@@ -270,7 +270,7 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
         <TouchableOpacity
           style={[styles.startBtn, isStarting && { opacity: 0.5 }]}
           onPress={handleStart}
-          disabled={isStarting}
+          disabled={isStarting} accessibilityRole="button"
         >
           {isStarting ? (
             <ActivityIndicator color={darkColors.text} />

@@ -149,7 +149,7 @@ export default function VoiceCommandDemoScreen() {
       <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.header}>
-            <Text style={styles.title}>Voice Command Controls</Text>
+            <Text style={styles.title} accessibilityRole="header">Voice Command Controls</Text>
             <Text style={styles.subtitle}>
               Hands-free continuous recognition monitoring. Activates during emergency count-downs.
             </Text>
@@ -186,7 +186,7 @@ export default function VoiceCommandDemoScreen() {
 
             <TouchableOpacity
               style={[styles.actionBtn, isListening ? styles.stopBtn : styles.startBtn]}
-              onPress={handleToggleListening}
+              onPress={handleToggleListening} accessibilityRole="button"
             >
               <Text style={styles.actionBtnText}>
                 {isListening ? 'Stop Speech Recognition' : 'Start Speech Recognition'}
@@ -206,7 +206,7 @@ export default function VoiceCommandDemoScreen() {
                 <TouchableOpacity
                   key={phrase}
                   style={styles.simBtn}
-                  onPress={() => handleSimulatePhrase(phrase)}
+                  onPress={() => handleSimulatePhrase(phrase)} accessibilityRole="button"
                 >
                   <Text style={styles.simBtnText}>❌ "{phrase}"</Text>
                 </TouchableOpacity>
@@ -219,7 +219,7 @@ export default function VoiceCommandDemoScreen() {
                 <TouchableOpacity
                   key={phrase}
                   style={[styles.simBtn, styles.sosSimBtn]}
-                  onPress={() => handleSimulatePhrase(phrase)}
+                  onPress={() => handleSimulatePhrase(phrase)} accessibilityRole="button"
                 >
                   <Text style={styles.simBtnText}>🚨 "{phrase}"</Text>
                 </TouchableOpacity>
@@ -261,7 +261,7 @@ export default function VoiceCommandDemoScreen() {
               placeholderTextColor={darkColors.textTertiary}
             />
 
-            <TouchableOpacity style={styles.ttsBtn} onPress={handleTTSAnnouncement}>
+            <TouchableOpacity style={styles.ttsBtn} onPress={handleTTSAnnouncement} accessibilityRole="button">
               <Text style={styles.ttsBtnText}>🔊 Speak Announcement</Text>
             </TouchableOpacity>
           </View>

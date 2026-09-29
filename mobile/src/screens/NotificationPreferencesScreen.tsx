@@ -107,7 +107,7 @@ export default function NotificationPreferencesScreen() {
       <View style={styles.header}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <Ionicons name="settings-outline" size={26} color={colors.danger[500]} />
-          <Text style={styles.title}>Notification Preferences</Text>
+          <Text style={styles.title} accessibilityRole="header">Notification Preferences</Text>
         </View>
         <Text style={styles.subtitle}>
           Configure which categories of push notifications you want to receive on your device

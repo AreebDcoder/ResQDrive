@@ -105,7 +105,7 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
       style={styles.container}
     >
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
-        <Text style={styles.sectionTitle}>Severity</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header">Severity</Text>
         <Controller
           control={control}
           name="severity"
@@ -118,7 +118,7 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
                     backgroundColor: value === opt ? SEVERITY_COLORS[opt] + '25' : tints.whiteSubtle,
                     borderColor: value === opt ? SEVERITY_COLORS[opt] : tints.whiteBorder,
                   }]}
-                  onPress={() => onChange(opt)}
+                  onPress={() => onChange(opt)} accessibilityRole="button"
                 >
                   <Text style={[styles.chipText, value === opt && { color: SEVERITY_COLORS[opt] }]}>{opt}</Text>
                 </TouchableOpacity>
@@ -128,7 +128,7 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
         />
         {errors.severity && <Text style={styles.errorHelper}>{errors.severity.message}</Text>}
 
-        <Text style={styles.sectionTitle}>Status</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header">Status</Text>
         <Controller
           control={control}
           name="status"
@@ -141,7 +141,7 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
                     backgroundColor: value === opt ? STATUS_COLORS[opt] + '25' : tints.whiteSubtle,
                     borderColor: value === opt ? STATUS_COLORS[opt] : tints.whiteBorder,
                   }]}
-                  onPress={() => onChange(opt)}
+                  onPress={() => onChange(opt)} accessibilityRole="button"
                 >
                   <Text style={[styles.chipText, value === opt && { color: STATUS_COLORS[opt] }]}>{opt.replace('_', ' ')}</Text>
                 </TouchableOpacity>
@@ -240,7 +240,7 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
         <TouchableOpacity
           style={[styles.submitBtn, isSubmitting && { opacity: 0.6 }]}
           onPress={handleSubmit(onSubmit)}
-          disabled={isSubmitting}
+          disabled={isSubmitting} accessibilityRole="button"
         >
           {isSubmitting ? (
             <ActivityIndicator color={darkColors.text} />

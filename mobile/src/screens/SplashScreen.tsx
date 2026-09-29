@@ -233,7 +233,7 @@ export default function SplashScreen() {
           },
         ]}
       >
-        <Text style={styles.title}>
+        <Text style={styles.title} accessibilityRole="header">
           ResQ<Text style={styles.highlight}>Drive</Text>
         </Text>
       </Animated.View>

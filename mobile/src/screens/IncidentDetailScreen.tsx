@@ -109,7 +109,7 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
           </View>
           <Text style={styles.value}>{current.address}</Text>
           {current.latitude && current.longitude ? (
-            <TouchableOpacity style={styles.mapsBtn} onPress={openInMaps} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.mapsBtn} onPress={openInMaps} activeOpacity={0.7} accessibilityRole="button">
               <Ionicons name="map-outline" size={16} color={darkColors.text} style={{ marginRight: 6 }} />
               <Text style={styles.mapsBtnText}>Open in Google Maps</Text>
             </TouchableOpacity>
@@ -201,7 +201,7 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
           style={styles.editBtn}
           onPress={() => navigation.navigate('CreateIncident', { mode: 'edit', id: current.id })}
           disabled={isSubmitting}
-          activeOpacity={0.7}
+          activeOpacity={0.7} accessibilityRole="button"
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
             <Ionicons name="pencil-outline" size={18} color={darkColors.text} />
@@ -212,7 +212,7 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
           style={styles.deleteBtn}
           onPress={handleDelete}
           disabled={isSubmitting}
-          activeOpacity={0.7}
+          activeOpacity={0.7} accessibilityRole="button"
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
             <Ionicons name="trash-outline" size={18} color={colors.danger[400]} />

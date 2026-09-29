@@ -100,7 +100,7 @@ export default function CrashSoundDemoScreen() {
       <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.header}>
-            <Text style={styles.title}>Transient-Triggered Crash Sound Detection</Text>
+            <Text style={styles.title} accessibilityRole="header">Transient-Triggered Crash Sound Detection</Text>
             <Text style={styles.subtitle}>
               Event-driven audio classifier: RMS transient detector triggers YAMNet inference on centered 2-second windows.
             </Text>
@@ -164,7 +164,7 @@ export default function CrashSoundDemoScreen() {
 
             <TouchableOpacity
               style={[styles.actionBtn, isMonitoring ? styles.stopBtn : styles.startBtn]}
-              onPress={handleToggleMonitoring}
+              onPress={handleToggleMonitoring} accessibilityRole="button"
             >
               <Text style={styles.actionBtnText}>
                 {isMonitoring ? 'Stop Audio Capture' : 'Start Audio Capture'}
@@ -201,7 +201,7 @@ export default function CrashSoundDemoScreen() {
 
             <View style={styles.simGrid}>
               {CRASH_RELEVANT_CLASS_NAMES.map((name) => (
-                <TouchableOpacity key={name} style={styles.simBtn} onPress={() => handleSimulateCrash(name)}>
+                <TouchableOpacity key={name} style={styles.simBtn} onPress={() => handleSimulateCrash(name)} accessibilityRole="button">
                   <Text style={styles.simBtnText}>🔊 {name}</Text>
                 </TouchableOpacity>
               ))}

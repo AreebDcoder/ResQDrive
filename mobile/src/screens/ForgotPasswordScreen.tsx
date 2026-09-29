@@ -65,7 +65,7 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: any }
 
       <Animated.View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 24, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
         <View style={styles.header}>
-          <Text style={styles.title}>Forgot Password?</Text>
+          <Text style={styles.title} accessibilityRole="header">Forgot Password?</Text>
           <Text style={styles.subtitle}>
             Enter your email and we'll send you a token to reset your password.
           </Text>
@@ -103,7 +103,7 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: any }
           />
           {errors.email && <Text style={styles.errorHelper}>{errors.email.message}</Text>}
 
-          <TouchableOpacity style={styles.sendBtn} onPress={handleSubmit(onSubmit)} disabled={isLoading}>
+          <TouchableOpacity style={styles.sendBtn} onPress={handleSubmit(onSubmit)} disabled={isLoading} accessibilityRole="button">
             {isLoading ? (
               <ActivityIndicator color={darkColors.text} />
             ) : (
@@ -112,7 +112,7 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: any }
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate('Login')}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate('Login')} accessibilityRole="button">
           <Text style={styles.backText}>Back to Log In</Text>
         </TouchableOpacity>
       </Animated.View>

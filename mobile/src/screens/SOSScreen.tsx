@@ -358,12 +358,12 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
       {/* Header */}
       <Animated.View style={[styles.header, { opacity: headerOpacity }]}>
         {!isInline && (
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Back">
             <Ionicons name="arrow-back" size={24} color={darkColors.text} />
           </TouchableOpacity>
         )}
         <View style={styles.headerContent}>
-          <Text style={styles.title}>Emergency SOS</Text>
+          <Text style={styles.title} accessibilityRole="header">Emergency SOS</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
             <Ionicons name="location-sharp" size={14} color={colors.danger[500]} />
             <Text style={styles.subtitle}>
@@ -402,7 +402,7 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
                 key={item.id}
                 style={[styles.callCard, index === 0 && styles.callCardFirst]}
                 onPress={() => handleCallNumber(item.phoneNumber, item.serviceName || 'Rescue')}
-                activeOpacity={0.85}
+                activeOpacity={0.85} accessibilityRole="button"
               >
                 <View style={styles.callIconCircle}>
                   <Text style={styles.callIcon}>📞</Text>

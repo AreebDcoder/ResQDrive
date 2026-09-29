@@ -91,7 +91,7 @@ export default function EmailVerificationScreen({ route, navigation }: { route: 
           <View style={styles.iconCircle}>
             <Ionicons name="mail-unread-outline" size={36} color={colors.danger[500]} />
           </View>
-          <Text style={styles.title}>Verify Your Email</Text>
+          <Text style={styles.title} accessibilityRole="header">Verify Your Email</Text>
           <Text style={styles.subtitle}>
             We've sent a 6-digit verification code to <Text style={styles.emailHighlight}>{email}</Text>.
           </Text>
@@ -127,7 +127,7 @@ export default function EmailVerificationScreen({ route, navigation }: { route: 
           <TouchableOpacity
             style={[styles.verifyBtn, otp.trim().length < 6 && styles.verifyBtnDisabled]}
             onPress={handleVerify}
-            disabled={isLoading || otp.trim().length < 6}
+            disabled={isLoading || otp.trim().length < 6} accessibilityRole="button"
           >
             {isLoading ? (
               <ActivityIndicator color={darkColors.text} />
@@ -141,7 +141,7 @@ export default function EmailVerificationScreen({ route, navigation }: { route: 
             {countdown > 0 ? (
               <Text style={styles.countdownText}>Resend in {countdown}s</Text>
             ) : (
-              <TouchableOpacity onPress={handleResend} disabled={isResending}>
+              <TouchableOpacity onPress={handleResend} disabled={isResending} accessibilityRole="button">
                 {isResending ? (
                   <ActivityIndicator size="small" color={colors.danger[500]} />
                 ) : (
@@ -152,7 +152,7 @@ export default function EmailVerificationScreen({ route, navigation }: { route: 
           </View>
         </View>
 
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate('Login')}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate('Login')} accessibilityRole="button">
           <Ionicons name="arrow-back-outline" size={16} color={darkColors.textSecondary} style={{ marginRight: 6 }} />
           <Text style={styles.backText}>Back to Log In</Text>
         </TouchableOpacity>

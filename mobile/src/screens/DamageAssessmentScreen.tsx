@@ -327,8 +327,8 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
         </View>
         <TouchableOpacity
           style={styles.deleteCardBtn}
-          onPress={() => handleDeleteAssessment(item.id)}
-        >
+          onPress={() => handleDeleteAssessment(item.id)} accessibilityRole="button"
+         accessibilityLabel="Delete">
           <Ionicons name="trash-outline" size={20} color={colors.danger[400]} />
         </TouchableOpacity>
       </View>
@@ -352,7 +352,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
           style={{ flex: 1, flexDirection: 'row' }}
           onPress={() => {
             navigation.navigate('RepairCost', { reportId: item.id });
-          }}
+          }} accessibilityRole="button"
         >
           <View style={styles.costHistoryThumbContainer}>
             <Ionicons name="receipt-outline" size={24} color={colors.danger[500]} />
@@ -370,8 +370,8 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.deleteCardBtn}
-          onPress={() => handleDeleteCostReport(item.id)}
-        >
+          onPress={() => handleDeleteCostReport(item.id)} accessibilityRole="button"
+         accessibilityLabel="Delete">
           <Ionicons name="trash-outline" size={20} color={colors.danger[400]} />
         </TouchableOpacity>
       </View>
@@ -396,7 +396,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
                 setIsCarRejection(false);
                 setSelectedImage(null);
                 setImageFile(null);
-              }}
+              }} accessibilityRole="button"
             >
               <Ionicons name="camera-outline" size={20} color={darkColors.text} style={{ marginRight: 8 }} />
               <Text style={styles.actionBtnText}>Retake Photo</Text>
@@ -466,7 +466,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
                   setImageFile(null);
                   setSelectedPartTag(null);
                   setIsCarRejection(false);
-                }}
+                }} accessibilityRole="button"
               >
                 <Ionicons name="add-circle-outline" size={20} color={darkColors.text} style={{ marginRight: 8 }} />
                 <Text style={styles.actionBtnText}>Add Another Damaged Area</Text>
@@ -480,7 +480,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
                     generate: true,
                     assessmentIds: currentSessionAssessmentIds,
                   });
-                }}
+                }} accessibilityRole="button"
               >
                 <Ionicons name="cash-outline" size={20} color={darkColors.text} style={{ marginRight: 8 }} />
                 <Text style={styles.actionBtnText}>Finish & View Repair Cost</Text>
@@ -517,7 +517,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
                     styles.vehicleChip,
                     selectedPartTag === pt.tag && styles.vehicleChipActive,
                   ]}
-                  onPress={() => setSelectedPartTag(pt.tag)}
+                  onPress={() => setSelectedPartTag(pt.tag)} accessibilityRole="button"
                 >
                   <Text style={[styles.vehicleChipText, selectedPartTag === pt.tag && styles.vehicleChipTextActive]}>
                     {pt.label}
@@ -548,7 +548,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
                       styles.vehicleChip,
                       selectedVehicleId === v.id && styles.vehicleChipActive,
                     ]}
-                    onPress={() => setSelectedVehicleId(v.id)}
+                    onPress={() => setSelectedVehicleId(v.id)} accessibilityRole="button"
                   >
                     <Text style={[styles.vehicleChipText, selectedVehicleId === v.id && styles.vehicleChipTextActive]}>
                       {v.make} {v.model}
@@ -560,12 +560,12 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
           )}
 
           <View style={styles.pickerRow}>
-            <TouchableOpacity style={styles.pickerBtn} onPress={() => handlePickImage(true)}>
+            <TouchableOpacity style={styles.pickerBtn} onPress={() => handlePickImage(true)} accessibilityRole="button">
               <Ionicons name="camera-outline" size={20} color={darkColors.text} style={{ marginRight: 6 }} />
               <Text style={styles.pickerBtnText}>Camera</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.pickerBtn} onPress={() => handlePickImage(false)}>
+            <TouchableOpacity style={styles.pickerBtn} onPress={() => handlePickImage(false)} accessibilityRole="button">
               <Ionicons name="images-outline" size={20} color={darkColors.text} style={{ marginRight: 6 }} />
               <Text style={styles.pickerBtnText}>Gallery</Text>
             </TouchableOpacity>
@@ -586,7 +586,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
                 !selectedPartTag && { opacity: 0.45, backgroundColor: tints.dangerMedium },
               ]}
               onPress={handleAnalyze}
-              disabled={!selectedPartTag || isAnalyzing}
+              disabled={!selectedPartTag || isAnalyzing} accessibilityRole="button"
             >
               <Ionicons name="hardware-chip-outline" size={20} color={darkColors.text} style={{ marginRight: 8 }} />
               <Text style={styles.actionBtnText}>
@@ -609,7 +609,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
       <View style={styles.segmentedHeader}>
         <TouchableOpacity
           style={[styles.segmentBtn, activeSegment === 'new' && styles.segmentBtnActive]}
-          onPress={() => setActiveSegment('new')}
+          onPress={() => setActiveSegment('new')} accessibilityRole="button"
         >
           <Ionicons name="camera-outline" size={16} color={activeSegment === 'new' ? colors.danger[500] : darkColors.textTertiary} style={{ marginRight: 6 }} />
           <Text style={[styles.segmentBtnText, activeSegment === 'new' && styles.segmentBtnTextActive]}>
@@ -619,7 +619,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
 
         <TouchableOpacity
           style={[styles.segmentBtn, activeSegment === 'history' && styles.segmentBtnActive]}
-          onPress={() => setActiveSegment('history')}
+          onPress={() => setActiveSegment('history')} accessibilityRole="button"
         >
           <Ionicons name="time-outline" size={16} color={activeSegment === 'history' ? colors.danger[500] : darkColors.textTertiary} style={{ marginRight: 6 }} />
           <Text style={[styles.segmentBtnText, activeSegment === 'history' && styles.segmentBtnTextActive]}>
@@ -629,7 +629,7 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
 
         <TouchableOpacity
           style={[styles.segmentBtn, activeSegment === 'cost_history' && styles.segmentBtnActive]}
-          onPress={() => setActiveSegment('cost_history')}
+          onPress={() => setActiveSegment('cost_history')} accessibilityRole="button"
         >
           <Ionicons name="receipt-outline" size={16} color={activeSegment === 'cost_history' ? colors.danger[500] : darkColors.textTertiary} style={{ marginRight: 6 }} />
           <Text style={[styles.segmentBtnText, activeSegment === 'cost_history' && styles.segmentBtnTextActive]}>

@@ -73,7 +73,7 @@ export default function BleSensorDemoScreen() {
       <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.header}>
-            <Text style={styles.title}>BLE Sensor Diagnostics</Text>
+            <Text style={styles.title} accessibilityRole="header">BLE Sensor Diagnostics</Text>
             <Text style={styles.subtitle}>
               Monitor ResQDrive-Sensor connection, telemetry values, and fallback states.
             </Text>
@@ -108,7 +108,7 @@ export default function BleSensorDemoScreen() {
               </View>
             </View>
 
-            <TouchableOpacity style={styles.reconnectBtn} onPress={handleForceReconnect}>
+            <TouchableOpacity style={styles.reconnectBtn} onPress={handleForceReconnect} accessibilityRole="button">
               <Ionicons name="refresh" size={18} color={darkColors.text} style={{ marginRight: 6 }} />
               <Text style={styles.reconnectBtnText}>Force Reconnect BLE</Text>
             </TouchableOpacity>
@@ -150,7 +150,7 @@ export default function BleSensorDemoScreen() {
               setTimeout(() => {
                 MultiModalFusionService.recordMotionEvent('severe', 5.0, 300);
               }, 1000);
-            }}
+            }} accessibilityRole="button"
           >
             <Ionicons name="flash" size={18} color={darkColors.text} style={{ marginRight: 8 }} />
             <Text style={styles.simCrashBtnText}>🧪 DEV: Trigger Confirmed Accident</Text>

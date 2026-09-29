@@ -116,7 +116,7 @@ export default function MyVehiclesScreen({ navigation }: { navigation: AppNaviga
     <View style={{ flex: 1, backgroundColor: tc.background }}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: tc.text }]}>My Vehicles</Text>
+        <Text style={[styles.headerTitle, { color: tc.text }]} accessibilityRole="header">My Vehicles</Text>
         <Text style={[styles.headerSub, { color: tc.textSecondary }]}>{vehicles?.length || 0} registered</Text>
       </View>
 

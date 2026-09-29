@@ -175,7 +175,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
 
       {/* ── Header ── */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>
+        <Text style={styles.headerTitle} accessibilityRole="header">
           Emergency Contacts
         </Text>
 
@@ -205,7 +205,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
 
           <TouchableOpacity
             style={styles.retryBtn}
-            onPress={fetchContacts}
+            onPress={fetchContacts} accessibilityRole="button"
           >
             <Text style={styles.retryText}>
               Retry
@@ -285,7 +285,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
                       { contact: item }
                     )
                   }
-                  activeOpacity={0.7}
+                  activeOpacity={0.7} accessibilityRole="button"
                 >
                   <Text style={styles.contactName}>
                     {item.name}
@@ -318,8 +318,8 @@ export default function EmergencyContactsScreen({ navigation }: any) {
                       }
                       disabled={
                         index === 0 || isUpdating
-                      }
-                    >
+                      } accessibilityRole="button"
+                     accessibilityLabel="Up">
                       <Ionicons
                         name="chevron-up"
                         size={16}
@@ -345,8 +345,8 @@ export default function EmergencyContactsScreen({ navigation }: any) {
                         index ===
                           contacts.length - 1 ||
                         isUpdating
-                      }
-                    >
+                      } accessibilityRole="button"
+                     accessibilityLabel="Down">
                       <Ionicons
                         name="chevron-down"
                         size={16}
@@ -373,7 +373,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
                       bottom: 8,
                       left: 8,
                       right: 8,
-                    }}
+                    }} accessibilityRole="button"
                   >
                     <Text style={styles.cardDeleteIcon}>
                       🗑️
@@ -393,7 +393,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
           onPress={() =>
             navigation.navigate('AddEditContact')
           }
-          activeOpacity={0.8}
+          activeOpacity={0.8} accessibilityRole="button"
         >
           <View
             style={{

@@ -78,7 +78,7 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
         <TouchableOpacity
           style={{ flex: 1 }}
           onPress={() => navigation.navigate('IncidentDetail', { id: item.id })}
-          activeOpacity={0.7}
+          activeOpacity={0.7} accessibilityRole="button"
         >
           <View style={styles.cardHeader}>
             <View style={styles.badgesRow}>
@@ -104,7 +104,7 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
           <TouchableOpacity
             style={styles.deleteCardBtn}
             onPress={() => handleDeleteIncident(item.id)}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button"
           >
             <View style={styles.deleteIconBg}>
               <Ionicons name="trash-outline" size={16} color={colors.danger[400]} />
@@ -131,7 +131,7 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
               key={sev}
               style={[styles.filterChip, active && styles.filterChipActive]}
               onPress={() => onFilterChange(sev)}
-              activeOpacity={0.7}
+              activeOpacity={0.7} accessibilityRole="button"
             >
               <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{sev}</Text>
             </TouchableOpacity>
@@ -145,7 +145,7 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
             <Ionicons name="alert-circle-outline" size={40} color={colors.danger[400]} />
           </View>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={onRefresh}>
+          <TouchableOpacity style={styles.retryBtn} onPress={onRefresh} accessibilityRole="button">
             <Text style={styles.retryBtnText}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -176,7 +176,7 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
           }
           ListFooterComponent={
             meta.page < meta.totalPages ? (
-              <TouchableOpacity style={styles.loadMoreBtn} onPress={onLoadMore} disabled={isLoading}>
+              <TouchableOpacity style={styles.loadMoreBtn} onPress={onLoadMore} disabled={isLoading} accessibilityRole="button">
                 {isLoading ? (
                   <ActivityIndicator color={colors.danger[500]} />
                 ) : (
@@ -192,7 +192,7 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
       <TouchableOpacity
         style={styles.fab}
         onPress={() => navigation.navigate('CreateIncident', { mode: 'create' })}
-        activeOpacity={0.85}
+        activeOpacity={0.85} accessibilityRole="button"
       >
         <View style={styles.fabGradient} />
         <Text style={styles.fabText}>+</Text>

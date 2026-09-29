@@ -134,7 +134,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
   };
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessibilityRole="button">
       <View style={styles.container}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -158,7 +158,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                 },
               ]}
             >
-              <Text style={styles.title}>Join ResQDrive</Text>
+              <Text style={styles.title} accessibilityRole="header">Join ResQDrive</Text>
               <Text style={styles.subtitle}>Create an account to start</Text>
             </Animated.View>
 
@@ -185,7 +185,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                 <TouchableOpacity
                   style={[styles.roleTab, selectedRole === 'DRIVER' && styles.activeRoleTab]}
                   onPress={() => handleRoleChange('DRIVER')}
-                  activeOpacity={0.7}
+                  activeOpacity={0.7} accessibilityRole="button"
                 >
                   <Ionicons name="car-outline" size={18} color={selectedRole === 'DRIVER' ? darkColors.text : darkColors.textTertiary} />
                   <Text style={[styles.roleTabText, selectedRole === 'DRIVER' && styles.activeRoleTabText]}>
@@ -195,7 +195,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                 <TouchableOpacity
                   style={[styles.roleTab, selectedRole === 'MECHANIC' && styles.activeRoleTab]}
                   onPress={() => handleRoleChange('MECHANIC')}
-                  activeOpacity={0.7}
+                  activeOpacity={0.7} accessibilityRole="button"
                 >
                   <Ionicons name="construct-outline" size={18} color={selectedRole === 'MECHANIC' ? darkColors.text : darkColors.textTertiary} />
                   <Text style={[styles.roleTabText, selectedRole === 'MECHANIC' && styles.activeRoleTabText]}>
@@ -413,7 +413,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                             onFocus={() => setFocusedField('password')}
                             value={value}
                           />
-                          <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(!showPassword)}>
+                          <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(!showPassword)} accessibilityRole="button">
                             <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={darkColors.textTertiary} />
                           </TouchableOpacity>
                         </View>
@@ -441,7 +441,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                           />
                           <TouchableOpacity
                             style={styles.eyeBtn}
-                            onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                            onPress={() => setShowConfirmPassword(!showConfirmPassword)} accessibilityRole="button"
                           >
                             <Ionicons name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={darkColors.textTertiary} />
                           </TouchableOpacity>
@@ -457,7 +457,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                   style={[styles.registerBtn, isLoading && styles.registerBtnDisabled]}
                   onPress={handleSubmit(onSubmit)}
                   disabled={isLoading}
-                  activeOpacity={0.85}
+                  activeOpacity={0.85} accessibilityRole="button"
                 >
                   <View style={styles.registerBtnGradient} />
                   {isLoading ? (
@@ -473,7 +473,7 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
             {/* Footer */}
             <View style={styles.footer}>
               <Text style={styles.footerText}>Already have an account? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+              <TouchableOpacity onPress={() => navigation.navigate('Login')} accessibilityRole="button">
                 <Text style={styles.loginText}>Log In</Text>
               </TouchableOpacity>
             </View>

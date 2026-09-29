@@ -271,7 +271,7 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
       >
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
           <View style={styles.glassCard}>
-            <Text style={styles.headerTitle}>Emergency Alert</Text>
+            <Text style={styles.headerTitle} accessibilityRole="header">Emergency Alert</Text>
             <Text style={styles.headerSubtitle}>
               Triggers multi-channel alerts (push, SMS, email, phone call) to your emergency contacts.
               Escalates every 30 seconds until someone acknowledges.
@@ -289,7 +289,7 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
             <TouchableOpacity
               style={[styles.triggerBtn, emergency.isTriggering && { opacity: 0.6 }]}
               onPress={handleTrigger}
-              disabled={emergency.isTriggering}
+              disabled={emergency.isTriggering} accessibilityRole="button"
             >
               {emergency.isTriggering ? (
                 <ActivityIndicator color={darkColors.text} size="large" />
@@ -325,13 +325,13 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
               ) : null}
 
               <View style={styles.actionsRow}>
-                <TouchableOpacity style={styles.linkBtn} onPress={copyAcknowledgeLink}>
+                <TouchableOpacity style={styles.linkBtn} onPress={copyAcknowledgeLink} accessibilityRole="button">
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Ionicons name="copy-outline" size={16} color={darkColors.text} style={{ marginRight: 6 }} />
                     <Text style={styles.linkBtnText}>Copy Link</Text>
                   </View>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.linkBtn} onPress={openAcknowledgePage}>
+                <TouchableOpacity style={styles.linkBtn} onPress={openAcknowledgePage} accessibilityRole="button">
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Ionicons name="globe-outline" size={16} color={darkColors.text} style={{ marginRight: 6 }} />
                     <Text style={styles.linkBtnText}>Open Page</Text>
@@ -342,7 +342,7 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
               <TouchableOpacity
                 style={[styles.cancelBtn, emergency.isCancelling && { opacity: 0.5 }]}
                 onPress={handleCancel}
-                disabled={emergency.isCancelling}
+                disabled={emergency.isCancelling} accessibilityRole="button"
               >
                 {emergency.isCancelling ? (
                   <ActivityIndicator color={darkColors.text} />
@@ -363,7 +363,7 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
               </Text>
               <TouchableOpacity
                 style={styles.resetBtn}
-                onPress={() => dispatch(clearEmergency())}
+                onPress={() => dispatch(clearEmergency())} accessibilityRole="button"
               >
                 <Text style={styles.resetBtnText}>Dismiss</Text>
               </TouchableOpacity>
@@ -379,7 +379,7 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
               </Text>
               <TouchableOpacity
                 style={styles.resetBtn}
-                onPress={() => dispatch(clearEmergency())}
+                onPress={() => dispatch(clearEmergency())} accessibilityRole="button"
               >
                 <Text style={styles.resetBtnText}>Dismiss</Text>
               </TouchableOpacity>

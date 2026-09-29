@@ -222,7 +222,7 @@ const handleShareReport = async () => {
           onPress={() => {
             loadReport(item.id);
           }}
-          activeOpacity={0.7}
+          activeOpacity={0.7} accessibilityRole="button"
         >
           <View style={styles.historyCardHeader}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -253,8 +253,8 @@ const handleShareReport = async () => {
 
         <TouchableOpacity 
           style={styles.deleteReportIconBtn} 
-          onPress={() => handleDeleteReport(item.id)}
-        >
+          onPress={() => handleDeleteReport(item.id)} accessibilityRole="button"
+         accessibilityLabel="Delete">
           <Ionicons name="trash-outline" size={18} color={colors.danger[400]} />
         </TouchableOpacity>
       </View>
@@ -394,7 +394,7 @@ const handleShareReport = async () => {
         <TouchableOpacity 
           style={styles.shareBtn} 
           onPress={handleShareReport}
-          disabled={isSharing}
+          disabled={isSharing} accessibilityRole="button"
         >
           {isSharing ? (
             <ActivityIndicator size="small" color={darkColors.text} />
@@ -423,8 +423,8 @@ const handleShareReport = async () => {
             }
           }}
           style={styles.backBtn}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button"
+         accessibilityLabel="Back">
           <Ionicons name="arrow-back" size={24} color={darkColors.text} />
         </TouchableOpacity>
         <Text style={styles.headerBarTitle}>Repair Estimation</Text>
@@ -435,7 +435,7 @@ const handleShareReport = async () => {
       <View style={styles.segmentedHeader}>
         <TouchableOpacity
           style={[styles.segmentBtn, activeSegment === 'details' && styles.segmentBtnActive]}
-          onPress={() => setActiveSegment('details')}
+          onPress={() => setActiveSegment('details')} accessibilityRole="button"
         >
           <Ionicons name="document-text-outline" size={16} color={activeSegment === 'details' ? colors.danger[500] : darkColors.textTertiary} style={{ marginRight: 6 }} />
           <Text style={[styles.segmentBtnText, activeSegment === 'details' && styles.segmentBtnTextActive]}>
@@ -445,7 +445,7 @@ const handleShareReport = async () => {
 
         <TouchableOpacity
           style={[styles.segmentBtn, activeSegment === 'history' && styles.segmentBtnActive]}
-          onPress={() => setActiveSegment('history')}
+          onPress={() => setActiveSegment('history')} accessibilityRole="button"
         >
           <Ionicons name="folder-open-outline" size={16} color={activeSegment === 'history' ? colors.danger[500] : darkColors.textTertiary} style={{ marginRight: 6 }} />
           <Text style={[styles.segmentBtnText, activeSegment === 'history' && styles.segmentBtnTextActive]}>

@@ -122,7 +122,7 @@ export default function AddEditContactScreen({ route, navigation }: any) {
         <View style={styles.header}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Ionicons name={isEditing ? 'pencil-outline' : 'person-add-outline'} size={26} color={colors.danger[500]} />
-            <Text style={styles.title}>
+            <Text style={styles.title} accessibilityRole="header">
               {isEditing ? 'Edit Contact' : 'Add Contact'}
             </Text>
           </View>
@@ -205,7 +205,7 @@ export default function AddEditContactScreen({ route, navigation }: any) {
                   selectedRelationship === rel && styles.tagSelected,
                 ]}
                 onPress={() => setValue('relationship', rel)}
-                activeOpacity={0.7}
+                activeOpacity={0.7} accessibilityRole="button"
               >
                 <Ionicons
                   name={RELATIONSHIP_ICONS[rel]}
@@ -229,7 +229,7 @@ export default function AddEditContactScreen({ route, navigation }: any) {
           <TouchableOpacity
             style={styles.saveBtn}
             onPress={handleSubmit(onSubmit)}
-            disabled={isLoading}
+            disabled={isLoading} accessibilityRole="button"
           >
             {isLoading ? (
               <ActivityIndicator color={darkColors.text} />
@@ -245,7 +245,7 @@ export default function AddEditContactScreen({ route, navigation }: any) {
             <TouchableOpacity
               style={styles.deleteBtn}
               onPress={handleDelete}
-              disabled={isLoading}
+              disabled={isLoading} accessibilityRole="button"
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                 <Ionicons name="trash-outline" size={18} color={colors.danger[400]} />

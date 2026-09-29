@@ -148,7 +148,7 @@ export default function ProfileScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       {/* ── Profile Picture Header ── */}
       <View style={styles.profileHeader}>
-        <TouchableOpacity onPress={simulatePictureUpload} style={styles.avatarWrap}>
+        <TouchableOpacity onPress={simulatePictureUpload} style={styles.avatarWrap} accessibilityRole="button">
           <View style={styles.avatarRing}>
             <Image
               source={{ uri: user.profilePictureUrl || 'https://i.pravatar.cc/300?img=11' }}
@@ -191,7 +191,7 @@ export default function ProfileScreen() {
             <Ionicons name="person-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
             <Text style={styles.cardTitle}>Account Details</Text>
           </View>
-          <TouchableOpacity onPress={() => { setIsEditing(!isEditing); setProfileMessage(null); }}>
+          <TouchableOpacity onPress={() => { setIsEditing(!isEditing); setProfileMessage(null); }} accessibilityRole="button">
             <View style={isEditing ? styles.cancelBtn : styles.editBtn}>
               <Text style={isEditing ? styles.cancelBtnText : styles.editBtnText}>{isEditing ? 'Cancel' : 'Edit'}</Text>
             </View>
@@ -330,7 +330,7 @@ export default function ProfileScreen() {
         )}
 
         {isEditing && (
-          <TouchableOpacity style={styles.saveBtn} onPress={handleProfileSubmit(onUpdateProfile)} disabled={isLoading}>
+          <TouchableOpacity style={styles.saveBtn} onPress={handleProfileSubmit(onUpdateProfile)} disabled={isLoading} accessibilityRole="button">
             {isLoading ? <ActivityIndicator color={darkColors.text} /> : (
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Ionicons name="save-outline" size={18} color={darkColors.text} style={{ marginRight: 6 }} />
@@ -343,7 +343,7 @@ export default function ProfileScreen() {
 
       {/* ── Change Password Card ── */}
       <View style={styles.card}>
-        <TouchableOpacity style={styles.cardHeader} onPress={() => { setIsChangingPassword(!isChangingPassword); setPwMessage(null); }}>
+        <TouchableOpacity style={styles.cardHeader} onPress={() => { setIsChangingPassword(!isChangingPassword); setPwMessage(null); }} accessibilityRole="button">
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Ionicons name="lock-closed-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
             <Text style={styles.cardTitle}>Security & Password</Text>
@@ -379,7 +379,7 @@ export default function ProfileScreen() {
                   />
                   <TouchableOpacity
                     style={styles.eyeBtn}
-                    onPress={() => setShowCurrentPassword(!showCurrentPassword)}
+                    onPress={() => setShowCurrentPassword(!showCurrentPassword)} accessibilityRole="button"
                   >
                     <Ionicons name={showCurrentPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color={darkColors.textTertiary} />
                   </TouchableOpacity>
@@ -404,7 +404,7 @@ export default function ProfileScreen() {
                     onChangeText={onChange}
                     value={value}
                   />
-                  <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowNewPassword(!showNewPassword)}>
+                  <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowNewPassword(!showNewPassword)} accessibilityRole="button">
                     <Ionicons name={showNewPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color={darkColors.textTertiary} />
                   </TouchableOpacity>
                 </View>
@@ -430,7 +430,7 @@ export default function ProfileScreen() {
                   />
                   <TouchableOpacity
                     style={styles.eyeBtn}
-                    onPress={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                    onPress={() => setShowConfirmNewPassword(!showConfirmNewPassword)} accessibilityRole="button"
                   >
                     <Ionicons name={showConfirmNewPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color={darkColors.textTertiary} />
                   </TouchableOpacity>
@@ -441,7 +441,7 @@ export default function ProfileScreen() {
               <Text style={styles.errorHelper}>{pwErrors.confirmNewPassword.message}</Text>
             )}
 
-            <TouchableOpacity style={styles.pwSubmitBtn} onPress={handlePwSubmit(onChangePassword)} disabled={isPwLoading}>
+            <TouchableOpacity style={styles.pwSubmitBtn} onPress={handlePwSubmit(onChangePassword)} disabled={isPwLoading} accessibilityRole="button">
               {isPwLoading ? <ActivityIndicator color={colors.danger[500]} /> : (
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="refresh-outline" size={16} color={colors.danger[500]} style={{ marginRight: 6 }} />
@@ -454,7 +454,7 @@ export default function ProfileScreen() {
       </View>
 
       {/* ── Logout ── */}
-      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} accessibilityRole="button">
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Ionicons name="log-out-outline" size={20} color={colors.danger[400]} style={{ marginRight: 8 }} />
           <Text style={styles.logoutBtnText}>Log Out</Text>

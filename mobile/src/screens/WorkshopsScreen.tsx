@@ -190,7 +190,7 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
           <TouchableOpacity
             style={styles.callBtn}
             onPress={() => callWorkshop(item.phoneNumber)}
-            activeOpacity={0.8}
+            activeOpacity={0.8} accessibilityRole="button"
           >
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Ionicons name="call-outline" size={16} color={colors.success[400]} style={{ marginRight: 6 }} />
@@ -201,7 +201,7 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
         <TouchableOpacity
           style={[styles.navigateBtn, (!item.phoneNumber || item.phoneNumber.includes('Navigation') || item.phoneNumber.includes('N/A')) && { flex: 1 }]}
           onPress={() => openNavigation(item)}
-          activeOpacity={0.8}
+          activeOpacity={0.8} accessibilityRole="button"
         >
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Ionicons name="navigate-outline" size={16} color={darkColors.text} style={{ marginRight: 6 }} />
@@ -217,12 +217,12 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
       {/* ── Header ── */}
       <View style={styles.header}>
         {!isInline && (
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Back">
             <Ionicons name="arrow-back" size={20} color={darkColors.text} />
           </TouchableOpacity>
         )}
         <View>
-          <Text style={styles.title}>Nearby Workshops</Text>
+          <Text style={styles.title} accessibilityRole="header">Nearby Workshops</Text>
           <Text style={styles.subtitle}>Verified mechanics near you</Text>
         </View>
       </View>
@@ -238,7 +238,7 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
         <View style={styles.centerContainer}>
           <Ionicons name="warning-outline" size={48} color={colors.danger[400]} style={{ marginBottom: 12 }} />
           <Text style={styles.errorText}>{errorMsg}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={() => fetchWorkshops()}>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => fetchWorkshops()} accessibilityRole="button">
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Ionicons name="refresh-outline" size={16} color={darkColors.text} style={{ marginRight: 6 }} />
               <Text style={styles.retryBtnText}>Try Again</Text>

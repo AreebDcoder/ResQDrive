@@ -324,7 +324,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                   <Text style={styles.noVehicleText}>No active vehicle paired for crash detection.</Text>
                   <TouchableOpacity
                     style={styles.actionBtnSecondary}
-                    onPress={() => navigation.navigate('MyVehicles')}
+                    onPress={() => navigation.navigate('MyVehicles')} accessibilityRole="button"
                   >
                     <Ionicons name="add" size={16} color={darkColors.text} style={{ marginRight: 4 }} />
                     <Text style={styles.actionBtnText}>Add Vehicle</Text>
@@ -347,7 +347,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                       {primaryContact.relationship} • {primaryContact.phoneNumber}
                     </Text>
                   </View>
-                  <TouchableOpacity style={styles.callNowBtn} onPress={handleQuickCall}>
+                  <TouchableOpacity style={styles.callNowBtn} onPress={handleQuickCall} accessibilityRole="button">
                     <Ionicons name="call" size={14} color={darkColors.text} style={{ marginRight: 4 }} />
                     <Text style={styles.callNowBtnText}>CALL</Text>
                   </TouchableOpacity>
@@ -357,7 +357,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                   <Text style={styles.noVehicleText}>No emergency contacts registered.</Text>
                   <TouchableOpacity
                     style={styles.actionBtnSecondary}
-                    onPress={() => navigation.navigate('EmergencyContacts')}
+                    onPress={() => navigation.navigate('EmergencyContacts')} accessibilityRole="button"
                   >
                     <Ionicons name="add" size={16} color={darkColors.text} style={{ marginRight: 4 }} />
                     <Text style={styles.actionBtnText}>Add Contact</Text>
@@ -378,7 +378,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                   styles.drivingModeCircle,
                   (preferences?.drivingModeEnabled) ? styles.circleActive : styles.circleInactive
                 ]}
-                activeOpacity={0.8}
+                activeOpacity={0.8} accessibilityRole="button"
               >
                 <Ionicons
                   name="power"
@@ -403,13 +403,13 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
     <View style={{ flex: 1, backgroundColor: darkColors.surface }}>
       {/* Header */}
       <View style={styles.customHeader}>
-        <TouchableOpacity onPress={() => setIsDrawerOpen(true)}>
+        <TouchableOpacity onPress={() => setIsDrawerOpen(true)} accessibilityRole="button" accessibilityLabel="Menu">
           <Ionicons name="menu" size={28} color={darkColors.text} />
         </TouchableOpacity>
         <Text style={styles.customHeaderTitle}>ResQDrive</Text>
         <TouchableOpacity 
           onPress={() => navigation.navigate('BleSensorDemo')}
-          style={{ padding: 4 }}
+          style={{ padding: 4 }} accessibilityRole="button"
         >
           <Ionicons 
             name={connectionStatus === 'connected' ? 'bluetooth' : 'bluetooth-outline'} 
@@ -432,31 +432,31 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
 
       {/* Bottom Tabs */}
       <View style={tabStyles.tabBar}>
-        <TouchableOpacity style={tabStyles.tabItem} onPress={() => handleTabPress('home')}>
+        <TouchableOpacity style={tabStyles.tabItem} onPress={() => handleTabPress('home')} accessibilityRole="button">
           {activeTab === 'home' && <View style={tabStyles.activeIndicator} />}
           <Ionicons name={activeTab === 'home' ? "home" : "home-outline"} size={22} color={activeTab === 'home' ? colors.danger[600] : darkColors.textTertiary} />
           <Text style={[tabStyles.tabLabel, activeTab === 'home' && tabStyles.activeTabLabel]}>Home</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={tabStyles.tabItem} onPress={() => handleTabPress('alert')}>
+        <TouchableOpacity style={tabStyles.tabItem} onPress={() => handleTabPress('alert')} accessibilityRole="button">
           {activeTab === 'alert' && <View style={tabStyles.activeIndicator} />}
           <Ionicons name={activeTab === 'alert' ? "warning" : "warning-outline"} size={22} color={activeTab === 'alert' ? colors.danger[600] : darkColors.textTertiary} />
           <Text style={[tabStyles.tabLabel, activeTab === 'alert' && tabStyles.activeTabLabel]}>Alert</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={tabStyles.tabItem} onPress={() => handleTabPress('damage')}>
+        <TouchableOpacity style={tabStyles.tabItem} onPress={() => handleTabPress('damage')} accessibilityRole="button">
           {activeTab === 'damage' && <View style={tabStyles.activeIndicator} />}
           <Ionicons name={activeTab === 'damage' ? "camera" : "camera-outline"} size={22} color={activeTab === 'damage' ? colors.danger[600] : darkColors.textTertiary} />
           <Text style={[tabStyles.tabLabel, activeTab === 'damage' && tabStyles.activeTabLabel]}>Damage</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={tabStyles.tabItem} onPress={() => handleTabPress('services')}>
+        <TouchableOpacity style={tabStyles.tabItem} onPress={() => handleTabPress('services')} accessibilityRole="button">
           {activeTab === 'services' && <View style={tabStyles.activeIndicator} />}
           <Ionicons name={activeTab === 'services' ? "location" : "location-outline"} size={22} color={activeTab === 'services' ? colors.danger[600] : darkColors.textTertiary} />
           <Text style={[tabStyles.tabLabel, activeTab === 'services' && tabStyles.activeTabLabel]}>Hospital</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={tabStyles.tabItem} onPress={() => handleTabPress('parts')}>
+        <TouchableOpacity style={tabStyles.tabItem} onPress={() => handleTabPress('parts')} accessibilityRole="button">
           {activeTab === 'parts' && <View style={tabStyles.activeIndicator} />}
           <MaterialCommunityIcons name={activeTab === 'parts' ? "wrench" : "wrench-outline"} size={22} color={activeTab === 'parts' ? colors.danger[600] : darkColors.textTertiary} />
           <Text style={[tabStyles.tabLabel, activeTab === 'parts' && tabStyles.activeTabLabel]}>Workshop</Text>
@@ -466,11 +466,11 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
       {/* Sidebar Drawer Modal Overlay */}
       {isDrawerOpen && (
         <View style={drawerStyles.overlay}>
-          <TouchableOpacity style={drawerStyles.backdrop} activeOpacity={1} onPress={() => setIsDrawerOpen(false)} />
+          <TouchableOpacity style={drawerStyles.backdrop} activeOpacity={1} onPress={() => setIsDrawerOpen(false)} accessibilityRole="button" />
           <View style={drawerStyles.drawerContainer}>
             <View style={drawerStyles.drawerHeader}>
               <Text style={drawerStyles.drawerTitle}>Menu Options</Text>
-              <TouchableOpacity onPress={() => setIsDrawerOpen(false)}>
+              <TouchableOpacity onPress={() => setIsDrawerOpen(false)} accessibilityRole="button" accessibilityLabel="Close">
                 <Ionicons name="close-outline" size={24} color={darkColors.text} />
               </TouchableOpacity>
             </View>
@@ -481,7 +481,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 onPress={() => {
                   setIsDrawerOpen(false);
                   navigation.navigate('MyVehicles');
-                }}
+                }} accessibilityRole="button"
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="car-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
@@ -495,7 +495,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 onPress={() => {
                   setIsDrawerOpen(false);
                   navigation.navigate('EmergencyContacts');
-                }}
+                }} accessibilityRole="button"
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="call-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
@@ -509,7 +509,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 onPress={() => {
                   setIsDrawerOpen(false);
                   navigation.navigate('NotificationHistory');
-                }}
+                }} accessibilityRole="button"
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="notifications-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
@@ -523,7 +523,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 onPress={() => {
                   setIsDrawerOpen(false);
                   navigation.navigate('NotificationPreferences');
-                }}
+                }} accessibilityRole="button"
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="settings-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
@@ -537,7 +537,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 onPress={() => {
                   setIsDrawerOpen(false);
                   navigation.navigate('CrashSoundDemo');
-                }}
+                }} accessibilityRole="button"
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="mic-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
@@ -551,7 +551,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 onPress={() => {
                   setIsDrawerOpen(false);
                   navigation.navigate('BleSensorDemo');
-                }}
+                }} accessibilityRole="button"
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="bluetooth-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
@@ -565,7 +565,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 onPress={() => {
                   setIsDrawerOpen(false);
                   navigation.navigate('VoiceCommandDemo');
-                }}
+                }} accessibilityRole="button"
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="volume-high-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
@@ -579,7 +579,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 onPress={() => {
                   setIsDrawerOpen(false);
                   navigation.navigate('Profile');
-                }}
+                }} accessibilityRole="button"
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="person-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
@@ -593,7 +593,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 onPress={() => {
                   setIsDrawerOpen(false);
                   navigation.navigate('IncidentsList');
-                }}
+                }} accessibilityRole="button"
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="document-text-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
@@ -607,7 +607,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 onPress={() => {
                   setIsDrawerOpen(false);
                   navigation.navigate('LocationSharing');
-                }}
+                }} accessibilityRole="button"
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="location-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
@@ -621,7 +621,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 onPress={() => {
                   setIsDrawerOpen(false);
                   navigation.navigate('EmergencyNotification');
-                }}
+                }} accessibilityRole="button"
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="warning-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
@@ -635,7 +635,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 onPress={() => {
                   setIsDrawerOpen(false);
                   testEmergencyFallback();
-                }}
+                }} accessibilityRole="button"
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                   <Ionicons name="flask-outline" size={18} color={darkColors.textTertiary} />
@@ -649,7 +649,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 onPress={() => {
                   setIsDrawerOpen(false);
                   navigation.navigate('SOS');
-                }}
+                }} accessibilityRole="button"
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                   <Ionicons name="alert-circle-outline" size={18} color={colors.danger[600]} />
@@ -679,7 +679,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                     longitude: lng,
                     severity: 'Moderate',
                   });
-                }}
+                }} accessibilityRole="button"
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                   <Ionicons name="warning-outline" size={18} color={darkColors.text} />

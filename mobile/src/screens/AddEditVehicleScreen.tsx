@@ -104,7 +104,7 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
         <View style={styles.header}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Ionicons name={isEditing ? 'pencil-outline' : 'car-outline'} size={26} color={colors.danger[500]} />
-            <Text style={styles.title}>
+            <Text style={styles.title} accessibilityRole="header">
               {isEditing ? 'Edit Vehicle' : 'Add Vehicle'}
             </Text>
           </View>
@@ -219,7 +219,7 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
           <TouchableOpacity
             style={styles.saveBtn}
             onPress={handleSubmit(onSubmit)}
-            disabled={isLoading}
+            disabled={isLoading} accessibilityRole="button"
           >
             {isLoading ? (
               <ActivityIndicator color={darkColors.text} />
@@ -240,7 +240,7 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
                     vehicleId: vehicle.id,
                     insurance: vehicle.insurance,
                   })
-                }
+                } accessibilityRole="button"
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                   <Ionicons name="shield-checkmark-outline" size={18} color={colors.danger[500]} />
@@ -253,7 +253,7 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
               <TouchableOpacity
                 style={styles.deleteBtn}
                 onPress={handleDelete}
-                disabled={isLoading}
+                disabled={isLoading} accessibilityRole="button"
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                   <Ionicons name="trash-outline" size={18} color={colors.danger[400]} />
