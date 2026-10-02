@@ -282,8 +282,15 @@ export default function CountdownScreen({ navigation, route }: any) {
     }
 
     // ═══ STEP 4: Direct background SMS (device-side fallback) ═══
+    // FIX: Only send device-side SMS if the backend SMS channel FAILED.
+    // Previously, this ALWAYS sent device-side SMS to ALL contacts — even when
+    // the backend had already successfully sent RoboSMS via the API. This caused
+    // each contact to receive DUPLICATE SMS (one from backend, one from device).
     let autoSmsSent = false;
-    if (dispatchContacts.length > 0) {
+    const backendSmsFailed = !backendSucceeded ||
+      (backendSucceeded && dispatchStatus.sms !== 'sent');
+
+    if (dispatchContacts.length > 0 && backendSmsFailed) {
       const smsMessage = `ResQDrive ALERT: ${user?.fullName || 'Unknown'} may have been in a ${severity} accident. Location: https://www.google.com/maps?q=${realLat},${realLng}`;
 
       // Try background auto-SMS first (react-native-direct-sms)

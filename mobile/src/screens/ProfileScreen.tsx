@@ -24,11 +24,13 @@ import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, FormInput, Input } from '../components/ui';
+import { useTheme } from '../theme/useTheme';
 import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function ProfileScreen() {
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
+  const { theme, toggleTheme } = useTheme();
   const { user } = useSelector((state: RootState) => state.auth);
   
   const [isEditing, setIsEditing] = useState(false);
@@ -350,6 +352,33 @@ export default function ProfileScreen() {
         )}
       </View>
 
+      {/* ── Theme Toggle ── */}
+      <View style={styles.themeToggleRow}>
+        <View style={styles.themeToggleInfo}>
+          <Ionicons
+            name={theme === 'dark' ? 'moon-outline' : 'sunny-outline'}
+            size={20}
+            color={colors.danger[500]}
+          />
+          <View>
+            <Text style={styles.themeToggleTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+              {theme === 'dark' ? 'Dark Theme' : 'Light Theme'}
+            </Text>
+            <Text style={styles.themeToggleSubtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+              Tap to switch to {theme === 'dark' ? 'light' : 'dark'} mode
+            </Text>
+          </View>
+        </View>
+        <Button
+          label="Toggle"
+          variant="secondary"
+          size="sm"
+          onPress={toggleTheme}
+          icon={theme === 'dark' ? 'sunny-outline' : 'moon-outline'}
+          accessibilityHint="Toggle between dark and light theme"
+        />
+      </View>
+
       {/* ── Logout ── */}
       <Button
         label="Log Out"
@@ -625,5 +654,33 @@ const styles = StyleSheet.create({
   },
   eyeBtnText: {
     fontSize: 16,
+  },
+  // Theme toggle row styles
+  themeToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: tints.glassCard,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: tints.whiteBorder,
+  },
+  themeToggleInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  themeToggleTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: darkColors.text,
+  },
+  themeToggleSubtitle: {
+    fontSize: 12,
+    color: darkColors.textSecondary,
+    marginTop: 2,
   },
 });

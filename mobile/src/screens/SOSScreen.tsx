@@ -220,6 +220,13 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
 
   const escalationStartTimeRef = useRef<number>(0);
 
+  // CRITICAL FIX: Use a ref to always call the LATEST triggerAutoEscalationCall.
+  // Without this, the useEffect at line 240 captures a stale closure from the
+  // first render — personalContacts would be empty (not yet loaded from API),
+  // causing the auto-call to skip personal contacts and jump straight to
+  // the regional emergency number.
+  const triggerAutoEscalationRef = useRef<() => Promise<void>>(async () => {});
+
   useEffect(() => {
     if (!isEscalationActive) return;
 
@@ -231,6 +238,10 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
       if (remaining <= 0) {
         clearInterval(intervalId);
         setEscalationTimeLeft(0);
+        // CRITICAL FIX: Actually fire the auto-escalation call when timer hits 0.
+        // Previously this function was defined but never invoked — the auto-call
+        // to emergency contacts (and regional fallback) never actually happened.
+        triggerAutoEscalationRef.current();
       } else {
         setEscalationTimeLeft(remaining);
       }
@@ -309,6 +320,12 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
       }
     }
   };
+
+  // Keep the ref updated with the latest closure on every render
+  // (so the timer useEffect always calls the freshest version)
+  useEffect(() => {
+    triggerAutoEscalationRef.current = triggerAutoEscalationCall;
+  });
 
   const handleCallNumber = async (number: string, name: string) => {
     // Stop local countdown if active

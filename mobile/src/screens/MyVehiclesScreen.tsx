@@ -39,7 +39,7 @@ export default function MyVehiclesScreen({ navigation }: { navigation: AppNaviga
         <View style={styles.headerInfo}>
           <View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              <Ionicons name="car" size={20} color={colors.primary[400]} />
+              <Ionicons name="car" size={20} color={colors.danger[400]} />
               <View style={[styles.titleRow, {}]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 }}>
                   <View>
@@ -81,12 +81,12 @@ export default function MyVehiclesScreen({ navigation }: { navigation: AppNaviga
             accessibilityLabel="Set as primary vehicle"
             style={({ pressed }) => [
               styles.setPrimaryBtn,
-              { backgroundColor: colors.primary[50], borderColor: colors.primary[200], opacity: pressed ? 0.85 : 1 },
+              { backgroundColor: colors.danger[50], borderColor: colors.danger[200], opacity: pressed ? 0.85 : 1 },
             ]}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-              <Ionicons name="flash-outline" size={14} color={colors.primary[500]} />
-              <Text style={[styles.setPrimaryText, { color: colors.primary[600] }]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Activate</Text>
+              <Ionicons name="flash-outline" size={14} color={colors.danger[500]} />
+              <Text style={[styles.setPrimaryText, { color: colors.danger[600] }]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Activate</Text>
             </View>
           </Pressable>
         )}
@@ -101,9 +101,9 @@ export default function MyVehiclesScreen({ navigation }: { navigation: AppNaviga
             <Ionicons
               name={item.insurance ? 'shield-checkmark-outline' : 'add-circle-outline'}
               size={14}
-              color={item.insurance ? colors.success[500] : colors.primary[500]}
+              color={item.insurance ? colors.success[500] : colors.danger[500]}
             />
-            <Text style={{ color: item.insurance ? colors.success[600] : colors.primary[600], fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium }} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+            <Text style={{ color: item.insurance ? colors.success[600] : colors.danger[600], fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium }} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               {item.insurance ? 'Insured' : 'Add Insurance'}
             </Text>
           </View>
@@ -123,7 +123,7 @@ export default function MyVehiclesScreen({ navigation }: { navigation: AppNaviga
       {/* Loading */}
       {isLoading && (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.primary[500]} />
+          <ActivityIndicator size="large" color={colors.danger[500]} />
         </View>
       )}
 
@@ -133,7 +133,7 @@ export default function MyVehiclesScreen({ navigation }: { navigation: AppNaviga
           <Ionicons name="alert-circle-outline" size={36} color={colors.danger[500]} style={{ marginBottom: spacing.sm }} />
           <Text style={{ color: colors.danger[500], fontSize: typography.fontSize.md }} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Failed to load vehicles</Text>
           <Pressable onPress={() => refetch()} accessibilityRole="button" accessibilityLabel="Retry" style={{ marginTop: spacing.md }}>
-            <Text style={{ color: colors.primary[500], fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold }} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Retry</Text>
+            <Text style={{ color: colors.danger[500], fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold }} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Retry</Text>
           </Pressable>
         </View>
       )}
@@ -166,7 +166,7 @@ export default function MyVehiclesScreen({ navigation }: { navigation: AppNaviga
         accessibilityLabel="Add new vehicle"
         style={({ pressed }) => [
           styles.fab,
-          { backgroundColor: colors.primary[600], opacity: pressed ? 0.85 : 1 },
+          { backgroundColor: colors.danger[600], opacity: pressed ? 0.85 : 1 },
         ]}
        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
         <Ionicons name="add" size={28} color={darkColors.text} />
