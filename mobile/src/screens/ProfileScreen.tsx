@@ -119,7 +119,6 @@ export default function ProfileScreen() {
         await api.post('/auth/logout', { refreshToken: token });
       }
     } catch (err) {
-      console.log('Logout API call failed:', err);
     } finally {
             await deleteItemAsync('refreshToken');
       dispatch(logoutAction());

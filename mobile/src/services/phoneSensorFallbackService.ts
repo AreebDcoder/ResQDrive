@@ -37,16 +37,13 @@ export class PhoneSensorFallbackService implements SensorFusionService {
   async start() {
     if (this.intervalId) return;
 
-    console.log('PhoneFallback: Initializing accelerometer and gyroscope...');
     
     // Check hardware availability of sensors
     try {
       const accelAvailable = await Accelerometer.isAvailableAsync();
       const gyroAvailable = await Gyroscope.isAvailableAsync();
       this.isGyroHardwareAvailable = gyroAvailable;
-      console.log(`[PhoneFallback] Hardware sensor status -> Accelerometer: ${accelAvailable ? 'AVAILABLE' : 'NOT_FOUND'}, Gyroscope: ${gyroAvailable ? 'AVAILABLE' : 'NOT_FOUND'}`);
     } catch (err: any) {
-      console.log('[PhoneFallback] Error checking sensor availability:', err.message);
       this.isGyroHardwareAvailable = false;
     }
 
@@ -63,7 +60,6 @@ export class PhoneSensorFallbackService implements SensorFusionService {
     }
 
     try {
-      console.log('PhoneFallback: Requesting foreground location permission...');
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === 'granted') {
         this.locationSubscription = await Location.watchPositionAsync(
@@ -84,7 +80,6 @@ export class PhoneSensorFallbackService implements SensorFusionService {
         );
       }
     } catch (e: any) {
-      console.log('PhoneFallback: Failed to start location tracking:', e.message);
     }
 
     this.lastAccel = { ...this.currentAccel };

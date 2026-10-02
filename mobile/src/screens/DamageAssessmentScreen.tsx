@@ -194,7 +194,6 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
         setCurrentSessionAssessmentIds((prev) => [...prev, response.data.id]);
       }
     } catch (err: any) {
-      console.log('Damage Assessment Error:', err);
       const status = err.response?.status;
       const serverMsg = err.response?.data?.message || err.response?.data?.detail;
 

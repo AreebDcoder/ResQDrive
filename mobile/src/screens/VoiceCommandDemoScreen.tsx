@@ -121,7 +121,6 @@ export default function VoiceCommandDemoScreen() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        console.log('Location permission denied, dialing default.');
         Linking.openURL('tel:1122');
         return;
       }
@@ -150,7 +149,6 @@ export default function VoiceCommandDemoScreen() {
         Linking.openURL('tel:1122');
       }
     } catch (err) {
-      console.log('Voice SOS execution failed:', err);
       Linking.openURL('tel:1122');
     }
   };

@@ -87,7 +87,6 @@ export default function WorkshopsScreen({ navigation, isInline }: { navigation: 
           longitude = locResult.lng;
         }
       } catch (locErr) {
-        console.log('Location acquisition fallback in WorkshopsScreen:', locErr);
       }
 
       const response = await api.get('/workshops/nearest', {

@@ -6,7 +6,6 @@ import { Platform } from 'react-native';
 
 export async function registerForPushNotificationsAsync(): Promise<string | null> {
   if (!Device.isDevice) {
-    console.log('Push notifications require a physical device.');
     return null;
   }
 
@@ -19,7 +18,6 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
   }
 
   if (finalStatus !== 'granted') {
-    console.log('Push notification permission not granted.');
     return null;
   }
 
@@ -40,9 +38,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
 
   try {
   await api.patch('/users/me', { pushToken: token });
-  console.log('✅ Push token saved successfully:', token);
 } catch (err) {
-  console.log('❌ Failed to save push token to backend:', err);
 }
 
 return token;

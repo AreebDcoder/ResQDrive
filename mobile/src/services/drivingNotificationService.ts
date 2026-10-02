@@ -27,7 +27,6 @@ export class DrivingNotificationService {
       }
       return true;
     } catch (e) {
-      console.log('Failed to request notifications permission:', e);
       return false;
     }
   }
@@ -68,9 +67,7 @@ export class DrivingNotificationService {
         trigger: null,
       });
 
-      console.log('Driving mode persistent notification scheduled successfully.');
     } catch (error) {
-      console.log('Failed to start driving mode notification:', error);
     }
   }
 
@@ -80,9 +77,7 @@ export class DrivingNotificationService {
   static async stopNotification(): Promise<void> {
     try {
       await Notifications.dismissNotificationAsync(DRIVING_NOTIFICATION_ID);
-      console.log('Driving mode persistent notification dismissed.');
     } catch (error) {
-      console.log('Failed to dismiss driving mode notification:', error);
     }
   }
 }

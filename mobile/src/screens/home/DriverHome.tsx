@@ -89,7 +89,6 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
         const cRes = await api.get('/emergency-contacts');
         dispatch({ type: 'contacts/fetchContactsSuccess', payload: cRes.data });
       } catch (err) {
-        console.log('Failed to background sync dashboard data:', err);
       }
     };
     
@@ -101,7 +100,6 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
         const response = await api.get('/notifications/preferences');
         dispatch({ type: 'notifications/fetchPreferencesSuccess', payload: response.data });
       } catch (err) {
-        console.log('Failed to fetch preferences on Home mount:', err);
       }
     };
     if (!preferences) {
@@ -116,13 +114,11 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
 
   React.useEffect(() => {
     MultiModalFusionService.subscribeToConfirmedAccidents(async (trigger) => {
-      console.log(`🚨 MULTI-MODAL ACCIDENT CONFIRMED! Acoustic ("${trigger.soundEvent.topClass}") & Motion (${trigger.motionEvent.severity.toUpperCase()}) co-occurred within 10s window!`);
 
       const loc = await getSafeDeviceLocation();
       const lat = loc?.latitude ?? FALLBACK_LAT;
       const lng = loc?.longitude ?? FALLBACK_LNG;
 
-      console.log(`📍 Got precise location: Lat ${lat}, Lng ${lng}`);
       navigation.navigate('Countdown', {
         latitude: lat,
         longitude: lng,
@@ -133,15 +129,12 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
 
     // 2. Feed YAMNet acoustic crash events into MultiModalFusionService
     CrashSoundDetectionService.subscribeToCrashEvents((confidence, topClass) => {
-      console.log('🔊 [Audio Monitor] Acoustic crash signature detected:', topClass, `${(confidence * 100).toFixed(1)}%`);
       MultiModalFusionService.recordSoundEvent(confidence, topClass);
     });
 
     if (preferences?.drivingModeEnabled) {
-      console.log('Driving Mode Enabled: Starting background YAMNet crash sound monitoring...');
       CrashSoundDetectionService.startMonitoring();
     } else {
-      console.log('Driving Mode Disabled: Stopping background YAMNet crash sound monitoring...');
       CrashSoundDetectionService.stopMonitoring();
     }
 
@@ -152,7 +145,6 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
 
   React.useEffect(() => {
     if (preferences?.drivingModeEnabled) {
-      console.log('Driving Mode Enabled: Starting sensor fusion source manager...');
 
       // 3. Feed Accelerometer/Gyroscope motion events into MultiModalFusionService
       sensorSourceManager.onSensorEvent((reading) => {
@@ -160,7 +152,6 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
 
         if (severity === 'severe' || severity === 'moderate') {
           const mlLog = reading.mlClassifiedSeverity ? ` | ML Prediction: ${reading.mlClassifiedSeverity.toUpperCase()} (${((reading.mlConfidence || 0) * 100).toFixed(1)}%)` : '';
-          console.log(`🚗 [Motion Monitor] ${severity.toUpperCase()} impact signature detected (${reading.accelG.toFixed(2)}g / ${reading.gyroDegPerSec.toFixed(1)}°/s)${mlLog}. Feeding into MultiModalFusionService...`);
           MultiModalFusionService.recordMotionEvent(
             severity,
             reading.accelG,
@@ -170,13 +161,11 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
           );
         } else if (severity === 'minor') {
           const mlLog = reading.mlClassifiedSeverity ? ` | ML Prediction: ${reading.mlClassifiedSeverity.toUpperCase()} (${((reading.mlConfidence || 0) * 100).toFixed(1)}%)` : '';
-          console.log(`ℹ️ [Motion Monitor] Logged MINOR jolt event (${reading.accelG.toFixed(2)}g, ${reading.gyroDegPerSec.toFixed(1)}°/s)${mlLog}. Recorded for history review without triggering countdown.`);
         }
       });
 
       sensorSourceManager.start();
     } else {
-      console.log('Driving Mode Disabled: Stopping sensor fusion source manager...');
       sensorSourceManager.stop();
     }
 
@@ -275,7 +264,6 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
 
       alert(`Emergency alert sent via: ${result.mode}`);
     } catch (err: any) {
-      console.log('Emergency dispatch failed:', err);
       alert('Failed to send emergency alert. Please try again or call emergency services directly.');
     }
   };
@@ -657,7 +645,6 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 </View>
                 <Text style={[styles.menuItemArrow, { color: colors.danger[600] }]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
               </TouchableOpacity>
-
 
 
               <TouchableOpacity

@@ -158,7 +158,6 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
  
 
     const res = await api.post('/auth/google', { idToken });
-    console.log('✅ Backend response:', JSON.stringify(res.data));
 
          if (res.data?.accessToken) {
         const { accessToken, refreshToken, user } = res.data;
@@ -174,7 +173,6 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
       });
     }
   } catch (error: any) {
-    console.log('❌ Google Sign-In error:', error.code, error.message, error.response?.data);
     if (error.code === statusCodes.SIGN_IN_CANCELLED) {
       // User cancelled
     } else {

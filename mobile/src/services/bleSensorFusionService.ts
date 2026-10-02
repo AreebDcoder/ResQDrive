@@ -9,7 +9,6 @@ let BleManagerClass: any = null;
 try {
   BleManagerClass = require('react-native-ble-plx').BleManager;
 } catch (e) {
-  console.log('react-native-ble-plx is not natively available.');
 }
 
 const SERVICE_UUID = '4fafc201-1fb5-459e-8fcc-c5c9c331914b';
@@ -41,7 +40,6 @@ constructor() {
       try {
         this.manager = new BleManagerClass();
       } catch (err: any) {
-        console.log('BLE: Native BleClient not available in current APK build, using Phone sensors:', err?.message);
         this.manager = null;
       }
     }
@@ -61,7 +59,6 @@ constructor() {
 
     store.dispatch(setConnectionStatus('connecting'));
     if (!this.manager) {
-      console.log('BLE: BleManager is not supported or initialized on this device.');
       this.handleConnectionFailure();
       return;
     }
@@ -80,10 +77,9 @@ constructor() {
           }
         ).then(sub => {
           this.phoneLocationSubscription = sub;
-          console.log('BLE: Phone GPS backup watcher initialized.');
         });
       }
-    }).catch(err => console.log('BLE Fallback GPS error:', err.message));
+    }).catch(err => {});
 
     this.scanAndConnect();
   }
@@ -111,7 +107,7 @@ constructor() {
 
     if (this.connectedDevice) {
       this.connectedDevice.cancelConnection()
-        .catch((err: any) => console.log('BLE Disconnect ignored:', err.message));
+        .catch((err: any) => {});
       this.connectedDevice = null;
     }
 
@@ -126,11 +122,9 @@ constructor() {
   }
 
   private scanAndConnect() {
-    console.log('BLE: Starting 3s scan for ResQDrive Service...');
     
     // Safety 3s timeout: if hardware isn't broadcasting, stop scan and trigger fallback
     const scanTimeout = setTimeout(() => {
-      console.log('BLE: Scan timeout reached (3s). Stopping scan...');
       if (this.manager) {
         try { this.manager.stopDeviceScan(); } catch (e) {}
       }
@@ -143,7 +137,6 @@ constructor() {
       async (error: any, device: any) => {
         clearTimeout(scanTimeout);
         if (error) {
-          console.log('BLE Scan error:', error.message);
           this.handleConnectionFailure();
           return;
         }
@@ -151,7 +144,6 @@ constructor() {
         if (device) {
           // Primary match is service UUID, secondary/tie-breaker is device name
           const isNameMatch = device.name === DEVICE_NAME;
-          console.log(`BLE Found device: ${device.name} (${device.id}), Match: ${isNameMatch}`);
           
           this.manager.stopDeviceScan();
           this.connectToDevice(device);
@@ -162,24 +154,18 @@ constructor() {
 
   private async connectToDevice(device: any) {
     try {
-      console.log(`BLE: Connecting to ${device.name || 'ResQDrive-Sensor'}...`);
       const connected = await device.connect();
       this.connectedDevice = connected;
       
-      console.log('BLE: Discovering services and characteristics...');
       await connected.discoverAllServicesAndCharacteristics();
 
       if (Platform.OS === 'android') {
         try {
-          console.log('BLE: Requesting MTU size of 256 bytes for large sensor JSON payload...');
           await connected.requestMTU(256);
-          console.log('BLE: MTU negotiation complete.');
         } catch (mtuErr: any) {
-          console.log('BLE: MTU request rejected or failed:', mtuErr.message);
         }
       }
       
-      console.log('BLE: Subscribing to characteristics notifications...');
       this.subscribeToNotifications(connected);
 
       // Successfully connected: reset attempts and set Redux state
@@ -188,12 +174,10 @@ constructor() {
 
       // Listen for unexpected device disconnects
       device.onDisconnected((err: any, disconnectedDevice: any) => {
-        console.log('BLE: Device disconnected unexpectedly.');
         this.handleDisconnect();
       });
 
     } catch (err: any) {
-      console.log('BLE: Connection failed:', err.message);
       this.handleConnectionFailure();
     }
   }
@@ -204,7 +188,6 @@ constructor() {
       CHARACTERISTIC_UUID,
       (error: any, characteristic: any) => {
         if (error) {
-          console.log('BLE notification error:', error.message);
           return;
         }
         if (characteristic?.value) {
@@ -257,7 +240,6 @@ constructor() {
       store.dispatch(updateLatestReading(reading));
       this.callbacks.forEach(cb => cb(reading));
     } catch (e: any) {
-      console.log('BLE parse error:', e.message);
     }
   }
 
@@ -275,7 +257,6 @@ constructor() {
     if (this.manager) {
       try { this.manager.stopDeviceScan(); } catch (e) {}
     } else {
-      console.log('BLE: BleManager is missing. Skipping retries, marking as unavailable.');
       this.isScanningOrConnecting = false;
       store.dispatch(setConnectionStatus('unavailable'));
       return;
@@ -283,7 +264,6 @@ constructor() {
 
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
-      console.log(`BLE: Retrying connection in 2 seconds (Attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
       store.dispatch(setConnectionStatus('connecting'));
       
       this.reconnectTimer = setTimeout(() => {
@@ -291,7 +271,6 @@ constructor() {
       }, 2000);
     } else {
       // Retries exhausted: fail gracefully and surface "unavailable" status for phone fallback
-      console.log('BLE: Hardware connection attempt completed. Switching to Phone sensors.');
       this.isScanningOrConnecting = false;
       store.dispatch(setConnectionStatus('unavailable'));
     }

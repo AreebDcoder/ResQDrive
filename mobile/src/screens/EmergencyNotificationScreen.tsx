@@ -102,7 +102,6 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
       );
 
       setGpsStatus('active');
-      console.log('[Emergency] GPS tracking started for location session:', locationSessionId);
     } catch (err) {
       console.error('[Emergency] Failed to start GPS tracking:', err);
       setGpsStatus('error');
@@ -184,12 +183,10 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
       console.warn('Could not get location for emergency trigger:', err);
     }
 
-    console.log('[Emergency] Triggering alert with payload:', payload);
     const result = await dispatch(triggerEmergency(payload));
     if (result.error) {
       toast.error(result.payload || 'Could not trigger alert');
     } else {
-      console.log('[Emergency] Trigger successful:', result.payload);
     }
   }
 
@@ -216,7 +213,6 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
     if (result.error) {
       toast.error(result.payload || 'Could not cancel alert');
     } else {
-      console.log('[Emergency] Cancel successful');
     }
   }
 

@@ -88,7 +88,6 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
           dispatch(fetchContactsSuccess(res.data));
         }
       } catch (err) {
-        console.log('[SOS] Failed to fetch fresh contacts:', err);
       }
     };
     fetchFreshContacts();
@@ -170,7 +169,7 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
         title: 'Emergency Direct Call Permission',
         message: 'ResQDrive requires permission to directly place emergency calls to Rescue 1122.',
         buttonPositive: 'Allow',
-      }).catch((e) => console.log('Early CALL_PHONE permission check error:', e));
+      }).catch((e) => {});
     }
   }, []);
 
@@ -209,7 +208,6 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
         setRegionalNumbers(response.data.regionalNumbers);
       }
     } catch (err: any) {
-      console.log('Non-fatal: could not refresh regional numbers, using standard defaults:', err?.message);
     } finally {
       setIsLocating(false);
       setIsLoading(false);
@@ -257,14 +255,12 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
       const contact = sortedContacts[currentContactIndex];
       phone = contact.phoneNumber;
       name = contact.name;
-      console.log(`[SOS Auto-Escalation] Calling personal contact ${currentContactIndex + 1}/${sortedContacts.length}: ${name} (${phone})`);
       autoDialed = true;
     } else {
       // 2. All personal contacts exhausted — call regional emergency service (prefer 11-digit landline)
       const targetService = regionalNumbers.find((r) => r.phoneNumber.length >= 5) || regionalNumbers[0];
       phone = targetService?.phoneNumber || '0519290002';
       name = targetService?.serviceName || 'Rescue 1122 HQ (Auto-Dial)';
-      console.log(`[SOS Auto-Escalation] All personal contacts exhausted — calling regional: ${name} (${phone})`);
       setHasCycledThroughAll(true);
       autoDialed = isAutoDialable(phone);
     }
@@ -275,16 +271,13 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
         autoDialed,
       });
     } catch (err) {
-      console.log('Failed to log auto-dialed call:', err);
     }
 
     // Place the direct call
     const dialed = await makeDirectPhoneCall(phone);
 
     if (dialed) {
-      console.log(`[SOS] Auto-call placed to ${name} (${phone}) — no user interaction needed`);
     } else if (!isAutoDialable(phone)) {
-      console.log(`[SOS] ${phone} is a 4-digit shortcode — opened dialer (user must tap Call)`);
       Alert.alert(
         `Call ${name}`,
         `${phone} is an emergency shortcode. Tap the green Call button to dial.`,
@@ -304,7 +297,6 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
         escalationStartTimeRef.current = 0;
         setEscalationTimeLeft(60);
         setIsEscalationActive(true);
-        console.log(`[SOS] Next escalation scheduled in 60s: Personal contact ${nextContact.name}`);
       } else {
         // Next is Regional Rescue 1122 Landline!
         const regional = regionalNumbers.find((r) => r.phoneNumber.length >= 5) || regionalNumbers[0];
@@ -314,7 +306,6 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
         });
         setEscalationTimeLeft(60);
         setIsEscalationActive(true);
-        console.log(`[SOS] Next escalation scheduled in 60s: Regional emergency service ${regional?.serviceName || 'Rescue 1122'}`);
       }
     }
   };
@@ -340,7 +331,6 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
         autoDialed: false,
       });
     } catch (err) {
-      console.log('Failed to log emergency call:', err);
     }
     await makeDirectPhoneCall(pendingCallContact.phone);
     setPendingCallContact(null);
@@ -432,7 +422,6 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
                 </View>
               </TouchableOpacity>
             ))}
-
 
 
             <View style={styles.noteBox}>

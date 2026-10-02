@@ -82,7 +82,6 @@ export default function HospitalsScreen({ navigation, isInline }: { navigation: 
           longitude = locResult.lng;
         }
       } catch (locErr) {
-        console.log('Location acquisition fallback in HospitalsScreen:', locErr);
       }
 
       const response = await api.get('/hospitals/nearest', {

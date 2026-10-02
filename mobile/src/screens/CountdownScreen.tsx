@@ -83,7 +83,6 @@ export default function CountdownScreen({ navigation, route }: any) {
           dispatch(fetchContactsSuccess(res.data));
         }
       } catch (err) {
-        console.log('[Countdown] Background contacts sync failed, using cached contacts:', err);
       }
     };
     syncContacts();
@@ -122,7 +121,6 @@ export default function CountdownScreen({ navigation, route }: any) {
         });
         return response.data;
       } catch (err) {
-        console.log('Failed to log incident:', err);
         return null;
       }
     },
@@ -153,7 +151,6 @@ export default function CountdownScreen({ navigation, route }: any) {
         dispatch(fetchContactsSuccess(freshRes.data));
       }
     } catch (e) {
-      console.log('[Countdown] Using Redux contacts for dispatch:', e);
     }
 
     const sortedContacts = [...currentContacts].sort(
@@ -180,11 +177,9 @@ export default function CountdownScreen({ navigation, route }: any) {
         realLng = pos.coords.longitude;
       }
     } catch (locErr) {
-      console.log('[Countdown] Using initial coordinates:', locErr);
     }
 
     const mapsLink = `https://www.google.com/maps?q=${realLat},${realLng}`;
-    console.log('[Countdown] Countdown ended. Starting multi-channel dispatch...');
 
     setDispatchStatus({
       backend: 'sending', sms: 'pending', push: 'pending',
@@ -203,9 +198,7 @@ export default function CountdownScreen({ navigation, route }: any) {
       );
       const geoData = await geoRes.json();
       address = geoData?.display_name;
-      console.log('[Countdown] Reverse geocoded address:', address);
     } catch (err) {
-      console.log('[Countdown] Reverse geocoding failed:', err);
     }
 
     try {
@@ -221,9 +214,7 @@ export default function CountdownScreen({ navigation, route }: any) {
       });
       incident = response.data;
       setDispatchStatus(prev => ({ ...prev, incident: 'logged' }));
-      console.log('[Countdown] Incident logged:', incident?.id, 'Address:', incident?.address);
     } catch (err) {
-      console.log('[Countdown] Failed to log incident:', err);
       setDispatchStatus(prev => ({ ...prev, incident: 'failed' }));
     }
 
@@ -241,9 +232,7 @@ export default function CountdownScreen({ navigation, route }: any) {
       emergencyNotificationResult = response.data;
       acknowledgeUrl = response.data?.acknowledgeUrl;
       setDispatchStatus(prev => ({ ...prev, module68: 'triggered' }));
-      console.log('✅ [Countdown] RoboCall & RoboSMS triggered! Session ID:', emergencyNotificationResult?.sessionId);
     } catch (err: any) {
-      console.log('[Countdown] Module 6.8 trigger failed (non-fatal):', err?.response?.data?.message || err?.message);
       setDispatchStatus(prev => ({ ...prev, module68: 'failed' }));
     }
 
@@ -281,14 +270,12 @@ export default function CountdownScreen({ navigation, route }: any) {
           email: respChannels.email.status === 'SENT' ? 'sent' : (respChannels.email.devMode ? 'failed' : 'failed'),
           whatsapp: respChannels.whatsapp?.status === 'SENT' ? 'sent' : (respChannels.whatsapp?.devMode ? 'pending' : 'failed'),
         }));
-        console.log('[Countdown] Backend dispatch succeeded:', respChannels);
       } else {
         setDispatchStatus(prev => ({
           ...prev, backend: 'failed', push: 'failed', email: 'failed', sms: 'pending', whatsapp: 'failed',
         }));
       }
     } catch (err) {
-      console.log('[Countdown] Backend dispatch failed — will fall back to device SMS:', err);
       setDispatchStatus(prev => ({
         ...prev, backend: 'failed', push: 'failed', email: 'failed', sms: 'pending', whatsapp: 'failed',
       }));
@@ -305,10 +292,8 @@ export default function CountdownScreen({ navigation, route }: any) {
         autoSmsSent = smsResult.sent > 0;
         if (autoSmsSent) {
           setDispatchStatus(prev => ({ ...prev, sms: 'sent' }));
-          console.log('[Countdown] Auto-SMS (background) sent to', smsResult.sent, 'contacts');
         }
       } catch (err) {
-        console.log('[Countdown] Auto-SMS error:', err);
       }
 
       // If auto-SMS failed AND backend also failed → open SMS app as last resort
@@ -320,12 +305,10 @@ export default function CountdownScreen({ navigation, route }: any) {
             const phoneNumbers = dispatchContacts.map(c => c.phoneNumber);
             await Sms.sendSMSAsync(phoneNumbers, smsMessage);
             setDispatchStatus(prev => ({ ...prev, sms: 'sent-via-device' }));
-            console.log('[Countdown] Device SMS app opened — user must tap Send.');
           } else {
             setDispatchStatus(prev => ({ ...prev, sms: 'failed' }));
           }
         } catch (err) {
-          console.log('[Countdown] Device SMS fallback also failed:', err);
           setDispatchStatus(prev => ({ ...prev, sms: 'failed' }));
         }
       } else if (!autoSmsSent && backendSucceeded) {
@@ -345,7 +328,6 @@ export default function CountdownScreen({ navigation, route }: any) {
         trigger: null,
       });
     } catch (e) {
-      console.log('[Countdown] Local notification failed:', e);
     }
 
     // ═══ STEP 6: Show dispatch summary for 3 seconds, then navigate to SOS ═══
@@ -370,7 +352,6 @@ export default function CountdownScreen({ navigation, route }: any) {
 
   useEffect(() => {
     // Release the microphone from crash detection so speech recognizer gets exclusive access
-    console.log('[Countdown]: Stopping crash audio monitoring to free microphone for voice commands.');
     CrashSoundDetectionService.stopMonitoring();
 
     // Small delay to let the native mic resource fully release before starting speech recognition
@@ -380,11 +361,9 @@ export default function CountdownScreen({ navigation, route }: any) {
 
     VoiceCommandService.subscribeToCallbacks(
       () => {
-        console.log('[Countdown Voice Command]: CANCEL action detected.');
         cancelCallbackRef.current('VOICE');
       },
       () => {
-        console.log('[Countdown Voice Command]: SOS action detected. Bypassing countdown!');
         timeoutCallbackRef.current();
       },
       () => {},
@@ -396,7 +375,6 @@ export default function CountdownScreen({ navigation, route }: any) {
       clearTimeout(startDelay);
       // Stop voice, restart crash monitoring
       VoiceCommandService.stopListening();
-      console.log('[Countdown]: Restarting crash audio monitoring.');
       CrashSoundDetectionService.startMonitoring();
     };
   }, []);

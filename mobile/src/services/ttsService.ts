@@ -20,7 +20,6 @@ export class TtsService {
   static async announceAccidentInfo(locationDescription: string, hospitalName: string, etaMinutes: number) {
     const text = `Accident detected near ${locationDescription}. Nearest hospital is ${hospitalName}, approximately ${etaMinutes} minutes away.`;
     
-    console.log(`[TtsService Announcement]: "${text}"`);
 
     if (isNativeTtsSupported && Tts) {
       try {

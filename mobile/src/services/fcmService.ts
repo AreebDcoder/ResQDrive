@@ -46,7 +46,6 @@ export class FCMService {
 
       return true; // Mock mode defaults to true
     } catch (error) {
-      console.log('Permission request failed:', error);
       return false;
     }
   }
@@ -58,7 +57,6 @@ export class FCMService {
     try {
       const hasPermission = await this.requestPermission();
       if (!hasPermission) {
-        console.log('Notification permission not granted. Device registration skipped.');
         return null;
       }
 
@@ -75,7 +73,6 @@ export class FCMService {
 
       if (!fcmToken) {
         fcmToken = 'mock-fcm-token-' + Platform.OS + '-' + Math.random().toString(36).substring(7);
-        console.log('Using mock FCM device token for registration:', fcmToken);
       }
 
       if (fcmToken) {
@@ -83,12 +80,10 @@ export class FCMService {
           fcmToken,
           platform: Platform.OS,
         });
-        console.log('FCM Device Token registered successfully:', fcmToken);
         return fcmToken;
       }
       return null;
     } catch (error: any) {
-      console.log('FCM token registration failed:', error.message);
       return null;
     }
   }
@@ -111,10 +106,8 @@ export class FCMService {
         await api.delete('/notifications/register-device', {
           data: { fcmToken },
         });
-        console.log('FCM Device Token removed from backend.');
       }
     } catch (error) {
-      console.log('Failed to unregister FCM token:', error);
     }
   }
 
@@ -123,13 +116,11 @@ export class FCMService {
    */
   static setupFCMListeners(onNotificationReceived?: (message: any) => void) {
     if (!messaging || !isNativeFirebaseLinked) {
-      console.log('FCM listeners skipped (messaging module not natively linked).');
       return () => {};
     }
 
     try {
       const unsubscribeMessage = messaging().onMessage(async (remoteMessage: any) => {
-        console.log('Foreground Message received:', remoteMessage);
 
         if (onNotificationReceived) {
           onNotificationReceived(remoteMessage);
@@ -145,9 +136,7 @@ export class FCMService {
             fcmToken: newToken,
             platform: Platform.OS,
           });
-          console.log('FCM Device Token refreshed & updated on backend.');
         } catch (err) {
-          console.log('Failed to sync refreshed FCM token:', err);
         }
       });
 

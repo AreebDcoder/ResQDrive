@@ -23,7 +23,6 @@ export async function sendDirectBackgroundSMS(
       if (granted === PermissionsAndroid.RESULTS.GRANTED) {
         const DirectSms = require('react-native-direct-sms').default;
         await DirectSms.sendDirectSms(cleanNumber, message);
-        console.log(`[Auto-SMS] Background SMS sent to ${cleanNumber}`);
         return true;
       } else {
         console.warn('[Auto-SMS] SEND_SMS permission denied');
@@ -58,6 +57,5 @@ export async function sendBulkBackgroundSMS(
     }
   }
 
-  console.log(`[Auto-SMS] Bulk SMS: ${sent} sent, ${failed} failed out of ${contacts.length}`);
   return { sent, failed };
 }

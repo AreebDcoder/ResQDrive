@@ -25,8 +25,6 @@ import { ConfirmDialog } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
 
 
-
-
 interface LineItem {
   partTag: string;
   damageType: string;
@@ -103,7 +101,6 @@ export default function RepairCostScreen({ route, navigation }: any) {
       setReport(response.data);
       setActiveSegment('details');
     } catch (err: any) {
-      console.log('Error generating estimate:', err);
       const serverMsg = err.response?.data?.message;
       setErrorMsg(serverMsg || 'Failed to generate repair cost estimate. Please check connections.');
     } finally {

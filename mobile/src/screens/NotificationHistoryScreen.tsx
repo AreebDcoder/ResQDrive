@@ -75,7 +75,6 @@ const { history = [], pagination, isHistoryLoading, error } = useSelector(
       await api.patch(`/notifications/${logId}/read`);
       dispatch(markReadSuccess(logId));
     } catch (err) {
-      console.log('Failed to mark notification read:', err);
     }
   };
 

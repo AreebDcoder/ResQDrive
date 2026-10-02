@@ -9,14 +9,14 @@ module.exports = function withCallPhone(config) {
       const projectRoot = config.modRequest.platformProjectRoot;
       const packagePath = path.join(
         projectRoot,
-        "app/src/main/java/com/basit_009/resqdrivemobile"
+        "app/src/main/java/com/resqdrive/app"
       );
 
       if (!fs.existsSync(packagePath)) {
         fs.mkdirSync(packagePath, { recursive: true });
       }
 
-      const moduleContent = `package com.basit_009.resqdrivemobile;
+      const moduleContent = `package com.resqdrive.app;
 
 import android.content.Intent;
 import android.net.Uri;
@@ -51,7 +51,7 @@ public class CallPhoneModule extends ReactContextBaseJavaModule {
 }
 `;
 
-      const packageContent = `package com.basit_009.resqdrivemobile;
+      const packageContent = `package com.resqdrive.app;
 
 import com.facebook.react.ReactPackage;
 import com.facebook.react.bridge.NativeModule;
