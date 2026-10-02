@@ -21,13 +21,15 @@ import { VoiceCommandService } from '../services/voiceCommandService';
 import { CrashSoundDetectionService } from '../services/crashSoundDetectionService';
 import { sendBulkBackgroundSMS } from '../utils/directSms';
 import { MultiModalFusionService } from '../services/multiModalFusionService';
+import { MlInferenceService } from '../services/mlInferenceService';
 
 const COUNTDOWN_SECONDS = 10;
 
 export default function CountdownScreen({ navigation, route }: any) {
   const dispatch = useDispatch();
-  const { latitude, longitude, severity = 'Moderate', countdownSeconds } = route.params || {};
-  const initialCountdown = countdownSeconds || (severity === 'Severe' ? 10 : 20);
+  const { latitude, longitude, severity: initialSeverity = 'Moderate', countdownSeconds, severityFeatures } = route.params || {};
+  const [severity, setSeverity] = useState<string>(initialSeverity);
+  const initialCountdown = countdownSeconds || (initialSeverity === 'Severe' ? 10 : 20);
   const contacts = useSelector((state: RootState) => state.contacts.list);
   const user = useSelector((state: RootState) => state.auth.user);
 
@@ -174,6 +176,22 @@ export default function CountdownScreen({ navigation, route }: any) {
       email: 'pending', whatsapp: 'pending', module68: 'pending', incident: 'pending',
     });
 
+    // ═══ STEP 0: Evaluate confirmed accident severity with Model 2 (Random Forest) ═══
+    let evaluatedSeverity = severity;
+    if (severityFeatures) {
+      try {
+        console.log('[Countdown] Evaluating confirmed accident severity with Model 2 (Random Forest)...');
+        const sevRes = await MlInferenceService.assessSeverity(severityFeatures);
+        if (sevRes?.severity) {
+          evaluatedSeverity = sevRes.severity;
+          setSeverity(evaluatedSeverity);
+          console.log(`[Countdown] Severity Model 2 Result: ${evaluatedSeverity.toUpperCase()} | Probabilities:`, sevRes.probabilities);
+        }
+      } catch (sevErr) {
+        console.warn('[Countdown] Severity Model 2 evaluation error:', sevErr);
+      }
+    }
+
 // ═══ STEP 1: Log incident in database ═══
     let incident = null;
 
@@ -194,13 +212,13 @@ export default function CountdownScreen({ navigation, route }: any) {
     try {
       const response = await api.post('/incidents', {
         type: 'AUTO',
-        severity: severity.toUpperCase(),
+        severity: evaluatedSeverity.toUpperCase(),
         status: 'ACTIVE',
         occurredAt: new Date().toISOString(),
         latitude: realLat,
         longitude: realLng,
         address, // ← NEW: stores real street/city name in database
-        description: 'Countdown reached zero — emergency alert dispatched',
+        description: `Countdown reached zero — emergency alert dispatched (${evaluatedSeverity})`,
       });
       incident = response.data;
       setDispatchStatus(prev => ({ ...prev, incident: 'logged' }));

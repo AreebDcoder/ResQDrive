@@ -123,6 +123,14 @@ export class SensorSourceManager implements SensorFusionService {
     console.log('SensorManager: Manual force reconnect triggered.');
     this.switchToBle();
   }
+
+  getSensorWindow(sampleCount?: number) {
+    return phoneSensorFallbackService.getSensorWindow(sampleCount);
+  }
+
+  resetSensorBuffer() {
+    phoneSensorFallbackService.resetSensorBuffer();
+  }
 }
 
 export const sensorSourceManager = new SensorSourceManager();

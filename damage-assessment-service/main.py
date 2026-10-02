@@ -40,7 +40,14 @@ try:
 except ImportError:
     HAS_ULTRALYTICS = False
 
+from ml_inference import ml_router, load_models
+
 app = FastAPI(title="ResQDrive Damage Assessment Microservice")
+app.include_router(ml_router)
+
+@app.on_event("startup")
+def startup_event():
+    load_models()
 
 CLASSES = ["crack", "dent", "glass_shatter", "lamp_broken", "scratch", "tire_flat"]
 
@@ -132,7 +139,7 @@ if HAS_ULTRALYTICS:
             try:
                 yolo_model = YOLO(path)
                 yolo_model_path = path
-                print(f"✅ Primary YOLO damage model loaded successfully from {candidate}.")
+                print(f"[DamageService] Primary YOLO damage model loaded successfully from {candidate}.")
                 break
             except Exception as e:
                 print(f"Error loading YOLO model from {candidate}: {e}")
@@ -148,7 +155,7 @@ try:
         interpreter.allocate_tensors()
         input_details = interpreter.get_input_details()
         output_details = interpreter.get_output_details()
-        print(f"📦 Standby TFLite damage model loaded successfully from cardd_model.tflite.")
+        print(f"[DamageService] Standby TFLite damage model loaded successfully from cardd_model.tflite.")
 except Exception as e:
     print(f"Error loading standby TFLite damage model: {e}")
 

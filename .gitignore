@@ -52,3 +52,7 @@ mobile/eas.json
 
 # Prevent accidental stray files created by shell redirects (e.g. `git > something`)
 git
+
+# Large ML binary models (> 100MB exceeds GitHub push limit)
+*.pkl
+ml/training_data/

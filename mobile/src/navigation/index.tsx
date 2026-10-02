@@ -47,7 +47,11 @@ import { FCMService } from '../services/fcmService';
 import CountdownScreen from '../screens/CountdownScreen';
 import { CrashSoundDetectionService } from '../services/crashSoundDetectionService';
 import BleSensorDemoScreen from '../screens/BleSensorDemoScreen';
+import SeverityDemoScreen from '../screens/SeverityDemoScreen';
 import { sensorSourceManager } from '../services/sensorSourceManager';
+import { ML_CONFIG } from '../config/mlConfig';
+import { ImpactFeatureExtractor } from '../services/impactFeatureExtractor';
+import { MlInferenceService } from '../services/mlInferenceService';
 import DevModeBanner from '../components/DevModeBanner'; 
 import { makeDirectPhoneCall } from '../utils/directCall';
 
@@ -150,12 +154,37 @@ function DriverHome({ navigation }: any) {
       const lat = loc?.latitude ?? 33.6844;
       const lng = loc?.longitude ?? 73.0479;
 
+      // Extract sensor window and severity features for Model 2
+      const window = sensorSourceManager.getSensorWindow();
+      const audioConf = trigger.soundEvent.confidence;
+      const severityFeatures = ImpactFeatureExtractor.extractSeverityFeatures(window, audioConf);
+
+      // In Production Mode (!SEVERITY_DEMO_MODE), verify crash signature with Model 1 (VZCrash RF)
+      if (!ML_CONFIG.SEVERITY_DEMO_MODE) {
+        try {
+          const adFeatures = ImpactFeatureExtractor.extractAccidentDetectionFeatures(window);
+          const adRes = await MlInferenceService.detectAccident(adFeatures);
+          if (adRes) {
+            console.log(`🤖 [Model 1 VZCrash] Prediction: ${adRes.prediction} (prob: ${JSON.stringify(adRes.probabilities)})`);
+            if (adRes.prediction !== 'crash') {
+              console.log(`⚠️ [Model 1 VZCrash] Event classified as "${adRes.prediction}" (not a crash). Ignoring countdown trigger.`);
+              return;
+            }
+          }
+        } catch (adErr) {
+          console.warn('[Model 1 VZCrash] Inference error, proceeding with multi-modal trigger:', adErr);
+        }
+      } else {
+        console.log('🧪 [FYP DEMO MODE] Model 1 VZCrash bypassed as per FYP Demo Mode specification.');
+      }
+
       console.log(`📍 Got precise location: Lat ${lat}, Lng ${lng}`);
       navigation.navigate('Countdown', {
         latitude: lat,
         longitude: lng,
         severity: trigger.combinedSeverity,
         countdownSeconds: trigger.combinedSeverity === 'Severe' ? 10 : 20,
+        severityFeatures,
       });
     });
 
@@ -606,6 +635,20 @@ function DriverHome({ navigation }: any) {
                 style={styles.menuItem}
                 onPress={() => {
                   setIsDrawerOpen(false);
+                  navigation.navigate('SeverityDemo');
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="speedometer-outline" size={20} color="#E53935" style={{ marginRight: 12 }} />
+                  <Text style={styles.menuItemText}>FYP Severity Demo</Text>
+                </View>
+                <Text style={styles.menuItemArrow}>›</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => {
+                  setIsDrawerOpen(false);
                   navigation.navigate('Profile');
                 }}
               >
@@ -1027,6 +1070,7 @@ function AppStack({ role }: { role: string }) {
       <Stack.Screen name="RepairCost" component={RepairCostScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Countdown" component={CountdownScreen} options={{ headerShown: false, gestureEnabled: false }} />
       <Stack.Screen name="BleSensorDemo" component={BleSensorDemoScreen} options={{ title: 'BLE Sensor Diagnostics' }} />
+      <Stack.Screen name="SeverityDemo" component={SeverityDemoScreen} options={{ title: 'FYP Severity Demo' }} />
     </Stack.Navigator>
   );
 }

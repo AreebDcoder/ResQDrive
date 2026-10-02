@@ -6,6 +6,7 @@ import { SensorReading, SensorFusionService } from './sensorFusionInterface';
 import { classifyMotionSeverity } from '../config/motionSeverityConfig';
 import { classifyCrashSeverityMl } from './crashSeverityMlService';
 import { CrashSoundDetectionService } from './crashSoundDetectionService';
+import { RawSensorSample } from './impactFeatureExtractor';
 
 export class PhoneSensorFallbackService implements SensorFusionService {
   private callbacks: ((reading: SensorReading) => void)[] = [];
@@ -20,6 +21,10 @@ export class PhoneSensorFallbackService implements SensorFusionService {
   private currentGyro = { x: 0, y: 0, z: 0 };
   private speedBuffer: number[] = [];
   private lastSpeedKmh = 0;
+
+  // Rolling window of raw samples for feature extraction (~5 seconds at 200ms)
+  private rawSamplesBuffer: RawSensorSample[] = [];
+  private static readonly MAX_BUFFER_SAMPLES = 25;
 
   // Software Gyroscope & Jerk Tracking State
   private isGyroHardwareAvailable = false;
@@ -193,12 +198,51 @@ export class PhoneSensorFallbackService implements SensorFusionService {
       durationMs,
       mlClassifiedSeverity: mlResult.topClass,
       mlConfidence: mlResult.confidence,
-      timestamp: Date.now(),
+      timestamp: now,
     };
+
+    // Push raw sample into rolling window buffer
+    this.rawSamplesBuffer.push({
+      ax,
+      ay,
+      az,
+      gx: this.currentGyro.x,
+      gy: this.currentGyro.y,
+      gz: this.currentGyro.z,
+      timestamp: now,
+    });
+    if (this.rawSamplesBuffer.length > PhoneSensorFallbackService.MAX_BUFFER_SAMPLES) {
+      this.rawSamplesBuffer.shift();
+    }
 
     // Update Redux state and notify callbacks
     store.dispatch(updateLatestReading(reading));
     this.callbacks.forEach(cb => cb(reading));
+  }
+
+  /**
+   * Retrieves a snapshot of recent raw sensor samples and speed points for ML feature extraction.
+   * Default count is 10 samples (~2 seconds of telemetry).
+   */
+  getSensorWindow(sampleCount: number = 10): { samples: RawSensorSample[]; speeds: number[] } {
+    const samples = this.rawSamplesBuffer.slice(-sampleCount);
+    const speeds = [...this.speedBuffer];
+    return { samples, speeds };
+  }
+
+  /**
+   * Resets the raw sensor sample and speed buffer for a clean start (e.g. before demo).
+   */
+  resetSensorBuffer(): void {
+    this.rawSamplesBuffer = [];
+    this.speedBuffer = [];
+  }
+
+  /**
+   * Returns the most recent GPS speed in km/h.
+   */
+  getLastSpeedKmh(): number {
+    return this.lastSpeedKmh;
   }
 }
 
