@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -7,15 +7,12 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState } from '../store/store';
+import { useAppDispatch } from '../store/hooks';
 import {
-  fetchPreferencesStart,
-  fetchPreferencesSuccess,
-  fetchPreferencesFailure,
-  updatePreferenceOptimistic,
-} from '../store/slices/notificationsSlice';
-import api from '../api/axios';
+  useGetPreferencesQuery,
+  useUpdatePreferencesMutation,
+  notificationsApi,
+} from '../store/api/notificationsApi';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useToast } from '../components/ui/Toast';
@@ -55,41 +52,35 @@ const CATEGORIES: Array<{
 
 export default function NotificationPreferencesScreen() {
   const toast = useToast();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
-  const { preferences, isLoading, error } = useSelector((state: RootState) => state.notifications);
+  // Batch 11: Migrated to RTK Query — auto-fetches on mount, invalidates cache on mutation.
+  const { data: preferences, isLoading, error } = useGetPreferencesQuery();
+  const [updatePreference] = useUpdatePreferencesMutation();
   const [isUpdating, setIsUpdating] = useState(false);
-
-  const fetchPrefs = async () => {
-    dispatch(fetchPreferencesStart());
-    try {
-      const response = await api.get('/notifications/preferences');
-      dispatch(fetchPreferencesSuccess(response.data));
-    } catch (err: any) {
-      dispatch(
-        fetchPreferencesFailure(err.response?.data?.message || 'Failed to fetch preferences.')
-      );
-    }
-  };
-
-  useEffect(() => {
-    fetchPrefs();
-  }, []);
 
   const handleToggle = async (key: string, currentValue: boolean) => {
     const newValue = !currentValue;
 
-    // 1. Optimistic UI update in Redux store
-    dispatch(updatePreferenceOptimistic({ [key]: newValue }));
+    // 1. Optimistic UI update — patch RTK Query cache directly so the
+    //    toggle reflects immediately while the request is in flight.
+    const patchAction = dispatch(
+      notificationsApi.util.updateQueryData('getPreferences', undefined, (draft: any) => {
+        if (draft) {
+          draft[key] = newValue;
+        }
+      })
+    );
     setIsUpdating(true);
 
     try {
-      // 2. Persist update on backend
-      await api.patch('/notifications/preferences', { [key]: newValue });
+      // 2. Persist update on backend via RTK Query mutation —
+      //    invalidates 'Preferences' tag and triggers a refetch.
+      await updatePreference({ [key]: newValue }).unwrap();
     } catch (err) {
       toast.error('Failed to update preference. Reverting...');
-      // 3. Revert on failure
-      dispatch(updatePreferenceOptimistic({ [key]: currentValue }));
+      // 3. Revert on failure — undo the optimistic cache patch.
+      patchAction.undo();
     } finally {
       setIsUpdating(false);
     }
@@ -124,11 +115,11 @@ export default function NotificationPreferencesScreen() {
         </View>
       )}
 
-      {error && (
+      {error ? (
         <View style={styles.errorBanner}>
-          <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{error}</Text>
+          <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{error ? String((error as any)?.data?.message || (error as any)?.error || error) : ''}</Text>
         </View>
-      )}
+      ) : null}
 
       {preferences && (
         <View style={styles.list}>

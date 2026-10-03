@@ -12,8 +12,8 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
+import { useAppDispatch } from '../../store/hooks';
 import { RootState } from '../../store/store';
-import api from '../../api/axios';
 import * as Location from 'expo-location';
 import { dispatchEmergencyAlert } from '../../utils/emergencyFallback';
 import { getSafeDeviceLocation } from '../../utils/location';
@@ -25,6 +25,13 @@ import { makeDirectPhoneCall } from '../../utils/directCall';
 import { sensorSourceManager } from '../../services/sensorSourceManager';
 import { CrashSoundDetectionService } from '../../services/crashSoundDetectionService';
 import { FCMService } from '../../services/fcmService';
+import { useGetVehiclesQuery } from '../../store/api/vehiclesApi';
+import { useGetContactsQuery } from '../../store/api/contactsApi';
+import {
+  useGetPreferencesQuery,
+  useUpdatePreferencesMutation,
+  notificationsApi,
+} from '../../store/api/notificationsApi';
 import type { AppNavigation } from '../../navigation/types';
 import { colors, darkColors, tints, spacing, radius, typography } from '../../theme/tokens';
 import { useTheme } from '../../theme/useTheme';
@@ -81,10 +88,15 @@ const LiveTelemetryWidget = React.memo(function LiveTelemetryWidget({ drivingMod
 
 // ─── Driver Dashboard (the Home tab content) ──────────────────────────────────
 function DriverDashboard({ navigation, onOpenDrawer }: { navigation: AppNavigation; onOpenDrawer: () => void }) {
-  const dispatch = useDispatch();
-  const vehicles = useSelector((state: RootState) => state.vehicles.list);
-  const contacts = useSelector((state: RootState) => state.contacts.list);
-  const { preferences } = useSelector((state: RootState) => state.notifications);
+  const dispatch = useAppDispatch();
+  // Batch 11: Migrated vehicles/contacts/preferences to RTK Query — auto-fetch on mount,
+  // auto-refetch on tag invalidation. data is undefined initially, so default to [].
+  const { data: vehiclesData } = useGetVehiclesQuery();
+  const { data: contactsData } = useGetContactsQuery();
+  const { data: preferences } = useGetPreferencesQuery();
+  const [updatePreference] = useUpdatePreferencesMutation();
+  const vehicles = vehiclesData || [];
+  const contacts = contactsData || [];
   const connectionStatus = useSelector((state: RootState) => state.sensor.connectionStatus);
   const [isUpdatingPref, setIsUpdatingPref] = useState(false);
 
@@ -92,28 +104,12 @@ function DriverDashboard({ navigation, onOpenDrawer }: { navigation: AppNavigati
   const primaryContact = contacts.find((c) => c.priorityOrder === 1);
 
   useEffect(() => {
-    const syncData = async () => {
-      try {
-        const vRes = await api.get('/vehicles');
-        dispatch({ type: 'vehicles/fetchVehiclesSuccess', payload: vRes.data });
-        const cRes = await api.get('/emergency-contacts');
-        dispatch({ type: 'contacts/fetchContactsSuccess', payload: cRes.data });
-      } catch (err) {}
-    };
-    syncData();
-
-    const fetchPrefs = async () => {
-      try {
-        const response = await api.get('/notifications/preferences');
-        dispatch({ type: 'notifications/fetchPreferencesSuccess', payload: response.data });
-      } catch (err) {}
-    };
-    if (!preferences) fetchPrefs();
-
+    // Batch 11: Vehicles, contacts, and preferences are now fetched by RTK Query hooks above.
+    // Only FCM device registration + listener setup remain in this effect.
     FCMService.registerDeviceWithBackend();
     const unsubscribe = FCMService.setupFCMListeners();
     return unsubscribe;
-  }, [dispatch]);
+  }, []);
 
   useEffect(() => {
     MultiModalFusionService.subscribeToConfirmedAccidents(async (trigger) => {
@@ -166,12 +162,21 @@ function DriverDashboard({ navigation, onOpenDrawer }: { navigation: AppNavigati
     const key = 'drivingModeEnabled';
     const currentValue = preferences.drivingModeEnabled;
     const newValue = !currentValue;
-    dispatch({ type: 'notifications/updatePreferenceOptimistic', payload: { [key]: newValue } });
+    // Batch 11: Optimistic UI update via RTK Query cache patch (replaces slice dispatch).
+    const patchAction = dispatch(
+      notificationsApi.util.updateQueryData('getPreferences', undefined, (draft: any) => {
+        if (draft) {
+          draft[key] = newValue;
+        }
+      })
+    );
     setIsUpdatingPref(true);
     try {
-      await api.patch('/notifications/preferences', { [key]: newValue });
+      // Batch 11: RTK Query mutation — invalidates 'Preferences' tag + auto-refetch.
+      await updatePreference({ [key]: newValue }).unwrap();
     } catch (err) {
-      dispatch({ type: 'notifications/updatePreferenceOptimistic', payload: { [key]: currentValue } });
+      // Revert on failure.
+      patchAction.undo();
     } finally {
       setIsUpdatingPref(false);
     }

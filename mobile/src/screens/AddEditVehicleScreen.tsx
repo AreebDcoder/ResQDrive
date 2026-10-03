@@ -13,10 +13,12 @@ import {
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useDispatch } from 'react-redux';
 import { vehicleSchema, VehicleInput } from '../schemas/validation';
-import { addVehicleSuccess, updateVehicleSuccess, deleteVehicleSuccess } from '../store/slices/vehiclesSlice';
-import api from '../api/axios';
+import {
+  useCreateVehicleMutation,
+  useUpdateVehicleMutation,
+  useDeleteVehicleMutation,
+} from '../store/api/vehiclesApi';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useToast } from '../components/ui/Toast';
@@ -25,10 +27,14 @@ import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function AddEditVehicleScreen({ route, navigation }: any) {
   const toast = useToast();
-  const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
   const vehicle = route.params?.vehicle; // If defined, we are editing
   const isEditing = !!vehicle;
+
+  // Batch 11: Migrated to RTK Query mutations — auto-invalidates 'VehicleList' tag.
+  const [createVehicle] = useCreateVehicleMutation();
+  const [updateVehicle] = useUpdateVehicleMutation();
+  const [deleteVehicle] = useDeleteVehicleMutation();
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -54,11 +60,11 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
     setErrorMsg(null);
     try {
       if (isEditing) {
-        const response = await api.patch(`/vehicles/${vehicle.id}`, data);
-        dispatch(updateVehicleSuccess(response.data));
+        // Batch 11: RTK Query mutation — invalidates 'Vehicle' + 'VehicleList' tags.
+        await updateVehicle({ id: vehicle.id, body: data }).unwrap();
       } else {
-        const response = await api.post('/vehicles', data);
-        dispatch(addVehicleSuccess(response.data));
+        // Batch 11: RTK Query mutation — invalidates 'VehicleList' tag.
+        await createVehicle(data).unwrap();
       }
       navigation.goBack();
     } catch (err: any) {
@@ -72,8 +78,8 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
     setIsLoading(true);
     setErrorMsg(null);
     try {
-      await api.delete(`/vehicles/${vehicle.id}`);
-      dispatch(deleteVehicleSuccess(vehicle.id));
+      // Batch 11: RTK Query mutation — invalidates 'VehicleList' tag.
+      await deleteVehicle(vehicle.id).unwrap();
       navigation.goBack();
     } catch (err: any) {
       setErrorMsg(err.response?.data?.message || 'Failed to delete vehicle.');

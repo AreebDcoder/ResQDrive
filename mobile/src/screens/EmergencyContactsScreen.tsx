@@ -4,7 +4,7 @@
 // All imports, logic, state, handlers preserved identically.
 // Only JSX structure + StyleSheet updated: dark glassmorphism theme.
 // ═══════════════════════════════════════════════════════════════
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -15,16 +15,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState } from '../store/store';
+import { useDispatch } from 'react-redux';
 import {
-  fetchContactsStart,
-  fetchContactsSuccess,
-  fetchContactsFailure,
-  reorderContactsSuccess,
-  deleteContactSuccess,
-} from '../store/slices/contactsSlice';
-import api from '../api/axios';
+  useGetContactsQuery,
+  useDeleteContactMutation,
+  useReorderContactsMutation,
+} from '../store/api/contactsApi';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useToast } from '../components/ui/Toast';
@@ -35,31 +31,15 @@ export default function EmergencyContactsScreen({ navigation }: any) {
   const toast = useToast();
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
-  const { list: contacts, isLoading, error } = useSelector(
-    (state: RootState) => state.contacts
-  );
+  // Batch 11: Migrated to RTK Query — automatic caching + invalidation
+  const { data: rawContacts, isLoading, error, refetch } = useGetContactsQuery();
+  // RTK Query data is initially undefined — default to [] for UI safety.
+  const contacts = rawContacts || [];
+  const [deleteContact] = useDeleteContactMutation();
+  const [reorderContacts] = useReorderContactsMutation();
   const [isUpdating, setIsUpdating] = useState(false);
   const [removeDialogVisible, setRemoveDialogVisible] = useState(false);
   const [pendingRemoveContact, setPendingRemoveContact] = useState<any>(null);
-
-  const fetchContacts = async () => {
-    dispatch(fetchContactsStart());
-    try {
-      const response = await api.get('/emergency-contacts');
-      dispatch(fetchContactsSuccess(response.data));
-    } catch (err: any) {
-      dispatch(
-        fetchContactsFailure(
-          err.response?.data?.message ||
-            'Failed to load emergency contacts.'
-        )
-      );
-    }
-  };
-
-  useEffect(() => {
-    fetchContacts();
-  }, []);
 
   const handleMove = async (
     index: number,
@@ -91,12 +71,8 @@ export default function EmergencyContactsScreen({ navigation }: any) {
     setIsUpdating(true);
 
     try {
-      const response = await api.patch(
-        '/emergency-contacts/reorder',
-        { orders: payload }
-      );
-
-      dispatch(reorderContactsSuccess(response.data));
+      // Batch 11: RTK Query mutation — auto-invalidates cache + triggers refetch
+      await reorderContacts({ orders: payload }).unwrap();
     } catch (err) {
       toast.error('Failed to reorder contacts.');
     } finally {
@@ -125,15 +101,8 @@ export default function EmergencyContactsScreen({ navigation }: any) {
     setIsUpdating(true);
 
     try {
-      await api.delete(
-        `/emergency-contacts/${contact.id}`
-      );
-
-      dispatch(
-        deleteContactSuccess({
-          id: contact.id,
-        })
-      );
+      // Batch 11: RTK Query mutation — auto-invalidates ContactList tag + refetch
+      await deleteContact(contact.id).unwrap();
     } catch (err: any) {
       toast.error(err.response?.data?.message ||
           'Failed to delete contact.');
@@ -199,12 +168,12 @@ export default function EmergencyContactsScreen({ navigation }: any) {
           />
 
           <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
-            {error}
+            {error ? String((error as any)?.data?.message || (error as any)?.error || error) : ''}
           </Text>
 
           <TouchableOpacity
             style={styles.retryBtn}
-            onPress={fetchContacts} accessibilityRole="button"
+            onPress={refetch} accessibilityRole="button"
           >
             <Text style={styles.retryText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               Retry

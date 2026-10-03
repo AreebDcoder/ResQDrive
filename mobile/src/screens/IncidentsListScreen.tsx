@@ -8,8 +8,8 @@ import { RootState } from '../store/store';
 import {
   fetchIncidents, setFilters, clearFilters, clearCurrent,
 } from '../store/slices/incidentsSlice';
+import { useDeleteIncidentMutation } from '../store/api/incidentsApi';
 import { Ionicons } from '@expo/vector-icons';
-import api from '../api/axios';
 import { useToast } from '../components/ui/Toast';
 import { Button, ConfirmDialog, FAB, FilterChip } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
@@ -30,6 +30,8 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
   );
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  // Batch 11: Migrated delete to RTK Query — invalidates 'IncidentList' tag + auto-refetch.
+  const [deleteIncident] = useDeleteIncidentMutation();
 
   useEffect(() => {
     dispatch(clearCurrent());
@@ -60,8 +62,9 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
     setDeleteDialogVisible(false);
     if (!pendingDeleteId) return;
     try {
-      await api.delete(`/incidents/${pendingDeleteId}`);
-      dispatch(fetchIncidents({ page: 1, refresh: true }));
+      // Batch 11: RTK Query mutation — invalidates 'IncidentList' tag + auto-refetch.
+      // No manual `dispatch(fetchIncidents(...))` needed; tag invalidation triggers refetch.
+      await deleteIncident(pendingDeleteId).unwrap();
     } catch (err) {
       toast.error('Failed to delete incident.');
     } finally {

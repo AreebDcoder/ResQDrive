@@ -21,6 +21,10 @@ import { Ionicons } from '@expo/vector-icons';
 import api from '../api/axios';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchContactsSuccess } from '../store/slices/contactsSlice';
+import {
+  useGetRegionalNumbersQuery,
+  useLogEmergencyCallMutation,
+} from '../store/api/emergencyApi';
 import { makeDirectPhoneCall, isAutoDialable } from '../utils/directCall';
 import { getSafeDeviceLocation } from '../utils/location';
 import { useToast } from '../components/ui/Toast';
@@ -35,6 +39,9 @@ interface EmergencyNumberItem {
   phoneNumber: string;
   priorityOrder: number;
 }
+
+const FALLBACK_LAT = 33.6844;
+const FALLBACK_LNG = 73.0479;
 
 const DEFAULT_RESCUE_NUMBERS: EmergencyNumberItem[] = [
   {
@@ -59,11 +66,30 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
   const incidentId = route?.params?.incidentId || null;
 
   const [regionalNumbers, setRegionalNumbers] = useState<EmergencyNumberItem[]>(DEFAULT_RESCUE_NUMBERS);
-  const personalContacts = useSelector((state: any) => state.contacts?.list || []);
   const [regionName, setRegionName] = useState<string>('Pakistan (Nationwide)');
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const personalContacts = useSelector((state: any) => state.contacts?.list || []);
   const [isLoading, setIsLoading] = useState(false);
   const [isLocating, setIsLocating] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Batch 11: Migrated regional numbers fetch to RTK Query.
+  // The hook auto-fetches when `coords` change; skip until coords are resolved.
+  const { data: regionalData } = useGetRegionalNumbersQuery(
+    (coords || { lat: FALLBACK_LAT, lng: FALLBACK_LNG }) as { lat: number; lng: number },
+    { skip: !coords }
+  );
+  const [logEmergencyCall] = useLogEmergencyCallMutation();
+
+  // Sync RTK Query response into local state (preserves DEFAULT_RESCUE_NUMBERS fallback).
+  useEffect(() => {
+    if (regionalData?.regionName) {
+      setRegionName(regionalData.regionName);
+    }
+    if (regionalData?.regionalNumbers && regionalData.regionalNumbers.length > 0) {
+      setRegionalNumbers(regionalData.regionalNumbers);
+    }
+  }, [regionalData]);
 
   // Auto-escalation state & cycling
   const [escalationTimeLeft, setEscalationTimeLeft] = useState<number>(60);
@@ -189,34 +215,27 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
     ]).start();
   };
 
-  const fetchEmergencyNumbers = useCallback(async () => {
-    setIsLocating(true);
-    setErrorMsg(null);
-    try {
-      const loc = await getSafeDeviceLocation();
-      const latitude = loc?.latitude ?? 33.6844;
-      const longitude = loc?.longitude ?? 73.0479;
-
-      const response = await api.get('/emergency-sos/numbers', {
-        params: { lat: latitude, lng: longitude },
-      });
-
-      if (response.data?.regionName) {
-        setRegionName(response.data.regionName);
-      }
-      if (response.data?.regionalNumbers && response.data.regionalNumbers.length > 0) {
-        setRegionalNumbers(response.data.regionalNumbers);
-      }
-    } catch (err: any) {
-    } finally {
-      setIsLocating(false);
-      setIsLoading(false);
-    }
-  }, []);
-
+  // Resolve device location once on mount, then feed coords to RTK Query.
   useEffect(() => {
-    fetchEmergencyNumbers();
-  }, [fetchEmergencyNumbers]);
+    let cancelled = false;
+    const getLoc = async () => {
+      setIsLocating(true);
+      try {
+        const loc = await getSafeDeviceLocation();
+        if (cancelled) return;
+        const latitude = loc?.latitude ?? FALLBACK_LAT;
+        const longitude = loc?.longitude ?? FALLBACK_LNG;
+        setCoords({ lat: latitude, lng: longitude });
+      } catch (err: any) {
+        // Fall back to nationwide defaults; RTK Query will fetch with fallback coords.
+        setCoords({ lat: FALLBACK_LAT, lng: FALLBACK_LNG });
+      } finally {
+        if (!cancelled) setIsLocating(false);
+      }
+    };
+    getLoc();
+    return () => { cancelled = true; };
+  }, []);
 
   const escalationStartTimeRef = useRef<number>(0);
 
@@ -277,10 +296,11 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
     }
 
     try {
-      await api.post('/emergency-sos/log-call', {
+      // Batch 11: RTK Query mutation — logs the emergency call attempt.
+      await logEmergencyCall({
         serviceName: name,
         autoDialed,
-      });
+      }).unwrap();
     } catch (err) {
     }
 
@@ -342,11 +362,11 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
     setCallDialogVisible(false);
     if (!pendingCallContact) return;
     try {
-      // Log manual call
-      await api.post('/emergency-sos/log-call', {
+      // Batch 11: RTK Query mutation — logs the manual call.
+      await logEmergencyCall({
         serviceName: pendingCallContact.name,
         autoDialed: false,
-      });
+      }).unwrap();
     } catch (err) {
     }
     await makeDirectPhoneCall(pendingCallContact.phone);
