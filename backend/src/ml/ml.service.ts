@@ -15,7 +15,7 @@ export class MlService {
   private readonly fastApiUrl: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.fastApiUrl = this.configService.get<string>('FASTAPI_API_URL') || 'http://localhost:8000';
+    this.fastApiUrl = this.configService.get<string>('FASTAPI_API_URL') || 'http://127.0.0.1:8000';
   }
 
   async getHealth() {
