@@ -291,7 +291,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
       default:
         return (
           <ScrollView style={styles.scrollContainer} contentContainerStyle={{ paddingBottom: 40 }}>
-          <DevModeBanner />
+          {__DEV__ && <DevModeBanner />}
             {/* Paired Vehicle Widget */}
             <View style={styles.dashboardCard}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
@@ -395,22 +395,38 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
           <Ionicons name="menu" size={28} color={darkColors.text} />
         </TouchableOpacity>
         <Text style={styles.customHeaderTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>ResQDrive</Text>
-        <TouchableOpacity 
-          onPress={() => navigation.navigate('BleSensorDemo')}
-          style={{ padding: 4 }} accessibilityRole="button"
-         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Ionicons 
-            name={connectionStatus === 'connected' ? 'bluetooth' : 'bluetooth-outline'} 
-            size={24} 
-            color={
-              connectionStatus === 'connected' 
-                ? colors.success[500] 
-                : connectionStatus === 'connecting' 
-                ? colors.warning[500] 
-                : darkColors.textTertiary
-            } 
-          />
-        </TouchableOpacity>
+        {__DEV__ ? (
+          <TouchableOpacity
+            onPress={() => navigation.navigate('BleSensorDemo')}
+            style={{ padding: 4 }} accessibilityRole="button"
+           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Ionicons
+              name={connectionStatus === 'connected' ? 'bluetooth' : 'bluetooth-outline'}
+              size={24}
+              color={
+                connectionStatus === 'connected'
+                  ? colors.success[500]
+                  : connectionStatus === 'connecting'
+                  ? colors.warning[500]
+                  : darkColors.textTertiary
+              }
+            />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 24, height: 24, justifyContent: 'center', alignItems: 'center' }}>
+            <Ionicons
+              name={connectionStatus === 'connected' ? 'bluetooth' : 'bluetooth-outline'}
+              size={24}
+              color={
+                connectionStatus === 'connected'
+                  ? colors.success[500]
+                  : connectionStatus === 'connecting'
+                  ? colors.warning[500]
+                  : darkColors.textTertiary
+              }
+            />
+          </View>
+        )}
       </View>
 
       {/* Main Content Area */}
@@ -520,47 +536,53 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 <Text style={styles.menuItemArrow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => {
-                  setIsDrawerOpen(false);
-                  navigation.navigate('CrashSoundDemo');
-                }} accessibilityRole="button"
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="mic-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
-                  <Text style={styles.menuItemText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Crash Sound Detection</Text>
-                </View>
-                <Text style={styles.menuItemArrow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
-              </TouchableOpacity>
+              {__DEV__ && (
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    setIsDrawerOpen(false);
+                    navigation.navigate('CrashSoundDemo');
+                  }} accessibilityRole="button"
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name="mic-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
+                    <Text style={styles.menuItemText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Crash Sound Detection</Text>
+                  </View>
+                  <Text style={styles.menuItemArrow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
+                </TouchableOpacity>
+              )}
 
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => {
-                  setIsDrawerOpen(false);
-                  navigation.navigate('BleSensorDemo');
-                }} accessibilityRole="button"
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="bluetooth-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
-                  <Text style={styles.menuItemText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>BLE Sensor Diagnostics</Text>
-                </View>
-                <Text style={styles.menuItemArrow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
-              </TouchableOpacity>
+              {__DEV__ && (
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    setIsDrawerOpen(false);
+                    navigation.navigate('BleSensorDemo');
+                  }} accessibilityRole="button"
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name="bluetooth-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
+                    <Text style={styles.menuItemText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>BLE Sensor Diagnostics</Text>
+                  </View>
+                  <Text style={styles.menuItemArrow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
+                </TouchableOpacity>
+              )}
 
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => {
-                  setIsDrawerOpen(false);
-                  navigation.navigate('VoiceCommandDemo');
-                }} accessibilityRole="button"
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="volume-high-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
-                  <Text style={styles.menuItemText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Voice Commands</Text>
-                </View>
-                <Text style={styles.menuItemArrow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
-              </TouchableOpacity>
+              {__DEV__ && (
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    setIsDrawerOpen(false);
+                    navigation.navigate('VoiceCommandDemo');
+                  }} accessibilityRole="button"
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name="volume-high-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
+                    <Text style={styles.menuItemText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Voice Commands</Text>
+                  </View>
+                  <Text style={styles.menuItemArrow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
+                </TouchableOpacity>
+              )}
 
               <TouchableOpacity
                 style={styles.menuItem}
@@ -618,19 +640,21 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                 <Text style={styles.menuItemArrow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => {
-                  setIsDrawerOpen(false);
-                  testEmergencyFallback();
-                }} accessibilityRole="button"
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                  <Ionicons name="flask-outline" size={18} color={darkColors.textTertiary} />
-                  <Text style={styles.menuItemText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Test Emergency Fallback</Text>
-                </View>
-                <Text style={styles.menuItemArrow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
-              </TouchableOpacity>
+              {__DEV__ && (
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    setIsDrawerOpen(false);
+                    testEmergencyFallback();
+                  }} accessibilityRole="button"
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                    <Ionicons name="flask-outline" size={18} color={darkColors.textTertiary} />
+                    <Text style={styles.menuItemText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Test Emergency Fallback</Text>
+                  </View>
+                  <Text style={styles.menuItemArrow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
+                </TouchableOpacity>
+              )}
 
               <TouchableOpacity
                 style={[styles.menuItem, { borderColor: colors.danger[600], borderWidth: 1 }]}
@@ -647,11 +671,12 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
               </TouchableOpacity>
 
 
-              <TouchableOpacity
-                style={[styles.menuItem, { backgroundColor: colors.danger[800] }]}
-                onPress={async () => {
-                  setIsDrawerOpen(false);
-                  let lat = FALLBACK_LAT;
+              {__DEV__ && (
+                <TouchableOpacity
+                  style={[styles.menuItem, { backgroundColor: colors.danger[800] }]}
+                  onPress={async () => {
+                    setIsDrawerOpen(false);
+                    let lat = FALLBACK_LAT;
                   let lng = FALLBACK_LNG;
                   try {
                     const loc = await Location.getLastKnownPositionAsync({});
@@ -673,7 +698,8 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                   <Text style={[styles.menuItemText, { color: darkColors.text }]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Simulate Crash (Test Countdown)</Text>
                 </View>
                 <Text style={[styles.menuItemArrow, { color: darkColors.text }]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
-              </TouchableOpacity>
+                </TouchableOpacity>
+              )}
             </ScrollView>
           </View>
         </View>

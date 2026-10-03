@@ -1,3 +1,4 @@
+import { darkColors } from '../theme/tokens';
 import React, { useEffect } from 'react';
 import { Linking, Platform } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -66,10 +67,10 @@ export default function AppStack({ role }: { role: string }) {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: '#1e1e1e', elevation: 0, shadowOpacity: 0 },
-        headerTintColor: '#ffffff',
+        headerStyle: { backgroundColor: darkColors.surface, elevation: 0, shadowOpacity: 0 },
+        headerTintColor: darkColors.text,
         headerTitleStyle: { fontWeight: 'bold' },
-        cardStyle: { backgroundColor: '#121212' },
+        cardStyle: { backgroundColor: darkColors.background },
       }}
     >
       <Stack.Screen name="Home" component={getHomeComponent()} options={{ headerShown: false }} />

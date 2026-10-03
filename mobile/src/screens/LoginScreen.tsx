@@ -121,7 +121,16 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
 
       await setItemAsync('refreshToken', refreshToken);
       dispatch(loginSuccess({ accessToken, user }));
-    } catch (err: any) {
+} catch (err: any) {
+      // 🚨 THIS WILL SHOW THE EXACT TRUTH ON YOUR SCREEN:
+      Alert.alert(
+        'Actual Error Details',
+        `Message: ${err.message}\n` +
+        `Status: ${err.response?.status || 'No Response'}\n` +
+        `Backend Said: ${JSON.stringify(err.response?.data || 'None')}\n` +
+        `Target URL: ${err.config?.baseURL || ''}${err.config?.url || ''}`
+      );
+
       const msg = err.response?.data?.message || 'Login failed. Please check your credentials.';
       if (typeof msg === 'string' && msg.includes('EMAIL_NOT_VERIFIED')) {
         setErrorMsg('Your account is not verified yet. Redirecting to verification...');

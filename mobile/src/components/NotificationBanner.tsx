@@ -1,3 +1,4 @@
+import { colors, darkColors, tints } from '../theme/tokens';
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -78,7 +79,7 @@ export default function NotificationBanner() {
       ]}
     >
       <View style={styles.contentRow}>
-        <Ionicons name="warning" size={28} color="#FF1744" style={{ marginRight: 12, marginTop: 2 }} />
+        <Ionicons name="warning" size={28} color={colors.danger[500]} style={{ marginRight: 12, marginTop: 2 }} />
         <View style={styles.textColumn}>
           <Text style={styles.title}>{notification.title}</Text>
           <Text style={styles.body} numberOfLines={2}>
@@ -86,7 +87,7 @@ export default function NotificationBanner() {
           </Text>
         </View>
         <TouchableOpacity style={styles.closeBtn} onPress={hideBanner}>
-          <Ionicons name="close" size={20} color="#A0A0B8" />
+          <Ionicons name="close" size={20} color="darkColors.textTertiary" />
         </TouchableOpacity>
       </View>
 
@@ -94,7 +95,7 @@ export default function NotificationBanner() {
         {notification.mapsLink && (
           <TouchableOpacity style={styles.actionBtn} onPress={handleOpenMap}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Ionicons name="location" size={16} color="#FFF" style={{ marginRight: 6 }} />
+              <Ionicons name="location" size={16} color="darkColors.text" style={{ marginRight: 6 }} />
               <Text style={styles.actionBtnText}>View Location Map</Text>
             </View>
           </TouchableOpacity>
@@ -116,12 +117,12 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     zIndex: 999999, // Ensure it stays above all screens & modals
-    backgroundColor: '#1E1B2E',
+    backgroundColor: darkColors.surfaceElevated,
     borderRadius: 16,
     padding: 16,
     borderWidth: 2,
-    borderColor: '#FF1744',
-    shadowColor: '#FF1744',
+    borderColor: colors.danger[500],
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.4,
     shadowRadius: 12,
@@ -139,13 +140,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 4,
   },
   body: {
-    color: '#D0D0E0',
+    color: darkColors.textSecondary,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -154,7 +155,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   closeBtnText: {
-    color: '#A0A0B8',
+    color: darkColors.textTertiary,
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -165,13 +166,13 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     flex: 1,
-    backgroundColor: '#FF1744',
+    backgroundColor: colors.danger[500],
     paddingVertical: 10,
     borderRadius: 10,
     alignItems: 'center',
   },
   actionBtnText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 13,
     fontWeight: 'bold',
   },
@@ -183,7 +184,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dismissBtnText: {
-    color: '#A0A0B8',
+    color: darkColors.textTertiary,
     fontSize: 13,
     fontWeight: '600',
   },

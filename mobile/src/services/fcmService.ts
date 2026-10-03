@@ -8,7 +8,7 @@ if (isNativeFirebaseLinked) {
   try {
     messaging = require('@react-native-firebase/messaging').default;
   } catch (e) {
-    console.warn('Firebase messaging module could not be loaded. Operating in fallback mock mode.');
+    // Batch 10: Removed console.warn — non-fatal, fallback to mock mode
   }
 }
 
@@ -40,7 +40,7 @@ export class FCMService {
             authStatus === 2; // Provisional
           return enabled;
         } catch (e) {
-          console.warn('Failed to call native requestPermission:', e);
+          // Batch 10: Removed console.warn — non-fatal
         }
       }
 
@@ -66,8 +66,7 @@ export class FCMService {
         try {
           fcmToken = await messaging().getToken();
         } catch (e: any) {
-          console.warn('Native FCM token retrieval failed:', e?.message ?? e);
-          console.warn('FCM error stack:', e?.stack ?? 'no stack');
+          // Batch 10: Removed console.warn — non-fatal, fallback to mock token below
         }
       }
 
@@ -75,14 +74,19 @@ export class FCMService {
         fcmToken = 'mock-fcm-token-' + Platform.OS + '-' + Math.random().toString(36).substring(7);
       }
 
-      if (fcmToken) {
+      // Batch 10: Do NOT register mock FCM tokens with the backend.
+      // Mock tokens can't receive real push notifications — registering them
+      // would cause the backend to store fake tokens and silently fail on
+      // future push attempts to those tokens.
+      if (fcmToken && !fcmToken.startsWith('mock-fcm-token-')) {
         await api.post('/notifications/register-device', {
           fcmToken,
           platform: Platform.OS,
         });
         return fcmToken;
       }
-      return null;
+      // Mock token — don't register with backend, just return for local use
+      return fcmToken;
     } catch (error: any) {
       return null;
     }
@@ -98,7 +102,7 @@ export class FCMService {
         try {
           fcmToken = await messaging().getToken();
         } catch (e) {
-          console.warn('Native FCM token retrieval failed on logout.');
+          // Batch 10: Removed console.warn — non-fatal on logout
         }
       }
 
@@ -145,7 +149,7 @@ export class FCMService {
         unsubscribeTokenRefresh();
       };
     } catch (error) {
-      console.warn('Failed to setup native FCM listeners:', error);
+      // Batch 10: Removed console.warn — listeners setup is best-effort
       return () => {};
     }
   }

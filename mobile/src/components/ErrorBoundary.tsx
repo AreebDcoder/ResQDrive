@@ -1,5 +1,6 @@
 import React, { Component, type ReactNode } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, typography } from '../theme/tokens';
 import { useTheme } from '../theme/useTheme';
 
@@ -71,7 +72,7 @@ function ErrorFallback({ error, onRetry, onReload }: { error: Error; onRetry: ()
     <View style={{ flex: 1, backgroundColor: bg, padding: spacing.xl }}>
       <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
         <View style={{ alignItems: 'center', marginBottom: spacing['2xl'] }}>
-          <Text style={{ fontSize: 48, marginBottom: spacing.md }}>⚠</Text>
+          <Ionicons name="warning" size={48} color={danger} style={{ marginBottom: spacing.md }} />
           <Text style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.bold, color: text, textAlign: 'center' }}>
             Something went wrong
           </Text>
