@@ -1,36 +1,70 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import SplashScreen from '../screens/SplashScreen';
+import OnboardingScreen from '../screens/OnboardingScreen';
 import AuthStack from './AuthStack';
 import AppStack from './AppStack';
 
 /**
+ * Deep linking configuration — enables the app to open from URLs.
+ *
+ * Supported prefixes:
+ *   - resqdrive:// (custom scheme)
+ *   - https://resqdrive.com (universal links — requires Apple App Site
+ *     Association + Android assetlinks.json on the domain)
+ *
+ * Supported routes:
+ *   - resqdrive://incident/{id} → IncidentDetail screen
+ *   - resqdrive://sos/{sessionId} → SOS screen
+ *   - resqdrive://share/{token} → LocationSharing screen
+ */
+const linking = {
+  prefixes: ['resqdrive://', 'https://resqdrive.com'],
+  config: {
+    screens: {
+      // Auth screens
+      Login: 'login',
+      Register: 'register',
+      // App screens
+      Home: 'home',
+      IncidentDetail: 'incident/:id',
+      SOS: 'sos/:sessionId',
+      LocationSharing: 'share/:token',
+      IncidentsList: 'incidents',
+      EmergencyContacts: 'contacts',
+      MyVehicles: 'vehicles',
+      Profile: 'profile',
+    },
+  },
+};
+
+/**
  * RootNavigator — thin wrapper that switches between AuthStack and AppStack
  * based on auth state.
- *
- * Previously this file was 1,205 LOC containing DriverHome + MechanicHome +
- * AdminHome + AuthStack + AppStack + all styles + all imports.
- * After Batch 4 refactoring:
- *   - DriverHome → src/screens/home/DriverHome.tsx (850 LOC)
- *   - MechanicHome → src/screens/home/MechanicHome.tsx
- *   - AdminHome → src/screens/home/AdminHome.tsx
- *   - AuthStack → src/navigation/AuthStack.tsx
- *   - AppStack → src/navigation/AppStack.tsx
- *   - types → src/navigation/types.ts (RootStackParamList)
- *
- * This file is now ~40 LOC.
  */
 export default function Navigation() {
   const { isAuthenticated, isLoading, user } = useSelector((state: RootState) => state.auth);
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
 
-  if (isLoading) {
+  useEffect(() => {
+    AsyncStorage.getItem('hasSeenOnboarding').then((val) => {
+      setHasSeenOnboarding(val === 'true');
+    }).catch(() => setHasSeenOnboarding(true));
+  }, []);
+
+  if (isLoading || hasSeenOnboarding === null) {
     return <SplashScreen />;
   }
 
+  if (!hasSeenOnboarding) {
+    return <OnboardingScreen onComplete={() => setHasSeenOnboarding(true)} />;
+  }
+
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking as any}>
       {isAuthenticated && user ? <AppStack role={user.role} /> : <AuthStack />}
     </NavigationContainer>
   );
