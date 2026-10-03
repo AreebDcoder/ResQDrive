@@ -1,45 +1,35 @@
-/**
- * ESLint configuration for the ResQDrive mobile app.
- *
- * Uses @react-native-community/eslint-config as the base (industry-standard
- * for React Native projects). Extended with TypeScript rules.
- *
- * Run: npx eslint src/ --ext .ts,.tsx
- */
 module.exports = {
   root: true,
   extends: [
-    '@react-native-community',
+    'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
+    'prettier',
   ],
   parser: '@typescript-eslint/parser',
+  parserOptions: {
+    ecmaVersion: 2022,
+    sourceType: 'module',
+    ecmaFeatures: { jsx: true },
+  },
   plugins: ['@typescript-eslint'],
-  settings: {
-    'import/resolver': {
-      typescript: {
-        alwaysTryTypes: true,
-        project: './tsconfig.json',
-      },
-    },
+  env: {
+    'react/react-native': true,
+    es2022: true,
+    node: true,
   },
   rules: {
-    // Allow console in development (warn in production)
-    'no-console': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
-    // Allow unused vars prefixed with _ (common pattern for ignored params)
+    // Warn on unused vars (don't error — some are used by type inference)
     '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
-    // Relax any usage (existing codebase has many `any` types)
+    // Allow explicit any (the codebase has many `any` types)
     '@typescript-eslint/no-explicit-any': 'off',
-    // Allow function hoisting (common in React Native)
-    '@typescript-eslint/no-use-before-define': 'off',
+    // No console.log in production code
+    'no-console': ['error', { allow: ['warn', 'error'] }],
+    // React Native specific
+    'react-native/no-raw-text': 'off',
+    // Allow short-circuit evaluation (common pattern in the codebase)
+    'no-unused-expressions': 'off',
+    // Allow require() for dynamic imports
+    '@typescript-eslint/no-var-requires': 'off',
   },
-  ignorePatterns: [
-    'node_modules/',
-    'dist/',
-    '.expo/',
-    'android/',
-    'ios/',
-    'patches/',
-    '*.json',
-    '__tests__/',
-  ],
+  ignorePatterns: ['node_modules/', 'dist/', '.expo/', '*.config.js', '*.json'],
 };
