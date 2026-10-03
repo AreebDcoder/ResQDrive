@@ -139,9 +139,18 @@ export function extractImpactFeatures(
   const gyroStats = calculateStats(gyroMagnitudes);
 
   // 3. Compute GPS Speed metrics
-  const validSpeeds = (speeds && speeds.length > 0)
+  let validSpeeds = (speeds && speeds.length > 0)
     ? speeds.filter(sp => typeof sp === 'number' && !isNaN(sp) && isFinite(sp))
     : [0.0];
+
+  // In FYP Demo Mode, if the device is stationary indoors (GPS speed is ~0),
+  // synthesize realistic pre-impact cruising velocity and speed-drop derived from kinetic g-force
+  // so Model 2 can evaluate realistic severity levels (Severe / Moderate / Minor) during presentations:
+  const hasRealSpeed = validSpeeds.some(sp => sp > 2.0);
+  if (!hasRealSpeed && ML_CONFIG.SEVERITY_DEMO_MODE) {
+    const simSpeed = accelStats.peak >= 4.0 ? 65.0 : (accelStats.peak >= 3.0 ? 42.0 : 25.0);
+    validSpeeds = [simSpeed, 0.0];
+  }
 
   const safeSpeeds = validSpeeds.length > 0 ? validSpeeds : [0.0];
   const speed_initial = Number(safeSpeeds[0].toFixed(2));
