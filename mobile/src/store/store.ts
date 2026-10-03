@@ -12,6 +12,9 @@ import sensorReducer from './slices/sensorSlice';
 import { vehiclesApi } from './api/vehiclesApi';
 import { contactsApi } from './api/contactsApi';
 import { notificationsApi } from './api/notificationsApi';
+import { incidentsApi } from './api/incidentsApi';
+import { emergencyApi } from './api/emergencyApi';
+import { authApi } from './api/authApi';
 
 export const store = configureStore({
   reducer: {
@@ -27,6 +30,9 @@ export const store = configureStore({
     [vehiclesApi.reducerPath]: vehiclesApi.reducer,
     [contactsApi.reducerPath]: contactsApi.reducer,
     [notificationsApi.reducerPath]: notificationsApi.reducer,
+    [incidentsApi.reducerPath]: incidentsApi.reducer,
+    [emergencyApi.reducerPath]: emergencyApi.reducer,
+    [authApi.reducerPath]: authApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -40,6 +46,9 @@ export const store = configureStore({
       vehiclesApi.middleware,
       contactsApi.middleware,
       notificationsApi.middleware,
+      incidentsApi.middleware,
+      emergencyApi.middleware,
+      authApi.middleware,
     ),
 });
 
