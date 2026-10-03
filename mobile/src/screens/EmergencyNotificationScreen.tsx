@@ -44,6 +44,8 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
   // Phase 8: ConfirmDialog state for destructive emergency actions (replaces Promise-based Alert.alert)
   const [triggerDialogVisible, setTriggerDialogVisible] = useState(false);
   const [cancelDialogVisible, setCancelDialogVisible] = useState(false);
+  // Guard against duplicate emergency trigger (prevents multiple backend dispatches)
+  const hasTriggeredRef = useRef(false);
 
   const subscriptionRef = useRef<Location.LocationSubscription | null>(null);
   const trackingSessionIdRef = useRef<string | null>(null);
@@ -171,6 +173,9 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
   }
 
   async function performEmergencyTrigger() {
+    // Guard: prevent duplicate trigger (each trigger sends WhatsApp + Email + Push to ALL contacts)
+    if (hasTriggeredRef.current) return;
+    hasTriggeredRef.current = true;
     const payload: any = { message: 'Emergency alert triggered from mobile app' };
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();

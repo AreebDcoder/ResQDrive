@@ -55,6 +55,12 @@ export default function CountdownScreen({ navigation, route }: any) {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // CRITICAL FIX: Guard ref to prevent duplicate emergency dispatch.
+  // When handleTimeout runs, it updates Redux state (contacts), which
+  // causes handleTimeout to be recreated, which causes the interval
+  // useEffect to re-run, which creates a new interval that immediately
+  // fires handleTimeout again — infinite loop of SMS/WhatsApp/Email.
+  const hasDispatchedRef = useRef(false);
 
   // Batch 7 Phase 4: Respect Reduce Motion accessibility setting
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -139,6 +145,17 @@ export default function CountdownScreen({ navigation, route }: any) {
   );
 
   const handleTimeout = useCallback(async () => {
+    // CRITICAL FIX: Guard against duplicate dispatch.
+    // Without this guard, handleTimeout is called in an INFINITE LOOP:
+    // 1. Timer hits 0 → handleTimeout() runs
+    // 2. handleTimeout calls dispatch(fetchContactsSuccess(...)) → contacts changes
+    // 3. handleTimeout is recreated (useCallback dep on contacts)
+    // 4. The interval useEffect [handleTimeout] re-runs → creates NEW interval
+    // 5. secondsLeft is 0 → new interval's first tick: prev=0, prev<=1 → handleTimeout() AGAIN
+    // 6. Loop repeats, sending 9+ SMS, multiple WhatsApp, multiple emails
+    if (hasDispatchedRef.current) return;
+    hasDispatchedRef.current = true;
+
     if (intervalRef.current) clearInterval(intervalRef.current);
     setIsDispatching(true);
 
@@ -387,11 +404,21 @@ export default function CountdownScreen({ navigation, route }: any) {
   }, []);
 
   useEffect(() => {
+    // CRITICAL FIX: Use empty deps [] so the interval is only created ONCE on mount.
+    // Previously deps were [handleTimeout], which caused the interval to be
+    // recreated every time handleTimeout changed (every render after contacts
+    // update). When the timer hit 0 and handleTimeout ran, it updated contacts
+    // → handleTimeout recreated → useEffect re-ran → new interval created →
+    // secondsLeft was 0 → new interval's first tick immediately called
+    // handleTimeout again → infinite loop of duplicate dispatches.
+    //
+    // Now we use timeoutCallbackRef.current() which always points to the
+    // latest handleTimeout (updated by the ref-syncing useEffect below).
     intervalRef.current = setInterval(() => {
       setSecondsLeft((prev: number) => {
         if (prev <= 1) {
           if (intervalRef.current) clearInterval(intervalRef.current);
-          handleTimeout();
+          timeoutCallbackRef.current();
           return 0;
         }
         return prev - 1;
@@ -401,7 +428,7 @@ export default function CountdownScreen({ navigation, route }: any) {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [handleTimeout]);
+  }, []);
 
   if (isCancelled) {
     return (
