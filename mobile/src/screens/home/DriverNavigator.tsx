@@ -1,3 +1,4 @@
+import { hapticMedium, hapticLight } from '../../utils/haptics';
 import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
@@ -154,10 +155,12 @@ function DriverDashboard({ navigation, onOpenDrawer }: { navigation: AppNavigati
   }, [preferences?.drivingModeEnabled]);
 
   const handleQuickCall = () => {
+  hapticLight();
     if (primaryContact) makeDirectPhoneCall(primaryContact.phoneNumber);
   };
 
   const handleToggleDrivingMode = async () => {
+  hapticMedium();
     if (!preferences) return;
     const key = 'drivingModeEnabled';
     const currentValue = preferences.drivingModeEnabled;

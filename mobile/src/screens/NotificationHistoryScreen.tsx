@@ -3,10 +3,11 @@
 // All imports, logic, state, handlers preserved identically.
 // Only JSX structure + StyleSheet updated: dark glassmorphism theme.
 // ═══════════════════════════════════════════════════════════════
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -21,6 +22,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useToast } from '../components/ui/Toast';
+import { SkeletonList } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function NotificationHistoryScreen() {
@@ -30,6 +32,7 @@ export default function NotificationHistoryScreen() {
   const {
     data: historyData,
     isLoading,
+    isFetching,
     error,
     refetch,
   } = useGetNotificationHistoryQuery({ page: 1, limit: 20 });
@@ -39,6 +42,8 @@ export default function NotificationHistoryScreen() {
   const logs: NotificationLog[] = historyData?.data || [];
   const total = historyData?.total || 0;
   const hasMore = logs.length < total;
+  // Batch 12: pull-to-refresh visibility — true during background refetches.
+  const refreshing = isFetching && !isLoading;
 
   const handleLoadMore = () => {
     // Batch 11: Load-more is currently limited to page 1 via the single RTK Query hook.
@@ -95,6 +100,29 @@ export default function NotificationHistoryScreen() {
     });
   };
 
+  // Batch 12: memoized FlatList row — avoids re-rendering every card when
+  // only the mark-all-as-read spinner state changes.
+  const renderItem = useCallback(
+    ({ item }: { item: NotificationLog }) => (
+      <TouchableOpacity
+        style={[styles.card, !item.isRead && styles.unreadCard]}
+        onPress={() => handleMarkRead(item.id, item.isRead)}
+        activeOpacity={0.7} accessibilityRole="button"
+      >
+        <View style={styles.cardHeader}>
+          {renderCategoryIcon(item.category)}
+          <View style={styles.cardInfo}>
+            <Text style={styles.cardTitleText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.title}</Text>
+            <Text style={styles.cardBodyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.body}</Text>
+            <Text style={styles.cardDate} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{formatDate(item.createdAt)}</Text>
+          </View>
+          {!item.isRead && <View style={styles.unreadDot} />}
+        </View>
+      </TouchableOpacity>
+    ),
+    []
+  );
+
   return (
     <View style={styles.container}>
       {/* ── Header ── */}
@@ -114,7 +142,9 @@ export default function NotificationHistoryScreen() {
       </View>
 
       {isLoading && logs.length === 0 ? (
-        <ActivityIndicator size="large" color={colors.danger[500]} style={styles.loader} />
+        <View style={styles.skeletonWrap}>
+          <SkeletonList count={4} variant="row" />
+        </View>
       ) : error ? (
         <View style={styles.centerContainer}>
           <Ionicons name="alert-circle-outline" size={36} color={colors.danger[400]} style={{ marginBottom: 8 }} />
@@ -134,28 +164,20 @@ export default function NotificationHistoryScreen() {
           data={logs}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={refetch}
+              tintColor={colors.danger[500]}
+              colors={[colors.danger[500]]}
+            />
+          }
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.2}
           ListFooterComponent={
             isLoading ? <ActivityIndicator size="small" color={colors.danger[500]} style={{ marginVertical: 12 }} /> : null
           }
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[styles.card, !item.isRead && styles.unreadCard]}
-              onPress={() => handleMarkRead(item.id, item.isRead)}
-              activeOpacity={0.7} accessibilityRole="button"
-            >
-              <View style={styles.cardHeader}>
-                {renderCategoryIcon(item.category)}
-                <View style={styles.cardInfo}>
-                  <Text style={styles.cardTitleText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.title}</Text>
-                  <Text style={styles.cardBodyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.body}</Text>
-                  <Text style={styles.cardDate} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{formatDate(item.createdAt)}</Text>
-                </View>
-                {!item.isRead && <View style={styles.unreadDot} />}
-              </View>
-            </TouchableOpacity>
-          )}
+          renderItem={renderItem}
         />
       )}
     </View>
@@ -199,6 +221,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  skeletonWrap: {
+    flex: 1,
   },
   centerContainer: {
     flex: 1,

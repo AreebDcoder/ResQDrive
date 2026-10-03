@@ -1,7 +1,8 @@
-import React from 'react';
-import { View, FlatList, Pressable, StyleSheet } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, FlatList, Pressable, RefreshControl, StyleSheet } from 'react-native';
 import { useGetVehiclesQuery, useSetPrimaryVehicleMutation } from '../store/api/vehiclesApi';
 import { useToast } from '../components/ui/Toast';
+import { SkeletonList } from '../components/ui';
 import { useTheme } from '../theme/useTheme';
 import { colors, darkColors, radius, shadows, spacing, typography } from '../theme/tokens';
 import type { AppNavigation } from '../navigation/types';
@@ -10,10 +11,12 @@ import { Ionicons } from '@expo/vector-icons';
 
 // Local styles using theme tokens — will be replaced with tokens directly in Batch 7
 export default function MyVehiclesScreen({ navigation }: { navigation: AppNavigation }) {
-  const { data: vehicles, isLoading, error, refetch } = useGetVehiclesQuery();
+  const { data: vehicles, isLoading, isFetching, error, refetch } = useGetVehiclesQuery();
   const [setPrimary] = useSetPrimaryVehicleMutation();
   const toast = useToast();
   const { colors: tc } = useTheme();
+  // Batch 12: pull-to-refresh visibility — true during background refetches.
+  const refreshing = isFetching && !isLoading;
 
   const handleSetPrimary = async (vehicleId: string) => {
     try {
@@ -24,7 +27,7 @@ export default function MyVehiclesScreen({ navigation }: { navigation: AppNaviga
     }
   };
 
-  const renderItem = ({ item }: { item: Vehicle }) => (
+  const renderItem = useCallback(({ item }: { item: Vehicle }) => (
     <Pressable
       onPress={() => navigation.navigate('AddEditVehicle', { vehicleId: item.id })}
       accessibilityRole="button"
@@ -110,7 +113,7 @@ export default function MyVehiclesScreen({ navigation }: { navigation: AppNaviga
         </Pressable>
       </View>
     </Pressable>
-  );
+  ), [navigation, tc]);
 
   return (
     <View style={{ flex: 1, backgroundColor: tc.background }}>
@@ -122,8 +125,8 @@ export default function MyVehiclesScreen({ navigation }: { navigation: AppNaviga
 
       {/* Loading */}
       {isLoading && (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.danger[500]} />
+        <View style={styles.skeletonWrap}>
+          <SkeletonList count={3} variant="card" />
         </View>
       )}
 
@@ -156,6 +159,16 @@ export default function MyVehiclesScreen({ navigation }: { navigation: AppNaviga
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           renderItem={renderItem}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={refetch}
+              tintColor={colors.danger[500]}
+              colors={[colors.danger[500]]}
+            />
+          }
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
         />
       )}
 
@@ -184,6 +197,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.bold },
   headerSub: { fontSize: typography.fontSize.sm },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl },
+  skeletonWrap: { flex: 1 },
   listContent: { paddingHorizontal: spacing.lg, paddingBottom: 80, gap: spacing.md },
   card: { borderRadius: radius.lg, borderWidth: 1, padding: spacing.lg, ...shadows.sm },
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md },

@@ -27,3 +27,4 @@ export { FormInput, type FormInputProps } from './FormInput';
 export { FormSelect, type FormSelectProps } from './FormSelect';
 export { ScreenWrapper, type ScreenWrapperProps } from './ScreenWrapper';
 export type { IconName } from './types';
+export { SkeletonList, type SkeletonListProps } from './SkeletonList';

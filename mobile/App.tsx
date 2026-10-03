@@ -12,6 +12,7 @@ import { Platform, PermissionsAndroid, View } from 'react-native';
 import { store, RootState } from './src/store/store';
 import Navigation from './src/navigation';
 import NotificationBanner from './src/components/NotificationBanner';
+import OfflineBanner from './src/components/OfflineBanner';
 import { DrivingNotificationService } from './src/services/drivingNotificationService';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { ThemeProvider } from './src/theme/ThemeProvider';
@@ -87,6 +88,7 @@ export default function App() {
             <ToastProvider>
               <SafeAreaProvider>
                 <SafeAppContainer>
+                  <OfflineBanner />
                   <DrivingModeNotificationTracker />
                   <Navigation />
                   <NotificationBanner />

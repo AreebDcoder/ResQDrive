@@ -1,3 +1,4 @@
+import { hapticHeavy } from '../utils/haptics';
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   AccessibilityInfo,
@@ -305,6 +306,7 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
     }
 
     // Place the direct call
+    hapticHeavy();
     const dialed = await makeDirectPhoneCall(phone);
 
     if (dialed) {

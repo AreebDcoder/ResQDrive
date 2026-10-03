@@ -1,3 +1,4 @@
+import { hapticLight, hapticSuccess } from '../utils/haptics';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   AccessibilityInfo,
@@ -376,6 +377,7 @@ export default function CountdownScreen({ navigation, route }: any) {
 
     // ═══ STEP 6: Show dispatch summary for 3 seconds, then navigate to SOS ═══
     setDispatchComplete(true);
+    hapticSuccess();
     setTimeout(() => {
       navigation.replace('SOS', {
         severity: severity.toLowerCase(),
@@ -441,6 +443,7 @@ export default function CountdownScreen({ navigation, route }: any) {
           timeoutCallbackRef.current();
           return 0;
         }
+        hapticLight();
         return prev - 1;
       });
     }, 1000);

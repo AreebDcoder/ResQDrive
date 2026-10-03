@@ -8,7 +8,7 @@ import { useGetIncidentsQuery, useDeleteIncidentMutation } from '../store/api/in
 import { clearCurrent } from '../store/slices/incidentsSlice';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '../components/ui/Toast';
-import { Button, ConfirmDialog, FAB, FilterChip } from '../components/ui';
+import { Button, ConfirmDialog, FAB, FilterChip, SkeletonList } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
 
 const SEVERITY_COLORS: Record<string, string> = {
@@ -95,7 +95,7 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
     }
   };
 
-  const renderItem = ({ item }: { item: any }) => {
+  const renderItem = useCallback(({ item }: { item: any }) => {
     const date = new Date(item.occurredAt).toLocaleString();
     const isSevere = item.severity === 'SEVERE';
     return (
@@ -138,7 +138,7 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
         )}
       </View>
     );
-  };
+  }, [navigation, handleDeleteIncident]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -191,9 +191,12 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
               tintColor={colors.danger[500]}
             />
           }
-          contentContainerStyle={list.length === 0 ? { flex: 1, justifyContent: 'center' } : { padding: 20 }}
+          removeClippedSubviews={true}
+          contentContainerStyle={list.length === 0 && !isLoading ? { flex: 1, justifyContent: 'center' } : { padding: 20 }}
           ListEmptyComponent={
-            !isLoading ? (
+            isLoading ? (
+              <SkeletonList count={5} variant="card" />
+            ) : (
               <View style={styles.centerContent}>
                 <View style={styles.emptyIconBg}>
                   <Ionicons name="document-text-outline" size={48} color={darkColors.textTertiary} />
@@ -201,7 +204,7 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
                 <Text style={styles.emptyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>No incidents recorded yet.</Text>
                 <Text style={styles.emptySubtext} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Tap the + button to log your first incident.</Text>
               </View>
-            ) : null
+            )
           }
           ListFooterComponent={
             meta.page < meta.totalPages ? (

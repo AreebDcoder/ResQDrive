@@ -4,12 +4,13 @@
 // All imports, logic, state, handlers preserved identically.
 // Only JSX structure + StyleSheet updated: dark glassmorphism theme.
 // ═══════════════════════════════════════════════════════════════
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
   Platform,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -24,7 +25,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useToast } from '../components/ui/Toast';
-import { ConfirmDialog } from '../components/ui';
+import { ConfirmDialog, SkeletonList } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function EmergencyContactsScreen({ navigation }: any) {
@@ -32,9 +33,11 @@ export default function EmergencyContactsScreen({ navigation }: any) {
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
   // Batch 11: Migrated to RTK Query — automatic caching + invalidation
-  const { data: rawContacts, isLoading, error, refetch } = useGetContactsQuery();
+  const { data: rawContacts, isLoading, isFetching, error, refetch } = useGetContactsQuery();
   // RTK Query data is initially undefined — default to [] for UI safety.
   const contacts = rawContacts || [];
+  // Batch 12: pull-to-refresh visibility — true during background refetches, false on first paint.
+  const refreshing = isFetching && !isLoading;
   const [deleteContact] = useDeleteContactMutation();
   const [reorderContacts] = useReorderContactsMutation();
   const [isUpdating, setIsUpdating] = useState(false);
@@ -119,6 +122,143 @@ export default function EmergencyContactsScreen({ navigation }: any) {
     setPendingRemoveContact(null);
   };
 
+  // Batch 12: memoized FlatList row — avoids re-rendering every contact card
+  // when only an unrelated prop (e.g. isUpdating overlay) changes.
+  const renderItem = useCallback(
+    ({ item, index }: { item: any; index: number }) => (
+      <View
+        style={[
+          styles.card,
+          item.priorityOrder === 1 &&
+            styles.primaryCard,
+        ]}
+      >
+        {/* Priority Badge */}
+        <View
+          style={[
+            styles.priorityIndicator,
+            item.priorityOrder === 1 &&
+              styles.primaryPriority,
+          ]}
+        >
+          <Text style={styles.priorityNum} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+            {item.priorityOrder}
+          </Text>
+
+          <Text style={styles.priorityLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+            {item.priorityOrder === 1
+              ? 'Primary'
+              : 'Sec'}
+          </Text>
+        </View>
+
+        {/* Contact Details */}
+        <TouchableOpacity
+          style={styles.cardDetails}
+          onPress={() =>
+            navigation.navigate(
+              'AddEditContact',
+              { contact: item }
+            )
+          }
+          activeOpacity={0.7} accessibilityRole="button"
+        >
+          <Text style={styles.contactName} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+            {item.name}
+          </Text>
+
+          <Text style={styles.contactMeta} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+            {item.relationship} •{' '}
+            {item.phoneNumber}
+          </Text>
+
+          {item.email ? (
+            <Text style={styles.contactEmail} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+              {item.email}
+            </Text>
+          ) : null}
+        </TouchableOpacity>
+
+        {/* Actions: Reorder & Quick Delete */}
+        <View style={styles.cardActions}>
+          {/* Reorder Arrows */}
+          <View style={styles.reorderActions}>
+            <TouchableOpacity
+              style={[
+                styles.arrowBtn,
+                index === 0 &&
+                  styles.disabledArrow,
+              ]}
+              onPress={() =>
+                handleMove(index, 'up')
+              }
+              disabled={
+                index === 0 || isUpdating
+              } accessibilityRole="button"
+             accessibilityLabel="Up" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Ionicons
+                name="chevron-up"
+                size={16}
+                color={
+                  index === 0
+                    ? darkColors.border
+                    : darkColors.text
+                }
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.arrowBtn,
+                index ===
+                  contacts.length - 1 &&
+                  styles.disabledArrow,
+              ]}
+              onPress={() =>
+                handleMove(index, 'down')
+              }
+              disabled={
+                index ===
+                  contacts.length - 1 ||
+                isUpdating
+              } accessibilityRole="button"
+             accessibilityLabel="Down" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Ionicons
+                name="chevron-down"
+                size={16}
+                color={
+                  index ===
+                  contacts.length - 1
+                    ? darkColors.border
+                    : darkColors.text
+                }
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Delete Contact */}
+          <TouchableOpacity
+            style={styles.cardDeleteBtn}
+            onPress={() =>
+              handleDeleteContact(item)
+            }
+            disabled={isUpdating}
+            activeOpacity={0.7}
+            hitSlop={{
+              top: 8,
+              bottom: 8,
+              left: 8,
+              right: 8,
+            }} accessibilityRole="button"
+          >
+            <Ionicons name="trash-outline" size={24} color={darkColors.text} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    ),
+    [contacts.length, isUpdating, navigation]
+  );
+
   return (
     <View style={styles.container}>
       {/* ── Info Banner ── */}
@@ -153,11 +293,9 @@ export default function EmergencyContactsScreen({ navigation }: any) {
       </View>
 
       {isLoading && contacts.length === 0 ? (
-        <ActivityIndicator
-          size="large"
-          color={colors.danger[500]}
-          style={styles.loader}
-        />
+        <View style={styles.skeletonWrap}>
+          <SkeletonList count={4} variant="card" />
+        </View>
       ) : error ? (
         <View style={styles.centerContainer}>
           <Ionicons
@@ -217,137 +355,17 @@ export default function EmergencyContactsScreen({ navigation }: any) {
             data={contacts}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
-            renderItem={({ item, index }) => (
-              <View
-                style={[
-                  styles.card,
-                  item.priorityOrder === 1 &&
-                    styles.primaryCard,
-                ]}
-              >
-                {/* Priority Badge */}
-                <View
-                  style={[
-                    styles.priorityIndicator,
-                    item.priorityOrder === 1 &&
-                      styles.primaryPriority,
-                  ]}
-                >
-                  <Text style={styles.priorityNum} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
-                    {item.priorityOrder}
-                  </Text>
-
-                  <Text style={styles.priorityLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
-                    {item.priorityOrder === 1
-                      ? 'Primary'
-                      : 'Sec'}
-                  </Text>
-                </View>
-
-                {/* Contact Details */}
-                <TouchableOpacity
-                  style={styles.cardDetails}
-                  onPress={() =>
-                    navigation.navigate(
-                      'AddEditContact',
-                      { contact: item }
-                    )
-                  }
-                  activeOpacity={0.7} accessibilityRole="button"
-                >
-                  <Text style={styles.contactName} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
-                    {item.name}
-                  </Text>
-
-                  <Text style={styles.contactMeta} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
-                    {item.relationship} •{' '}
-                    {item.phoneNumber}
-                  </Text>
-
-                  {item.email ? (
-                    <Text style={styles.contactEmail} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
-                      {item.email}
-                    </Text>
-                  ) : null}
-                </TouchableOpacity>
-
-                {/* Actions: Reorder & Quick Delete */}
-                <View style={styles.cardActions}>
-                  {/* Reorder Arrows */}
-                  <View style={styles.reorderActions}>
-                    <TouchableOpacity
-                      style={[
-                        styles.arrowBtn,
-                        index === 0 &&
-                          styles.disabledArrow,
-                      ]}
-                      onPress={() =>
-                        handleMove(index, 'up')
-                      }
-                      disabled={
-                        index === 0 || isUpdating
-                      } accessibilityRole="button"
-                     accessibilityLabel="Up" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                      <Ionicons
-                        name="chevron-up"
-                        size={16}
-                        color={
-                          index === 0
-                            ? darkColors.border
-                            : darkColors.text
-                        }
-                      />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={[
-                        styles.arrowBtn,
-                        index ===
-                          contacts.length - 1 &&
-                          styles.disabledArrow,
-                      ]}
-                      onPress={() =>
-                        handleMove(index, 'down')
-                      }
-                      disabled={
-                        index ===
-                          contacts.length - 1 ||
-                        isUpdating
-                      } accessibilityRole="button"
-                     accessibilityLabel="Down" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                      <Ionicons
-                        name="chevron-down"
-                        size={16}
-                        color={
-                          index ===
-                          contacts.length - 1
-                            ? darkColors.border
-                            : darkColors.text
-                        }
-                      />
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Delete Contact */}
-                  <TouchableOpacity
-                    style={styles.cardDeleteBtn}
-                    onPress={() =>
-                      handleDeleteContact(item)
-                    }
-                    disabled={isUpdating}
-                    activeOpacity={0.7}
-                    hitSlop={{
-                      top: 8,
-                      bottom: 8,
-                      left: 8,
-                      right: 8,
-                    }} accessibilityRole="button"
-                  >
-                    <Ionicons name="trash-outline" size={24} color={darkColors.text} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
+            renderItem={renderItem}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={refetch}
+                tintColor={colors.danger[500]}
+                colors={[colors.danger[500]]}
+              />
+            }
+            removeClippedSubviews={true}
+            maxToRenderPerBatch={10}
           />
         </View>
       )}
@@ -462,6 +480,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+
+  skeletonWrap: {
+    flex: 1,
   },
 
   centerContainer: {
