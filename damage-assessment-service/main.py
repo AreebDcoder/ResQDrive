@@ -123,10 +123,33 @@ CAR_RELATED_IMAGENET_CLASSES = {
     "pickup", "minivan", "ambulance", "police_van", "moving_van",
     "garbage_truck", "fire_engine", "beach_wagon", "station_wagon",
     "tow_truck", "trailer_truck", "car", "motor_vehicle", "automobile",
-    "passenger_car", "recreational_vehicle",
-    "car_wheel", "car_mirror", "grille", "disk_brake", "car_seat", "seat_belt",
-    "bumper", "dashboard"
+    "passenger_car", "recreational_vehicle", "half_track", "tank", "snowplow",
+    "forklift", "tractor", "go-kart", "golfcart", "moped", "motor_scooter", "motorcycle",
+    "car_wheel", "car_mirror", "grille", "radiator_grille", "disk_brake", "car_seat", "seat_belt",
+    "bumper", "dashboard", "radiator", "shield", "steel_drum", "crash_helmet", "plate"
 }
+
+CAR_RELATED_KEYWORDS = [
+    "car", "vehic", "truck", "auto", "grille", "brake", "bumper",
+    "dashboard", "wheel", "tire", "radiator", "hood", "fender", "door",
+    "windshield", "headlight", "taillight", "mirror", "seat", "shield", "metal", "chassis",
+    "convertible", "cab", "wagon", "van", "jeep", "pickup", "motor", "iron", "tray", "drum", "plate"
+]
+
+NON_CAR_KEYWORDS = [
+    # Animals & nature
+    "dog", "cat", "bird", "fish", "horse", "cow", "sheep", "pig", "bear", "lion", "tiger",
+    "rabbit", "monkey", "elephant", "frog", "reptile", "insect", "spider", "snake", "lizard",
+    "retriever", "terrier", "spaniel", "hound", "poodle", "bulldog", "shepherd", "pug", "chihuahua",
+    "tabby", "siamese", "persian",
+    # Food & drinks
+    "pizza", "burger", "sandwich", "hotdog", "bagel", "banana", "apple", "bread", "cake", "ice_cream", "soup",
+    # People & clothing
+    "groom", "gown", "dress", "suit", "uniform", "jersey", "wig", "skirt", "shoe", "boot", "sandal",
+    "bikini", "brassiere", "diaper", "pajama", "swimming_trunks",
+    # Household & indoor furnishings
+    "sofa", "couch", "pillow", "quilt", "toilet", "microwave", "toaster", "laptop", "cellular_telephone"
+]
 
 # 1. Load Primary YOLO damage detection model
 yolo_model = None
@@ -170,12 +193,13 @@ if HAS_TENSORFLOW:
         print(f"Error loading MobileNetV2 verification model: {e}")
 
 
-def is_likely_a_car(img: Image.Image) -> bool:
+def is_likely_a_car(img: Image.Image) -> tuple[bool, bool]:
     """
-    Car-Verification Gate: Rejects non-vehicle photos before damage inference.
+    Car-Verification Gate: Inspects photo with MobileNetV2 ImageNet classifier.
+    Returns: (is_car_confirmed, is_definitely_non_car)
     """
     if verification_model is None:
-        return True
+        return True, False
 
     try:
         img_resized = img.resize((224, 224))
@@ -184,25 +208,37 @@ def is_likely_a_car(img: Image.Image) -> bool:
         preprocessed = preprocess_input(img_batch.copy())
 
         preds = verification_model.predict(preprocessed, verbose=0)
-        decoded = decode_predictions(preds, top=10)[0]
+        decoded = decode_predictions(preds, top=25)[0]
 
+        top_5_summary = ", ".join([f"{c} ({s:.2f})" for _, c, s in decoded[:5]])
+        print(f"[Car Verification Gate] ImageNet top predictions: {top_5_summary}")
+
+        # 1. Whole vehicle or automotive part match
         for _, class_name, score in decoded:
             clean_name = class_name.lower().strip()
-            if clean_name in CAR_RELATED_IMAGENET_CLASSES and float(score) > 0.05:
+            if clean_name in CAR_RELATED_IMAGENET_CLASSES and float(score) >= 0.015:
                 print(f"[Car Verification Gate] Verified as car/part: {clean_name} ({score:.4f})")
-                return True
+                return True, False
 
         for _, class_name, score in decoded:
             clean_name = class_name.lower().strip()
-            if any(k in clean_name for k in ["car", "vehicle", "truck", "automobile", "grille", "brake"]) and float(score) > 0.05:
+            if any(k in clean_name for k in CAR_RELATED_KEYWORDS) and float(score) >= 0.015:
                 print(f"[Car Verification Gate] Verified via keyword match: {clean_name} ({score:.4f})")
-                return True
+                return True, False
 
-        print(f"[Car Verification Gate] Rejected non-car image.")
-        return False
+        # 2. Definite non-car match (people, pets, food, indoor furniture)
+        top_class = decoded[0][1].lower().strip()
+        top_score = float(decoded[0][2])
+        if top_score >= 0.25 and any(k in top_class for k in NON_CAR_KEYWORDS):
+            print(f"[Car Verification Gate] Confirmed non-vehicle subject: {top_class} ({top_score:.4f})")
+            return False, True
+
+        # 3. Macro / close-up crop of vehicle body (e.g. dent on sheet metal, scratch on door)
+        print(f"[Car Verification Gate] Ambiguous/close-up crop. Deferring validation to damage model.")
+        return False, False
     except Exception as e:
         print(f"[Car Verification Gate] Error during verification: {e}")
-        return True
+        return True, False
 
 
 @app.get("/health")
@@ -232,10 +268,12 @@ async def predict(file: UploadFile = File(...)):
         img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
 
         # 1. Car-Verification Gate Check
-        if not is_likely_a_car(img):
+        is_car_confirmed, is_definitely_non_car = is_likely_a_car(img)
+
+        if is_definitely_non_car:
             raise HTTPException(
                 status_code=400,
-                detail="This doesn't appear to be a photo of a car or car part. Please upload a clear photo of the damaged vehicle."
+                detail="This doesn't appear to be a photo of a vehicle. Please upload a clear photo of the damaged vehicle or damaged car part."
             )
 
         # 2. Run Primary YOLO Inference if available
@@ -295,8 +333,13 @@ async def predict(file: UploadFile = File(...)):
 
                 best_severity = "minor" if highest_sev_level == 1 else ("moderate" if highest_sev_level == 2 else "severe")
             else:
+                if not is_car_confirmed:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="This doesn't appear to be a photo of a vehicle or vehicle damage. Please upload a clear photo of the damaged vehicle."
+                    )
                 best_confidence = 0.20
-                best_damage_type = "unknown"
+                best_damage_type = "dent"
                 best_severity = "minor"
 
             low_confidence_warning = True if best_confidence < 0.30 else False
@@ -325,6 +368,13 @@ async def predict(file: UploadFile = File(...)):
         predicted_idx = int(np.argmax(output))
         damage_type = CLASSES[predicted_idx]
         confidence = float(output[predicted_idx])
+
+        if not is_car_confirmed and confidence < 0.25:
+            raise HTTPException(
+                status_code=400,
+                detail="This doesn't appear to be a photo of a vehicle or vehicle damage. Please upload a clear photo of the damaged vehicle."
+            )
+
         severity = DAMAGE_TYPE_TO_SEVERITY.get(damage_type, "minor")
         low_confidence_warning = True if confidence < 0.30 else False
         inference_time_ms = int((time.time() - start_time) * 1000)
