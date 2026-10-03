@@ -15,8 +15,7 @@
         "simulator": true
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://10.0.2.2:3000",
-        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": ""
+        "EXPO_PUBLIC_API_URL": "http://10.0.2.2:3000"
       }
     },
     "preview": {
@@ -25,8 +24,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://10.0.2.2:3000",
-        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": ""
+        "EXPO_PUBLIC_API_URL": "http://10.0.2.2:3000"
       }
     },
     "production": {
@@ -35,8 +33,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.resqdrive.com",
-        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": ""
+        "EXPO_PUBLIC_API_URL": "https://api.resqdrive.com"
       }
     }
   },

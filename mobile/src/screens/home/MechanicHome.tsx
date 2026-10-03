@@ -1,75 +1,185 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, StatusBar } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, StatusBar, ActivityIndicator, RefreshControl } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { RootState } from '../../store/store';
 import { logoutAction } from '../../store/slices/authSlice';
 import type { AppNavigation } from '../../navigation/types';
-import { colors, darkColors, tints } from '../../theme/tokens';
-
-// Local styles — will be replaced with theme tokens in Batch 6
-const mS = StyleSheet.create({
-  workshopCard: { backgroundColor: tints.glassCard, borderWidth: 1, borderColor: tints.whiteBorderStrong, borderRadius: 16, padding: 20, marginBottom: 10 },
-  workshopLabel: { fontSize: 12, color: darkColors.textTertiary, fontWeight: '500', textTransform: 'uppercase', letterSpacing: 1 },
-  workshopName: { fontSize: 20, fontWeight: '600', color: darkColors.text, marginTop: 4 },
-  workshopSpec: { fontSize: 14, color: colors.danger[600], marginTop: 2 },
-  menuItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: tints.glassCard, borderWidth: 1, borderColor: tints.whiteBorderStrong, borderRadius: 14, padding: 16, gap: 14 },
-  menuLabel: { flex: 1, fontSize: 15, color: darkColors.text },
-  logoutBtn: { backgroundColor: tints.dangerLight, borderWidth: 1, borderColor: tints.dangerMedium, borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 20 },
-  logoutText: { color: colors.danger[500], fontSize: 15, fontWeight: '600' },
-  customHeader: {
-    flexDirection: 'row',
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 12 : 44,
-    height: Platform.OS === 'android' ? 56 + (StatusBar.currentHeight || 0) + 12 : 56 + 44,
-    backgroundColor: tints.glassCardStrong,
-    alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16,
-    borderBottomWidth: 1, borderBottomColor: tints.whiteBorder,
-  },
-  customHeaderTitle: { fontSize: 18, fontWeight: 'bold', color: darkColors.text },
-});
+import { colors, darkColors, tints, spacing, radius, typography } from '../../theme/tokens';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import api from '../../api/axios';
 
 export default function MechanicHome({ navigation }: { navigation: AppNavigation }) {
   const { user } = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
+  const [incidents, setIncidents] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchIncidents = async () => {
+    try {
+      const res = await api.get('/incidents', { params: { limit: 3, assignedToMe: true } });
+      setIncidents(res.data?.incidents || res.data || []);
+    } catch (err) {
+      // Fallback: fetch all incidents
+      try {
+        const res = await api.get('/incidents', { params: { limit: 3 } });
+        setIncidents(res.data?.incidents || res.data || []);
+      } catch (e) {}
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchIncidents();
+  }, []);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchIncidents();
+  };
+
+  const workshop = user?.mechanicDetails;
+
+  const quickActions = [
+    { label: 'Profile', icon: 'person-circle-outline', route: 'Profile', color: colors.info[500] },
+    { label: 'Incidents', icon: 'document-text-outline', route: 'IncidentsList', color: colors.warning[500] },
+    { label: 'Notifications', icon: 'notifications-outline', route: 'NotificationHistory', color: colors.success[500] },
+    { label: 'Hospitals', icon: 'medkit-outline', route: 'Hospitals', color: colors.danger[500] },
+  ];
 
   return (
     <View style={{ flex: 1, backgroundColor: darkColors.background }}>
       <StatusBar barStyle="light-content" backgroundColor={darkColors.background} />
-      <View style={mS.customHeader}>
-        <View style={{ width: 28 }} />
-        <Text style={mS.customHeaderTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Workshop Dashboard</Text>
-        <View style={{ width: 28 }} />
+      {/* Native Header */}
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+        <Text style={styles.headerTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Workshop Dashboard</Text>
       </View>
-      <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }}>
-        <View style={mS.workshopCard}>
-          <Text style={mS.workshopLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Workshop</Text>
-          <Text style={mS.workshopName} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{user?.mechanicDetails?.workshopName || 'My Workshop'}</Text>
-          <Text style={mS.workshopSpec} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{user?.mechanicDetails?.specialization || 'General Repair'}</Text>
+
+      <ScrollView
+        contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing['5xl'] }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.danger[500]} colors={[colors.danger[500]]} />}
+      >
+        {/* Workshop Info Card */}
+        <View style={styles.workshopCard}>
+          <View style={styles.workshopIconRow}>
+            <View style={styles.workshopIconCircle}>
+              <Ionicons name="construct" size={28} color={colors.danger[500]} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.workshopLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>WORKSHOP</Text>
+              <Text style={styles.workshopName} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+                {workshop?.workshopName || 'My Workshop'}
+              </Text>
+              <Text style={styles.workshopSpec} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+                {workshop?.specialization || 'General Repair'}
+              </Text>
+            </View>
+          </View>
         </View>
-        <TouchableOpacity style={mS.menuItem} onPress={() => navigation.navigate('Profile')} accessibilityRole="button" accessibilityLabel="My Profile">
-          <Ionicons name="person-circle-outline" size={22} color={darkColors.textTertiary} />
-          <Text style={mS.menuLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>My Profile</Text>
-          <Ionicons name="chevron-forward" size={18} color={darkColors.textTertiary} />
-        </TouchableOpacity>
-        <TouchableOpacity style={mS.menuItem} onPress={() => navigation.navigate('IncidentsList')} accessibilityRole="button" accessibilityLabel="Incident History">
-          <Ionicons name="document-text-outline" size={22} color={darkColors.textTertiary} />
-          <Text style={mS.menuLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Incident History</Text>
-          <Ionicons name="chevron-forward" size={18} color={darkColors.textTertiary} />
-        </TouchableOpacity>
-        <TouchableOpacity style={mS.menuItem} onPress={() => navigation.navigate('NotificationHistory')} accessibilityRole="button" accessibilityLabel="Notifications">
-          <Ionicons name="notifications-outline" size={22} color={darkColors.textTertiary} />
-          <Text style={mS.menuLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Notifications</Text>
-          <Ionicons name="chevron-forward" size={18} color={darkColors.textTertiary} />
-        </TouchableOpacity>
-        <TouchableOpacity style={mS.menuItem} onPress={() => navigation.navigate('Hospitals')} accessibilityRole="button" accessibilityLabel="Nearby Hospitals">
-          <Ionicons name="medkit-outline" size={22} color={darkColors.textTertiary} />
-          <Text style={mS.menuLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Nearby Hospitals</Text>
-          <Ionicons name="chevron-forward" size={18} color={darkColors.textTertiary} />
-        </TouchableOpacity>
-        <TouchableOpacity style={mS.logoutBtn} onPress={() => dispatch(logoutAction())} accessibilityRole="button" accessibilityLabel="Logout">
-          <Text style={mS.logoutText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Logout</Text>
+
+        {/* KPI Row */}
+        <View style={styles.kpiRow}>
+          <View style={styles.kpiCard}>
+            <Text style={styles.kpiValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{incidents.length}</Text>
+            <Text style={styles.kpiLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Recent Jobs</Text>
+          </View>
+          <View style={styles.kpiCard}>
+            <Text style={styles.kpiValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>--</Text>
+            <Text style={styles.kpiLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>This Month</Text>
+          </View>
+          <View style={styles.kpiCard}>
+            <Ionicons name="star" size={20} color={colors.warning[500]} />
+            <Text style={styles.kpiLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Rating</Text>
+          </View>
+        </View>
+
+        {/* Quick Actions Grid */}
+        <Text style={styles.sectionTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Quick Actions</Text>
+        <View style={styles.quickActionsGrid}>
+          {quickActions.map((action, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.quickActionCard}
+              onPress={() => navigation.navigate(action.route as any)}
+              accessibilityRole="button"
+              accessibilityLabel={action.label}
+            >
+              <View style={[styles.quickActionIcon, { backgroundColor: `${action.color}20` }]}>
+                <Ionicons name={action.icon as any} size={24} color={action.color} />
+              </View>
+              <Text style={styles.quickActionLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{action.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Recent Incidents */}
+        <Text style={styles.sectionTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Recent Jobs</Text>
+        {isLoading ? (
+          <ActivityIndicator size="large" color={colors.danger[500]} style={{ padding: spacing.xl }} />
+        ) : incidents.length > 0 ? (
+          incidents.map((incident: any, index: number) => (
+            <TouchableOpacity
+              key={incident.id || index}
+              style={styles.incidentCard}
+              onPress={() => navigation.navigate('IncidentDetail', { id: incident.id })}
+              accessibilityRole="button"
+            >
+              <View style={styles.incidentIconRow}>
+                <Ionicons name="car" size={20} color={colors.danger[500]} />
+                <Text style={styles.incidentTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+                  {incident.type || 'AUTO'} • {incident.severity || 'MODERATE'}
+                </Text>
+              </View>
+              <Text style={styles.incidentDate} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+                {new Date(incident.occurredAt).toLocaleDateString()}
+              </Text>
+            </TouchableOpacity>
+          ))
+        ) : (
+          <View style={styles.emptyState}>
+            <Ionicons name="document-text-outline" size={40} color={darkColors.textTertiary} />
+            <Text style={styles.emptyStateText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>No recent jobs</Text>
+          </View>
+        )}
+
+        {/* Logout */}
+        <TouchableOpacity style={styles.logoutBtn} onPress={() => dispatch(logoutAction())} accessibilityRole="button" accessibilityLabel="Logout">
+          <Ionicons name="log-out-outline" size={20} color={colors.danger[500]} style={{ marginRight: spacing.sm }} />
+          <Text style={styles.logoutText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Logout</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 56, backgroundColor: darkColors.surface, borderBottomWidth: 1, borderBottomColor: darkColors.border },
+  headerTitle: { fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.bold, color: darkColors.text },
+  workshopCard: { backgroundColor: tints.glassCard, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.md, borderWidth: 1, borderColor: tints.whiteBorder },
+  workshopIconRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  workshopIconCircle: { width: 48, height: 48, borderRadius: 24, backgroundColor: tints.dangerSubtle, justifyContent: 'center', alignItems: 'center' },
+  workshopLabel: { fontSize: typography.fontSize.xs, color: darkColors.textTertiary, fontWeight: typography.fontWeight.medium, letterSpacing: 1 },
+  workshopName: { fontSize: typography.fontSize.xl, fontWeight: typography.fontWeight.bold, color: darkColors.text, marginTop: 2 },
+  workshopSpec: { fontSize: typography.fontSize.sm, color: colors.danger[500], marginTop: 2 },
+  kpiRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
+  kpiCard: { flex: 1, backgroundColor: tints.glassCard, borderRadius: radius.md, padding: spacing.md, alignItems: 'center', borderWidth: 1, borderColor: tints.whiteBorder, gap: spacing.xs },
+  kpiValue: { fontSize: typography.fontSize.xl, fontWeight: typography.fontWeight.bold, color: darkColors.text },
+  kpiLabel: { fontSize: typography.fontSize.xs, color: darkColors.textSecondary, marginTop: 2 },
+  sectionTitle: { fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.bold, color: darkColors.text, marginTop: spacing.lg, marginBottom: spacing.sm },
+  quickActionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg },
+  quickActionCard: { width: '48%', backgroundColor: tints.glassCard, borderRadius: radius.lg, padding: spacing.lg, alignItems: 'center', borderWidth: 1, borderColor: tints.whiteBorder, gap: spacing.sm },
+  quickActionIcon: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
+  quickActionLabel: { fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: darkColors.text },
+  incidentCard: { backgroundColor: tints.glassCard, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm, borderWidth: 1, borderColor: tints.whiteBorder },
+  incidentIconRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
+  incidentTitle: { flex: 1, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: darkColors.text },
+  incidentDate: { fontSize: typography.fontSize.xs, color: darkColors.textTertiary },
+  emptyState: { alignItems: 'center', paddingVertical: spacing['3xl'], gap: spacing.sm },
+  emptyStateText: { fontSize: typography.fontSize.sm, color: darkColors.textTertiary },
+  logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: tints.dangerLight, borderWidth: 1, borderColor: tints.dangerMedium, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.xl },
+  logoutText: { color: colors.danger[500], fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold },
+});
