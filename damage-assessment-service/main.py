@@ -51,23 +51,6 @@ def startup_event():
 
 CLASSES = ["crack", "dent", "glass_shatter", "lamp_broken", "scratch", "tire_flat"]
 
-DAMAGE_TYPE_TO_SEVERITY = {
-    "scratch": "minor",
-    "dent": "minor",
-    "lamp_broken": "moderate",
-    "lamp broken": "moderate",
-    "broken_lamp": "moderate",
-    "broken lamp": "moderate",
-    "tire_flat": "moderate",
-    "tire flat": "moderate",
-    "flat_tire": "moderate",
-    "flat tire": "moderate",
-    "crack": "severe",
-    "glass_shatter": "severe",
-    "glass shatter": "severe",
-    "shattered_glass": "severe",
-    "shattered glass": "severe",
-}
 
 def evaluate_class_severity(clean_name: str, conf: float, area_ratio: float) -> tuple[str, int]:
     """
@@ -112,10 +95,13 @@ def evaluate_class_severity(clean_name: str, conf: float, area_ratio: float) -> 
         else:
             return "severe", 3
 
-    # Fallback for unexpected classes
-    base_sev = DAMAGE_TYPE_TO_SEVERITY.get(cls, "minor")
-    sev_num = 1 if base_sev == "minor" else (2 if base_sev == "moderate" else 3)
-    return base_sev, sev_num
+    # Fallback for unexpected classes: dynamic scaling based on area and confidence
+    if area_ratio >= 0.35 or conf >= 0.70:
+        return "severe", 3
+    elif area_ratio >= 0.15 or conf >= 0.40:
+        return "moderate", 2
+    else:
+        return "minor", 1
 
 # ImageNet vehicle and part verification classes
 CAR_RELATED_IMAGENET_CLASSES = {
@@ -375,7 +361,14 @@ async def predict(file: UploadFile = File(...)):
                 detail="This doesn't appear to be a photo of a vehicle or vehicle damage. Please upload a clear photo of the damaged vehicle."
             )
 
-        severity = DAMAGE_TYPE_TO_SEVERITY.get(damage_type, "minor")
+        # Discarded static baseline mapping:
+        # Dynamic severity based on confidence and prediction prominence
+        if confidence >= 0.75:
+            severity = "severe"
+        elif confidence >= 0.45:
+            severity = "moderate"
+        else:
+            severity = "minor"
         low_confidence_warning = True if confidence < 0.30 else False
         inference_time_ms = int((time.time() - start_time) * 1000)
 
