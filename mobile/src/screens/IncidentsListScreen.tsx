@@ -3,12 +3,9 @@ import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   RefreshControl, SafeAreaView, StatusBar,
 } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState } from '../store/store';
-import {
-  fetchIncidents, setFilters, clearFilters, clearCurrent,
-} from '../store/slices/incidentsSlice';
-import { useDeleteIncidentMutation } from '../store/api/incidentsApi';
+import { useDispatch } from 'react-redux';
+import { useGetIncidentsQuery, useDeleteIncidentMutation } from '../store/api/incidentsApi';
+import { clearCurrent } from '../store/slices/incidentsSlice';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '../components/ui/Toast';
 import { Button, ConfirmDialog, FAB, FilterChip } from '../components/ui';
@@ -25,32 +22,58 @@ const SEVERITY_FILTERS = ['ALL', 'MINOR', 'MODERATE', 'SEVERE'];
 export default function IncidentsListScreen({ navigation }: { navigation: any }) {
   const toast = useToast();
   const dispatch = useDispatch<any>();
-  const { list, isLoading, isRefreshing, error, meta, filters } = useSelector(
-    (state: RootState) => state.incidents
-  );
+  // Batch 11: Migrated list query to RTK Query. Delete was migrated in Half 1.
+  // severity + page are now query params; auto-refetches when they change.
+  const [currentPage, setCurrentPage] = useState(1);
+  const [severityFilter, setSeverityFilter] = useState<string | undefined>(undefined);
+  // Local accumulated list preserves the original "load more appends" UX.
+  // RTK Query only returns the current page's data; we merge into local state.
+  const [accumulatedList, setAccumulatedList] = useState<any[]>([]);
+  const [accumulatedMeta, setAccumulatedMeta] = useState({ page: 1, totalPages: 0 });
+  const { data: incidentsData, isLoading, isFetching, error, refetch } = useGetIncidentsQuery({
+    page: currentPage,
+    severity: severityFilter,
+  });
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-  // Batch 11: Migrated delete to RTK Query — invalidates 'IncidentList' tag + auto-refetch.
   const [deleteIncident] = useDeleteIncidentMutation();
 
   useEffect(() => {
     dispatch(clearCurrent());
-    dispatch(fetchIncidents({ page: 1, refresh: true }));
-  }, [dispatch, filters]);
-
-  const onRefresh = useCallback(() => {
-    dispatch(fetchIncidents({ page: 1, refresh: true }));
   }, [dispatch]);
 
-  const onLoadMore = useCallback(() => {
-    if (meta.page < meta.totalPages && !isLoading) {
-      dispatch(fetchIncidents({ page: meta.page + 1 }));
+  // Sync RTK Query response → local list (page 1 replaces, page >1 appends).
+  useEffect(() => {
+    const payload = incidentsData as any;
+    if (payload?.data) {
+      if (currentPage === 1) {
+        setAccumulatedList(payload.data);
+      } else {
+        setAccumulatedList(prev => [...prev, ...payload.data]);
+      }
+      setAccumulatedMeta(payload.meta || { page: 1, totalPages: 0 });
     }
-  }, [dispatch, meta, isLoading]);
+  }, [incidentsData, currentPage]);
+
+  const list = accumulatedList;
+  const meta = accumulatedMeta;
+  const isRefreshing = isFetching && !isLoading;
+  const filters = { severity: severityFilter };
+
+  const onRefresh = useCallback(() => {
+    setCurrentPage(1);
+    refetch();
+  }, [refetch]);
+
+  const onLoadMore = useCallback(() => {
+    if (meta.page < meta.totalPages && !isFetching) {
+      setCurrentPage(p => p + 1);
+    }
+  }, [meta, isFetching]);
 
   const onFilterChange = (sev: string) => {
-    if (sev === 'ALL') dispatch(clearFilters());
-    else dispatch(setFilters({ severity: sev }));
+    setSeverityFilter(sev === 'ALL' ? undefined : sev);
+    setCurrentPage(1);
   };
 
   const handleDeleteIncident = (id: string) => {
@@ -144,7 +167,7 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
           <View style={styles.errorBadge}>
             <Ionicons name="alert-circle-outline" size={40} color={colors.danger[400]} />
           </View>
-          <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{error}</Text>
+          <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{String((error as any)?.data?.message || (error as any)?.error || error)}</Text>
           <View style={styles.retryBtnWrap}>
             <Button
               label="Retry"
@@ -188,8 +211,8 @@ export default function IncidentsListScreen({ navigation }: { navigation: any })
                   variant="secondary"
                   size="md"
                   onPress={onLoadMore}
-                  loading={isLoading}
-                  disabled={isLoading}
+                  loading={isFetching}
+                  disabled={isFetching}
                   fullWidth
                   accessibilityHint="Load more incidents"
                 />

@@ -18,10 +18,12 @@ import {
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useDispatch } from 'react-redux';
 import { contactSchema, ContactInput } from '../schemas/validation';
-import { addContactSuccess, updateContactSuccess, deleteContactSuccess } from '../store/slices/contactsSlice';
-import api from '../api/axios';
+import {
+  useCreateContactMutation,
+  useUpdateContactMutation,
+  useDeleteContactMutation,
+} from '../store/api/contactsApi';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useToast } from '../components/ui/Toast';
@@ -40,10 +42,16 @@ const RELATIONSHIP_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
 
 export default function AddEditContactScreen({ route, navigation }: any) {
   const toast = useToast();
-  const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
   const contact = route.params?.contact; // If defined, we are editing
   const isEditing = !!contact;
+
+  // Batch 11: Migrated to RTK Query mutations — auto-invalidates 'ContactList' tag.
+  // No manual dispatch of slice actions needed; tag invalidation triggers refetch
+  // on any screen using useGetContactsQuery (e.g. EmergencyContactsScreen).
+  const [createContact] = useCreateContactMutation();
+  const [updateContact] = useUpdateContactMutation();
+  const [deleteContact] = useDeleteContactMutation();
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -72,15 +80,14 @@ export default function AddEditContactScreen({ route, navigation }: any) {
     setErrorMsg(null);
     try {
       if (isEditing) {
-        const response = await api.patch(`/emergency-contacts/${contact.id}`, data);
-        dispatch(updateContactSuccess(response.data));
+        // Batch 11: RTK Query mutation — invalidates 'Contact' + 'ContactList' tags.
+        await updateContact({ id: contact.id, body: data }).unwrap();
       } else {
-        const response = await api.post('/emergency-contacts', data);
-        dispatch(addContactSuccess(response.data));
+        await createContact(data).unwrap();
       }
       navigation.goBack();
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Failed to save emergency contact.');
+      setErrorMsg(err.data?.message || 'Failed to save emergency contact.');
     } finally {
       setIsLoading(false);
     }
@@ -90,11 +97,11 @@ const doDelete = async () => {
     setIsLoading(true);
     setErrorMsg(null);
     try {
-      await api.delete(`/emergency-contacts/${contact.id}`);
-      dispatch(deleteContactSuccess({ id: contact.id }));
+      // Batch 11: RTK Query mutation — invalidates 'ContactList' tag.
+      await deleteContact(contact.id).unwrap();
       navigation.goBack();
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Failed to delete contact.');
+      setErrorMsg(err.data?.message || 'Failed to delete contact.');
       setIsLoading(false);
     }
   };

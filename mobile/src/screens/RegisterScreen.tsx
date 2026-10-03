@@ -16,7 +16,7 @@ import {
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { registerSchema, RegisterInput } from '../schemas/validation';
-import api from '../api/axios';
+import { useRegisterMutation, useGoogleRegisterMutation } from '../store/api/authApi';
 import { useDispatch } from 'react-redux';
 import { loginSuccess } from '../store/slices/authSlice';
 import { setItemAsync } from '../utils/secureStorage';
@@ -33,6 +33,10 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'DRIVER' | 'MECHANIC'>('DRIVER');
+
+  // Batch 11: Migrated to RTK Query mutations. Auth state stays in authSlice.
+  const [register] = useRegisterMutation();
+  const [googleRegister] = useGoogleRegisterMutation();
 
   // Entrance animations
   const headerOpacity = useRef(new Animated.Value(0)).current;
@@ -133,17 +137,19 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
     try {
       if (isGoogleUser) {
         const { password, confirmPassword, ...registerPayload } = data;
-        const response = await api.post('/auth/google/register', { ...registerPayload, profilePictureUrl: googleData?.profilePictureUrl });
-        const { accessToken, refreshToken, user } = response.data;
+        // Batch 11: RTK Query mutation — POST /auth/google/register.
+        const response = await googleRegister({ ...registerPayload, profilePictureUrl: googleData?.profilePictureUrl }).unwrap();
+        const { accessToken, refreshToken, user } = response;
         await setItemAsync('refreshToken', refreshToken);
         dispatch(loginSuccess({ accessToken, user }));
       } else {
         const { confirmPassword, ...registerPayload } = data;
-        await api.post('/auth/register', registerPayload);
+        // Batch 11: RTK Query mutation — POST /auth/register.
+        await register(registerPayload).unwrap();
         navigation.navigate('EmailVerification', { email: data.email });
       }
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Registration failed. Please check details.');
+      setErrorMsg(err.data?.message || 'Registration failed. Please check details.');
     } finally {
       setIsLoading(false);
     }

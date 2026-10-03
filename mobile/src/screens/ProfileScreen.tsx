@@ -18,6 +18,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { getItemAsync, deleteItemAsync } from '../utils/secureStorage';
 import { RootState } from '../store/store';
 import { updateUserProfile, logoutAction } from '../store/slices/authSlice';
+import { useUpdateProfileMutation, useChangePasswordMutation } from '../store/api/authApi';
 import { updateProfileSchema, changePasswordSchema, UpdateProfileInput, ChangePasswordInput } from '../schemas/validation';
 import { FCMService } from '../services/fcmService';
 import api from '../api/axios';
@@ -33,6 +34,10 @@ export default function ProfileScreen() {
   const { theme, toggleTheme } = useTheme();
   const { user } = useSelector((state: RootState) => state.auth);
   
+  // Batch 11: Migrated to RTK Query mutations — auto-invalidates 'User' tag.
+  // Logout stays as api.post because it clears tokens locally; no cache benefit.
+  const [updateProfile] = useUpdateProfileMutation();
+  const [changePassword] = useChangePasswordMutation();
   const [isEditing, setIsEditing] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [profileMessage, setProfileMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -78,12 +83,13 @@ export default function ProfileScreen() {
     setIsLoading(true);
     setProfileMessage(null);
     try {
-      const response = await api.patch('/users/me', data);
-      dispatch(updateUserProfile(response.data));
+      // Batch 11: RTK Query mutation — auto-invalidates 'User' tag.
+      const result = await updateProfile(data).unwrap() as any;
+      dispatch(updateUserProfile(result));
       setProfileMessage({ type: 'success', text: 'Profile updated successfully!' });
       setIsEditing(false);
     } catch (err: any) {
-      setProfileMessage({ type: 'error', text: err.response?.data?.message || 'Failed to update profile.' });
+      setProfileMessage({ type: 'error', text: err.data?.message || 'Failed to update profile.' });
     } finally {
       setIsLoading(false);
     }
@@ -93,10 +99,11 @@ export default function ProfileScreen() {
     setIsPwLoading(true);
     setPwMessage(null);
     try {
-      await api.patch('/users/me/password', {
+      // Batch 11: RTK Query mutation.
+      await changePassword({
         currentPassword: data.currentPassword,
         newPassword: data.newPassword,
-      });
+      }).unwrap();
       setPwMessage({ type: 'success', text: 'Password changed successfully! You will be logged out.' });
       resetPwForm();
       
@@ -105,7 +112,7 @@ export default function ProfileScreen() {
         await handleLogout();
       }, 2000);
     } catch (err: any) {
-      setPwMessage({ type: 'error', text: err.response?.data?.message || 'Incorrect current password.' });
+      setPwMessage({ type: 'error', text: err.data?.message || 'Incorrect current password.' });
     } finally {
       setIsPwLoading(false);
     }
@@ -133,8 +140,10 @@ export default function ProfileScreen() {
       // Simulate profile picture upload by generating a random avatar URL
       const randomAvatarId = Math.floor(Math.random() * 100);
       const url = `https://i.pravatar.cc/300?img=${randomAvatarId}`;
-      const response = await api.patch('/users/me', { profilePictureUrl: url });
-      dispatch(updateUserProfile(response.data));
+      // Batch 11: RTK Query mutation reuses the same hook as onUpdateProfile.
+      // Cast to any: authApi.User is missing isActive field (in authSlice.User).
+      const result = await updateProfile({ profilePictureUrl: url }).unwrap() as any;
+      dispatch(updateUserProfile(result));
       setProfileMessage({ type: 'success', text: 'Profile picture updated!' });
     } catch (err) {
       setProfileMessage({ type: 'error', text: 'Failed to update picture.' });

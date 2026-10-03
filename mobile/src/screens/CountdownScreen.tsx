@@ -13,6 +13,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
 import { fetchContactsSuccess } from '../store/slices/contactsSlice';
+import { useCreateIncidentMutation } from '../store/api/incidentsApi';
+import {
+  useTriggerEmergencyMutation,
+  useDispatchAlertMutation,
+} from '../store/api/emergencyApi';
 import api from '../api/axios';
 import * as Notifications from 'expo-notifications';
 import { dispatchEmergencyAlert } from '../utils/emergencyFallback';
@@ -33,6 +38,15 @@ export default function CountdownScreen({ navigation, route }: any) {
   const initialCountdown = countdownSeconds || (severity === 'Severe' ? 10 : 20);
   const contacts = useSelector((state: RootState) => state.contacts.list);
   const user = useSelector((state: RootState) => state.auth.user);
+
+  // Batch 11: Migrated emergency-dispatch mutations to RTK Query.
+  // These are component-level hooks invoked inside handleTimeout (async callback).
+  // Note: the api.get('/emergency-contacts') one-off fetch in handleTimeout
+  // is intentionally kept as `api.get` — RTK Query hooks can't be called
+  // conditionally inside callbacks, and we need the LATEST contacts before dispatch.
+  const [createIncident] = useCreateIncidentMutation();
+  const [triggerEmergency] = useTriggerEmergencyMutation();
+  const [dispatchAlert] = useDispatchAlertMutation();
 
   const [secondsLeft, setSecondsLeft] = useState(initialCountdown);
   const [isDispatching, setIsDispatching] = useState(false);
@@ -112,7 +126,10 @@ export default function CountdownScreen({ navigation, route }: any) {
   const logIncident = useCallback(
     async (status: 'FALSE_ALARM' | 'ACTIVE', dispatchStatus?: Record<string, any>) => {
       try {
-        const response = await api.post('/incidents', {
+        // Batch 11: RTK Query mutation — invalidates 'IncidentList' tag.
+        // Cast to any: incidentsApi Incident type doesn't include alertDispatchStatus,
+        // but the backend accepts it (it's part of the DB schema).
+        const result = await createIncident({
           type: 'AUTO',
           severity: status === 'FALSE_ALARM' ? 'NONE' : severity.toUpperCase(),
           status,
@@ -124,13 +141,13 @@ export default function CountdownScreen({ navigation, route }: any) {
               ? 'Countdown cancelled by user false alarm'
               : 'Countdown reached zero emergency alert dispatched',
           alertDispatchStatus: dispatchStatus,
-        });
-        return response.data;
+        } as any).unwrap();
+        return result;
       } catch (err) {
         return null;
       }
     },
-    [severity, latitude, longitude],
+    [severity, latitude, longitude, createIncident],
   );
 
   const handleCancel = useCallback(
@@ -219,7 +236,8 @@ export default function CountdownScreen({ navigation, route }: any) {
     }
 
     try {
-      const response = await api.post('/incidents', {
+      // Batch 11: RTK Query mutation. Auto-invalidates 'IncidentList' tag.
+      const result = await createIncident({
         type: 'AUTO',
         severity: severity.toUpperCase(),
         status: 'ACTIVE',
@@ -228,8 +246,8 @@ export default function CountdownScreen({ navigation, route }: any) {
         longitude: realLng,
         address, // ← NEW: stores real street/city name in database
         description: 'Countdown reached zero — emergency alert dispatched',
-      });
-      incident = response.data;
+      }).unwrap();
+      incident = result;
       setDispatchStatus(prev => ({ ...prev, incident: 'logged' }));
     } catch (err) {
       setDispatchStatus(prev => ({ ...prev, incident: 'failed' }));
@@ -239,15 +257,16 @@ export default function CountdownScreen({ navigation, route }: any) {
     let acknowledgeUrl: string | undefined;
     let emergencyNotificationResult: any = null;
     try {
-      const response = await api.post('/emergency-notification/trigger', {
+      // Batch 11: RTK Query mutation. Invalidates 'Emergency' tag.
+      const response = await triggerEmergency({
         incidentId: incident?.id,
         message: `Accident detected (${severity})`,
         latitude: realLat,
         longitude: realLng,
         address: incident?.address,
-      });
-      emergencyNotificationResult = response.data;
-      acknowledgeUrl = response.data?.acknowledgeUrl;
+      }).unwrap();
+      emergencyNotificationResult = response;
+      acknowledgeUrl = response?.acknowledgeUrl;
       setDispatchStatus(prev => ({ ...prev, module68: 'triggered' }));
     } catch (err: any) {
       setDispatchStatus(prev => ({ ...prev, module68: 'failed' }));
@@ -256,7 +275,8 @@ export default function CountdownScreen({ navigation, route }: any) {
     // ═══ STEP 3: Multi-channel dispatch (WhatsApp Cloud API + Email + Push) ═══
     let backendSucceeded = false;
     try {
-      const response = await api.post('/alert-dispatch', {
+      // Batch 11: RTK Query mutation. Invalidates 'Emergency' tag.
+      const response = await dispatchAlert({
         userId: user?.id,
         userName: user?.fullName,
         incidentId: incident?.id,
@@ -266,10 +286,10 @@ export default function CountdownScreen({ navigation, route }: any) {
         address: resolvedAddress || incident?.address,
         severity,
         contacts: dispatchContacts,
-      });
-      setBackendChannels(response.data?.channels);
-      setIsDevMode(response.data?.devMode ?? true);
-      const respChannels = response.data?.channels;
+      }).unwrap();
+      setBackendChannels(response?.channels);
+      setIsDevMode(response?.devMode ?? true);
+      const respChannels = response?.channels;
 
       const anySent = respChannels &&
         (respChannels.push.status === 'SENT' ||
@@ -363,7 +383,7 @@ export default function CountdownScreen({ navigation, route }: any) {
         sessionId: emergencyNotificationResult?.sessionId || null,
       });
     }, 3000);
-  }, [contacts, user, severity, latitude, longitude, navigation, dispatch]);
+  }, [contacts, user, severity, latitude, longitude, navigation, dispatch, createIncident, triggerEmergency, dispatchAlert]);
 
 
   const cancelCallbackRef = useRef(handleCancel);

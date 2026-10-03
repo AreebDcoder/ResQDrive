@@ -21,7 +21,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useDispatch } from 'react-redux';
 import { loginSchema, LoginInput } from '../schemas/validation';
 import { loginSuccess } from '../store/slices/authSlice';
-import api from '../api/axios';
+import { useLoginMutation, useGoogleAuthMutation } from '../store/api/authApi';
 import { setItemAsync } from '../utils/secureStorage';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -36,6 +36,11 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  // Batch 11: Migrated to RTK Query mutations. Auth state is still managed by
+  // authSlice.loginSuccess (not RTK Query cache) so dispatch(loginSuccess) is preserved.
+  const [login] = useLoginMutation();
+  const [googleAuth] = useGoogleAuthMutation();
 
   // Entrance animations
   const cardY = useRef(new Animated.Value(24)).current;
@@ -116,22 +121,22 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
     setErrorMsg(null);
     Keyboard.dismiss();
     try {
-      const response = await api.post('/auth/login', data);
-      const { accessToken, refreshToken, user } = response.data;
+      // Batch 11: RTK Query mutation. Returns AuthResponse unwrapped.
+      const authData = await login(data).unwrap();
+      const { accessToken, refreshToken, user } = authData;
 
       await setItemAsync('refreshToken', refreshToken);
-      dispatch(loginSuccess({ accessToken, user }));
+      // Cast to any: authApi.User is missing isActive (present in authSlice.User).
+      dispatch(loginSuccess({ accessToken, user: user as any }));
 } catch (err: any) {
       // 🚨 THIS WILL SHOW THE EXACT TRUTH ON YOUR SCREEN:
       Alert.alert(
         'Actual Error Details',
-        `Message: ${err.message}\n` +
-        `Status: ${err.response?.status || 'No Response'}\n` +
-        `Backend Said: ${JSON.stringify(err.response?.data || 'None')}\n` +
-        `Target URL: ${err.config?.baseURL || ''}${err.config?.url || ''}`
+        `Status: ${err.status || 'No Response'}\n` +
+        `Backend Said: ${JSON.stringify(err.data || 'None')}`
       );
 
-      const msg = err.response?.data?.message || 'Login failed. Please check your credentials.';
+      const msg = err.data?.message || 'Login failed. Please check your credentials.';
       if (typeof msg === 'string' && msg.includes('EMAIL_NOT_VERIFIED')) {
         setErrorMsg('Your account is not verified yet. Redirecting to verification...');
         setTimeout(() => {
@@ -166,13 +171,16 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
     }
  
 
-    const res = await api.post('/auth/google', { idToken });
+    // Batch 11: RTK Query mutation — POST /auth/google with idToken.
+    // Cast to any: response can include `newUser` flag if user doesn't exist yet,
+    // which isn't part of the typed AuthResponse.
+    const res = await googleAuth({ idToken }).unwrap() as any;
 
-         if (res.data?.accessToken) {
-        const { accessToken, refreshToken, user } = res.data;
+         if (res?.accessToken) {
+        const { accessToken, refreshToken, user } = res;
         await setItemAsync('refreshToken', refreshToken);
-        dispatch(loginSuccess({ accessToken, user }));
-    } else if (res.data?.newUser) {
+        dispatch(loginSuccess({ accessToken, user: user as any }));
+    } else if (res?.newUser) {
       navigation.navigate('Register', {
         googleData: {
           fullName: userInfo.data?.user?.name || '',

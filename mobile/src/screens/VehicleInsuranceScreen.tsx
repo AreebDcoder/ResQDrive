@@ -13,10 +13,8 @@ import {
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useDispatch } from 'react-redux';
 import { insuranceSchema, InsuranceInput } from '../schemas/validation';
-import { upsertInsuranceSuccess, deleteInsuranceSuccess } from '../store/slices/vehiclesSlice';
-import api from '../api/axios';
+import { useUpsertInsuranceMutation, useDeleteInsuranceMutation } from '../store/api/vehiclesApi';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useToast } from '../components/ui/Toast';
@@ -25,10 +23,13 @@ import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function VehicleInsuranceScreen({ route, navigation }: any) {
   const toast = useToast();
-  const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
   const { vehicleId, insurance } = route.params;
   const isEditing = !!insurance;
+
+  // Batch 11: Migrated to RTK Query mutations — auto-invalidates 'Insurance' tag.
+  const [upsertInsurance] = useUpsertInsuranceMutation();
+  const [deleteInsurance] = useDeleteInsuranceMutation();
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -60,11 +61,11 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
     setIsLoading(true);
     setErrorMsg(null);
     try {
-      const response = await api.put(`/vehicles/${vehicleId}/insurance`, data);
-      dispatch(upsertInsuranceSuccess({ vehicleId, insurance: response.data }));
+      // Batch 11: RTK Query mutation — invalidates 'Insurance' tag for this vehicle.
+      await upsertInsurance({ vehicleId, body: data }).unwrap();
       navigation.goBack();
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Failed to save insurance details.');
+      setErrorMsg(err.data?.message || 'Failed to save insurance details.');
     } finally {
       setIsLoading(false);
     }
@@ -74,11 +75,11 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
     setIsLoading(true);
     setErrorMsg(null);
     try {
-      await api.delete(`/vehicles/${vehicleId}/insurance`);
-      dispatch(deleteInsuranceSuccess(vehicleId));
+      // Batch 11: RTK Query mutation.
+      await deleteInsurance(vehicleId).unwrap();
       navigation.goBack();
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Failed to remove insurance details.');
+      setErrorMsg(err.data?.message || 'Failed to remove insurance details.');
       setIsLoading(false);
     }
   };
