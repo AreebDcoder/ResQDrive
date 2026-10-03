@@ -4,10 +4,10 @@ import 'react-native-gesture-handler';
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Provider, useSelector } from 'react-redux';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Notifications from 'expo-notifications';
-import { Platform, PermissionsAndroid } from 'react-native';
+import { Platform, PermissionsAndroid, View } from 'react-native';
 
 import { store, RootState } from './src/store/store';
 import Navigation from './src/navigation';
@@ -66,6 +66,16 @@ function ThemedStatusBar() {
   return <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />;
 }
 
+// Global container that prevents Android navigation buttons (◁ ○ □) from overlapping app controls
+function SafeAppContainer({ children }: { children: React.ReactNode }) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={{ flex: 1, paddingBottom: insets.bottom, backgroundColor: '#0A0A0F' }}>
+      {children}
+    </View>
+  );
+}
+
 const GHRootView = GestureHandlerRootView as any;
 
 export default function App() {
@@ -76,10 +86,12 @@ export default function App() {
           <ThemeProvider>
             <ToastProvider>
               <SafeAreaProvider>
-                <DrivingModeNotificationTracker />
-                <Navigation />
-                <NotificationBanner />
-                <ThemedStatusBar />
+                <SafeAppContainer>
+                  <DrivingModeNotificationTracker />
+                  <Navigation />
+                  <NotificationBanner />
+                  <ThemedStatusBar />
+                </SafeAppContainer>
               </SafeAreaProvider>
             </ToastProvider>
           </ThemeProvider>
