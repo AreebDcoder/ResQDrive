@@ -39,7 +39,7 @@ export class WorkshopsService {
           role: 'MECHANIC',
           isActive: true,
           mechanicDetails: {
-            isNot: null,
+            isWorkshopVerified: true,
           },
         },
         include: { mechanicDetails: true },

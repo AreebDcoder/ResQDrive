@@ -576,12 +576,6 @@ export class AuthService {
           where: { id: resetToken.id },
           data: { used: true },
         });
-        if (resetToken.user.role === UserRole.MECHANIC) {
-          await tx.mechanicDetails.updateMany({
-            where: { userId: resetToken.userId },
-            data: { isWorkshopVerified: true },
-          });
-        }
       });
       return { message: 'Email address successfully verified! You can now log in.' };
     }
@@ -592,18 +586,10 @@ export class AuthService {
         secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
       });
 
-      const user = await this.prisma.user.update({
+      await this.prisma.user.update({
         where: { id: payload.sub },
         data: { isVerified: true },
-        include: { mechanicDetails: true },
       });
-
-      if (user.role === UserRole.MECHANIC) {
-        await this.prisma.mechanicDetails.updateMany({
-          where: { userId: user.id },
-          data: { isWorkshopVerified: true },
-        });
-      }
 
       return { message: 'Email address successfully verified! You can now log in.' };
     } catch (error) {
