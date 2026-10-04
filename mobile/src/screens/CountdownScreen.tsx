@@ -259,6 +259,7 @@ export default function CountdownScreen({ navigation, route }: any) {
     // ═══ STEP 2: Trigger Module 6.8 (RoboCall voice call + RoboSMS) ═══
     let acknowledgeUrl: string | undefined;
     let emergencyNotificationResult: any = null;
+    let roboCallSucceeded = false;
     try {
       // Batch 11: RTK Query mutation. Invalidates 'Emergency' tag.
       const response = await triggerEmergency({
@@ -271,13 +272,16 @@ export default function CountdownScreen({ navigation, route }: any) {
       }).unwrap();
       emergencyNotificationResult = response;
       acknowledgeUrl = response?.acknowledgeUrl;
+      roboCallSucceeded = true;
       setDispatchStatus(prev => ({ ...prev, module68: 'triggered' }));
     } catch (err: any) {
+      roboCallSucceeded = false;
       setDispatchStatus(prev => ({ ...prev, module68: 'failed' }));
     }
 
     // ═══ STEP 3: Multi-channel dispatch (WhatsApp Cloud API + Email + Push) ═══
     let backendSucceeded = false;
+    let smsSentViaBackend = false;
     try {
       // Batch 11: RTK Query mutation. Invalidates 'Emergency' tag.
       const response = await dispatchAlert({
@@ -303,6 +307,7 @@ export default function CountdownScreen({ navigation, route }: any) {
 
       if (anySent) {
         backendSucceeded = true;
+        smsSentViaBackend = respChannels.sms.status === 'SENT';
         setDispatchStatus(prev => ({
           ...prev,
           backend: 'sent',
@@ -327,22 +332,20 @@ export default function CountdownScreen({ navigation, route }: any) {
     // Previously, this ALWAYS sent device-side SMS to ALL contacts — even when
     // the backend had already successfully sent RoboSMS via the API. This caused
     // each contact to receive DUPLICATE SMS (one from backend, one from device).
-let autoSmsSent = false;
-const backendSmsFailed = !backendSucceeded ||
-  (backendSucceeded && dispatchStatus.sms !== 'sent');
+    let autoSmsSent = false;
+    const backendSmsFailed = !backendSucceeded || (backendSucceeded && !smsSentViaBackend);
 
-if (dispatchContacts.length > 0 && backendSmsFailed) {
-  const backendBase = (api.defaults.baseURL || 'http://192.168.18.186:3000')
-    .replace(/\/api\/?$/, '')
-    .replace(/\/$/, '');
+    if (dispatchContacts.length > 0 && backendSmsFailed) {
+      const backendBase = (api.defaults.baseURL || '').replace(/\/api\/?$/, '').replace(/\/$/, '');
 
-  const fullAckUrl = acknowledgeUrl
-    ? (acknowledgeUrl.startsWith('http') ? acknowledgeUrl : `${backendBase}${acknowledgeUrl}`)
-    : null;
+      const fullAckUrl = acknowledgeUrl
+        ? (acknowledgeUrl.startsWith('http') ? acknowledgeUrl : `${backendBase}${acknowledgeUrl}`)
+        : null;
 
-  const ackLine = fullAckUrl ? `\nTrack & Acknowledge: ${fullAckUrl}` : '';
+      const ackLine = fullAckUrl ? `\nTrack & Acknowledge: ${fullAckUrl}` : '';
 
-  const smsMessage = `[ResQDrive ALERT] ${user?.fullName || 'Driver'} accident (${severity}).\nLocation: https://maps.google.com/?q=${realLat},${realLng}${ackLine}`;
+      const locationName = address || resolvedAddress || incident?.address || `Coordinates: ${realLat.toFixed(4)}, ${realLng.toFixed(4)}`;
+      const smsMessage = `[ResQDrive ALERT] ${user?.fullName || 'Driver'} accident (${severity}).\nLocation: ${locationName}\nMap: https://maps.google.com/?q=${realLat},${realLng}${ackLine}`;
       // Try background auto-SMS first (react-native-direct-sms)
       try {
         const smsResult = await sendBulkBackgroundSMS(dispatchContacts, smsMessage);
@@ -373,22 +376,26 @@ if (dispatchContacts.length > 0 && backendSmsFailed) {
       }
     }
 
-    // ═══ STEP 4.5: Direct Phone Call from driver device to primary emergency contact ═══
-    // We execute the call AFTER background SMS has fully resolved and settled over the cellular radio
+    // ═══ STEP 4.5: Direct Phone Call — only if RoboCall FAILED ═══
     if (dispatchContacts.length > 0 && dispatchContacts[0]?.phoneNumber) {
-      const primaryTarget = dispatchContacts[0];
-      try {
-        await makeDirectPhoneCall(primaryTarget.phoneNumber);
-      } catch (callErr) {
-        console.log('[Countdown] Direct phone call error:', callErr);
+      if (!roboCallSucceeded) {
+        // RoboCall failed — call primary contact instantly from mobile SIM
+        const primaryTarget = dispatchContacts[0];
+        try {
+          await makeDirectPhoneCall(primaryTarget.phoneNumber);
+        } catch (callErr) {
+          // Call failed — SOS escalation will handle subsequent contacts
+        }
       }
+      // If RoboCall succeeded — DON'T call from mobile.
+      // SOS screen auto-escalation handles calling contacts one by one with 60s timeout.
     }
 
     // ═══ STEP 5: Local push notification on device ═══
     try {
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: '🚨 ResQDrive Emergency Alert',
+          title: 'ResQDrive Emergency Alert',
           body: `Emergency alert dispatched! Live GPS tracking active. Acknowledgement link sent to contacts.`,
           sound: true,
           data: { mapsLink, severity },
@@ -406,7 +413,7 @@ if (dispatchContacts.length > 0 && backendSmsFailed) {
         severity: severity.toLowerCase(),
         incidentId: incident?.id || null,
         sessionId: emergencyNotificationResult?.sessionId || null,
-        initialContactIndex: 1,
+        initialContactIndex: roboCallSucceeded ? 0 : 1,
       });
     }, 3000);
   }, [contacts, user, severity, latitude, longitude, navigation, dispatch, createIncident, triggerEmergency, dispatchAlert]);

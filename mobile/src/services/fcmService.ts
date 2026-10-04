@@ -126,7 +126,7 @@ export class FCMService {
     try {
       const Notifications = require('expo-notifications');
       const unsubscribeMessage = messaging().onMessage(async (remoteMessage: any) => {
-        console.log('[FCM] Foreground Message received:', remoteMessage);
+        // [FCM] Foreground message received (Batch 10: console.log removed)
 
         if (onNotificationReceived) {
           onNotificationReceived(remoteMessage);
@@ -147,7 +147,7 @@ export class FCMService {
             trigger: (Platform.OS === 'android' ? { channelId: 'emergency-alerts' } : null) as any,
           });
         } catch (e) {
-          console.log('[FCM] Foreground notification display error:', e);
+          // [FCM] Foreground notification display error (Batch 10: console.log removed)
         }
       });
 
