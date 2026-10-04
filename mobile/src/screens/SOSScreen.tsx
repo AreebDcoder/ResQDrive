@@ -1,5 +1,7 @@
+import { hapticHeavy } from '../utils/haptics';
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
+  AccessibilityInfo,
   View,
   Text,
   StyleSheet,
@@ -20,8 +22,15 @@ import { Ionicons } from '@expo/vector-icons';
 import api from '../api/axios';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchContactsSuccess } from '../store/slices/contactsSlice';
+import {
+  useGetRegionalNumbersQuery,
+  useLogEmergencyCallMutation,
+} from '../store/api/emergencyApi';
 import { makeDirectPhoneCall, isAutoDialable } from '../utils/directCall';
 import { getSafeDeviceLocation } from '../utils/location';
+import { useToast } from '../components/ui/Toast';
+import { ConfirmDialog } from '../components/ui';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 interface EmergencyNumberItem {
   id: string;
@@ -31,6 +40,9 @@ interface EmergencyNumberItem {
   phoneNumber: string;
   priorityOrder: number;
 }
+
+const FALLBACK_LAT = 33.6844;
+const FALLBACK_LNG = 73.0479;
 
 const DEFAULT_RESCUE_NUMBERS: EmergencyNumberItem[] = [
   {
@@ -48,17 +60,37 @@ const DEFAULT_RESCUE_NUMBERS: EmergencyNumberItem[] = [
 ];
 
 export default function SOSScreen({ route, navigation, isInline }: any) {
+  const toast = useToast();
   const dispatch = useDispatch();
   // Extract params from countdown trigger if navigated dynamically
   const severity = route?.params?.severity || 'moderate';
   const incidentId = route?.params?.incidentId || null;
 
   const [regionalNumbers, setRegionalNumbers] = useState<EmergencyNumberItem[]>(DEFAULT_RESCUE_NUMBERS);
-  const personalContacts = useSelector((state: any) => state.contacts?.list || []);
   const [regionName, setRegionName] = useState<string>('Pakistan (Nationwide)');
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const personalContacts = useSelector((state: any) => state.contacts?.list || []);
   const [isLoading, setIsLoading] = useState(false);
   const [isLocating, setIsLocating] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Batch 11: Migrated regional numbers fetch to RTK Query.
+  // The hook auto-fetches when `coords` change; skip until coords are resolved.
+  const { data: regionalData } = useGetRegionalNumbersQuery(
+    (coords || { lat: FALLBACK_LAT, lng: FALLBACK_LNG }) as { lat: number; lng: number },
+    { skip: !coords }
+  );
+  const [logEmergencyCall] = useLogEmergencyCallMutation();
+
+  // Sync RTK Query response into local state (preserves DEFAULT_RESCUE_NUMBERS fallback).
+  useEffect(() => {
+    if (regionalData?.regionName) {
+      setRegionName(regionalData.regionName);
+    }
+    if (regionalData?.regionalNumbers && regionalData.regionalNumbers.length > 0) {
+      setRegionalNumbers(regionalData.regionalNumbers);
+    }
+  }, [regionalData]);
 
   // Auto-escalation state & cycling
   const [escalationTimeLeft, setEscalationTimeLeft] = useState<number>(60);
@@ -70,6 +102,10 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
   );
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Phase 8: ConfirmDialog state for cautionary call confirm
+  const [callDialogVisible, setCallDialogVisible] = useState(false);
+  const [pendingCallContact, setPendingCallContact] = useState<{ name: string; phone: string } | null>(null);
+
   // Refresh personal contacts on mount to guarantee fresh priority
   useEffect(() => {
     const fetchFreshContacts = async () => {
@@ -79,7 +115,6 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
           dispatch(fetchContactsSuccess(res.data));
         }
       } catch (err) {
-        console.log('[SOS] Failed to fetch fresh contacts:', err);
       }
     };
     fetchFreshContacts();
@@ -106,15 +141,30 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
   const listOpacity = useRef(new Animated.Value(1)).current;
   const listTranslateY = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-    // Header fade in
-    Animated.timing(headerOpacity, {
-      toValue: 1,
-      duration: 500,
-      useNativeDriver: true,
-    }).start();
+  // Batch 7 Phase 4: Respect Reduce Motion accessibility setting
+  const [reduceMotion, setReduceMotion] = useState(false);
 
-    // SOS pulse loop
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    // Skip decorative header entrance animation when Reduce Motion is enabled.
+    // The sosPulse Animated.loop is a functional pulse indicator and remains running.
+    if (reduceMotion) {
+      headerOpacity.setValue(1);
+    } else {
+      // Header fade in
+      Animated.timing(headerOpacity, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+    }
+
+    // SOS pulse loop — continuous pulse effect, NOT skipped (functional indicator)
     Animated.loop(
       Animated.sequence([
         Animated.timing(sosPulse, {
@@ -131,7 +181,7 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
         }),
       ]),
     ).start();
-  }, []);
+  }, [reduceMotion]);
 
   const regionalNumbersRef = useRef(regionalNumbers);
 
@@ -146,7 +196,7 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
         title: 'Emergency Direct Call Permission',
         message: 'ResQDrive requires permission to directly place emergency calls to Rescue 1122.',
         buttonPositive: 'Allow',
-      }).catch((e) => console.log('Early CALL_PHONE permission check error:', e));
+      }).catch((e) => {});
     }
   }, []);
 
@@ -166,37 +216,36 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
     ]).start();
   };
 
-  const fetchEmergencyNumbers = useCallback(async () => {
-    setIsLocating(true);
-    setErrorMsg(null);
-    try {
-      const loc = await getSafeDeviceLocation();
-      const latitude = loc?.latitude ?? 33.6844;
-      const longitude = loc?.longitude ?? 73.0479;
-
-      const response = await api.get('/emergency-sos/numbers', {
-        params: { lat: latitude, lng: longitude },
-      });
-
-      if (response.data?.regionName) {
-        setRegionName(response.data.regionName);
+  // Resolve device location once on mount, then feed coords to RTK Query.
+  useEffect(() => {
+    let cancelled = false;
+    const getLoc = async () => {
+      setIsLocating(true);
+      try {
+        const loc = await getSafeDeviceLocation();
+        if (cancelled) return;
+        const latitude = loc?.latitude ?? FALLBACK_LAT;
+        const longitude = loc?.longitude ?? FALLBACK_LNG;
+        setCoords({ lat: latitude, lng: longitude });
+      } catch (err: any) {
+        // Fall back to nationwide defaults; RTK Query will fetch with fallback coords.
+        setCoords({ lat: FALLBACK_LAT, lng: FALLBACK_LNG });
+      } finally {
+        if (!cancelled) setIsLocating(false);
       }
-      if (response.data?.regionalNumbers && response.data.regionalNumbers.length > 0) {
-        setRegionalNumbers(response.data.regionalNumbers);
-      }
-    } catch (err: any) {
-      console.log('Non-fatal: could not refresh regional numbers, using standard defaults:', err?.message);
-    } finally {
-      setIsLocating(false);
-      setIsLoading(false);
-    }
+    };
+    getLoc();
+    return () => { cancelled = true; };
   }, []);
 
-  useEffect(() => {
-    fetchEmergencyNumbers();
-  }, [fetchEmergencyNumbers]);
-
   const escalationStartTimeRef = useRef<number>(0);
+
+  // CRITICAL FIX: Use a ref to always call the LATEST triggerAutoEscalationCall.
+  // Without this, the useEffect at line 240 captures a stale closure from the
+  // first render — personalContacts would be empty (not yet loaded from API),
+  // causing the auto-call to skip personal contacts and jump straight to
+  // the regional emergency number.
+  const triggerAutoEscalationRef = useRef<() => Promise<void>>(async () => {});
 
   useEffect(() => {
     if (!isEscalationActive) return;
@@ -209,6 +258,10 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
       if (remaining <= 0) {
         clearInterval(intervalId);
         setEscalationTimeLeft(0);
+        // CRITICAL FIX: Actually fire the auto-escalation call when timer hits 0.
+        // Previously this function was defined but never invoked — the auto-call
+        // to emergency contacts (and regional fallback) never actually happened.
+        triggerAutoEscalationRef.current();
       } else {
         setEscalationTimeLeft(remaining);
       }
@@ -233,34 +286,31 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
       const contact = sortedContacts[currentContactIndex];
       phone = contact.phoneNumber;
       name = contact.name;
-      console.log(`[SOS Auto-Escalation] Calling personal contact ${currentContactIndex + 1}/${sortedContacts.length}: ${name} (${phone})`);
       autoDialed = true;
     } else {
       // 2. All personal contacts exhausted — call regional emergency service (prefer 11-digit landline)
       const targetService = regionalNumbers.find((r) => r.phoneNumber.length >= 5) || regionalNumbers[0];
       phone = targetService?.phoneNumber || '0519290002';
       name = targetService?.serviceName || 'Rescue 1122 HQ (Auto-Dial)';
-      console.log(`[SOS Auto-Escalation] All personal contacts exhausted — calling regional: ${name} (${phone})`);
       setHasCycledThroughAll(true);
       autoDialed = isAutoDialable(phone);
     }
 
     try {
-      await api.post('/emergency-sos/log-call', {
+      // Batch 11: RTK Query mutation — logs the emergency call attempt.
+      await logEmergencyCall({
         serviceName: name,
         autoDialed,
-      });
+      }).unwrap();
     } catch (err) {
-      console.log('Failed to log auto-dialed call:', err);
     }
 
     // Place the direct call
+    hapticHeavy();
     const dialed = await makeDirectPhoneCall(phone);
 
     if (dialed) {
-      console.log(`[SOS] Auto-call placed to ${name} (${phone}) — no user interaction needed`);
     } else if (!isAutoDialable(phone)) {
-      console.log(`[SOS] ${phone} is a 4-digit shortcode — opened dialer (user must tap Call)`);
       Alert.alert(
         `Call ${name}`,
         `${phone} is an emergency shortcode. Tap the green Call button to dial.`,
@@ -280,7 +330,6 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
         escalationStartTimeRef.current = 0;
         setEscalationTimeLeft(60);
         setIsEscalationActive(true);
-        console.log(`[SOS] Next escalation scheduled in 60s: Personal contact ${nextContact.name}`);
       } else {
         // Next is Regional Rescue 1122 Landline!
         const regional = regionalNumbers.find((r) => r.phoneNumber.length >= 5) || regionalNumbers[0];
@@ -290,10 +339,15 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
         });
         setEscalationTimeLeft(60);
         setIsEscalationActive(true);
-        console.log(`[SOS] Next escalation scheduled in 60s: Regional emergency service ${regional?.serviceName || 'Rescue 1122'}`);
       }
     }
   };
+
+  // Keep the ref updated with the latest closure on every render
+  // (so the timer useEffect always calls the freshest version)
+  useEffect(() => {
+    triggerAutoEscalationRef.current = triggerAutoEscalationCall;
+  });
 
   const handleCallNumber = async (number: string, name: string) => {
     // Stop local countdown if active
@@ -301,30 +355,24 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
       setIsEscalationActive(false);
       if (timerRef.current) clearTimeout(timerRef.current);
     }
+    // Phase 8: replaced destructive Alert.alert with ConfirmDialog primitive
+    setPendingCallContact({ name, phone: number });
+    setCallDialogVisible(true);
+  };
 
-    Alert.alert(
-      `Call ${name}?`,
-      `This will dial ${number} using your phone's dialer.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Call Now',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // Log manual call
-              await api.post('/emergency-sos/log-call', {
-                serviceName: name,
-                autoDialed: false,
-              });
-            } catch (err) {
-              console.log('Failed to log emergency call:', err);
-            }
-            await makeDirectPhoneCall(number);
-          },
-        },
-      ]
-    );
+  const handleConfirmCall = async () => {
+    setCallDialogVisible(false);
+    if (!pendingCallContact) return;
+    try {
+      // Batch 11: RTK Query mutation — logs the manual call.
+      await logEmergencyCall({
+        serviceName: pendingCallContact.name,
+        autoDialed: false,
+      }).unwrap();
+    } catch (err) {
+    }
+    await makeDirectPhoneCall(pendingCallContact.phone);
+    setPendingCallContact(null);
   };
 
   const sosGlow = sosPulse.interpolate({
@@ -339,7 +387,7 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0A0A0F" />
+      <StatusBar barStyle="light-content" backgroundColor={darkColors.background} />
 
       {/* Pulsing SOS background glow */}
       <Animated.View
@@ -355,18 +403,18 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
       {/* Header */}
       <Animated.View style={[styles.header, { opacity: headerOpacity }]}>
         {!isInline && (
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color="#ffffff" />
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Back" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Ionicons name="arrow-back" size={24} color={darkColors.text} />
           </TouchableOpacity>
         )}
         <View style={styles.headerContent}>
-          <Text style={styles.title}>Emergency SOS</Text>
+          <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Emergency SOS</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
-            <Ionicons name="location-sharp" size={14} color="#E53935" />
-            <Text style={styles.subtitle}>
+            <Ionicons name="location-sharp" size={14} color={colors.danger[500]} />
+            <Text style={styles.subtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               {isLocating ? 'Detecting local services...' : regionName}
             </Text>
-            {isLocating && <ActivityIndicator size="small" color="#E53935" style={{ marginLeft: 6 }} />}
+            {isLocating && <ActivityIndicator size="small" color={colors.danger[500]} style={{ marginLeft: 6 }} />}
           </View>
         </View>
       </Animated.View>
@@ -374,8 +422,8 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
       {/* Escalation Countdown Indicator */}
       {isEscalationActive && (
         <View style={styles.countdownBanner}>
-          <Ionicons name="warning" size={24} color="#ff9800" style={{ marginRight: 8 }} />
-          <Text style={styles.countdownText}>
+          <Ionicons name="warning" size={24} color={colors.warning[500]} style={{ marginRight: 8 }} />
+          <Text style={styles.countdownText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             Auto-dialing {pendingCallTarget?.name || 'rescue'} in {escalationTimeLeft}s if no response...
           </Text>
         </View>
@@ -393,37 +441,48 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
           >
-            <Text style={styles.sectionLabel}>REGIONAL EMERGENCY SERVICES</Text>
+            <Text style={styles.sectionLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>REGIONAL EMERGENCY SERVICES</Text>
             {regionalNumbers.map((item, index) => (
               <TouchableOpacity
                 key={item.id}
                 style={[styles.callCard, index === 0 && styles.callCardFirst]}
                 onPress={() => handleCallNumber(item.phoneNumber, item.serviceName || 'Rescue')}
-                activeOpacity={0.85}
+                activeOpacity={0.85} accessibilityRole="button"
               >
                 <View style={styles.callIconCircle}>
-                  <Text style={styles.callIcon}>📞</Text>
+                  <Ionicons name="call-outline" size={24} color={darkColors.text} />
                 </View>
                 <View style={styles.callCardText}>
-                  <Text style={styles.callName}>{item.serviceName}</Text>
-                  <Text style={styles.callNumber}>{item.phoneNumber}</Text>
+                  <Text style={styles.callName} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.serviceName}</Text>
+                  <Text style={styles.callNumber} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.phoneNumber}</Text>
                 </View>
                 <View style={styles.callNowBadge}>
-                  <Text style={styles.callNowText}>CALL</Text>
+                  <Text style={styles.callNowText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>CALL</Text>
                 </View>
               </TouchableOpacity>
             ))}
 
 
-
             <View style={styles.noteBox}>
-              <Text style={styles.noteIcon}>ℹ️</Text>
-              <Text style={styles.noteText}>
+              <Text style={styles.noteIcon} allowFontScaling={true} maxFontSizeMultiplier={1.5}>ℹ️</Text>
+              <Text style={styles.noteText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 These calls work as standard cellular calls and do not require internet access.
               </Text>
             </View>
           </ScrollView>
         </Animated.View>
+
+      {/* Phase 8: ConfirmDialog replaces destructive Alert.alert */}
+      <ConfirmDialog
+        visible={callDialogVisible}
+        title={pendingCallContact ? `Call ${pendingCallContact.name}?` : 'Call?'}
+        description={pendingCallContact ? `This will dial ${pendingCallContact.phone} using your phone's dialer.` : undefined}
+        confirmLabel="Call Now"
+        cancelLabel="Cancel"
+        variant="warning"
+        onConfirm={handleConfirmCall}
+        onCancel={() => { setCallDialogVisible(false); setPendingCallContact(null); }}
+      />
     </SafeAreaView>
   );
 }
@@ -431,7 +490,7 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
   },
   sosGlow: {
     position: 'absolute',
@@ -440,7 +499,7 @@ const styles = StyleSheet.create({
     right: '15%',
     height: 260,
     borderRadius: 130,
-    backgroundColor: 'rgba(229, 57, 53, 0.15)',
+    backgroundColor: tints.dangerLight,
   },
   header: {
     flexDirection: 'row',
@@ -459,19 +518,19 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
   subtitle: {
     fontSize: 13,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginTop: 3,
   },
   countdownBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 152, 0, 0.15)',
+    backgroundColor: tints.warningSubtle,
     borderWidth: 1,
-    borderColor: 'rgba(255, 152, 0, 0.3)',
+    borderColor: tints.warningMedium,
     borderRadius: 12,
     padding: 12,
     marginHorizontal: 20,
@@ -479,7 +538,7 @@ const styles = StyleSheet.create({
   },
   countdownText: {
     flex: 1,
-    color: '#ff9800',
+    color: colors.warning[500],
     fontSize: 14,
     fontWeight: 'bold',
   },
@@ -493,15 +552,15 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(229, 57, 53, 0.08)',
+    backgroundColor: tints.dangerSubtle,
     borderWidth: 2,
-    borderColor: 'rgba(229, 57, 53, 0.3)',
+    borderColor: tints.dangerMedium,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
   },
   loadingText: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 15,
     textAlign: 'center',
   },
@@ -509,9 +568,9 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: 'rgba(255, 214, 0, 0.1)',
+    backgroundColor: tints.warningSubtle,
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 214, 0, 0.3)',
+    borderColor: tints.warningMedium,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -520,25 +579,25 @@ const styles = StyleSheet.create({
     fontSize: 32,
   },
   errorText: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 15,
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 22,
   },
   retryBtn: {
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 14,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 12,
     elevation: 6,
   },
   retryBtnText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontWeight: '700',
     fontSize: 15,
     letterSpacing: 0.3,
@@ -548,7 +607,7 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   sectionLabel: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1.5,
@@ -558,16 +617,16 @@ const styles = StyleSheet.create({
   callCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: tints.whiteBorderStrong,
   },
   callCardFirst: {
-    borderColor: 'rgba(229, 57, 53, 0.45)',
-    shadowColor: '#E53935',
+    borderColor: tints.dangerMedium,
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
@@ -577,7 +636,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(229, 57, 53, 0.12)',
+    backgroundColor: tints.dangerLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
@@ -589,28 +648,28 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   callName: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 2,
   },
   callNumber: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 14,
   },
   callNowBadge: {
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 3,
   },
   callNowText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontWeight: '700',
     fontSize: 13,
     letterSpacing: 0.5,
@@ -618,19 +677,19 @@ const styles = StyleSheet.create({
   noteBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: tints.whiteSubtle,
     borderRadius: 12,
     padding: 16,
     marginTop: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     gap: 10,
   },
   noteIcon: {
     fontSize: 16,
   },
   noteText: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 12,
     flex: 1,
     lineHeight: 18,
@@ -643,15 +702,15 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   devSimBtn: {
-    backgroundColor: '#1c1c2e',
-    borderColor: '#3e3e3e',
+    backgroundColor: darkColors.surfaceElevated,
+    borderColor: darkColors.surfaceElevated,
     borderWidth: 1,
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
   devSimText: {
-    color: '#ffffff',
+    color: darkColors.text,
     fontSize: 12,
     fontWeight: 'bold',
   },

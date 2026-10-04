@@ -1,5 +1,7 @@
+import { hapticLight, hapticSuccess } from '../utils/haptics';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
+  AccessibilityInfo,
   View,
   Text,
   StyleSheet,
@@ -12,6 +14,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
 import { fetchContactsSuccess } from '../store/slices/contactsSlice';
+import { useCreateIncidentMutation } from '../store/api/incidentsApi';
+import {
+  useTriggerEmergencyMutation,
+  useDispatchAlertMutation,
+} from '../store/api/emergencyApi';
 import api from '../api/axios';
 import * as Notifications from 'expo-notifications';
 import { dispatchEmergencyAlert } from '../utils/emergencyFallback';
@@ -21,6 +28,8 @@ import { VoiceCommandService } from '../services/voiceCommandService';
 import { CrashSoundDetectionService } from '../services/crashSoundDetectionService';
 import { sendBulkBackgroundSMS } from '../utils/directSms';
 import { MultiModalFusionService } from '../services/multiModalFusionService';
+import { colors, darkColors, tints } from '../theme/tokens';
+import { Ionicons } from '@expo/vector-icons';
 
 const COUNTDOWN_SECONDS = 10;
 
@@ -30,6 +39,15 @@ export default function CountdownScreen({ navigation, route }: any) {
   const initialCountdown = countdownSeconds || (severity === 'Severe' ? 10 : 20);
   const contacts = useSelector((state: RootState) => state.contacts.list);
   const user = useSelector((state: RootState) => state.auth.user);
+
+  // Batch 11: Migrated emergency-dispatch mutations to RTK Query.
+  // These are component-level hooks invoked inside handleTimeout (async callback).
+  // Note: the api.get('/emergency-contacts') one-off fetch in handleTimeout
+  // is intentionally kept as `api.get` — RTK Query hooks can't be called
+  // conditionally inside callbacks, and we need the LATEST contacts before dispatch.
+  const [createIncident] = useCreateIncidentMutation();
+  const [triggerEmergency] = useTriggerEmergencyMutation();
+  const [dispatchAlert] = useDispatchAlertMutation();
 
   const [secondsLeft, setSecondsLeft] = useState(initialCountdown);
   const [isDispatching, setIsDispatching] = useState(false);
@@ -52,10 +70,30 @@ export default function CountdownScreen({ navigation, route }: any) {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // CRITICAL FIX: Guard ref to prevent duplicate emergency dispatch.
+  // When handleTimeout runs, it updates Redux state (contacts), which
+  // causes handleTimeout to be recreated, which causes the interval
+  // useEffect to re-run, which creates a new interval that immediately
+  // fires handleTimeout again — infinite loop of SMS/WhatsApp/Email.
+  const hasDispatchedRef = useRef(false);
+
+  // Batch 7 Phase 4: Respect Reduce Motion accessibility setting
+  const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    // Skip decorative entrance fade-in when Reduce Motion is enabled
+    if (reduceMotion) {
+      fadeAnim.setValue(1);
+      return;
+    }
     Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
-  }, [fadeAnim]);
+  }, [fadeAnim, reduceMotion]);
 
   // Refresh emergency contacts list from backend on mount to guarantee fresh priority order
   useEffect(() => {
@@ -66,7 +104,6 @@ export default function CountdownScreen({ navigation, route }: any) {
           dispatch(fetchContactsSuccess(res.data));
         }
       } catch (err) {
-        console.log('[Countdown] Background contacts sync failed, using cached contacts:', err);
       }
     };
     syncContacts();
@@ -90,7 +127,10 @@ export default function CountdownScreen({ navigation, route }: any) {
   const logIncident = useCallback(
     async (status: 'FALSE_ALARM' | 'ACTIVE', dispatchStatus?: Record<string, any>) => {
       try {
-        const response = await api.post('/incidents', {
+        // Batch 11: RTK Query mutation — invalidates 'IncidentList' tag.
+        // Cast to any: incidentsApi Incident type doesn't include alertDispatchStatus,
+        // but the backend accepts it (it's part of the DB schema).
+        const result = await createIncident({
           type: 'AUTO',
           severity: status === 'FALSE_ALARM' ? 'NONE' : severity.toUpperCase(),
           status,
@@ -102,14 +142,13 @@ export default function CountdownScreen({ navigation, route }: any) {
               ? 'Countdown cancelled by user false alarm'
               : 'Countdown reached zero emergency alert dispatched',
           alertDispatchStatus: dispatchStatus,
-        });
-        return response.data;
+        } as any).unwrap();
+        return result;
       } catch (err) {
-        console.log('Failed to log incident:', err);
         return null;
       }
     },
-    [severity, latitude, longitude],
+    [severity, latitude, longitude, createIncident],
   );
 
   const handleCancel = useCallback(
@@ -124,6 +163,17 @@ export default function CountdownScreen({ navigation, route }: any) {
   );
 
   const handleTimeout = useCallback(async () => {
+    // CRITICAL FIX: Guard against duplicate dispatch.
+    // Without this guard, handleTimeout is called in an INFINITE LOOP:
+    // 1. Timer hits 0 → handleTimeout() runs
+    // 2. handleTimeout calls dispatch(fetchContactsSuccess(...)) → contacts changes
+    // 3. handleTimeout is recreated (useCallback dep on contacts)
+    // 4. The interval useEffect [handleTimeout] re-runs → creates NEW interval
+    // 5. secondsLeft is 0 → new interval's first tick: prev=0, prev<=1 → handleTimeout() AGAIN
+    // 6. Loop repeats, sending 9+ SMS, multiple WhatsApp, multiple emails
+    if (hasDispatchedRef.current) return;
+    hasDispatchedRef.current = true;
+
     if (intervalRef.current) clearInterval(intervalRef.current);
     setIsDispatching(true);
 
@@ -136,7 +186,6 @@ export default function CountdownScreen({ navigation, route }: any) {
         dispatch(fetchContactsSuccess(freshRes.data));
       }
     } catch (e) {
-      console.log('[Countdown] Using Redux contacts for dispatch:', e);
     }
 
     const sortedContacts = [...currentContacts].sort(
@@ -163,11 +212,9 @@ export default function CountdownScreen({ navigation, route }: any) {
         realLng = pos.coords.longitude;
       }
     } catch (locErr) {
-      console.log('[Countdown] Using initial coordinates:', locErr);
     }
 
     const mapsLink = `https://www.google.com/maps?q=${realLat},${realLng}`;
-    console.log('[Countdown] Countdown ended. Starting multi-channel dispatch...');
 
     setDispatchStatus({
       backend: 'sending', sms: 'pending', push: 'pending',
@@ -186,13 +233,12 @@ export default function CountdownScreen({ navigation, route }: any) {
       );
       const geoData = await geoRes.json();
       address = geoData?.display_name;
-      console.log('[Countdown] Reverse geocoded address:', address);
     } catch (err) {
-      console.log('[Countdown] Reverse geocoding failed:', err);
     }
 
     try {
-      const response = await api.post('/incidents', {
+      // Batch 11: RTK Query mutation. Auto-invalidates 'IncidentList' tag.
+      const result = await createIncident({
         type: 'AUTO',
         severity: severity.toUpperCase(),
         status: 'ACTIVE',
@@ -201,12 +247,10 @@ export default function CountdownScreen({ navigation, route }: any) {
         longitude: realLng,
         address, // ← NEW: stores real street/city name in database
         description: 'Countdown reached zero — emergency alert dispatched',
-      });
-      incident = response.data;
+      }).unwrap();
+      incident = result;
       setDispatchStatus(prev => ({ ...prev, incident: 'logged' }));
-      console.log('[Countdown] Incident logged:', incident?.id, 'Address:', incident?.address);
     } catch (err) {
-      console.log('[Countdown] Failed to log incident:', err);
       setDispatchStatus(prev => ({ ...prev, incident: 'failed' }));
     }
 
@@ -214,26 +258,26 @@ export default function CountdownScreen({ navigation, route }: any) {
     let acknowledgeUrl: string | undefined;
     let emergencyNotificationResult: any = null;
     try {
-      const response = await api.post('/emergency-notification/trigger', {
+      // Batch 11: RTK Query mutation. Invalidates 'Emergency' tag.
+      const response = await triggerEmergency({
         incidentId: incident?.id,
         message: `Accident detected (${severity})`,
         latitude: realLat,
         longitude: realLng,
         address: incident?.address,
-      });
-      emergencyNotificationResult = response.data;
-      acknowledgeUrl = response.data?.acknowledgeUrl;
+      }).unwrap();
+      emergencyNotificationResult = response;
+      acknowledgeUrl = response?.acknowledgeUrl;
       setDispatchStatus(prev => ({ ...prev, module68: 'triggered' }));
-      console.log('✅ [Countdown] RoboCall & RoboSMS triggered! Session ID:', emergencyNotificationResult?.sessionId);
     } catch (err: any) {
-      console.log('[Countdown] Module 6.8 trigger failed (non-fatal):', err?.response?.data?.message || err?.message);
       setDispatchStatus(prev => ({ ...prev, module68: 'failed' }));
     }
 
     // ═══ STEP 3: Multi-channel dispatch (WhatsApp Cloud API + Email + Push) ═══
     let backendSucceeded = false;
     try {
-      const response = await api.post('/alert-dispatch', {
+      // Batch 11: RTK Query mutation. Invalidates 'Emergency' tag.
+      const response = await dispatchAlert({
         userId: user?.id,
         userName: user?.fullName,
         incidentId: incident?.id,
@@ -243,10 +287,10 @@ export default function CountdownScreen({ navigation, route }: any) {
         address: resolvedAddress || incident?.address,
         severity,
         contacts: dispatchContacts,
-      });
-      setBackendChannels(response.data?.channels);
-      setIsDevMode(response.data?.devMode ?? true);
-      const respChannels = response.data?.channels;
+      }).unwrap();
+      setBackendChannels(response?.channels);
+      setIsDevMode(response?.devMode ?? true);
+      const respChannels = response?.channels;
 
       const anySent = respChannels &&
         (respChannels.push.status === 'SENT' ||
@@ -264,22 +308,27 @@ export default function CountdownScreen({ navigation, route }: any) {
           email: respChannels.email.status === 'SENT' ? 'sent' : (respChannels.email.devMode ? 'failed' : 'failed'),
           whatsapp: respChannels.whatsapp?.status === 'SENT' ? 'sent' : (respChannels.whatsapp?.devMode ? 'pending' : 'failed'),
         }));
-        console.log('[Countdown] Backend dispatch succeeded:', respChannels);
       } else {
         setDispatchStatus(prev => ({
           ...prev, backend: 'failed', push: 'failed', email: 'failed', sms: 'pending', whatsapp: 'failed',
         }));
       }
     } catch (err) {
-      console.log('[Countdown] Backend dispatch failed — will fall back to device SMS:', err);
       setDispatchStatus(prev => ({
         ...prev, backend: 'failed', push: 'failed', email: 'failed', sms: 'pending', whatsapp: 'failed',
       }));
     }
 
     // ═══ STEP 4: Direct background SMS (device-side fallback) ═══
+    // FIX: Only send device-side SMS if the backend SMS channel FAILED.
+    // Previously, this ALWAYS sent device-side SMS to ALL contacts — even when
+    // the backend had already successfully sent RoboSMS via the API. This caused
+    // each contact to receive DUPLICATE SMS (one from backend, one from device).
     let autoSmsSent = false;
-    if (dispatchContacts.length > 0) {
+    const backendSmsFailed = !backendSucceeded ||
+      (backendSucceeded && dispatchStatus.sms !== 'sent');
+
+    if (dispatchContacts.length > 0 && backendSmsFailed) {
       const smsMessage = `ResQDrive ALERT: ${user?.fullName || 'Unknown'} may have been in a ${severity} accident. Location: https://www.google.com/maps?q=${realLat},${realLng}`;
 
       // Try background auto-SMS first (react-native-direct-sms)
@@ -288,10 +337,8 @@ export default function CountdownScreen({ navigation, route }: any) {
         autoSmsSent = smsResult.sent > 0;
         if (autoSmsSent) {
           setDispatchStatus(prev => ({ ...prev, sms: 'sent' }));
-          console.log('[Countdown] Auto-SMS (background) sent to', smsResult.sent, 'contacts');
         }
       } catch (err) {
-        console.log('[Countdown] Auto-SMS error:', err);
       }
 
       // If auto-SMS failed AND backend also failed → open SMS app as last resort
@@ -303,12 +350,10 @@ export default function CountdownScreen({ navigation, route }: any) {
             const phoneNumbers = dispatchContacts.map(c => c.phoneNumber);
             await Sms.sendSMSAsync(phoneNumbers, smsMessage);
             setDispatchStatus(prev => ({ ...prev, sms: 'sent-via-device' }));
-            console.log('[Countdown] Device SMS app opened — user must tap Send.');
           } else {
             setDispatchStatus(prev => ({ ...prev, sms: 'failed' }));
           }
         } catch (err) {
-          console.log('[Countdown] Device SMS fallback also failed:', err);
           setDispatchStatus(prev => ({ ...prev, sms: 'failed' }));
         }
       } else if (!autoSmsSent && backendSucceeded) {
@@ -320,7 +365,7 @@ export default function CountdownScreen({ navigation, route }: any) {
     try {
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: '🚨 ResQDrive Emergency Alert',
+          title: 'ResQDrive Emergency Alert',
           body: `Emergency alert dispatched! Live GPS tracking active. Acknowledgement link sent to contacts.`,
           sound: true,
           data: { mapsLink, severity },
@@ -328,11 +373,11 @@ export default function CountdownScreen({ navigation, route }: any) {
         trigger: null,
       });
     } catch (e) {
-      console.log('[Countdown] Local notification failed:', e);
     }
 
     // ═══ STEP 6: Show dispatch summary for 3 seconds, then navigate to SOS ═══
     setDispatchComplete(true);
+    hapticSuccess();
     setTimeout(() => {
       navigation.replace('SOS', {
         severity: severity.toLowerCase(),
@@ -340,7 +385,7 @@ export default function CountdownScreen({ navigation, route }: any) {
         sessionId: emergencyNotificationResult?.sessionId || null,
       });
     }, 3000);
-  }, [contacts, user, severity, latitude, longitude, navigation, dispatch]);
+  }, [contacts, user, severity, latitude, longitude, navigation, dispatch, createIncident, triggerEmergency, dispatchAlert]);
 
 
   const cancelCallbackRef = useRef(handleCancel);
@@ -353,7 +398,6 @@ export default function CountdownScreen({ navigation, route }: any) {
 
   useEffect(() => {
     // Release the microphone from crash detection so speech recognizer gets exclusive access
-    console.log('[Countdown]: Stopping crash audio monitoring to free microphone for voice commands.');
     CrashSoundDetectionService.stopMonitoring();
 
     // Small delay to let the native mic resource fully release before starting speech recognition
@@ -363,11 +407,9 @@ export default function CountdownScreen({ navigation, route }: any) {
 
     VoiceCommandService.subscribeToCallbacks(
       () => {
-        console.log('[Countdown Voice Command]: CANCEL action detected.');
         cancelCallbackRef.current('VOICE');
       },
       () => {
-        console.log('[Countdown Voice Command]: SOS action detected. Bypassing countdown!');
         timeoutCallbackRef.current();
       },
       () => {},
@@ -379,19 +421,29 @@ export default function CountdownScreen({ navigation, route }: any) {
       clearTimeout(startDelay);
       // Stop voice, restart crash monitoring
       VoiceCommandService.stopListening();
-      console.log('[Countdown]: Restarting crash audio monitoring.');
       CrashSoundDetectionService.startMonitoring();
     };
   }, []);
 
   useEffect(() => {
+    // CRITICAL FIX: Use empty deps [] so the interval is only created ONCE on mount.
+    // Previously deps were [handleTimeout], which caused the interval to be
+    // recreated every time handleTimeout changed (every render after contacts
+    // update). When the timer hit 0 and handleTimeout ran, it updated contacts
+    // → handleTimeout recreated → useEffect re-ran → new interval created →
+    // secondsLeft was 0 → new interval's first tick immediately called
+    // handleTimeout again → infinite loop of duplicate dispatches.
+    //
+    // Now we use timeoutCallbackRef.current() which always points to the
+    // latest handleTimeout (updated by the ref-syncing useEffect below).
     intervalRef.current = setInterval(() => {
       setSecondsLeft((prev: number) => {
         if (prev <= 1) {
           if (intervalRef.current) clearInterval(intervalRef.current);
-          handleTimeout();
+          timeoutCallbackRef.current();
           return 0;
         }
+        hapticLight();
         return prev - 1;
       });
     }, 1000);
@@ -399,18 +451,18 @@ export default function CountdownScreen({ navigation, route }: any) {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [handleTimeout]);
+  }, []);
 
   if (isCancelled) {
     return (
       <SafeAreaView style={styles.cancelledContainer}>
         <View style={StyleSheet.absoluteFillObject}>
-          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0A0F' }]} />
+          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: darkColors.background }]} />
           <View style={[StyleSheet.absoluteFillObject, styles.cancelledGrad]} />
         </View>
         <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', opacity: fadeAnim }}>
-          <Text style={styles.cancelledIcon}>\u2705</Text>
-          <Text style={styles.cancelledText}>Marked as false alarm</Text>
+          <Text style={styles.cancelledIcon} allowFontScaling={true} maxFontSizeMultiplier={1.5}>\u2705</Text>
+          <Text style={styles.cancelledText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Marked as false alarm</Text>
         </Animated.View>
       </SafeAreaView>
     );
@@ -418,10 +470,10 @@ export default function CountdownScreen({ navigation, route }: any) {
 
   if (isDispatching && !dispatchComplete) {
     const statusIcon = (s: string) => {
-      if (s === 'sent' || s === 'sent-via-device' || s === 'triggered' || s === 'logged') return '✅';
-      if (s === 'sending') return '⏳';
-      if (s === 'failed') return '❌';
-      return '⏸️';
+      if (s === 'sent' || s === 'sent-via-device' || s === 'triggered' || s === 'logged') return 'checkmark-circle';
+      if (s === 'sending') return 'hourglass-outline';
+      if (s === 'failed') return 'close-circle';
+      return 'pause-circle-outline';
     };
     const statusText = (s: string, devMode?: boolean) => {
       if (s === 'sent') return 'Sent';
@@ -436,46 +488,44 @@ export default function CountdownScreen({ navigation, route }: any) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={StyleSheet.absoluteFillObject}>
-          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0A0F' }]} />
+          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: darkColors.background }]} />
           <View style={[StyleSheet.absoluteFillObject, styles.gradTop]} />
           <View style={[StyleSheet.absoluteFillObject, styles.gradBottom]} />
         </View>
         <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', opacity: fadeAnim, paddingHorizontal: 24 }}>
-          <Text style={styles.dispatchingIcon}>🚨</Text>
-          <Text style={styles.dispatchingText}>Dispatching Emergency Alert</Text>
+          <Ionicons name="warning-outline" size={24} color={darkColors.text} />
+          <Text style={styles.dispatchingText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Dispatching Emergency Alert</Text>
                     {isDevMode && (
-            <Text style={styles.devModeBanner}>
-              ⚠️ DEV MODE: Some channels not configured. Real delivery limited.
+            <Text style={styles.devModeBanner} allowFontScaling={true} maxFontSizeMultiplier={1.5}>DEV MODE: Some channels not configured. Real delivery limited.
             </Text>
           )}
 
           <View style={styles.statusList}>
-            <Text style={styles.statusRow}>
-              {statusIcon(dispatchStatus.backend)} Backend Dispatch: {statusText(dispatchStatus.backend)}
+            <Text style={styles.statusRow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+              <Ionicons name={statusIcon(dispatchStatus.backend)} size={14} color={darkColors.text} /> Backend Dispatch: {statusText(dispatchStatus.backend)}
             </Text>
-            <Text style={styles.statusRow}>
-              {statusIcon(dispatchStatus.push)} Push Notification: {statusText(dispatchStatus.push, backendChannels?.push?.devMode)}
+            <Text style={styles.statusRow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+              <Ionicons name={statusIcon(dispatchStatus.push)} size={14} color={darkColors.text} /> Push Notification: {statusText(dispatchStatus.push, backendChannels?.push?.devMode)}
             </Text>
-            <Text style={styles.statusRow}>
-              {statusIcon(dispatchStatus.sms)} SMS: {statusText(dispatchStatus.sms, backendChannels?.sms?.devMode)}
+            <Text style={styles.statusRow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+              <Ionicons name={statusIcon(dispatchStatus.sms)} size={14} color={darkColors.text} /> SMS: {statusText(dispatchStatus.sms, backendChannels?.sms?.devMode)}
             </Text>
-                        <Text style={styles.statusRow}>
-              {statusIcon(dispatchStatus.whatsapp)} WhatsApp: {statusText(dispatchStatus.whatsapp, backendChannels?.whatsapp?.devMode)}
+                        <Text style={styles.statusRow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+              <Ionicons name={statusIcon(dispatchStatus.whatsapp)} size={14} color={darkColors.text} /> WhatsApp: {statusText(dispatchStatus.whatsapp, backendChannels?.whatsapp?.devMode)}
             </Text>
-            <Text style={styles.statusRow}>
-              {statusIcon(dispatchStatus.email)} Email: {statusText(dispatchStatus.email, backendChannels?.email?.devMode)}
+            <Text style={styles.statusRow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+              <Ionicons name={statusIcon(dispatchStatus.email)} size={14} color={darkColors.text} /> Email: {statusText(dispatchStatus.email, backendChannels?.email?.devMode)}
             </Text>
-            <Text style={styles.statusRow}>
-              {statusIcon(dispatchStatus.incident)} Incident Log: {statusText(dispatchStatus.incident)}
+            <Text style={styles.statusRow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+              <Ionicons name={statusIcon(dispatchStatus.incident)} size={14} color={darkColors.text} /> Incident Log: {statusText(dispatchStatus.incident)}
             </Text>
-            <Text style={styles.statusRow}>
-              {statusIcon(dispatchStatus.module68)} Contact Escalation: {statusText(dispatchStatus.module68)}
+            <Text style={styles.statusRow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+              <Ionicons name={statusIcon(dispatchStatus.module68)} size={14} color={darkColors.text} /> Contact Escalation: {statusText(dispatchStatus.module68)}
             </Text>
           </View>
 
           {dispatchStatus.sms === 'sent-via-device' && (
-            <Text style={styles.smsHint}>
-              📱 Your SMS app opened. Tap "Send" to deliver the alert to your contacts.
+            <Text style={styles.smsHint} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Your SMS app opened. Tap "Send" to deliver the alert to your contacts.
             </Text>
           )}
         </Animated.View>
@@ -488,20 +538,20 @@ export default function CountdownScreen({ navigation, route }: any) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={StyleSheet.absoluteFillObject}>
-          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0A0F' }]} />
+          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: darkColors.background }]} />
           <View style={[StyleSheet.absoluteFillObject, styles.gradBottom]} />
         </View>
         <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', opacity: fadeAnim, paddingHorizontal: 24 }}>
-          <Text style={styles.completeIcon}>{allGood ? '✅' : '⚠️'}</Text>
-          <Text style={styles.completeTitle}>
+          <Ionicons name={allGood ? "checkmark-circle" : "warning-outline"} size={48} color={darkColors.text} />
+          <Text style={styles.completeTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             {allGood ? 'Alert Dispatched' : 'Partially Dispatched'}
           </Text>
-          <Text style={styles.completeSubtext}>
+          <Text style={styles.completeSubtext} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             {allGood
               ? 'Emergency contacts have been notified. Live GPS tracking is active. Escalation started.'
               : 'Some channels failed. Your contacts may still receive the alert via other channels.'}
           </Text>
-          <Text style={styles.redirectHint}>Redirecting to SOS screen...</Text>
+          <Text style={styles.redirectHint} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Redirecting to SOS screen...</Text>
         </Animated.View>
       </SafeAreaView>
     );
@@ -511,47 +561,47 @@ export default function CountdownScreen({ navigation, route }: any) {
     <SafeAreaView style={styles.container}>
       {/* Background gradient layers */}
       <View style={StyleSheet.absoluteFillObject}>
-        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0A0F' }]} />
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: darkColors.background }]} />
         <View style={[StyleSheet.absoluteFillObject, styles.gradTop]} />
         <View style={[StyleSheet.absoluteFillObject, styles.gradBottom]} />
         <View style={[StyleSheet.absoluteFillObject, styles.gradCenter]} />
       </View>
 
       <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24, opacity: fadeAnim }}>
-        <Text style={styles.warningLabel}>POSSIBLE ACCIDENT DETECTED</Text>
+        <Text style={styles.warningLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>POSSIBLE ACCIDENT DETECTED</Text>
 
         <Animated.View style={[styles.numberCircle, { transform: [{ scale: pulseAnim }] }]}>
           <View style={[StyleSheet.absoluteFillObject, styles.numberCircleGrad]} />
-          <Text style={styles.countdownNumber}>{secondsLeft}</Text>
+          <Text style={styles.countdownNumber} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{secondsLeft}</Text>
         </Animated.View>
 
-        <Text style={styles.subLabel}>
+        <Text style={styles.subLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
           Emergency alert will be sent automatically in {secondsLeft} second{secondsLeft !== 1 ? 's' : ''}
         </Text>
 
         <TouchableOpacity
           style={styles.cancelBtn}
           onPress={() => handleCancel('BUTTON')}
-          activeOpacity={0.85}
+          activeOpacity={0.85} accessibilityRole="button"
         >
-          <Text style={styles.cancelBtnText}>I AM OK CANCEL</Text>
+          <Text style={styles.cancelBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>I AM OK CANCEL</Text>
         </TouchableOpacity>
 
-        <Text style={styles.voiceHint}>You can also say "I am OK" or "Cancel"</Text>
+        <Text style={styles.voiceHint} allowFontScaling={true} maxFontSizeMultiplier={1.5}>You can also say "I am OK" or "Cancel"</Text>
 
         {__DEV__ && (
           <View style={styles.devSimRow}>
             <TouchableOpacity
               style={styles.devSimBtn}
-              onPress={() => VoiceCommandService.simulateSpeechInput('Cancel')}
+              onPress={() => VoiceCommandService.simulateSpeechInput('Cancel')} accessibilityRole="button"
             >
-              <Text style={styles.devSimText}>🗣️ Simulate Cancel</Text>
+              <Text style={styles.devSimText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Simulate Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.devSimBtn, { borderColor: '#d32f2f' }]}
-              onPress={() => VoiceCommandService.simulateSpeechInput('SOS')}
+              style={[styles.devSimBtn, { borderColor: colors.danger[600] }]}
+              onPress={() => VoiceCommandService.simulateSpeechInput('SOS')} accessibilityRole="button"
             >
-              <Text style={[styles.devSimText, { color: '#ff1744' }]}>🗣️ Simulate SOS</Text>
+              <Text style={[styles.devSimText, { color: colors.danger[500] }]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Simulate SOS</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -563,13 +613,13 @@ export default function CountdownScreen({ navigation, route }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
   },
-  gradTop: { top: 0, height: 400, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
-  gradBottom: { bottom: 0, height: 400, backgroundColor: 'rgba(229, 57, 53, 0.06)' },
-  gradCenter: { top: '30%', height: 300, backgroundColor: 'rgba(229, 57, 53, 0.05)' },
+  gradTop: { top: 0, height: 400, backgroundColor: tints.dangerSubtle },
+  gradBottom: { bottom: 0, height: 400, backgroundColor: tints.dangerSubtle },
+  gradCenter: { top: '30%', height: 300, backgroundColor: tints.dangerSubtle },
   warningLabel: {
-    color: '#FF8A80',
+    color: colors.danger[300],
     fontSize: 16,
     fontWeight: 'bold',
     letterSpacing: 2,
@@ -580,17 +630,17 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 40,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.7,
     shadowRadius: 40,
     elevation: 12,
     borderWidth: 2,
-    borderColor: 'rgba(255, 138, 128, 0.3)',
+    borderColor: tints.dangerErrorBorder,
   },
   numberCircleGrad: {
     borderRadius: 100,
@@ -600,35 +650,35 @@ const styles = StyleSheet.create({
   countdownNumber: {
     fontSize: 96,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
   subLabel: {
-    color: 'rgba(255, 205, 210, 0.8)',
+    color: tints.dangerErrorBorder,
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 48,
     lineHeight: 24,
   },
   cancelBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: tints.whiteBorderStrong,
     paddingVertical: 20,
     paddingHorizontal: 48,
     borderRadius: 16,
     marginBottom: 24,
-    shadowColor: '#FFFFFF',
+    shadowColor: darkColors.text,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 6,
   },
   cancelBtnText: {
-    color: '#0A0A0F',
+    color: darkColors.background,
     fontSize: 18,
     fontWeight: 'bold',
     letterSpacing: 1,
   },
   voiceHint: {
-    color: 'rgba(255, 138, 128, 0.5)',
+    color: tints.dangerErrorBorder,
     fontSize: 13,
     textAlign: 'center',
   },
@@ -637,7 +687,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   dispatchingText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 18,
     fontWeight: '600',
   },
@@ -645,20 +695,20 @@ const styles = StyleSheet.create({
     marginTop: 32,
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     width: '100%',
   },
   statusRow: {
-    color: '#E0E0E0',
+    color: darkColors.text,
     fontSize: 14,
     paddingVertical: 6,
     fontFamily: 'monospace',
   },
   smsHint: {
-    color: '#FFB74D',
+    color: colors.warning[300],
     fontSize: 13,
     textAlign: 'center',
     marginTop: 20,
@@ -670,33 +720,33 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   completeTitle: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 12,
   },
   completeSubtext: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 24,
   },
   redirectHint: {
-    color: '#666680',
+    color: darkColors.textTertiary,
     fontSize: 12,
   },
   cancelledContainer: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
   },
-  cancelledGrad: { top: 0, height: '100%', backgroundColor: 'rgba(0, 230, 118, 0.06)' },
+  cancelledGrad: { top: 0, height: '100%', backgroundColor: tints.successSubtle },
   cancelledIcon: {
     fontSize: 60,
     marginBottom: 16,
   },
   cancelledText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 18,
     fontWeight: '600',
   },
@@ -707,20 +757,20 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   devSimBtn: {
-    backgroundColor: '#1c1c2e',
-    borderColor: '#3e3e3e',
+    backgroundColor: darkColors.surfaceElevated,
+    borderColor: darkColors.surfaceElevated,
     borderWidth: 1,
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
   devSimText: {
-    color: '#ffffff',
+    color: darkColors.text,
     fontSize: 12,
     fontWeight: 'bold',
   },
     devModeBanner: {
-    color: '#FFB74D',
+    color: colors.warning[300],
     fontSize: 12,
     textAlign: 'center',
     marginTop: 8,

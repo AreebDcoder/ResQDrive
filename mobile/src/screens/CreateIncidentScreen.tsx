@@ -5,7 +5,7 @@
 // ═══════════════════════════════════════════════════════════════
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
   KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
@@ -19,17 +19,21 @@ import {
   createIncidentSchema, CreateIncidentInput, SEVERITY_OPTIONS, STATUS_OPTIONS,
 } from '../schemas/incidentValidation';
 import { Ionicons } from '@expo/vector-icons';
+import { useToast } from '../components/ui/Toast';
+import { Button, FormInput } from '../components/ui';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 const SEVERITY_COLORS: Record<string, string> = {
-  NONE: '#6B6B80', MINOR: '#FFD600', MODERATE: '#FF9100', SEVERE: '#FF1744',
+  NONE: darkColors.textTertiary, MINOR: colors.warning[400], MODERATE: colors.warning[500], SEVERE: colors.danger[500],
 };
 const STATUS_COLORS: Record<string, string> = {
-  ACTIVE: '#FF1744', RESOLVED: '#00E676', FALSE_ALARM: '#6B6B80',
+  ACTIVE: colors.danger[500], RESOLVED: colors.success[500], FALSE_ALARM: darkColors.textTertiary,
 };
 
 const nowISO = () => new Date().toISOString().slice(0, 16);
 
 export default function CreateIncidentScreen({ route, navigation }: { route: any; navigation: any }) {
+  const toast = useToast();
   const { mode, id } = route.params;
   const isEdit = mode === 'edit';
   const dispatch = useDispatch<any>();
@@ -77,21 +81,21 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
     try {
       if (isEdit && id) {
         await dispatch(updateIncident({ id, data })).unwrap();
-        Alert.alert('Success', 'Incident updated successfully');
+        toast.success('Incident updated successfully');
       } else {
         await dispatch(createIncident(data)).unwrap();
-        Alert.alert('Success', 'Incident reported successfully');
+        toast.success('Incident reported successfully');
       }
       navigation.goBack();
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to save incident');
+      toast.error(err.message || 'Failed to save incident');
     }
   };
 
   if (isEdit && loadError) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>{loadError}</Text>
+        <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{loadError}</Text>
       </View>
     );
   }
@@ -102,7 +106,7 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
       style={styles.container}
     >
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
-        <Text style={styles.sectionTitle}>Severity</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Severity</Text>
         <Controller
           control={control}
           name="severity"
@@ -112,20 +116,20 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
                 <TouchableOpacity
                   key={opt}
                   style={[styles.chip, {
-                    backgroundColor: value === opt ? SEVERITY_COLORS[opt] + '25' : 'rgba(255, 255, 255, 0.04)',
-                    borderColor: value === opt ? SEVERITY_COLORS[opt] : 'rgba(255, 255, 255, 0.06)',
+                    backgroundColor: value === opt ? SEVERITY_COLORS[opt] + '25' : tints.whiteSubtle,
+                    borderColor: value === opt ? SEVERITY_COLORS[opt] : tints.whiteBorder,
                   }]}
-                  onPress={() => onChange(opt)}
+                  onPress={() => onChange(opt)} accessibilityRole="button"
                 >
-                  <Text style={[styles.chipText, value === opt && { color: SEVERITY_COLORS[opt] }]}>{opt}</Text>
+                  <Text style={[styles.chipText, value === opt && { color: SEVERITY_COLORS[opt] }]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{opt}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           )}
         />
-        {errors.severity && <Text style={styles.errorHelper}>{errors.severity.message}</Text>}
+        {errors.severity && <Text style={styles.errorHelper} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errors.severity.message}</Text>}
 
-        <Text style={styles.sectionTitle}>Status</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Status</Text>
         <Controller
           control={control}
           name="status"
@@ -135,129 +139,87 @@ export default function CreateIncidentScreen({ route, navigation }: { route: any
                 <TouchableOpacity
                   key={opt}
                   style={[styles.chip, {
-                    backgroundColor: value === opt ? STATUS_COLORS[opt] + '25' : 'rgba(255, 255, 255, 0.04)',
-                    borderColor: value === opt ? STATUS_COLORS[opt] : 'rgba(255, 255, 255, 0.06)',
+                    backgroundColor: value === opt ? STATUS_COLORS[opt] + '25' : tints.whiteSubtle,
+                    borderColor: value === opt ? STATUS_COLORS[opt] : tints.whiteBorder,
                   }]}
-                  onPress={() => onChange(opt)}
+                  onPress={() => onChange(opt)} accessibilityRole="button"
                 >
-                  <Text style={[styles.chipText, value === opt && { color: STATUS_COLORS[opt] }]}>{opt.replace('_', ' ')}</Text>
+                  <Text style={[styles.chipText, value === opt && { color: STATUS_COLORS[opt] }]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{opt.replace('_', ' ')}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           )}
         />
 
-        <Text style={styles.label}>Date & Time (YYYY-MM-DDTHH:MM)</Text>
-        <Controller
-          control={control}
+        <Text style={styles.sectionTitle} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Date & Time (YYYY-MM-DDTHH:MM)</Text>
+        <FormInput
           name="occurredAt"
-          render={({ field: { onChange, value } }) => (
-            <TextInput
-              style={styles.input}
-              value={value}
-              onChangeText={onChange}
-              placeholderTextColor="#6B6B80"
-              autoCapitalize="none"
-            />
-          )}
-        />
-        {errors.occurredAt && <Text style={styles.errorHelper}>{errors.occurredAt.message}</Text>}
-
-        <Text style={styles.label}>Address (optional)</Text>
-        <Controller
           control={control}
+          label="Date & Time"
+          placeholder="YYYY-MM-DDTHH:MM"
+          autoCapitalize="none"
+          leftIcon="calendar-outline"
+        />
+
+        <FormInput
           name="address"
-          render={({ field: { onChange, value } }) => (
-            <TextInput
-              style={styles.input}
-              value={value}
-              onChangeText={onChange}
-              placeholder="e.g. Shahrah-e-Faisal, Karachi"
-              placeholderTextColor="#6B6B80"
-            />
-          )}
+          control={control}
+          label="Address (optional)"
+          placeholder="e.g. Shahrah-e-Faisal, Karachi"
+          leftIcon="location-outline"
         />
 
-        <Text style={styles.label}>Description (optional)</Text>
-        <Controller
-          control={control}
+        <FormInput
           name="description"
-          render={({ field: { onChange, value } }) => (
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={value}
-              onChangeText={onChange}
-              placeholder="Describe what happened..."
-              placeholderTextColor="#6B6B80"
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
-          )}
+          control={control}
+          label="Description (optional)"
+          placeholder="Describe what happened..."
+          multiline
+          numberOfLines={4}
+          leftIcon="document-text-outline"
         />
 
         <View style={styles.row}>
           <View style={{ flex: 1, marginRight: 8 }}>
-            <Text style={styles.label}>Latitude</Text>
-            <Controller
-              control={control}
+            <FormInput
               name="latitude"
-              render={({ field: { onChange, value } }) => (
-                <TextInput
-                  style={styles.input}
-                  value={value !== undefined && value !== null ? String(value) : ''}
-                  onChangeText={onChange}
-                  placeholder="24.8607"
-                  placeholderTextColor="#6B6B80"
-                  keyboardType="numeric"
-                />
-              )}
+              control={control}
+              label="Latitude"
+              placeholder="24.8607"
+              keyboardType="numeric"
             />
           </View>
           <View style={{ flex: 1, marginLeft: 8 }}>
-            <Text style={styles.label}>Longitude</Text>
-            <Controller
-              control={control}
+            <FormInput
               name="longitude"
-              render={({ field: { onChange, value } }) => (
-                <TextInput
-                  style={styles.input}
-                  value={value !== undefined && value !== null ? String(value) : ''}
-                  onChangeText={onChange}
-                  placeholder="67.0011"
-                  placeholderTextColor="#6B6B80"
-                  keyboardType="numeric"
-                />
-              )}
+              control={control}
+              label="Longitude"
+              placeholder="67.0011"
+              keyboardType="numeric"
             />
           </View>
         </View>
-        {errors.latitude && <Text style={styles.errorHelper}>{errors.latitude.message}</Text>}
 
-        <TouchableOpacity
-          style={[styles.submitBtn, isSubmitting && { opacity: 0.6 }]}
+        <Button
+          label={isEdit ? 'Update Incident' : 'Save Incident'}
+          variant="danger"
+          size="lg"
           onPress={handleSubmit(onSubmit)}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color="#ffffff" />
-          ) : (
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              <Ionicons name={isEdit ? "save-outline" : "alert-circle-outline"} size={20} color="#fff" />
-              <Text style={styles.submitBtnText}>{isEdit ? 'Update Incident' : 'Save Incident'}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+          loading={isSubmitting}
+          fullWidth
+          icon={isEdit ? 'save-outline' : 'alert-circle-outline'}
+          accessibilityHint={isEdit ? 'Update incident record' : 'Submit new incident record'}
+        />
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0A0F' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: '#0A0A0F' },
-  sectionTitle: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', marginBottom: 10, marginTop: 18 },
-  label: { color: '#A0A0B8', fontSize: 13, fontWeight: '600', marginBottom: 8, marginTop: 14 },
+  container: { flex: 1, backgroundColor: darkColors.background },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: darkColors.background },
+  sectionTitle: { color: darkColors.text, fontSize: 14, fontWeight: '700', marginBottom: 10, marginTop: 18 },
+  label: { color: darkColors.textSecondary, fontSize: 13, fontWeight: '600', marginBottom: 8, marginTop: 14 },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     paddingVertical: 8,
@@ -265,32 +227,32 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
   },
-  chipText: { color: '#6B6B80', fontSize: 12, fontWeight: '600' },
+  chipText: { color: darkColors.textTertiary, fontSize: 12, fontWeight: '600' },
   input: {
-    backgroundColor: 'rgba(10, 10, 15, 0.6)',
-    color: '#FFFFFF',
+    backgroundColor: tints.overlayStrong,
+    color: darkColors.text,
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: 10,
     fontSize: 15,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
   textArea: { minHeight: 100, paddingTop: 12 },
   row: { flexDirection: 'row' },
-  errorHelper: { color: '#FF8A80', fontSize: 11, marginTop: 4 },
-  errorText: { color: '#FF8A80', fontSize: 14, textAlign: 'center' },
+  errorHelper: { color: colors.danger[300], fontSize: 11, marginTop: 4 },
+  errorText: { color: colors.danger[300], fontSize: 14, textAlign: 'center' },
   submitBtn: {
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 24,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 5,
   },
-  submitBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  submitBtnText: { color: darkColors.text, fontSize: 16, fontWeight: '700' },
 });

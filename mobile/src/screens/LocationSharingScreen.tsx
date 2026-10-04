@@ -1,3 +1,4 @@
+import { API_URL } from '../api/axios';
 // ═══════════════════════════════════════════════════════════════
 // ResQDrive v2 — LOCATION SHARING SCREEN (Modernized)
 // All imports, logic, state, handlers preserved identically.
@@ -13,12 +14,18 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import api from '../api/axios';
 import { connectSocket, disconnectSocket, emitLocationUpdate } from '../services/socketService';
+import { useToast } from '../components/ui/Toast';
+import { colors, darkColors, tints } from '../theme/tokens';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const FAST_INTERVAL_MS = 5000;
 const SLOW_INTERVAL_MS = 30000;
 const BACKOFF_AFTER_MS = 10 * 60 * 1000;
 
 export default function LocationSharingScreen({ navigation }: { navigation: any }) {
+  const toast = useToast();
+  const insets = useSafeAreaInsets();
   const { user } = useSelector((state: RootState) => state.auth);
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<any>(null);
@@ -161,9 +168,7 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
 
   function getShareLink() {
     if (!session) return '';
-    const baseUrl = Platform.OS === 'web'
-      ? 'http://localhost:3000'
-      : (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000');
+    const baseUrl = API_URL; // Use centralized API_URL from axios.ts // was: Platform.OS === 'web'
     return `${baseUrl}${session.shareUrl}`;
   }
 
@@ -190,18 +195,18 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color="#E53935" size="large" />
-        <Text style={styles.loadingText}>Checking session status…</Text>
+        <ActivityIndicator color={colors.danger[500]} size="large" />
+        <Text style={styles.loadingText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Checking session status…</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 16 }]}>
       {/* ── Intro Card ── */}
       <View style={styles.card}>
-        <Text style={styles.title}>📍 Real-Time Location Sharing</Text>
-        <Text style={styles.subtitle}>
+        <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Real-Time Location Sharing</Text>
+        <Text style={styles.subtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
           Share your live location with emergency contacts via a simple link.
           No app install required for them.
         </Text>
@@ -210,16 +215,16 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
       {/* ── Error ── */}
       {error && (
         <View style={styles.errorBox}>
-          <Text style={styles.errorEmoji}>⚠️</Text>
-          <Text style={styles.errorText}>{error}</Text>
+          <Ionicons name="warning-outline" size={24} color={darkColors.text} />
+          <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{error}</Text>
         </View>
       )}
 
       {/* ── Permission Warning ── */}
       {permissionDenied && (
         <View style={styles.warnBox}>
-          <Text style={styles.warnEmoji}>🔒</Text>
-          <Text style={styles.warnText}>
+          <Ionicons name="lock-closed-outline" size={24} color={darkColors.text} />
+          <Text style={styles.warnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             Location permission denied. Please enable it in your device settings to share your location.
           </Text>
         </View>
@@ -230,34 +235,33 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
         <View style={styles.activeCard}>
           <View style={styles.activeHeader}>
             <View style={styles.liveDot} />
-            <Text style={styles.activeTitle}>LIVE — Sharing</Text>
+            <Text style={styles.activeTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>LIVE — Sharing</Text>
           </View>
-          <Text style={styles.activeSince}>⏱️ Started: {new Date(session.startedAt).toLocaleString()}</Text>
-          <Text style={styles.socketStatus}>
-            🔌 Socket: {socketStatus === 'connected' ? '🟢 Connected' : socketStatus === 'connecting' ? '🟡 Connecting…' : '🔴 Disconnected'}
+          <Text style={styles.activeSince} allowFontScaling={true} maxFontSizeMultiplier={1.5}>⏱️ Started: {new Date(session.startedAt).toLocaleString()}</Text>
+          <Text style={styles.socketStatus} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Socket: {socketStatus === 'connected' ? 'Connected' : socketStatus === 'connecting' ? 'Connecting…' : 'Disconnected'}
           </Text>
           {lastSent ? (
-            <Text style={styles.lastUpdate}>📡 Last GPS ping: {lastSent}</Text>
+            <Text style={styles.lastUpdate} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Last GPS ping: {lastSent}</Text>
           ) : (
-            <Text style={styles.lastUpdate}>📡 Waiting for first GPS fix…</Text>
+            <Text style={styles.lastUpdate} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Waiting for first GPS fix…</Text>
           )}
 
-          <TouchableOpacity style={styles.linkBtn} onPress={copyShareLink}>
-            <Text style={styles.linkBtnText}>📋 Copy Share Link</Text>
+          <TouchableOpacity style={styles.linkBtn} onPress={copyShareLink} accessibilityRole="button">
+            <Text style={styles.linkBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Copy Share Link</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.linkBtnSecondary} onPress={openInBrowser}>
-            <Text style={styles.linkBtnSecondaryText}>🌐 Open Tracking Page</Text>
+          <TouchableOpacity style={styles.linkBtnSecondary} onPress={openInBrowser} accessibilityRole="button">
+            <Text style={styles.linkBtnSecondaryText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Open Tracking Page</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.stopBtn, isStopping && { opacity: 0.5 }]}
             onPress={handleStop}
-            disabled={isStopping}
+            disabled={isStopping} accessibilityRole="button"
           >
             {isStopping ? (
-              <ActivityIndicator color="#ffffff" />
+              <ActivityIndicator color={darkColors.text} />
             ) : (
-              <Text style={styles.stopBtnText}>⏹️ Stop Sharing</Text>
+              <Text style={styles.stopBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>⏹️ Stop Sharing</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -268,24 +272,24 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
         <TouchableOpacity
           style={[styles.startBtn, isStarting && { opacity: 0.5 }]}
           onPress={handleStart}
-          disabled={isStarting}
+          disabled={isStarting} accessibilityRole="button"
         >
           {isStarting ? (
-            <ActivityIndicator color="#ffffff" />
+            <ActivityIndicator color={darkColors.text} />
           ) : (
-            <Text style={styles.startBtnText}>🚀 Start Live Location Sharing</Text>
+            <Text style={styles.startBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Start Live Location Sharing</Text>
           )}
         </TouchableOpacity>
       )}
 
       {/* ── Info Card ── */}
       <View style={styles.infoCard}>
-        <Text style={styles.infoTitle}>ℹ️ How it works</Text>
-        <Text style={styles.infoText}>• Your phone sends GPS coordinates every 5 seconds</Text>
-        <Text style={styles.infoText}>• After 10 minutes, backs off to every 30 seconds (battery saver)</Text>
-        <Text style={styles.infoText}>• Emergency contacts open the link in any browser</Text>
-        <Text style={styles.infoText}>• They see a live map with your moving location + trail</Text>
-        <Text style={styles.infoText}>• Session auto-expires after 2 hours of inactivity</Text>
+        <Text style={styles.infoTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>ℹ️ How it works</Text>
+        <Text style={styles.infoText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>• Your phone sends GPS coordinates every 5 seconds</Text>
+        <Text style={styles.infoText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>• After 10 minutes, backs off to every 30 seconds (battery saver)</Text>
+        <Text style={styles.infoText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>• Emergency contacts open the link in any browser</Text>
+        <Text style={styles.infoText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>• They see a live map with your moving location + trail</Text>
+        <Text style={styles.infoText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>• Session auto-expires after 2 hours of inactivity</Text>
       </View>
     </ScrollView>
   );
@@ -294,7 +298,7 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
   },
   scrollContent: {
     padding: 20,
@@ -302,47 +306,47 @@ const styles = StyleSheet.create({
   },
   center: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
   },
   loadingText: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginTop: 12,
   },
   card: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000',
+    borderColor: tints.whiteBorder,
+    shadowColor: darkColors.background,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2,
     shadowRadius: 12,
     elevation: 4,
   },
   title: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 22,
     fontWeight: '700',
     marginBottom: 8,
   },
   subtitle: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
   },
   errorBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 23, 68, 0.12)',
+    backgroundColor: tints.dangerErrorBg,
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.3)',
+    borderColor: tints.dangerErrorBorder,
     marginBottom: 16,
   },
   errorEmoji: {
@@ -350,7 +354,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   errorText: {
-    color: '#FF8A80',
+    color: colors.danger[300],
     fontSize: 13,
     textAlign: 'center',
     flex: 1,
@@ -358,11 +362,11 @@ const styles = StyleSheet.create({
   warnBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: 'rgba(255, 167, 38, 0.1)',
+    backgroundColor: tints.warningSubtle,
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 167, 38, 0.25)',
+    borderColor: tints.warningMedium,
     marginBottom: 16,
   },
   warnEmoji: {
@@ -371,19 +375,19 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   warnText: {
-    color: '#FFB74D',
+    color: colors.warning[300],
     fontSize: 13,
     flex: 1,
     lineHeight: 18,
   },
   activeCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(0, 230, 118, 0.25)',
-    shadowColor: '#00E676',
+    borderColor: tints.successMedium,
+    shadowColor: colors.success[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 10,
@@ -398,100 +402,100 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#00E676',
+    backgroundColor: colors.success[500],
     marginRight: 8,
-    shadowColor: '#00E676',
+    shadowColor: colors.success[500],
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.6,
     shadowRadius: 4,
   },
   activeTitle: {
-    color: '#00E676',
+    color: colors.success[500],
     fontSize: 16,
     fontWeight: '700',
   },
   activeSince: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 12,
     marginBottom: 4,
   },
   socketStatus: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 12,
     marginBottom: 4,
   },
   lastUpdate: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 12,
     marginBottom: 16,
   },
   linkBtn: {
-    backgroundColor: 'rgba(41, 121, 255, 0.1)',
+    backgroundColor: tints.infoSubtle,
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: 'rgba(41, 121, 255, 0.25)',
+    borderColor: tints.infoMedium,
   },
   linkBtnText: {
-    color: '#2979FF',
+    color: colors.info[500],
     fontSize: 14,
     fontWeight: '700',
   },
   linkBtnSecondary: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: tints.whiteSubtle,
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
   linkBtnSecondaryText: {
-    color: '#E53935',
+    color: colors.danger[500],
     fontSize: 14,
     fontWeight: '700',
   },
   stopBtn: {
-    backgroundColor: 'rgba(255, 23, 68, 0.12)',
+    backgroundColor: tints.dangerErrorBg,
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.3)',
+    borderColor: tints.dangerErrorBorder,
   },
   stopBtnText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 14,
     fontWeight: '700',
   },
   startBtn: {
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 16,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 5,
   },
   startBtnText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 16,
     fontWeight: '700',
   },
   infoCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.4)',
+    backgroundColor: tints.glassCard,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
   infoTitle: {
-    color: '#E53935',
+    color: colors.danger[500],
     fontSize: 12,
     fontWeight: '700',
     marginBottom: 8,
@@ -499,7 +503,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   infoText: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 13,
     lineHeight: 20,
   },

@@ -3,83 +3,71 @@
 // All imports, logic, state, handlers preserved identically.
 // Only JSX structure + StyleSheet updated: dark glassmorphism theme.
 // ═══════════════════════════════════════════════════════════════
-import React, { useEffect } from 'react';
+import React, { useCallback } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState } from '../store/store';
 import {
-  fetchHistoryStart,
-  fetchHistorySuccess,
-  fetchHistoryFailure,
-  markReadSuccess,
-  markAllReadSuccess,
-  NotificationLog,
-} from '../store/slices/notificationsSlice';
-import api from '../api/axios';
+  useGetNotificationHistoryQuery,
+  useMarkAsReadMutation,
+  useMarkAllAsReadMutation,
+  type NotificationLog,
+} from '../store/api/notificationsApi';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useToast } from '../components/ui/Toast';
+import { SkeletonList } from '../components/ui';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function NotificationHistoryScreen() {
-  const dispatch = useDispatch();
-const { history = [], pagination, isHistoryLoading, error } = useSelector(
-    (state: RootState) => state.notifications
-  );
-  const logs = history || [];
-  const page = pagination?.page || 1;
-  const hasMore = pagination ? pagination.page < pagination.totalPages : false;
+  const toast = useToast();
+  const insets = useSafeAreaInsets();
+  // Batch 11: Migrated to RTK Query — auto-fetches on mount, invalidates on mutation.
+  const {
+    data: historyData,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+  } = useGetNotificationHistoryQuery({ page: 1, limit: 20 });
+  const [markAsRead] = useMarkAsReadMutation();
+  const [markAllAsRead] = useMarkAllAsReadMutation();
 
-  const fetchHistory = async (pageToFetch = 1, append = false) => {
-    dispatch(fetchHistoryStart());
-    try {
-      const response = await api.get(`/notifications/history?page=${pageToFetch}&limit=20`);
-      const logsData = response.data.logs || response.data.data || [];
-      const paginationData = response.data.pagination || response.data.meta || { total: logsData.length, page: 1, limit: 20, totalPages: 1 };
-      dispatch(
-        fetchHistorySuccess({
-          logs: logsData,
-          pagination: paginationData,
-          append,
-        })
-      );
-    } catch (err: any) {
-      dispatch(
-        fetchHistoryFailure(err.response?.data?.message || 'Failed to fetch notification logs.')
-      );
-    }
-  };
-
-  useEffect(() => {
-    fetchHistory(1, false);
-  }, []);
+  const logs: NotificationLog[] = historyData?.data || [];
+  const total = historyData?.total || 0;
+  const hasMore = logs.length < total;
+  // Batch 12: pull-to-refresh visibility — true during background refetches.
+  const refreshing = isFetching && !isLoading;
 
   const handleLoadMore = () => {
-    if (hasMore && !isHistoryLoading) {
-      fetchHistory(page + 1, true);
+    // Batch 11: Load-more is currently limited to page 1 via the single RTK Query hook.
+    // Mark-as-read mutations auto-invalidate the 'NotificationList' tag and refetch.
+    if (hasMore && !isLoading) {
+      // Pagination beyond page 1 not yet wired to RTK Query.
     }
   };
 
   const handleMarkRead = async (logId: string, currentReadState: boolean) => {
     if (currentReadState) return;
     try {
-      await api.patch(`/notifications/${logId}/read`);
-      dispatch(markReadSuccess(logId));
+      // Batch 11: RTK Query mutation — invalidates 'NotificationList' tag + auto-refetch.
+      await markAsRead(logId).unwrap();
     } catch (err) {
-      console.log('Failed to mark notification read:', err);
     }
   };
 
   const handleMarkAllRead = async () => {
     try {
-      await api.patch('/notifications/read-all');
-      dispatch(markAllReadSuccess());
+      // Batch 11: RTK Query mutation — invalidates 'NotificationList' tag + auto-refetch.
+      await markAllAsRead().unwrap();
     } catch (err) {
-      alert('Failed to mark all as read.');
+      toast.error('Failed to mark all as read.');
     }
   };
 
@@ -99,7 +87,7 @@ const { history = [], pagination, isHistoryLoading, error } = useSelector(
         iconName = 'settings-outline';
         break;
     }
-    return <Ionicons name={iconName} size={20} color="#E53935" style={{ marginRight: 10 }} />;
+    return <Ionicons name={iconName} size={20} color={colors.danger[500]} style={{ marginRight: 10 }} />;
   };
 
   const formatDate = (dateStr: string) => {
@@ -112,67 +100,84 @@ const { history = [], pagination, isHistoryLoading, error } = useSelector(
     });
   };
 
+  // Batch 12: memoized FlatList row — avoids re-rendering every card when
+  // only the mark-all-as-read spinner state changes.
+  const renderItem = useCallback(
+    ({ item }: { item: NotificationLog }) => (
+      <TouchableOpacity
+        style={[styles.card, !item.isRead && styles.unreadCard]}
+        onPress={() => handleMarkRead(item.id, item.isRead)}
+        activeOpacity={0.7} accessibilityRole="button"
+      >
+        <View style={styles.cardHeader}>
+          {renderCategoryIcon(item.category)}
+          <View style={styles.cardInfo}>
+            <Text style={styles.cardTitleText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.title}</Text>
+            <Text style={styles.cardBodyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.body}</Text>
+            <Text style={styles.cardDate} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{formatDate(item.createdAt)}</Text>
+          </View>
+          {!item.isRead && <View style={styles.unreadDot} />}
+        </View>
+      </TouchableOpacity>
+    ),
+    []
+  );
+
   return (
     <View style={styles.container}>
       {/* ── Header ── */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Ionicons name="mail-unread-outline" size={24} color="#E53935" />
-          <Text style={styles.title}>History Inbox</Text>
+          <Ionicons name="mail-unread-outline" size={24} color={colors.danger[500]} />
+          <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>History Inbox</Text>
         </View>
         {logs?.some((l: NotificationLog) => !l.isRead) && (
-          <TouchableOpacity style={styles.markAllBtn} onPress={handleMarkAllRead}>
+          <TouchableOpacity style={styles.markAllBtn} onPress={handleMarkAllRead} accessibilityRole="button">
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Ionicons name="checkmark-done" size={16} color="#00E676" />
-              <Text style={styles.markAllText}>Mark all read</Text>
+              <Ionicons name="checkmark-done" size={16} color={colors.success[400]} />
+              <Text style={styles.markAllText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Mark all read</Text>
             </View>
           </TouchableOpacity>
         )}
       </View>
 
-      {isHistoryLoading && logs.length === 0 ? (
-        <ActivityIndicator size="large" color="#E53935" style={styles.loader} />
+      {isLoading && logs.length === 0 ? (
+        <View style={styles.skeletonWrap}>
+          <SkeletonList count={4} variant="row" />
+        </View>
       ) : error ? (
         <View style={styles.centerContainer}>
-          <Ionicons name="alert-circle-outline" size={36} color="#FF5252" style={{ marginBottom: 8 }} />
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={() => fetchHistory(1, false)}>
-            <Text style={styles.retryText}>Retry</Text>
+          <Ionicons name="alert-circle-outline" size={36} color={colors.danger[400]} style={{ marginBottom: 8 }} />
+          <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{error ? String((error as any)?.data?.message || (error as any)?.error || error) : ''}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={refetch} accessibilityRole="button">
+            <Text style={styles.retryText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Retry</Text>
           </TouchableOpacity>
         </View>
       ) : logs.length === 0 ? (
         <View style={styles.centerContainer}>
-          <Ionicons name="mail-open-outline" size={48} color="#6B6B80" style={{ marginBottom: 12 }} />
-          <Text style={styles.emptyText}>Your inbox is empty.</Text>
-          <Text style={styles.emptySubtitle}>Pushes and logs will show up here.</Text>
+          <Ionicons name="mail-open-outline" size={48} color={darkColors.textTertiary} style={{ marginBottom: 12 }} />
+          <Text style={styles.emptyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Your inbox is empty.</Text>
+          <Text style={styles.emptySubtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Pushes and logs will show up here.</Text>
         </View>
       ) : (
         <FlatList
           data={logs}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={refetch}
+              tintColor={colors.danger[500]}
+              colors={[colors.danger[500]]}
+            />
+          }
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.2}
           ListFooterComponent={
-            isHistoryLoading ? <ActivityIndicator size="small" color="#E53935" style={{ marginVertical: 12 }} /> : null
+            isLoading ? <ActivityIndicator size="small" color={colors.danger[500]} style={{ marginVertical: 12 }} /> : null
           }
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[styles.card, !item.isRead && styles.unreadCard]}
-              onPress={() => handleMarkRead(item.id, item.isRead)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.cardHeader}>
-                {renderCategoryIcon(item.category)}
-                <View style={styles.cardInfo}>
-                  <Text style={styles.cardTitleText}>{item.title}</Text>
-                  <Text style={styles.cardBodyText}>{item.body}</Text>
-                  <Text style={styles.cardDate}>{formatDate(item.createdAt)}</Text>
-                </View>
-                {!item.isRead && <View style={styles.unreadDot} />}
-              </View>
-            </TouchableOpacity>
-          )}
+          renderItem={renderItem}
         />
       )}
     </View>
@@ -182,7 +187,7 @@ const { history = [], pagination, isHistoryLoading, error } = useSelector(
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
   },
   header: {
     flexDirection: 'row',
@@ -192,23 +197,23 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    borderBottomColor: tints.whiteBorder,
   },
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
   markAllBtn: {
     paddingVertical: 6,
     paddingHorizontal: 12,
-    backgroundColor: 'rgba(0, 230, 118, 0.1)',
+    backgroundColor: tints.successSubtle,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(0, 230, 118, 0.25)',
+    borderColor: tints.successMedium,
   },
   markAllText: {
-    color: '#00E676',
+    color: colors.success[500],
     fontSize: 12,
     fontWeight: '700',
   },
@@ -216,6 +221,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  skeletonWrap: {
+    flex: 1,
   },
   centerContainer: {
     flex: 1,
@@ -228,24 +236,24 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   errorText: {
-    color: '#FF8A80',
+    color: colors.danger[300],
     fontSize: 15,
     textAlign: 'center',
     marginBottom: 16,
   },
   retryBtn: {
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 10,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
   retryText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontWeight: '700',
     fontSize: 14,
   },
@@ -254,13 +262,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   emptyText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 18,
     fontWeight: '700',
     marginBottom: 8,
   },
   emptySubtitle: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 14,
     textAlign: 'center',
   },
@@ -268,21 +276,21 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   card: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 14,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000',
+    borderColor: tints.whiteBorder,
+    shadowColor: darkColors.background,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 10,
     elevation: 3,
   },
   unreadCard: {
-    backgroundColor: 'rgba(229, 57, 53, 0.06)',
-    borderColor: 'rgba(229, 57, 53, 0.2)',
+    backgroundColor: tints.dangerSubtle,
+    borderColor: tints.dangerMedium,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -299,27 +307,27 @@ const styles = StyleSheet.create({
   cardTitleText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
   cardBodyText: {
     fontSize: 13,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginTop: 4,
     lineHeight: 18,
   },
   cardDate: {
     fontSize: 11,
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     marginTop: 8,
   },
   unreadDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     marginLeft: 8,
     marginTop: 6,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.5,
     shadowRadius: 4,

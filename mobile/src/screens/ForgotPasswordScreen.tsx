@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
+  AccessibilityInfo,
   ActivityIndicator,
   StyleSheet,
   Text,
@@ -12,6 +13,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { forgotPasswordSchema, ForgotPasswordInput } from '../schemas/validation';
 import api from '../api/axios';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function ForgotPasswordScreen({ navigation }: { navigation: any }) {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -21,12 +23,27 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: any }
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
 
-  useState(() => {
+  // Batch 7 Phase 4: Respect Reduce Motion accessibility setting
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    // Skip decorative entrance animation when Reduce Motion is enabled
+    if (reduceMotion) {
+      fadeAnim.setValue(1);
+      slideAnim.setValue(0);
+      return;
+    }
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
     ]).start();
-  });
+  }, [fadeAnim, slideAnim, reduceMotion]);
 
   const {
     control,
@@ -57,33 +74,33 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: any }
   return (
     <View style={styles.container}>
       <View style={StyleSheet.absoluteFillObject}>
-        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0A0F' }]} />
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: darkColors.background }]} />
         <View style={[StyleSheet.absoluteFillObject, styles.gradTop]} />
         <View style={[StyleSheet.absoluteFillObject, styles.gradBottom]} />
       </View>
 
       <Animated.View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 24, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
         <View style={styles.header}>
-          <Text style={styles.title}>Forgot Password?</Text>
-          <Text style={styles.subtitle}>
+          <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Forgot Password?</Text>
+          <Text style={styles.subtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             Enter your email and we'll send you a token to reset your password.
           </Text>
         </View>
 
         {errorMsg && (
           <View style={styles.alertError}>
-            <Text style={styles.alertText}>{errorMsg}</Text>
+            <Text style={styles.alertText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errorMsg}</Text>
           </View>
         )}
 
         {successMsg && (
           <View style={styles.alertSuccess}>
-            <Text style={styles.successText}>{successMsg}</Text>
+            <Text style={styles.successText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{successMsg}</Text>
           </View>
         )}
 
         <View style={styles.form}>
-          <Text style={styles.label}>Email Address</Text>
+          <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Email Address</Text>
           <Controller
             control={control}
             name="email"
@@ -91,28 +108,30 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: any }
               <TextInput
                 style={[styles.input, errors.email && styles.inputError]}
                 placeholder="name@example.com"
-                placeholderTextColor="#6B6B80"
+                placeholderTextColor={darkColors.textTertiary}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
+                allowFontScaling={true}
+                maxFontSizeMultiplier={1.5}
               />
             )}
           />
-          {errors.email && <Text style={styles.errorHelper}>{errors.email.message}</Text>}
+          {errors.email && <Text style={styles.errorHelper} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errors.email.message}</Text>}
 
-          <TouchableOpacity style={styles.sendBtn} onPress={handleSubmit(onSubmit)} disabled={isLoading}>
+          <TouchableOpacity style={styles.sendBtn} onPress={handleSubmit(onSubmit)} disabled={isLoading} accessibilityRole="button">
             {isLoading ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color={darkColors.text} />
             ) : (
-              <Text style={styles.sendBtnText}>Send Reset Link</Text>
+              <Text style={styles.sendBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Send Reset Link</Text>
             )}
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.backText}>Back to Log In</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate('Login')} accessibilityRole="button">
+          <Text style={styles.backText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Back to Log In</Text>
         </TouchableOpacity>
       </Animated.View>
     </View>
@@ -120,36 +139,36 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: any }
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0A0F' },
-  gradTop: { top: 0, height: 300, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
-  gradBottom: { bottom: 0, height: 400, backgroundColor: 'rgba(41, 121, 255, 0.06)' },
+  container: { flex: 1, backgroundColor: darkColors.background },
+  gradTop: { top: 0, height: 300, backgroundColor: tints.dangerSubtle },
+  gradBottom: { bottom: 0, height: 400, backgroundColor: tints.infoSubtle },
   header: { marginBottom: 32 },
-  title: { fontSize: 28, fontWeight: 'bold', color: '#FFFFFF' },
-  subtitle: { fontSize: 15, color: '#A0A0B8', marginTop: 10, lineHeight: 22 },
+  title: { fontSize: 28, fontWeight: 'bold', color: darkColors.text },
+  subtitle: { fontSize: 15, color: darkColors.textSecondary, marginTop: 10, lineHeight: 22 },
   alertError: {
-    backgroundColor: 'rgba(255, 23, 68, 0.12)', padding: 12, borderRadius: 14,
-    borderWidth: 1, borderColor: 'rgba(255, 23, 68, 0.3)', marginBottom: 20,
+    backgroundColor: tints.dangerErrorBg, padding: 12, borderRadius: 14,
+    borderWidth: 1, borderColor: tints.dangerErrorBorder, marginBottom: 20,
   },
   alertSuccess: {
-    backgroundColor: 'rgba(0, 230, 118, 0.1)', padding: 12, borderRadius: 14,
-    borderWidth: 1, borderColor: 'rgba(0, 230, 118, 0.3)', marginBottom: 20,
+    backgroundColor: tints.successSubtle, padding: 12, borderRadius: 14,
+    borderWidth: 1, borderColor: tints.successMedium, marginBottom: 20,
   },
-  alertText: { color: '#FF8A80', fontSize: 14, textAlign: 'center' },
-  successText: { color: '#00E676', fontSize: 14, textAlign: 'center' },
+  alertText: { color: colors.danger[300], fontSize: 14, textAlign: 'center' },
+  successText: { color: colors.success[500], fontSize: 14, textAlign: 'center' },
   form: { width: '100%' },
-  label: { fontSize: 14, color: '#A0A0B8', marginBottom: 8, fontWeight: '600' },
+  label: { fontSize: 14, color: darkColors.textSecondary, marginBottom: 8, fontWeight: '600' },
   input: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)', color: '#FFFFFF', paddingHorizontal: 16, paddingVertical: 14,
-    borderRadius: 14, fontSize: 15, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3,
+    backgroundColor: tints.glassCard, color: darkColors.text, paddingHorizontal: 16, paddingVertical: 14,
+    borderRadius: 14, fontSize: 15, marginBottom: 16, borderWidth: 1, borderColor: tints.whiteBorder,
+    shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3,
   },
-  inputError: { borderColor: 'rgba(255, 23, 68, 0.5)' },
-  errorHelper: { color: '#FF8A80', fontSize: 12, marginTop: -10, marginBottom: 16 },
+  inputError: { borderColor: tints.dangerErrorBorder },
+  errorHelper: { color: colors.danger[300], fontSize: 12, marginTop: -10, marginBottom: 16 },
   sendBtn: {
-    backgroundColor: '#E53935', paddingVertical: 16, borderRadius: 14, alignItems: 'center',
-    shadowColor: '#E53935', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 3,
+    backgroundColor: colors.danger[500], paddingVertical: 16, borderRadius: 14, alignItems: 'center',
+    shadowColor: colors.danger[500], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 3,
   },
-  sendBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
+  sendBtnText: { color: darkColors.text, fontSize: 16, fontWeight: 'bold' },
   backBtn: { alignItems: 'center', marginTop: 28 },
-  backText: { color: '#A0A0B8', fontSize: 14, fontWeight: '600' },
+  backText: { color: darkColors.textSecondary, fontSize: 14, fontWeight: '600' },
 });

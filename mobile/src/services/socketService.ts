@@ -20,10 +20,8 @@ export function getSocket(): Socket {
     });
 
     socket.on('connect', () => {
-      console.log('[Socket] Connected:', socket?.id);
     });
     socket.on('disconnect', (reason: string) => {
-      console.log('[Socket] Disconnected:', reason);
     });
     socket.on('connect_error', (err: Error) => {
       console.error('[Socket] Connect error:', err.message);
@@ -57,7 +55,6 @@ export function emitLocationUpdate(sessionId: string, lat: number, lng: number) 
   const s = getSocket();
   if (s.connected) {
     s.emit('location_update', { sessionId, lat, lng });
-    console.log('[Socket] Emitted location_update:', { sessionId, lat: lng });
   } else {
     console.warn('[Socket] Not connected — dropping location update');
   }

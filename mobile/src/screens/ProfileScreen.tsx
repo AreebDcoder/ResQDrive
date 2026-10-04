@@ -5,39 +5,45 @@
 // ═══════════════════════════════════════════════════════════════
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
   Image,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useDispatch, useSelector } from 'react-redux';
 import { getItemAsync, deleteItemAsync } from '../utils/secureStorage';
 import { RootState } from '../store/store';
 import { updateUserProfile, logoutAction } from '../store/slices/authSlice';
+import { useUpdateProfileMutation, useChangePasswordMutation } from '../store/api/authApi';
 import { updateProfileSchema, changePasswordSchema, UpdateProfileInput, ChangePasswordInput } from '../schemas/validation';
 import { FCMService } from '../services/fcmService';
 import api from '../api/axios';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Button, FormInput, Input } from '../components/ui';
+import { useTheme } from '../theme/useTheme';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function ProfileScreen() {
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
+  const { theme, toggleTheme } = useTheme();
   const { user } = useSelector((state: RootState) => state.auth);
   
+  // Batch 11: Migrated to RTK Query mutations — auto-invalidates 'User' tag.
+  // Logout stays as api.post because it clears tokens locally; no cache benefit.
+  const [updateProfile] = useUpdateProfileMutation();
+  const [changePassword] = useChangePasswordMutation();
   const [isEditing, setIsEditing] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [profileMessage, setProfileMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [pwMessage, setPwMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isPwLoading, setIsPwLoading] = useState(false);
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
 
   // Profile Form
   const {
@@ -77,12 +83,13 @@ export default function ProfileScreen() {
     setIsLoading(true);
     setProfileMessage(null);
     try {
-      const response = await api.patch('/users/me', data);
-      dispatch(updateUserProfile(response.data));
+      // Batch 11: RTK Query mutation — auto-invalidates 'User' tag.
+      const result = await updateProfile(data).unwrap() as any;
+      dispatch(updateUserProfile(result));
       setProfileMessage({ type: 'success', text: 'Profile updated successfully!' });
       setIsEditing(false);
     } catch (err: any) {
-      setProfileMessage({ type: 'error', text: err.response?.data?.message || 'Failed to update profile.' });
+      setProfileMessage({ type: 'error', text: err.data?.message || 'Failed to update profile.' });
     } finally {
       setIsLoading(false);
     }
@@ -92,10 +99,11 @@ export default function ProfileScreen() {
     setIsPwLoading(true);
     setPwMessage(null);
     try {
-      await api.patch('/users/me/password', {
+      // Batch 11: RTK Query mutation.
+      await changePassword({
         currentPassword: data.currentPassword,
         newPassword: data.newPassword,
-      });
+      }).unwrap();
       setPwMessage({ type: 'success', text: 'Password changed successfully! You will be logged out.' });
       resetPwForm();
       
@@ -104,7 +112,7 @@ export default function ProfileScreen() {
         await handleLogout();
       }, 2000);
     } catch (err: any) {
-      setPwMessage({ type: 'error', text: err.response?.data?.message || 'Incorrect current password.' });
+      setPwMessage({ type: 'error', text: err.data?.message || 'Incorrect current password.' });
     } finally {
       setIsPwLoading(false);
     }
@@ -120,7 +128,6 @@ export default function ProfileScreen() {
         await api.post('/auth/logout', { refreshToken: token });
       }
     } catch (err) {
-      console.log('Logout API call failed:', err);
     } finally {
             await deleteItemAsync('refreshToken');
       dispatch(logoutAction());
@@ -133,8 +140,10 @@ export default function ProfileScreen() {
       // Simulate profile picture upload by generating a random avatar URL
       const randomAvatarId = Math.floor(Math.random() * 100);
       const url = `https://i.pravatar.cc/300?img=${randomAvatarId}`;
-      const response = await api.patch('/users/me', { profilePictureUrl: url });
-      dispatch(updateUserProfile(response.data));
+      // Batch 11: RTK Query mutation reuses the same hook as onUpdateProfile.
+      // Cast to any: authApi.User is missing isActive field (in authSlice.User).
+      const result = await updateProfile({ profilePictureUrl: url }).unwrap() as any;
+      dispatch(updateUserProfile(result));
       setProfileMessage({ type: 'success', text: 'Profile picture updated!' });
     } catch (err) {
       setProfileMessage({ type: 'error', text: 'Failed to update picture.' });
@@ -144,10 +153,10 @@ export default function ProfileScreen() {
   if (!user) return null;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 16 }]}>
       {/* ── Profile Picture Header ── */}
       <View style={styles.profileHeader}>
-        <TouchableOpacity onPress={simulatePictureUpload} style={styles.avatarWrap}>
+        <TouchableOpacity onPress={simulatePictureUpload} style={styles.avatarWrap} accessibilityRole="button" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <View style={styles.avatarRing}>
             <Image
               source={{ uri: user.profilePictureUrl || 'https://i.pravatar.cc/300?img=11' }}
@@ -155,19 +164,19 @@ export default function ProfileScreen() {
             />
           </View>
           <View style={styles.editBadge}>
-            <Ionicons name="camera" size={14} color="#FFF" />
+            <Ionicons name="camera" size={14} color={darkColors.text} />
           </View>
         </TouchableOpacity>
-        <Text style={styles.profileName}>{user.fullName}</Text>
+        <Text style={styles.profileName} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{user.fullName}</Text>
         <View style={styles.roleRow}>
-          <Text style={styles.profileRole}>Role: </Text>
+          <Text style={styles.profileRole} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Role: </Text>
           <View style={styles.rolePill}>
-            <Text style={styles.roleLabel}>{user.role}</Text>
+            <Text style={styles.roleLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{user.role}</Text>
           </View>
         </View>
         {user.role === 'MECHANIC' && (
           <View style={styles.verificationRow}>
-            <Text style={styles.verificationText}>
+            <Text style={styles.verificationText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               Workshop Verified: {user.mechanicDetails?.isWorkshopVerified ? 'Yes' : 'Pending Approval'}
             </Text>
           </View>
@@ -177,7 +186,7 @@ export default function ProfileScreen() {
       {/* ── Profile Alert ── */}
       {profileMessage && (
         <View style={profileMessage.type === 'success' ? styles.alertSuccess : styles.alertError}>
-          <Text style={profileMessage.type === 'success' ? styles.successText : styles.alertText}>
+          <Text style={profileMessage.type === 'success' ? styles.successText : styles.alertText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             {profileMessage.text}
           </Text>
         </View>
@@ -187,278 +196,208 @@ export default function ProfileScreen() {
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Ionicons name="person-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
-            <Text style={styles.cardTitle}>Account Details</Text>
+            <Ionicons name="person-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
+            <Text style={styles.cardTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Account Details</Text>
           </View>
-          <TouchableOpacity onPress={() => { setIsEditing(!isEditing); setProfileMessage(null); }}>
-            <View style={isEditing ? styles.cancelBtn : styles.editBtn}>
-              <Text style={isEditing ? styles.cancelBtnText : styles.editBtnText}>{isEditing ? 'Cancel' : 'Edit'}</Text>
-            </View>
-          </TouchableOpacity>
+          <Button
+            label={isEditing ? 'Cancel' : 'Edit'}
+            variant={isEditing ? 'ghost' : 'secondary'}
+            size="sm"
+            onPress={() => { setIsEditing(!isEditing); setProfileMessage(null); }}
+            accessibilityHint={isEditing ? 'Cancel profile editing' : 'Edit profile details'}
+          />
         </View>
 
-        <Text style={styles.label}>Email Address (Read-only)</Text>
-        <TextInput style={[styles.input, styles.inputDisabled]} value={user.email} editable={false} />
+        <Input
+          label="Email Address (Read-only)"
+          value={user.email}
+          onChangeText={() => {}}
+          editable={false}
+          leftIcon="mail-outline"
+        />
 
-        <Text style={styles.label}>Full Name</Text>
-        <Controller
-          control={profileControl}
+        <FormInput
           name="fullName"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={[styles.input, !isEditing && styles.inputDisabled, profileErrors.fullName && styles.inputError]}
-              editable={isEditing}
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-            />
-          )}
-        />
-        {profileErrors.fullName && <Text style={styles.errorHelper}>{profileErrors.fullName.message}</Text>}
-
-        <Text style={styles.label}>Phone Number</Text>
-        <Controller
           control={profileControl}
-          name="phoneNumber"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={[styles.input, !isEditing && styles.inputDisabled, profileErrors.phoneNumber && styles.inputError]}
-              editable={isEditing}
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-            />
-          )}
+          label="Full Name"
+          editable={isEditing}
+          leftIcon="person-outline"
         />
-        {profileErrors.phoneNumber && <Text style={styles.errorHelper}>{profileErrors.phoneNumber.message}</Text>}
+
+        <FormInput
+          name="phoneNumber"
+          control={profileControl}
+          label="Phone Number"
+          editable={isEditing}
+          leftIcon="call-outline"
+          keyboardType="phone-pad"
+        />
 
         {/* Dynamic Driver Fields */}
         {user.role === 'DRIVER' && (
           <View>
-            <Text style={styles.label}>CNIC Number</Text>
-            <Controller
-              control={profileControl}
+            <FormInput
               name="cnicNumber"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <TextInput
-                  style={[styles.input, !isEditing && styles.inputDisabled, profileErrors.cnicNumber && styles.inputError]}
-                  editable={isEditing}
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  value={value}
-                />
-              )}
-            />
-            {profileErrors.cnicNumber && <Text style={styles.errorHelper}>{profileErrors.cnicNumber.message}</Text>}
-
-            <Text style={styles.label}>Driving License Number</Text>
-            <Controller
               control={profileControl}
-              name="drivingLicenseNumber"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <TextInput
-                  style={[styles.input, !isEditing && styles.inputDisabled, profileErrors.drivingLicenseNumber && styles.inputError]}
-                  editable={isEditing}
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  value={value}
-                />
-              )}
+              label="CNIC Number"
+              editable={isEditing}
+              placeholder="42101-XXXXXXX-X"
             />
-            {profileErrors.drivingLicenseNumber && (
-              <Text style={styles.errorHelper}>{profileErrors.drivingLicenseNumber.message}</Text>
-            )}
+
+            <FormInput
+              name="drivingLicenseNumber"
+              control={profileControl}
+              label="Driving License Number"
+              editable={isEditing}
+              placeholder="DL-XXXXXXX"
+            />
           </View>
         )}
 
         {/* Dynamic Mechanic Fields */}
         {user.role === 'MECHANIC' && (
           <View>
-            <Text style={styles.label}>Workshop Name</Text>
-            <Controller
-              control={profileControl}
+            <FormInput
               name="workshopName"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <TextInput
-                  style={[styles.input, !isEditing && styles.inputDisabled, profileErrors.workshopName && styles.inputError]}
-                  editable={isEditing}
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  value={value}
-                />
-              )}
-            />
-            {profileErrors.workshopName && <Text style={styles.errorHelper}>{profileErrors.workshopName.message}</Text>}
-
-            <Text style={styles.label}>Workshop Address</Text>
-            <Controller
               control={profileControl}
+              label="Workshop Name"
+              editable={isEditing}
+              placeholder="Quick Fix Garage"
+            />
+
+            <FormInput
               name="workshopAddress"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <TextInput
-                  style={[styles.input, !isEditing && styles.inputDisabled, profileErrors.workshopAddress && styles.inputError]}
-                  editable={isEditing}
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  value={value}
-                />
-              )}
-            />
-            {profileErrors.workshopAddress && (
-              <Text style={styles.errorHelper}>{profileErrors.workshopAddress.message}</Text>
-            )}
-
-            <Text style={styles.label}>Specialization</Text>
-            <Controller
               control={profileControl}
-              name="specialization"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <TextInput
-                  style={[styles.input, !isEditing && styles.inputDisabled, profileErrors.specialization && styles.inputError]}
-                  editable={isEditing}
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  value={value}
-                />
-              )}
+              label="Workshop Address"
+              editable={isEditing}
+              placeholder="Plot 45, Industrial Zone"
             />
-            {profileErrors.specialization && (
-              <Text style={styles.errorHelper}>{profileErrors.specialization.message}</Text>
-            )}
+
+            <FormInput
+              name="specialization"
+              control={profileControl}
+              label="Specialization"
+              editable={isEditing}
+              placeholder="Engine, Electrical, Brake Repair"
+            />
           </View>
         )}
 
         {isEditing && (
-          <TouchableOpacity style={styles.saveBtn} onPress={handleProfileSubmit(onUpdateProfile)} disabled={isLoading}>
-            {isLoading ? <ActivityIndicator color="#fff" /> : (
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Ionicons name="save-outline" size={18} color="#FFF" style={{ marginRight: 6 }} />
-                <Text style={styles.saveBtnText}>Save Profile</Text>
-              </View>
-            )}
-          </TouchableOpacity>
+          <Button
+            label="Save Profile"
+            variant="danger"
+            size="lg"
+            onPress={handleProfileSubmit(onUpdateProfile)}
+            loading={isLoading}
+            fullWidth
+            icon="save-outline"
+            accessibilityHint="Save profile changes"
+          />
         )}
       </View>
 
       {/* ── Change Password Card ── */}
       <View style={styles.card}>
-        <TouchableOpacity style={styles.cardHeader} onPress={() => { setIsChangingPassword(!isChangingPassword); setPwMessage(null); }}>
+        <TouchableOpacity style={styles.cardHeader} onPress={() => { setIsChangingPassword(!isChangingPassword); setPwMessage(null); }} accessibilityRole="button">
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Ionicons name="lock-closed-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
-            <Text style={styles.cardTitle}>Security & Password</Text>
+            <Ionicons name="lock-closed-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
+            <Text style={styles.cardTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Security & Password</Text>
           </View>
-          <Ionicons name={isChangingPassword ? 'chevron-up-outline' : 'chevron-down-outline'} size={20} color="#888899" />
+          <Ionicons name={isChangingPassword ? 'chevron-up-outline' : 'chevron-down-outline'} size={20} color={darkColors.textTertiary} />
         </TouchableOpacity>
 
         {isChangingPassword && (
           <View style={styles.pwContainer}>
             {pwMessage && (
               <View style={pwMessage.type === 'success' ? styles.alertSuccess : styles.alertError}>
-                <Text style={pwMessage.type === 'success' ? styles.successText : styles.alertText}>
+                <Text style={pwMessage.type === 'success' ? styles.successText : styles.alertText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                   {pwMessage.text}
                 </Text>
               </View>
             )}
 
-            <Text style={styles.label}>Current Password</Text>
-            <Controller
-              control={pwControl}
+            <FormInput
               name="currentPassword"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <View style={[styles.passwordContainer, pwErrors.currentPassword && styles.inputError]}>
-                  <TextInput
-                    style={styles.passwordInput}
-                    placeholder="Enter current password"
-                    placeholderTextColor="#6B6B80"
-                    secureTextEntry={!showCurrentPassword}
-                    autoCapitalize="none"
-                    onBlur={onBlur}
-                    onChangeText={onChange}
-                    value={value}
-                  />
-                  <TouchableOpacity
-                    style={styles.eyeBtn}
-                    onPress={() => setShowCurrentPassword(!showCurrentPassword)}
-                  >
-                    <Ionicons name={showCurrentPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color="#888899" />
-                  </TouchableOpacity>
-                </View>
-              )}
-            />
-            {pwErrors.currentPassword && <Text style={styles.errorHelper}>{pwErrors.currentPassword.message}</Text>}
-
-            <Text style={styles.label}>New Password</Text>
-            <Controller
               control={pwControl}
+              label="Current Password"
+              placeholder="Enter current password"
+              secureTextEntry
+              autoCapitalize="none"
+              leftIcon="lock-closed-outline"
+            />
+
+            <FormInput
               name="newPassword"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <View style={[styles.passwordContainer, pwErrors.newPassword && styles.inputError]}>
-                  <TextInput
-                    style={styles.passwordInput}
-                    placeholder="At least 8 chars, 1 num, 1 spec"
-                    placeholderTextColor="#6B6B80"
-                    secureTextEntry={!showNewPassword}
-                    autoCapitalize="none"
-                    onBlur={onBlur}
-                    onChangeText={onChange}
-                    value={value}
-                  />
-                  <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowNewPassword(!showNewPassword)}>
-                    <Ionicons name={showNewPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color="#888899" />
-                  </TouchableOpacity>
-                </View>
-              )}
-            />
-            {pwErrors.newPassword && <Text style={styles.errorHelper}>{pwErrors.newPassword.message}</Text>}
-
-            <Text style={styles.label}>Confirm New Password</Text>
-            <Controller
               control={pwControl}
-              name="confirmNewPassword"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <View style={[styles.passwordContainer, pwErrors.confirmNewPassword && styles.inputError]}>
-                  <TextInput
-                    style={styles.passwordInput}
-                    placeholder="Confirm new password"
-                    placeholderTextColor="#6B6B80"
-                    secureTextEntry={!showConfirmNewPassword}
-                    autoCapitalize="none"
-                    onBlur={onBlur}
-                    onChangeText={onChange}
-                    value={value}
-                  />
-                  <TouchableOpacity
-                    style={styles.eyeBtn}
-                    onPress={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
-                  >
-                    <Ionicons name={showConfirmNewPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color="#888899" />
-                  </TouchableOpacity>
-                </View>
-              )}
+              label="New Password"
+              placeholder="At least 8 chars, 1 num, 1 spec"
+              secureTextEntry
+              autoCapitalize="none"
+              leftIcon="lock-closed-outline"
             />
-            {pwErrors.confirmNewPassword && (
-              <Text style={styles.errorHelper}>{pwErrors.confirmNewPassword.message}</Text>
-            )}
 
-            <TouchableOpacity style={styles.pwSubmitBtn} onPress={handlePwSubmit(onChangePassword)} disabled={isPwLoading}>
-              {isPwLoading ? <ActivityIndicator color="#E53935" /> : (
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="refresh-outline" size={16} color="#E53935" style={{ marginRight: 6 }} />
-                  <Text style={styles.pwSubmitBtnText}>Update Password</Text>
-                </View>
-              )}
-            </TouchableOpacity>
+            <FormInput
+              name="confirmNewPassword"
+              control={pwControl}
+              label="Confirm New Password"
+              placeholder="Confirm new password"
+              secureTextEntry
+              autoCapitalize="none"
+              leftIcon="lock-closed-outline"
+            />
+
+            <Button
+              label="Update Password"
+              variant="secondary"
+              size="lg"
+              onPress={handlePwSubmit(onChangePassword)}
+              loading={isPwLoading}
+              fullWidth
+              icon="refresh-outline"
+              accessibilityHint="Submit password change form"
+            />
           </View>
         )}
       </View>
 
-      {/* ── Logout ── */}
-      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Ionicons name="log-out-outline" size={20} color="#FF5252" style={{ marginRight: 8 }} />
-          <Text style={styles.logoutBtnText}>Log Out</Text>
+      {/* ── Theme Toggle ── */}
+      <View style={styles.themeToggleRow}>
+        <View style={styles.themeToggleInfo}>
+          <Ionicons
+            name={theme === 'dark' ? 'moon-outline' : 'sunny-outline'}
+            size={20}
+            color={colors.danger[500]}
+          />
+          <View>
+            <Text style={styles.themeToggleTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+              {theme === 'dark' ? 'Dark Theme' : 'Light Theme'}
+            </Text>
+            <Text style={styles.themeToggleSubtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+              Tap to switch to {theme === 'dark' ? 'light' : 'dark'} mode
+            </Text>
+          </View>
         </View>
-      </TouchableOpacity>
+        <Button
+          label="Toggle"
+          variant="secondary"
+          size="sm"
+          onPress={toggleTheme}
+          icon={theme === 'dark' ? 'sunny-outline' : 'moon-outline'}
+          accessibilityHint="Toggle between dark and light theme"
+        />
+      </View>
+
+      {/* ── Logout ── */}
+      <Button
+        label="Log Out"
+        variant="ghost"
+        size="lg"
+        onPress={handleLogout}
+        fullWidth
+        icon="log-out-outline"
+        accessibilityHint="Log out of your account"
+      />
     </ScrollView>
   );
 }
@@ -466,7 +405,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
   },
   scrollContent: {
     padding: 20,
@@ -486,13 +425,13 @@ const styles = StyleSheet.create({
     borderRadius: 55,
     padding: 3,
     borderWidth: 3,
-    borderColor: '#E53935',
-    shadowColor: '#E53935',
+    borderColor: colors.danger[500],
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 12,
     elevation: 8,
-    backgroundColor: '#1C1C2E',
+    backgroundColor: darkColors.surfaceElevated,
   },
   avatar: {
     width: 104,
@@ -506,11 +445,11 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#2979FF',
+    backgroundColor: colors.info[500],
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#0A0A0F',
+    borderColor: darkColors.background,
   },
   editBadgeText: {
     fontSize: 14,
@@ -518,7 +457,7 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: darkColors.text,
     marginTop: 16,
   },
   roleRow: {
@@ -528,16 +467,16 @@ const styles = StyleSheet.create({
   },
   profileRole: {
     fontSize: 14,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
   },
   rolePill: {
-    backgroundColor: 'rgba(229, 57, 53, 0.15)',
+    backgroundColor: tints.dangerLight,
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: 12,
   },
   roleLabel: {
-    color: '#E53935',
+    color: colors.danger[500],
     fontWeight: '700',
     fontSize: 13,
   },
@@ -546,16 +485,16 @@ const styles = StyleSheet.create({
   },
   verificationText: {
     fontSize: 13,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
   },
   card: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000',
+    borderColor: tints.whiteBorder,
+    shadowColor: darkColors.background,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 16,
@@ -570,77 +509,77 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
   editBtn: {
-    backgroundColor: 'rgba(41, 121, 255, 0.15)',
+    backgroundColor: tints.infoSubtle,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 10,
   },
   editBtnText: {
-    color: '#2979FF',
+    color: colors.info[500],
     fontWeight: '700',
     fontSize: 13,
   },
   cancelBtn: {
-    backgroundColor: 'rgba(229, 57, 53, 0.15)',
+    backgroundColor: tints.dangerLight,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 10,
   },
   cancelBtnText: {
-    color: '#E53935',
+    color: colors.danger[500],
     fontWeight: '700',
     fontSize: 13,
   },
   expandIcon: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 14,
   },
   label: {
     fontSize: 12,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginBottom: 6,
     marginTop: 12,
     fontWeight: '600',
   },
   input: {
-    backgroundColor: 'rgba(10, 10, 15, 0.6)',
-    color: '#FFFFFF',
+    backgroundColor: tints.overlayStrong,
+    color: darkColors.text,
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: 10,
     fontSize: 15,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
   inputDisabled: {
-    color: '#6B6B80',
-    borderColor: 'rgba(255, 255, 255, 0.03)',
+    color: darkColors.textTertiary,
+    borderColor: tints.whiteSubtle,
   },
   inputError: {
-    borderColor: '#E53935',
+    borderColor: colors.danger[500],
   },
   errorHelper: {
-    color: '#FF8A80',
+    color: colors.danger[300],
     fontSize: 12,
     marginTop: 4,
   },
   saveBtn: {
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 20,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
   saveBtnText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 15,
     fontWeight: '700',
   },
@@ -648,8 +587,8 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   pwSubmitBtn: {
-    backgroundColor: 'rgba(41, 121, 255, 0.1)',
-    borderColor: '#2979FF',
+    backgroundColor: tints.infoSubtle,
+    borderColor: colors.info[500],
     borderWidth: 1,
     paddingVertical: 14,
     borderRadius: 10,
@@ -657,13 +596,13 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   pwSubmitBtnText: {
-    color: '#2979FF',
+    color: colors.info[500],
     fontSize: 15,
     fontWeight: '700',
   },
   logoutBtn: {
-    backgroundColor: 'rgba(229, 57, 53, 0.12)',
-    borderColor: 'rgba(229, 57, 53, 0.3)',
+    backgroundColor: tints.dangerLight,
+    borderColor: tints.dangerMedium,
     borderWidth: 1,
     paddingVertical: 16,
     borderRadius: 10,
@@ -672,48 +611,48 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   logoutBtnText: {
-    color: '#E53935',
+    color: colors.danger[500],
     fontSize: 16,
     fontWeight: '700',
   },
   alertError: {
-    backgroundColor: 'rgba(255, 23, 68, 0.12)',
+    backgroundColor: tints.dangerErrorBg,
     padding: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.3)',
+    borderColor: tints.dangerErrorBorder,
     marginBottom: 20,
   },
   alertSuccess: {
-    backgroundColor: 'rgba(0, 230, 118, 0.1)',
+    backgroundColor: tints.successSubtle,
     padding: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(0, 230, 118, 0.3)',
+    borderColor: tints.successMedium,
     marginBottom: 20,
   },
   alertText: {
-    color: '#FF8A80',
+    color: colors.danger[300],
     fontSize: 14,
     textAlign: 'center',
   },
   successText: {
-    color: '#69F0AE',
+    color: colors.success[300],
     fontSize: 14,
     textAlign: 'center',
   },
   passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(10, 10, 15, 0.6)',
+    backgroundColor: tints.overlayStrong,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     paddingRight: 14,
   },
   passwordInput: {
     flex: 1,
-    color: '#FFFFFF',
+    color: darkColors.text,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
@@ -724,5 +663,33 @@ const styles = StyleSheet.create({
   },
   eyeBtnText: {
     fontSize: 16,
+  },
+  // Theme toggle row styles
+  themeToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: tints.glassCard,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: tints.whiteBorder,
+  },
+  themeToggleInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  themeToggleTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: darkColors.text,
+  },
+  themeToggleSubtitle: {
+    fontSize: 12,
+    color: darkColors.textSecondary,
+    marginTop: 2,
   },
 });

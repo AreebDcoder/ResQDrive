@@ -15,6 +15,8 @@ import {
 } from 'react-native';
 import api from '../../api/axios';
 import { Ionicons } from '@expo/vector-icons';
+import { ConfirmDialog } from '../../components/ui';
+import { colors, darkColors } from '../../theme/tokens';
 
 interface RegionalNumber {
   id: string;
@@ -34,6 +36,11 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
   const [priorityOrder, setPriorityOrder] = useState('1');
   const [isActive, setIsActive] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Phase 8: ConfirmDialog state for destructive delete
+  const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [pendingDeleteName, setPendingDeleteName] = useState<string | null>(null);
 
   const fetchNumbers = async () => {
     setIsLoading(true);
@@ -93,25 +100,24 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
   };
 
   const handleDeleteNumber = (id: string, name: string) => {
-    Alert.alert(
-      'Delete Number',
-      `Are you sure you want to delete "${name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await api.delete(`/admin/emergency-numbers/${id}`);
-              fetchNumbers();
-            } catch (err) {
-              Alert.alert('Error', 'Failed to delete number.');
-            }
-          },
-        },
-      ]
-    );
+    // Phase 8: replaced destructive Alert.alert with ConfirmDialog primitive
+    setPendingDeleteId(id);
+    setPendingDeleteName(name);
+    setDeleteDialogVisible(true);
+  };
+
+  const handleConfirmDeleteNumber = async () => {
+    setDeleteDialogVisible(false);
+    if (!pendingDeleteId) return;
+    try {
+      await api.delete(`/admin/emergency-numbers/${pendingDeleteId}`);
+      fetchNumbers();
+    } catch (err) {
+      Alert.alert('Error', 'Failed to delete number.');
+    } finally {
+      setPendingDeleteId(null);
+      setPendingDeleteName(null);
+    }
   };
 
   return (
@@ -122,71 +128,79 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color="#ffffff" />
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Back" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Ionicons name="arrow-back" size={24} color={darkColors.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Manage Regional Numbers</Text>
+          <Text style={styles.headerTitle} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Manage Regional Numbers</Text>
         </View>
 
         {/* Input Form Card */}
         <View style={styles.formCard}>
-          <Text style={styles.formTitle}>➕ Add Regional Number</Text>
+          <Text style={styles.formTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Add Regional Number</Text>
           <TextInput
             placeholder="Region Name (e.g. Punjab / Islamabad, Karachi)"
-            placeholderTextColor="#888"
+            placeholderTextColor={darkColors.textTertiary}
             value={regionName}
             onChangeText={setRegionName}
             style={styles.input}
+            allowFontScaling={true}
+            maxFontSizeMultiplier={1.5}
           />
           <TextInput
             placeholder="Service Name (e.g. Rescue 1122)"
-            placeholderTextColor="#888"
+            placeholderTextColor={darkColors.textTertiary}
             value={serviceName}
             onChangeText={setServiceName}
             style={styles.input}
+            allowFontScaling={true}
+            maxFontSizeMultiplier={1.5}
           />
           <TextInput
             placeholder="Phone Number (e.g. 1122, 115)"
-            placeholderTextColor="#888"
+            placeholderTextColor={darkColors.textTertiary}
             value={phoneNumber}
             onChangeText={setPhoneNumber}
             keyboardType="phone-pad"
             style={styles.input}
+            allowFontScaling={true}
+            maxFontSizeMultiplier={1.5}
           />
           <TextInput
             placeholder="Priority Order (e.g. 1, 2)"
-            placeholderTextColor="#888"
+            placeholderTextColor={darkColors.textTertiary}
             value={priorityOrder}
             onChangeText={setPriorityOrder}
             keyboardType="number-pad"
             style={styles.input}
+            allowFontScaling={true}
+            maxFontSizeMultiplier={1.5}
           />
           <View style={styles.switchRow}>
-            <Text style={{ color: '#ffffff' }}>Active status:</Text>
+            <Text style={{ color: darkColors.text }} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Active status:</Text>
             <Switch value={isActive} onValueChange={setIsActive} />
           </View>
           <TouchableOpacity
             style={styles.addBtn}
             onPress={handleAddNumber}
-            disabled={isSubmitting}
+            disabled={isSubmitting} accessibilityRole="button"
           >
             {isSubmitting ? (
-              <ActivityIndicator color="#ffffff" />
+              <ActivityIndicator color={darkColors.text} />
             ) : (
-              <Text style={styles.addBtnText}>Add Regional Number</Text>
+              <Text style={styles.addBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Add Regional Number</Text>
             )}
           </TouchableOpacity>
         </View>
 
         {/* List of Numbers */}
-        <Text style={styles.listSectionTitle}>📋 DATABASE ENTRIES</Text>
+        <Text style={styles.listSectionTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>DATABASE ENTRIES</Text>
         {isLoading ? (
           <View style={styles.center}>
-            <ActivityIndicator size="large" color="#d32f2f" />
+            <ActivityIndicator size="large" color={colors.danger[600]} />
           </View>
         ) : numbers.length === 0 ? (
           <View style={styles.center}>
-            <Text style={styles.emptyText}>No regional emergency numbers found.</Text>
+            <Text style={styles.emptyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>No regional emergency numbers found.</Text>
           </View>
         ) : (
           <FlatList
@@ -196,10 +210,10 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
             renderItem={({ item }) => (
               <View style={styles.numberCard}>
                 <View style={styles.cardDetails}>
-                  <Text style={styles.cardRegion}>{item.regionName}</Text>
-                  <Text style={styles.cardService}>{item.serviceName}</Text>
-                  <Text style={styles.cardPhone}>Number: {item.phoneNumber}</Text>
-                  <Text style={styles.cardPriority}>Priority: {item.priorityOrder}</Text>
+                  <Text style={styles.cardRegion} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.regionName}</Text>
+                  <Text style={styles.cardService} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.serviceName}</Text>
+                  <Text style={styles.cardPhone} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Number: {item.phoneNumber}</Text>
+                  <Text style={styles.cardPriority} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Priority: {item.priorityOrder}</Text>
                 </View>
                 <View style={styles.actionsBlock}>
                   <Switch
@@ -208,15 +222,27 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
                   />
                   <TouchableOpacity
                     style={styles.deleteBtn}
-                    onPress={() => handleDeleteNumber(item.id, item.serviceName)}
-                  >
-                    <Ionicons name="trash-outline" size={20} color="#ff1744" />
+                    onPress={() => handleDeleteNumber(item.id, item.serviceName)} accessibilityRole="button"
+                   accessibilityLabel="Delete" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Ionicons name="trash-outline" size={20} color={colors.danger[500]} />
                   </TouchableOpacity>
                 </View>
               </View>
             )}
           />
         )}
+
+        {/* Phase 8: ConfirmDialog replaces destructive Alert.alert */}
+        <ConfirmDialog
+          visible={deleteDialogVisible}
+          title="Delete Number"
+          description={pendingDeleteName ? `Are you sure you want to delete "${pendingDeleteName}"?` : undefined}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          variant="danger"
+          onConfirm={handleConfirmDeleteNumber}
+          onCancel={() => { setDeleteDialogVisible(false); setPendingDeleteId(null); setPendingDeleteName(null); }}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -225,14 +251,14 @@ export default function AdminEmergencyNumbersScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: darkColors.surface,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#2e2e2e',
+    borderBottomColor: darkColors.surface,
   },
   backBtn: {
     marginRight: 16,
@@ -240,31 +266,31 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: darkColors.text,
   },
   formCard: {
-    backgroundColor: '#1e1e1e',
+    backgroundColor: darkColors.surface,
     borderRadius: 12,
     padding: 16,
     margin: 16,
     borderWidth: 1,
-    borderColor: '#2e2e2e',
+    borderColor: darkColors.surface,
   },
   formTitle: {
     fontSize: 15,
     fontWeight: 'bold',
-    color: '#d32f2f',
+    color: colors.danger[600],
     marginBottom: 12,
   },
   input: {
-    backgroundColor: '#121212',
-    color: '#ffffff',
+    backgroundColor: darkColors.surface,
+    color: darkColors.text,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#2e2e2e',
+    borderColor: darkColors.surface,
   },
   switchRow: {
     flexDirection: 'row',
@@ -273,20 +299,20 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   addBtn: {
-    backgroundColor: '#d32f2f',
+    backgroundColor: colors.danger[600],
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',
   },
   addBtnText: {
-    color: '#ffffff',
+    color: darkColors.text,
     fontWeight: 'bold',
     fontSize: 15,
   },
   listSectionTitle: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#888888',
+    color: darkColors.textTertiary,
     marginLeft: 16,
     marginBottom: 8,
     letterSpacing: 1,
@@ -299,12 +325,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#1e1e1e',
+    backgroundColor: darkColors.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#2e2e2e',
+    borderColor: darkColors.surface,
   },
   cardDetails: {
     flex: 1,
@@ -312,7 +338,7 @@ const styles = StyleSheet.create({
   },
   cardRegion: {
     fontSize: 12,
-    color: '#d32f2f',
+    color: colors.danger[600],
     fontWeight: 'bold',
     textTransform: 'uppercase',
     marginBottom: 4,
@@ -320,17 +346,17 @@ const styles = StyleSheet.create({
   cardService: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: darkColors.text,
     marginBottom: 4,
   },
   cardPhone: {
     fontSize: 14,
-    color: '#888888',
+    color: darkColors.textTertiary,
     marginBottom: 2,
   },
   cardPriority: {
     fontSize: 12,
-    color: '#888888',
+    color: darkColors.textTertiary,
   },
   actionsBlock: {
     alignItems: 'center',
@@ -347,7 +373,7 @@ const styles = StyleSheet.create({
     padding: 40,
   },
   emptyText: {
-    color: '#888888',
+    color: darkColors.textTertiary,
     textAlign: 'center',
     fontSize: 14,
   },

@@ -20,13 +20,22 @@ export const getDynamicApiUrl = (): string => {
     }
   }
 
-  return process.env.EXPO_PUBLIC_API_URL || 'http://192.168.100.13:3000';
+  return process.env.EXPO_PUBLIC_API_URL || LOCALHOST_API_URL;
 };
 
 export const API_URL = getDynamicApiUrl();
 
+// Batch 13: HTTPS enforcement — in production builds, reject http:// URLs
+// to prevent plaintext API calls on hostile networks (public WiFi, carrier MITM)
+if (!__DEV__ && API_URL.startsWith('http://')) {
+  console.error('CRITICAL: API_URL uses http:// in production. Forcing https://');
+}
+export const SECURE_API_URL = (!__DEV__ && API_URL.startsWith('http://'))
+  ? API_URL.replace('http://', 'https://')
+  : API_URL;
+
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: SECURE_API_URL,
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',

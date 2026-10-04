@@ -1,3 +1,4 @@
+import { colors, darkColors, tints } from '../theme/tokens';
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import api from '../api/axios';
@@ -43,7 +44,7 @@ export default function DevModeBanner() {
 
 const styles = StyleSheet.create({
   banner: {
-    backgroundColor: 'rgba(255, 183, 77, 0.12)',
+    backgroundColor: 'tints.warningSubtle',
     borderWidth: 1,
     borderColor: 'rgba(255, 183, 77, 0.4)',
     borderRadius: 10,
@@ -52,14 +53,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   title: {
-    color: '#FFB74D',
+    color: colors.warning[400],
     fontSize: 12,
     fontWeight: 'bold',
     letterSpacing: 1,
     marginBottom: 4,
   },
   text: {
-    color: '#FFD180',
+    color: colors.warning[200],
     fontSize: 11,
     marginBottom: 2,
   },

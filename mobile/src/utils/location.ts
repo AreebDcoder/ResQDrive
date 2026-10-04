@@ -19,7 +19,6 @@ export async function getSafeDeviceLocation(): Promise<LocationCoords | null> {
       perm = req.status;
     }
     if (perm !== 'granted') {
-      console.log('⚠️ [Location] Permission not granted.');
       return { latitude: 33.6844, longitude: 73.0479 };
     }
 
@@ -71,7 +70,6 @@ export async function getAddressFromCoords(lat: number, lng: number): Promise<st
       return parts.join(', ');
     }
   } catch (e) {
-    console.log('[Location] Reverse geocoding failed:', e);
   }
   return null;
 }

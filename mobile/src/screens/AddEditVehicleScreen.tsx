@@ -13,19 +13,32 @@ import {
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useDispatch } from 'react-redux';
 import { vehicleSchema, VehicleInput } from '../schemas/validation';
-import { addVehicleSuccess, updateVehicleSuccess, deleteVehicleSuccess } from '../store/slices/vehiclesSlice';
-import api from '../api/axios';
+import {
+  useCreateVehicleMutation,
+  useUpdateVehicleMutation,
+  useDeleteVehicleMutation,
+} from '../store/api/vehiclesApi';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useToast } from '../components/ui/Toast';
+import { ConfirmDialog } from '../components/ui';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function AddEditVehicleScreen({ route, navigation }: any) {
-  const dispatch = useDispatch();
+  const toast = useToast();
+  const insets = useSafeAreaInsets();
   const vehicle = route.params?.vehicle; // If defined, we are editing
   const isEditing = !!vehicle;
 
+  // Batch 11: Migrated to RTK Query mutations — auto-invalidates 'VehicleList' tag.
+  const [createVehicle] = useCreateVehicleMutation();
+  const [updateVehicle] = useUpdateVehicleMutation();
+  const [deleteVehicle] = useDeleteVehicleMutation();
+
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
 
   const {
     control,
@@ -47,11 +60,11 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
     setErrorMsg(null);
     try {
       if (isEditing) {
-        const response = await api.patch(`/vehicles/${vehicle.id}`, data);
-        dispatch(updateVehicleSuccess(response.data));
+        // Batch 11: RTK Query mutation — invalidates 'Vehicle' + 'VehicleList' tags.
+        await updateVehicle({ id: vehicle.id, body: data }).unwrap();
       } else {
-        const response = await api.post('/vehicles', data);
-        dispatch(addVehicleSuccess(response.data));
+        // Batch 11: RTK Query mutation — invalidates 'VehicleList' tag.
+        await createVehicle(data).unwrap();
       }
       navigation.goBack();
     } catch (err: any) {
@@ -61,34 +74,33 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
     }
   };
 
-  const handleDelete = () => {
-    const doDelete = async () => {
-      setIsLoading(true);
-      setErrorMsg(null);
-      try {
-        await api.delete(`/vehicles/${vehicle.id}`);
-        dispatch(deleteVehicleSuccess(vehicle.id));
-        navigation.goBack();
-      } catch (err: any) {
-        setErrorMsg(err.response?.data?.message || 'Failed to delete vehicle.');
-        setIsLoading(false);
-      }
-    };
+  const doDelete = async () => {
+    setIsLoading(true);
+    setErrorMsg(null);
+    try {
+      // Batch 11: RTK Query mutation — invalidates 'VehicleList' tag.
+      await deleteVehicle(vehicle.id).unwrap();
+      navigation.goBack();
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Failed to delete vehicle.');
+      setIsLoading(false);
+    }
+  };
 
+  const handleDelete = () => {
     if (Platform.OS === 'web') {
       if (typeof window !== 'undefined' && window.confirm(`Are you sure you want to delete ${vehicle.make} ${vehicle.model}?`)) {
         doDelete();
       }
     } else {
-      Alert.alert(
-        'Delete Vehicle',
-        `Are you sure you want to delete ${vehicle.make} ${vehicle.model} (${vehicle.licensePlate})?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Delete', style: 'destructive', onPress: doDelete },
-        ],
-      );
+      // Phase 8: replaced destructive Alert.alert with ConfirmDialog primitive
+      setDeleteDialogVisible(true);
     }
+  };
+
+  const handleConfirmDelete = () => {
+    setDeleteDialogVisible(false);
+    doDelete();
   };
 
   return (
@@ -96,16 +108,16 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
-      <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.scrollContainer, { paddingTop: insets.top + 16 }]} keyboardShouldPersistTaps="handled">
         {/* ── Header ── */}
         <View style={styles.header}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <Ionicons name={isEditing ? 'pencil-outline' : 'car-outline'} size={26} color="#E53935" />
-            <Text style={styles.title}>
+            <Ionicons name={isEditing ? 'pencil-outline' : 'car-outline'} size={26} color={colors.danger[500]} />
+            <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               {isEditing ? 'Edit Vehicle' : 'Add Vehicle'}
             </Text>
           </View>
-          <Text style={styles.subtitle}>
+          <Text style={styles.subtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             {isEditing ? 'Update your registered vehicle details' : 'Register a vehicle for accident detection'}
           </Text>
         </View>
@@ -113,13 +125,13 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
         {/* ── Error ── */}
         {errorMsg && (
           <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle-outline" size={18} color="#FF8A80" style={{ marginRight: 8 }} />
-            <Text style={styles.errorText}>{errorMsg}</Text>
+            <Ionicons name="alert-circle-outline" size={18} color={colors.danger[300]} style={{ marginRight: 8 }} />
+            <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errorMsg}</Text>
           </View>
         )}
 
         <View style={styles.form}>
-          <Text style={styles.label}>Make / Manufacturer</Text>
+          <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Make / Manufacturer</Text>
           <Controller
             control={control}
             name="make"
@@ -127,16 +139,18 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
               <TextInput
                 style={[styles.input, errors.make && styles.inputError]}
                 placeholder="e.g. Honda, Suzuki"
-                placeholderTextColor="#6B6B80"
+                placeholderTextColor={darkColors.textTertiary}
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
+                allowFontScaling={true}
+                maxFontSizeMultiplier={1.5}
               />
             )}
           />
-          {errors.make && <Text style={styles.errorHelper}>{errors.make.message}</Text>}
+          {errors.make && <Text style={styles.errorHelper} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errors.make.message}</Text>}
 
-          <Text style={styles.label}>Model</Text>
+          <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Model</Text>
           <Controller
             control={control}
             name="model"
@@ -144,18 +158,20 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
               <TextInput
                 style={[styles.input, errors.model && styles.inputError]}
                 placeholder="e.g. Civic, Swift"
-                placeholderTextColor="#6B6B80"
+                placeholderTextColor={darkColors.textTertiary}
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
+                allowFontScaling={true}
+                maxFontSizeMultiplier={1.5}
               />
             )}
           />
-          {errors.model && <Text style={styles.errorHelper}>{errors.model.message}</Text>}
+          {errors.model && <Text style={styles.errorHelper} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errors.model.message}</Text>}
 
           <View style={styles.row}>
             <View style={styles.rowCol}>
-              <Text style={styles.label}>Year</Text>
+              <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Year</Text>
               <Controller
                 control={control}
                 name="year"
@@ -163,19 +179,21 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
                   <TextInput
                     style={[styles.input, errors.year && styles.inputError]}
                     placeholder="2022"
-                    placeholderTextColor="#6B6B80"
+                    placeholderTextColor={darkColors.textTertiary}
                     keyboardType="number-pad"
                     onBlur={onBlur}
                     onChangeText={onChange}
                     value={value !== undefined && value !== null ? String(value) : ''}
+                    allowFontScaling={true}
+                    maxFontSizeMultiplier={1.5}
                   />
                 )}
               />
-              {errors.year && <Text style={styles.errorHelper}>{errors.year.message}</Text>}
+              {errors.year && <Text style={styles.errorHelper} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errors.year.message}</Text>}
             </View>
 
             <View style={styles.rowCol}>
-              <Text style={styles.label}>Color</Text>
+              <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Color</Text>
               <Controller
                 control={control}
                 name="color"
@@ -183,18 +201,20 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
                   <TextInput
                     style={[styles.input, errors.color && styles.inputError]}
                     placeholder="e.g. White"
-                    placeholderTextColor="#6B6B80"
+                    placeholderTextColor={darkColors.textTertiary}
                     onBlur={onBlur}
                     onChangeText={onChange}
                     value={value}
+                    allowFontScaling={true}
+                    maxFontSizeMultiplier={1.5}
                   />
                 )}
               />
-              {errors.color && <Text style={styles.errorHelper}>{errors.color.message}</Text>}
+              {errors.color && <Text style={styles.errorHelper} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errors.color.message}</Text>}
             </View>
           </View>
 
-          <Text style={styles.label}>License Plate Number</Text>
+          <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>License Plate Number</Text>
           <Controller
             control={control}
             name="licensePlate"
@@ -202,26 +222,28 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
               <TextInput
                 style={[styles.input, errors.licensePlate && styles.inputError]}
                 placeholder="e.g. ABC-1234"
-                placeholderTextColor="#6B6B80"
+                placeholderTextColor={darkColors.textTertiary}
                 autoCapitalize="characters"
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
+                allowFontScaling={true}
+                maxFontSizeMultiplier={1.5}
               />
             )}
           />
-          {errors.licensePlate && <Text style={styles.errorHelper}>{errors.licensePlate.message}</Text>}
+          {errors.licensePlate && <Text style={styles.errorHelper} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errors.licensePlate.message}</Text>}
 
           {/* ── Save Button ── */}
           <TouchableOpacity
             style={styles.saveBtn}
             onPress={handleSubmit(onSubmit)}
-            disabled={isLoading}
+            disabled={isLoading} accessibilityRole="button"
           >
             {isLoading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={darkColors.text} />
             ) : (
-              <Text style={styles.saveBtnText}>
+              <Text style={styles.saveBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 {isEditing ? 'Save Changes' : 'Register Vehicle'}
               </Text>
             )}
@@ -237,11 +259,11 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
                     vehicleId: vehicle.id,
                     insurance: vehicle.insurance,
                   })
-                }
+                } accessibilityRole="button"
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                  <Ionicons name="shield-checkmark-outline" size={18} color="#E53935" />
-                  <Text style={styles.insuranceBtnText}>
+                  <Ionicons name="shield-checkmark-outline" size={18} color={colors.danger[500]} />
+                  <Text style={styles.insuranceBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                     {vehicle.insurance ? 'View/Edit Insurance Details' : 'Add Vehicle Insurance (Optional)'}
                   </Text>
                 </View>
@@ -250,17 +272,29 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
               <TouchableOpacity
                 style={styles.deleteBtn}
                 onPress={handleDelete}
-                disabled={isLoading}
+                disabled={isLoading} accessibilityRole="button"
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                  <Ionicons name="trash-outline" size={18} color="#FF5252" />
-                  <Text style={styles.deleteBtnText}>Remove Vehicle</Text>
+                  <Ionicons name="trash-outline" size={18} color={colors.danger[400]} />
+                  <Text style={styles.deleteBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Remove Vehicle</Text>
                 </View>
               </TouchableOpacity>
             </View>
           )}
         </View>
       </ScrollView>
+
+      {/* Phase 8: ConfirmDialog replaces destructive Alert.alert */}
+      <ConfirmDialog
+        visible={deleteDialogVisible}
+        title="Delete Vehicle"
+        description={vehicle ? `Are you sure you want to delete ${vehicle.make} ${vehicle.model} (${vehicle.licensePlate})?` : undefined}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteDialogVisible(false)}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -268,7 +302,7 @@ export default function AddEditVehicleScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
   },
   scrollContainer: {
     flexGrow: 1,
@@ -282,22 +316,22 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
   subtitle: {
     fontSize: 14,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginTop: 6,
     lineHeight: 20,
   },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 23, 68, 0.12)',
+    backgroundColor: tints.dangerErrorBg,
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.3)',
+    borderColor: tints.dangerErrorBorder,
     marginBottom: 20,
   },
   errorEmoji: {
@@ -305,7 +339,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   errorText: {
-    color: '#FF8A80',
+    color: colors.danger[300],
     fontSize: 14,
     textAlign: 'center',
     flex: 1,
@@ -315,26 +349,26 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginBottom: 8,
     fontWeight: '600',
   },
   input: {
-    backgroundColor: 'rgba(10, 10, 15, 0.6)',
-    color: '#FFFFFF',
+    backgroundColor: tints.overlayStrong,
+    color: darkColors.text,
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderRadius: 10,
     fontSize: 15,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
   inputError: {
-    borderColor: '#E53935',
+    borderColor: colors.danger[500],
   },
   errorHelper: {
-    color: '#FF8A80',
+    color: colors.danger[300],
     fontSize: 12,
     marginTop: -10,
     marginBottom: 16,
@@ -347,47 +381,47 @@ const styles = StyleSheet.create({
     flex: 0.48,
   },
   saveBtn: {
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 10,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 5,
   },
   saveBtnText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 16,
     fontWeight: '700',
   },
   insuranceBtn: {
-    backgroundColor: 'rgba(41, 121, 255, 0.08)',
+    backgroundColor: tints.infoSubtle,
     borderWidth: 1,
-    borderColor: 'rgba(41, 121, 255, 0.3)',
+    borderColor: tints.infoMedium,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 20,
   },
   insuranceBtnText: {
-    color: '#2979FF',
+    color: colors.info[500],
     fontSize: 14,
     fontWeight: '700',
   },
   deleteBtn: {
-    backgroundColor: 'rgba(255, 23, 68, 0.06)',
+    backgroundColor: tints.dangerErrorBg,
     borderWidth: 1,
-    borderColor: 'rgba(255, 82, 82, 0.3)',
+    borderColor: tints.dangerErrorBorder,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 16,
   },
   deleteBtnText: {
-    color: '#FF5252',
+    color: colors.danger[400],
     fontSize: 14,
     fontWeight: '700',
   },

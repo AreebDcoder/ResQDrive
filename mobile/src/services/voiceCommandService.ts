@@ -3,7 +3,6 @@ import api from '../api/axios';
 import { classifyIntent, VoiceIntent } from '../utils/voiceClassifier';
 
 // Log all registered NativeModules so we can see the exact module name
-console.log('[VoiceCommandService]: Registered NativeModules keys:', Object.keys(NativeModules).join(', '));
 
 // Always load Voice unconditionally — it registers as RCTVoice not Voice
 let Voice: any = null;
@@ -13,7 +12,6 @@ let NetInfo: any = null;
 try {
   const voiceModule = require('@react-native-voice/voice');
   Voice = voiceModule.default || voiceModule;
-  console.log('[VoiceCommandService]: Voice module loaded, keys:', Object.keys(Voice || {}).join(', '));
 } catch (e: any) {
   console.warn('[VoiceCommandService]: Voice require FAILED:', e?.message);
 }
@@ -71,7 +69,6 @@ export class VoiceCommandService {
             buttonPositive: 'OK',
           }
         );
-        console.log('[VoiceCommandService]: PermissionsAndroid.request RECORD_AUDIO result =', granted);
         return granted === PermissionsAndroid.RESULTS.GRANTED;
       }
       return true;
@@ -97,7 +94,6 @@ export class VoiceCommandService {
     if (this.isListening && !forceRestart) return;
 
     const hasPermission = await this.requestPermissions();
-    console.log('[VoiceCommandService]: hasPermission =', hasPermission, 'Voice =', !!Voice);
     if (!hasPermission) {
       this.updateStatus('Voice permission denied.');
       return;
@@ -169,14 +165,12 @@ export class VoiceCommandService {
 
         this.sessionCount++;
         const session = this.sessionCount;
-        console.log(`[Voice] Session #${session} starting...`);
 
         // Attach handlers BEFORE calling start()
         Voice.onSpeechResults = (e: any) => {
           if (!this.isListening || this.sessionCount !== session) return;
           this.consecutiveErrors = 0; // Reset error counter on valid speech
           const transcript = e?.value?.[0] ?? '';
-          console.log(`[Voice] #${session} RESULT: "${transcript}"`);
           if (transcript) this.handleTranscriptResult(transcript, true, 'native');
           scheduleRestart(400);
         };
@@ -185,23 +179,19 @@ export class VoiceCommandService {
           if (!this.isListening || this.sessionCount !== session) return;
           this.consecutiveErrors = 0; // Reset error counter on partial speech
           const transcript = e?.value?.[0] ?? '';
-          console.log(`[Voice] #${session} PARTIAL: "${transcript}"`);
           if (transcript) this.handleTranscriptResult(transcript, false, 'native');
         };
 
         // Do NOT restart on onSpeechEnd — that fires too eagerly before any audio
         Voice.onSpeechEnd = () => {
-          console.log(`[Voice] #${session} onSpeechEnd`);
         };
 
         Voice.onSpeechError = (e: any) => {
           if (!this.isListening || this.sessionCount !== session) return;
           const code = String(e?.error?.code ?? e?.error ?? '');
-          console.log(`[Voice] #${session} ERROR code=${code}`);
 
           // Code 6 (speech timeout) and Code 7 (no match / silence) are normal silence intervals
           if (code === '6' || code === '7') {
-            console.log(`[Voice] Silence interval (code=${code}). Restarting listener...`);
             this.consecutiveErrors = 0; // Normal silence is not a fatal error
             scheduleRestart(400);
             return;
@@ -212,7 +202,6 @@ export class VoiceCommandService {
             this.consecutiveErrors++;
 
             if (this.consecutiveErrors >= this.MAX_CONSECUTIVE_ERRORS) {
-              console.log(`[Voice] ${this.consecutiveErrors} consecutive speech errors. Pausing auto-restart loop.`);
               this.updateStatus('Listening paused. Tap microphone to speak.');
               this.isListening = false;
               return;
@@ -228,7 +217,7 @@ export class VoiceCommandService {
         };
 
         Voice.start('en-US')
-          .then(() => console.log(`[Voice] #${session} start() OK — say something!`))
+          .then(() => {})
           .catch((err: any) => {
             console.warn(`[Voice] #${session} start() REJECTED:`, err?.message);
             this.consecutiveErrors++;
@@ -279,7 +268,6 @@ export class VoiceCommandService {
           });
 
           recognizer.on('error', (err: any) => {
-            console.log('Offline Vosk error:', err);
             this.updateStatus('Offline Error');
           });
         })
@@ -305,7 +293,6 @@ export class VoiceCommandService {
    * Manual verification method to inject transcription test strings (predefined simulator phrases)
    */
   static simulateSpeechInput(text: string) {
-    console.log(`[Voice Command Simulator]: Simulated speech text input: "${text}"`);
     this.handleTranscriptResult(text, true, 'mock_simulated');
   }
 
@@ -352,7 +339,6 @@ export class VoiceCommandService {
         actionTaken,
       });
     } catch (err: any) {
-      console.log('Failed to upload voice telemetry log:', err.message);
     }
   }
 

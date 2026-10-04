@@ -13,19 +13,27 @@ import {
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useDispatch } from 'react-redux';
 import { insuranceSchema, InsuranceInput } from '../schemas/validation';
-import { upsertInsuranceSuccess, deleteInsuranceSuccess } from '../store/slices/vehiclesSlice';
-import api from '../api/axios';
+import { useUpsertInsuranceMutation, useDeleteInsuranceMutation } from '../store/api/vehiclesApi';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useToast } from '../components/ui/Toast';
+import { ConfirmDialog } from '../components/ui';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function VehicleInsuranceScreen({ route, navigation }: any) {
-  const dispatch = useDispatch();
+  const toast = useToast();
+  const insets = useSafeAreaInsets();
   const { vehicleId, insurance } = route.params;
   const isEditing = !!insurance;
 
+  // Batch 11: Migrated to RTK Query mutations — auto-invalidates 'Insurance' tag.
+  const [upsertInsurance] = useUpsertInsuranceMutation();
+  const [deleteInsurance] = useDeleteInsuranceMutation();
+
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [removeDialogVisible, setRemoveDialogVisible] = useState(false);
 
   // Format Date ISO to YYYY-MM-DD for text input
   const getFormattedDate = (isoStr?: string) => {
@@ -53,44 +61,43 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
     setIsLoading(true);
     setErrorMsg(null);
     try {
-      const response = await api.put(`/vehicles/${vehicleId}/insurance`, data);
-      dispatch(upsertInsuranceSuccess({ vehicleId, insurance: response.data }));
+      // Batch 11: RTK Query mutation — invalidates 'Insurance' tag for this vehicle.
+      await upsertInsurance({ vehicleId, body: data }).unwrap();
       navigation.goBack();
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Failed to save insurance details.');
+      setErrorMsg(err.data?.message || 'Failed to save insurance details.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDelete = () => {
-    const doDelete = async () => {
-      setIsLoading(true);
-      setErrorMsg(null);
-      try {
-        await api.delete(`/vehicles/${vehicleId}/insurance`);
-        dispatch(deleteInsuranceSuccess(vehicleId));
-        navigation.goBack();
-      } catch (err: any) {
-        setErrorMsg(err.response?.data?.message || 'Failed to remove insurance details.');
-        setIsLoading(false);
-      }
-    };
+  const doDelete = async () => {
+    setIsLoading(true);
+    setErrorMsg(null);
+    try {
+      // Batch 11: RTK Query mutation.
+      await deleteInsurance(vehicleId).unwrap();
+      navigation.goBack();
+    } catch (err: any) {
+      setErrorMsg(err.data?.message || 'Failed to remove insurance details.');
+      setIsLoading(false);
+    }
+  };
 
+  const handleDelete = () => {
     if (Platform.OS === 'web') {
       if (typeof window !== 'undefined' && window.confirm('Are you sure you want to remove these insurance details?')) {
         doDelete();
       }
     } else {
-      Alert.alert(
-        'Remove Insurance Details',
-        'Are you sure you want to remove these insurance details?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Remove', style: 'destructive', onPress: doDelete },
-        ],
-      );
+      // Phase 8: replaced destructive Alert.alert with ConfirmDialog primitive
+      setRemoveDialogVisible(true);
     }
+  };
+
+  const handleConfirmRemove = () => {
+    setRemoveDialogVisible(false);
+    doDelete();
   };
 
   return (
@@ -98,14 +105,14 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
-      <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.scrollContainer, { paddingTop: insets.top + 16 }]} keyboardShouldPersistTaps="handled">
         {/* ── Header ── */}
         <View style={styles.header}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <Ionicons name="shield-checkmark-outline" size={26} color="#E53935" />
-            <Text style={styles.title}>Insurance Details</Text>
+            <Ionicons name="shield-checkmark-outline" size={26} color={colors.danger[500]} />
+            <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Insurance Details</Text>
           </View>
-          <Text style={styles.subtitle}>
+          <Text style={styles.subtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             Optional reference details shown on crash screens and auto-filled in accident exports
           </Text>
         </View>
@@ -113,13 +120,13 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
         {/* ── Error ── */}
         {errorMsg && (
           <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle-outline" size={18} color="#FF8A80" style={{ marginRight: 8 }} />
-            <Text style={styles.errorText}>{errorMsg}</Text>
+            <Ionicons name="alert-circle-outline" size={18} color={colors.danger[300]} style={{ marginRight: 8 }} />
+            <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errorMsg}</Text>
           </View>
         )}
 
         <View style={styles.form}>
-          <Text style={styles.label}>Insurance Provider Name</Text>
+          <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Insurance Provider Name</Text>
           <Controller
             control={control}
             name="providerName"
@@ -127,15 +134,17 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
               <TextInput
                 style={[styles.input, errors.providerName && styles.inputError]}
                 placeholder="e.g. EFU General, Adamjee"
-                placeholderTextColor="#6B6B80"
+                placeholderTextColor={darkColors.textTertiary}
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
+                allowFontScaling={true}
+                maxFontSizeMultiplier={1.5}
               />
             )}
           />
 
-          <Text style={styles.label}>Policy Number</Text>
+          <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Policy Number</Text>
           <Controller
             control={control}
             name="policyNumber"
@@ -143,17 +152,19 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
               <TextInput
                 style={[styles.input, errors.policyNumber && styles.inputError]}
                 placeholder="e.g. POL-123456"
-                placeholderTextColor="#6B6B80"
+                placeholderTextColor={darkColors.textTertiary}
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
+                allowFontScaling={true}
+                maxFontSizeMultiplier={1.5}
               />
             )}
           />
 
           <View style={styles.row}>
             <View style={styles.rowCol}>
-              <Text style={styles.label}>Coverage Type</Text>
+              <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Coverage Type</Text>
               <Controller
                 control={control}
                 name="coverageType"
@@ -161,17 +172,19 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
                   <TextInput
                     style={[styles.input, errors.coverageType && styles.inputError]}
                     placeholder="e.g. Comprehensive"
-                    placeholderTextColor="#6B6B80"
+                    placeholderTextColor={darkColors.textTertiary}
                     onBlur={onBlur}
                     onChangeText={onChange}
                     value={value}
+                    allowFontScaling={true}
+                    maxFontSizeMultiplier={1.5}
                   />
                 )}
               />
             </View>
 
             <View style={styles.rowCol}>
-              <Text style={styles.label}>Expiry (YYYY-MM-DD)</Text>
+              <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Expiry (YYYY-MM-DD)</Text>
               <Controller
                 control={control}
                 name="expiryDate"
@@ -179,17 +192,19 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
                   <TextInput
                     style={[styles.input, errors.expiryDate && styles.inputError]}
                     placeholder="2027-12-31"
-                    placeholderTextColor="#6B6B80"
+                    placeholderTextColor={darkColors.textTertiary}
                     onBlur={onBlur}
                     onChangeText={onChange}
                     value={value}
+                    allowFontScaling={true}
+                    maxFontSizeMultiplier={1.5}
                   />
                 )}
               />
             </View>
           </View>
 
-          <Text style={styles.label}>Emergency Helpline Number</Text>
+          <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Emergency Helpline Number</Text>
           <Controller
             control={control}
             name="emergencyHelpline"
@@ -197,11 +212,13 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
               <TextInput
                 style={[styles.input, errors.emergencyHelpline && styles.inputError]}
                 placeholder="e.g. 111-338-111"
-                placeholderTextColor="#6B6B80"
+                placeholderTextColor={darkColors.textTertiary}
                 keyboardType="phone-pad"
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
+                allowFontScaling={true}
+                maxFontSizeMultiplier={1.5}
               />
             )}
           />
@@ -210,12 +227,12 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
           <TouchableOpacity
             style={styles.saveBtn}
             onPress={handleSubmit(onSubmit)}
-            disabled={isLoading}
+            disabled={isLoading} accessibilityRole="button"
           >
             {isLoading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={darkColors.text} />
             ) : (
-              <Text style={styles.saveBtnText}>Save Insurance Details</Text>
+              <Text style={styles.saveBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Save Insurance Details</Text>
             )}
           </TouchableOpacity>
 
@@ -224,16 +241,28 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
             <TouchableOpacity
               style={styles.deleteBtn}
               onPress={handleDelete}
-              disabled={isLoading}
+              disabled={isLoading} accessibilityRole="button"
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                <Ionicons name="trash-outline" size={18} color="#FF5252" />
-                <Text style={styles.deleteBtnText}>Remove Insurance Details</Text>
+                <Ionicons name="trash-outline" size={18} color={colors.danger[400]} />
+                <Text style={styles.deleteBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Remove Insurance Details</Text>
               </View>
             </TouchableOpacity>
           )}
         </View>
       </ScrollView>
+
+      {/* Phase 8: ConfirmDialog replaces destructive Alert.alert */}
+      <ConfirmDialog
+        visible={removeDialogVisible}
+        title="Remove Insurance Details"
+        description="Are you sure you want to remove these insurance details?"
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmRemove}
+        onCancel={() => setRemoveDialogVisible(false)}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -241,7 +270,7 @@ export default function VehicleInsuranceScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
   },
   scrollContainer: {
     flexGrow: 1,
@@ -255,22 +284,22 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
   subtitle: {
     fontSize: 14,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginTop: 6,
     lineHeight: 20,
   },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 23, 68, 0.12)',
+    backgroundColor: tints.dangerErrorBg,
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.3)',
+    borderColor: tints.dangerErrorBorder,
     marginBottom: 20,
   },
   errorEmoji: {
@@ -278,7 +307,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   errorText: {
-    color: '#FF8A80',
+    color: colors.danger[300],
     fontSize: 14,
     textAlign: 'center',
     flex: 1,
@@ -288,23 +317,23 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginBottom: 8,
     fontWeight: '600',
   },
   input: {
-    backgroundColor: 'rgba(10, 10, 15, 0.6)',
-    color: '#FFFFFF',
+    backgroundColor: tints.overlayStrong,
+    color: darkColors.text,
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderRadius: 10,
     fontSize: 15,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
   inputError: {
-    borderColor: '#E53935',
+    borderColor: colors.danger[500],
   },
   row: {
     flexDirection: 'row',
@@ -314,33 +343,33 @@ const styles = StyleSheet.create({
     flex: 0.48,
   },
   saveBtn: {
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 10,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 5,
   },
   saveBtnText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 16,
     fontWeight: '700',
   },
   deleteBtn: {
-    backgroundColor: 'rgba(255, 23, 68, 0.06)',
+    backgroundColor: tints.dangerErrorBg,
     borderWidth: 1,
-    borderColor: 'rgba(255, 82, 82, 0.3)',
+    borderColor: tints.dangerErrorBorder,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 16,
   },
   deleteBtnText: {
-    color: '#FF5252',
+    color: colors.danger[400],
     fontSize: 14,
     fontWeight: '700',
   },

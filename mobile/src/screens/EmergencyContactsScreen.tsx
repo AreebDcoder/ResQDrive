@@ -4,54 +4,45 @@
 // All imports, logic, state, handlers preserved identically.
 // Only JSX structure + StyleSheet updated: dark glassmorphism theme.
 // ═══════════════════════════════════════════════════════════════
-import React, { useEffect, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
   Platform,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState } from '../store/store';
+import { useDispatch } from 'react-redux';
 import {
-  fetchContactsStart,
-  fetchContactsSuccess,
-  fetchContactsFailure,
-  reorderContactsSuccess,
-  deleteContactSuccess,
-} from '../store/slices/contactsSlice';
-import api from '../api/axios';
+  useGetContactsQuery,
+  useDeleteContactMutation,
+  useReorderContactsMutation,
+} from '../store/api/contactsApi';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useToast } from '../components/ui/Toast';
+import { ConfirmDialog, SkeletonList } from '../components/ui';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function EmergencyContactsScreen({ navigation }: any) {
+  const toast = useToast();
   const dispatch = useDispatch();
-  const { list: contacts, isLoading, error } = useSelector(
-    (state: RootState) => state.contacts
-  );
+  const insets = useSafeAreaInsets();
+  // Batch 11: Migrated to RTK Query — automatic caching + invalidation
+  const { data: rawContacts, isLoading, isFetching, error, refetch } = useGetContactsQuery();
+  // RTK Query data is initially undefined — default to [] for UI safety.
+  const contacts = rawContacts || [];
+  // Batch 12: pull-to-refresh visibility — true during background refetches, false on first paint.
+  const refreshing = isFetching && !isLoading;
+  const [deleteContact] = useDeleteContactMutation();
+  const [reorderContacts] = useReorderContactsMutation();
   const [isUpdating, setIsUpdating] = useState(false);
-
-  const fetchContacts = async () => {
-    dispatch(fetchContactsStart());
-    try {
-      const response = await api.get('/emergency-contacts');
-      dispatch(fetchContactsSuccess(response.data));
-    } catch (err: any) {
-      dispatch(
-        fetchContactsFailure(
-          err.response?.data?.message ||
-            'Failed to load emergency contacts.'
-        )
-      );
-    }
-  };
-
-  useEffect(() => {
-    fetchContacts();
-  }, []);
+  const [removeDialogVisible, setRemoveDialogVisible] = useState(false);
+  const [pendingRemoveContact, setPendingRemoveContact] = useState<any>(null);
 
   const handleMove = async (
     index: number,
@@ -83,44 +74,16 @@ export default function EmergencyContactsScreen({ navigation }: any) {
     setIsUpdating(true);
 
     try {
-      const response = await api.patch(
-        '/emergency-contacts/reorder',
-        { orders: payload }
-      );
-
-      dispatch(reorderContactsSuccess(response.data));
+      // Batch 11: RTK Query mutation — auto-invalidates cache + triggers refetch
+      await reorderContacts({ orders: payload }).unwrap();
     } catch (err) {
-      alert('Failed to reorder contacts.');
+      toast.error('Failed to reorder contacts.');
     } finally {
       setIsUpdating(false);
     }
   };
 
   const handleDeleteContact = (contact: any) => {
-    const doDelete = async () => {
-      setIsUpdating(true);
-
-      try {
-        await api.delete(
-          `/emergency-contacts/${contact.id}`
-        );
-
-        dispatch(
-          deleteContactSuccess({
-            id: contact.id,
-          })
-        );
-      } catch (err: any) {
-        Alert.alert(
-          'Error',
-          err.response?.data?.message ||
-            'Failed to delete contact.'
-        );
-      } finally {
-        setIsUpdating(false);
-      }
-    };
-
     if (Platform.OS === 'web') {
       if (
         typeof window !== 'undefined' &&
@@ -128,28 +91,173 @@ export default function EmergencyContactsScreen({ navigation }: any) {
           `Remove ${contact.name} from emergency contacts?`
         )
       ) {
-        doDelete();
+        doDeleteContact(contact);
       }
     } else {
-      Alert.alert(
-        'Remove Emergency Contact',
-        `Are you sure you want to remove ${contact.name} (${
-          contact.relationship || 'Contact'
-        }) from your emergency contacts?`,
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-          {
-            text: 'Remove',
-            style: 'destructive',
-            onPress: doDelete,
-          },
-        ]
-      );
+      // Phase 8: replaced destructive Alert.alert with ConfirmDialog primitive
+      setPendingRemoveContact(contact);
+      setRemoveDialogVisible(true);
     }
   };
+
+  const doDeleteContact = async (contact: any) => {
+    setIsUpdating(true);
+
+    try {
+      // Batch 11: RTK Query mutation — auto-invalidates ContactList tag + refetch
+      await deleteContact(contact.id).unwrap();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message ||
+          'Failed to delete contact.');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleConfirmRemove = () => {
+    setRemoveDialogVisible(false);
+    if (pendingRemoveContact) {
+      doDeleteContact(pendingRemoveContact);
+    }
+    setPendingRemoveContact(null);
+  };
+
+  // Batch 12: memoized FlatList row — avoids re-rendering every contact card
+  // when only an unrelated prop (e.g. isUpdating overlay) changes.
+  const renderItem = useCallback(
+    ({ item, index }: { item: any; index: number }) => (
+      <View
+        style={[
+          styles.card,
+          item.priorityOrder === 1 &&
+            styles.primaryCard,
+        ]}
+      >
+        {/* Priority Badge */}
+        <View
+          style={[
+            styles.priorityIndicator,
+            item.priorityOrder === 1 &&
+              styles.primaryPriority,
+          ]}
+        >
+          <Text style={styles.priorityNum} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+            {item.priorityOrder}
+          </Text>
+
+          <Text style={styles.priorityLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+            {item.priorityOrder === 1
+              ? 'Primary'
+              : 'Sec'}
+          </Text>
+        </View>
+
+        {/* Contact Details */}
+        <TouchableOpacity
+          style={styles.cardDetails}
+          onPress={() =>
+            navigation.navigate(
+              'AddEditContact',
+              { contact: item }
+            )
+          }
+          activeOpacity={0.7} accessibilityRole="button"
+        >
+          <Text style={styles.contactName} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+            {item.name}
+          </Text>
+
+          <Text style={styles.contactMeta} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+            {item.relationship} •{' '}
+            {item.phoneNumber}
+          </Text>
+
+          {item.email ? (
+            <Text style={styles.contactEmail} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+              {item.email}
+            </Text>
+          ) : null}
+        </TouchableOpacity>
+
+        {/* Actions: Reorder & Quick Delete */}
+        <View style={styles.cardActions}>
+          {/* Reorder Arrows */}
+          <View style={styles.reorderActions}>
+            <TouchableOpacity
+              style={[
+                styles.arrowBtn,
+                index === 0 &&
+                  styles.disabledArrow,
+              ]}
+              onPress={() =>
+                handleMove(index, 'up')
+              }
+              disabled={
+                index === 0 || isUpdating
+              } accessibilityRole="button"
+             accessibilityLabel="Up" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Ionicons
+                name="chevron-up"
+                size={16}
+                color={
+                  index === 0
+                    ? darkColors.border
+                    : darkColors.text
+                }
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.arrowBtn,
+                index ===
+                  contacts.length - 1 &&
+                  styles.disabledArrow,
+              ]}
+              onPress={() =>
+                handleMove(index, 'down')
+              }
+              disabled={
+                index ===
+                  contacts.length - 1 ||
+                isUpdating
+              } accessibilityRole="button"
+             accessibilityLabel="Down" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Ionicons
+                name="chevron-down"
+                size={16}
+                color={
+                  index ===
+                  contacts.length - 1
+                    ? darkColors.border
+                    : darkColors.text
+                }
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Delete Contact */}
+          <TouchableOpacity
+            style={styles.cardDeleteBtn}
+            onPress={() =>
+              handleDeleteContact(item)
+            }
+            disabled={isUpdating}
+            activeOpacity={0.7}
+            hitSlop={{
+              top: 8,
+              bottom: 8,
+              left: 8,
+              right: 8,
+            }} accessibilityRole="button"
+          >
+            <Ionicons name="trash-outline" size={24} color={darkColors.text} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    ),
+    [contacts.length, isUpdating, navigation]
+  );
 
   return (
     <View style={styles.container}>
@@ -158,14 +266,14 @@ export default function EmergencyContactsScreen({ navigation }: any) {
         <Ionicons
           name="information-circle-outline"
           size={20}
-          color="#E53935"
+          color={colors.danger[500]}
           style={{
             marginRight: 8,
             marginTop: 2,
           }}
         />
 
-        <Text style={styles.infoText}>
+        <Text style={styles.infoText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
           Escalation Rules: In an emergency, your primary
           contact (Priority 1) is notified first. Secondary
           contacts are alerted at 30-second intervals if the
@@ -174,40 +282,38 @@ export default function EmergencyContactsScreen({ navigation }: any) {
       </View>
 
       {/* ── Header ── */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <Text style={styles.headerTitle} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>
           Emergency Contacts
         </Text>
 
-        <Text style={styles.headerSub}>
+        <Text style={styles.headerSub} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
           {contacts.length}/5 slots used
         </Text>
       </View>
 
       {isLoading && contacts.length === 0 ? (
-        <ActivityIndicator
-          size="large"
-          color="#E53935"
-          style={styles.loader}
-        />
+        <View style={styles.skeletonWrap}>
+          <SkeletonList count={4} variant="card" />
+        </View>
       ) : error ? (
         <View style={styles.centerContainer}>
           <Ionicons
             name="alert-circle-outline"
             size={36}
-            color="#FF5252"
+            color={colors.danger[400]}
             style={{ marginBottom: 8 }}
           />
 
-          <Text style={styles.errorText}>
-            {error}
+          <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+            {error ? String((error as any)?.data?.message || (error as any)?.error || error) : ''}
           </Text>
 
           <TouchableOpacity
             style={styles.retryBtn}
-            onPress={fetchContacts}
+            onPress={refetch} accessibilityRole="button"
           >
-            <Text style={styles.retryText}>
+            <Text style={styles.retryText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               Retry
             </Text>
           </TouchableOpacity>
@@ -217,15 +323,15 @@ export default function EmergencyContactsScreen({ navigation }: any) {
           <Ionicons
             name="people-outline"
             size={48}
-            color="#6B6B80"
+            color={darkColors.textTertiary}
             style={{ marginBottom: 12 }}
           />
 
-          <Text style={styles.emptyText}>
+          <Text style={styles.emptyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             No emergency contacts added yet.
           </Text>
 
-          <Text style={styles.emptySubtitle}>
+          <Text style={styles.emptySubtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             Add up to 5 contacts (e.g. Spouse, Parents,
             Friends) to receive automatic crash alerts.
           </Text>
@@ -235,11 +341,11 @@ export default function EmergencyContactsScreen({ navigation }: any) {
           {isUpdating && (
             <View style={styles.updatingOverlay}>
               <ActivityIndicator
-                color="#E53935"
+                color={colors.danger[500]}
                 size="small"
               />
 
-              <Text style={styles.updatingText}>
+              <Text style={styles.updatingText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 Syncing priority list...
               </Text>
             </View>
@@ -249,139 +355,17 @@ export default function EmergencyContactsScreen({ navigation }: any) {
             data={contacts}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
-            renderItem={({ item, index }) => (
-              <View
-                style={[
-                  styles.card,
-                  item.priorityOrder === 1 &&
-                    styles.primaryCard,
-                ]}
-              >
-                {/* Priority Badge */}
-                <View
-                  style={[
-                    styles.priorityIndicator,
-                    item.priorityOrder === 1 &&
-                      styles.primaryPriority,
-                  ]}
-                >
-                  <Text style={styles.priorityNum}>
-                    {item.priorityOrder}
-                  </Text>
-
-                  <Text style={styles.priorityLabel}>
-                    {item.priorityOrder === 1
-                      ? 'Primary'
-                      : 'Sec'}
-                  </Text>
-                </View>
-
-                {/* Contact Details */}
-                <TouchableOpacity
-                  style={styles.cardDetails}
-                  onPress={() =>
-                    navigation.navigate(
-                      'AddEditContact',
-                      { contact: item }
-                    )
-                  }
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.contactName}>
-                    {item.name}
-                  </Text>
-
-                  <Text style={styles.contactMeta}>
-                    {item.relationship} •{' '}
-                    {item.phoneNumber}
-                  </Text>
-
-                  {item.email ? (
-                    <Text style={styles.contactEmail}>
-                      {item.email}
-                    </Text>
-                  ) : null}
-                </TouchableOpacity>
-
-                {/* Actions: Reorder & Quick Delete */}
-                <View style={styles.cardActions}>
-                  {/* Reorder Arrows */}
-                  <View style={styles.reorderActions}>
-                    <TouchableOpacity
-                      style={[
-                        styles.arrowBtn,
-                        index === 0 &&
-                          styles.disabledArrow,
-                      ]}
-                      onPress={() =>
-                        handleMove(index, 'up')
-                      }
-                      disabled={
-                        index === 0 || isUpdating
-                      }
-                    >
-                      <Ionicons
-                        name="chevron-up"
-                        size={16}
-                        color={
-                          index === 0
-                            ? '#444'
-                            : '#FFFFFF'
-                        }
-                      />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={[
-                        styles.arrowBtn,
-                        index ===
-                          contacts.length - 1 &&
-                          styles.disabledArrow,
-                      ]}
-                      onPress={() =>
-                        handleMove(index, 'down')
-                      }
-                      disabled={
-                        index ===
-                          contacts.length - 1 ||
-                        isUpdating
-                      }
-                    >
-                      <Ionicons
-                        name="chevron-down"
-                        size={16}
-                        color={
-                          index ===
-                          contacts.length - 1
-                            ? '#444'
-                            : '#FFFFFF'
-                        }
-                      />
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Delete Contact */}
-                  <TouchableOpacity
-                    style={styles.cardDeleteBtn}
-                    onPress={() =>
-                      handleDeleteContact(item)
-                    }
-                    disabled={isUpdating}
-                    activeOpacity={0.7}
-                    hitSlop={{
-                      top: 8,
-                      bottom: 8,
-                      left: 8,
-                      right: 8,
-                    }}
-                  >
-                    <Text style={styles.cardDeleteIcon}>
-                      🗑️
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
+            renderItem={renderItem}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={refetch}
+                tintColor={colors.danger[500]}
+                colors={[colors.danger[500]]}
+              />
+            }
+            removeClippedSubviews={true}
+            maxToRenderPerBatch={10}
           />
         </View>
       )}
@@ -393,7 +377,7 @@ export default function EmergencyContactsScreen({ navigation }: any) {
           onPress={() =>
             navigation.navigate('AddEditContact')
           }
-          activeOpacity={0.8}
+          activeOpacity={0.8} accessibilityRole="button"
         >
           <View
             style={{
@@ -406,10 +390,10 @@ export default function EmergencyContactsScreen({ navigation }: any) {
             <Ionicons
               name="person-add-outline"
               size={18}
-              color="#FFFFFF"
+              color={darkColors.text}
             />
 
-            <Text style={styles.addBtnText}>
+            <Text style={styles.addBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               Add Emergency Contact ({contacts.length}/5)
             </Text>
           </View>
@@ -419,16 +403,27 @@ export default function EmergencyContactsScreen({ navigation }: any) {
           <Ionicons
             name="lock-closed-outline"
             size={16}
-            color="#A0A0B8"
+            color={darkColors.textSecondary}
             style={{ marginRight: 6 }}
           />
 
-          <Text style={styles.limitBannerText}>
+          <Text style={styles.limitBannerText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             Emergency contact limit reached (maximum 5).
             Remove or edit existing contacts if needed.
           </Text>
         </View>
       )}
+      {/* Phase 8: ConfirmDialog replaces destructive Alert.alert */}
+      <ConfirmDialog
+        visible={removeDialogVisible}
+        title="Remove Emergency Contact"
+        description={pendingRemoveContact ? `Are you sure you want to remove ${pendingRemoveContact.name} (${pendingRemoveContact.relationship || 'Contact'}) from your emergency contacts?` : undefined}
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmRemove}
+        onCancel={() => { setRemoveDialogVisible(false); setPendingRemoveContact(null); }}
+      />
     </View>
   );
 }
@@ -436,16 +431,16 @@ export default function EmergencyContactsScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
   },
 
   infoBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: 'rgba(229, 57, 53, 0.1)',
+    backgroundColor: tints.dangerLight,
     padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(229, 57, 53, 0.2)',
+    borderBottomColor: tints.dangerMedium,
   },
 
   infoEmoji: {
@@ -455,7 +450,7 @@ const styles = StyleSheet.create({
   },
 
   infoText: {
-    color: '#FF8A80',
+    color: colors.danger[300],
     fontSize: 12,
     lineHeight: 18,
     flex: 1,
@@ -466,18 +461,18 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    borderBottomColor: tints.whiteBorder,
   },
 
   headerTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
 
   headerSub: {
     fontSize: 13,
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     marginTop: 4,
   },
 
@@ -485,6 +480,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+
+  skeletonWrap: {
+    flex: 1,
   },
 
   centerContainer: {
@@ -500,18 +499,18 @@ const styles = StyleSheet.create({
   },
 
   errorText: {
-    color: '#FF8A80',
+    color: colors.danger[300],
     fontSize: 15,
     textAlign: 'center',
     marginBottom: 16,
   },
 
   retryBtn: {
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 10,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: {
       width: 0,
       height: 4,
@@ -522,7 +521,7 @@ const styles = StyleSheet.create({
   },
 
   retryText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontWeight: '700',
     fontSize: 14,
   },
@@ -533,7 +532,7 @@ const styles = StyleSheet.create({
   },
 
   emptyText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 18,
     fontWeight: '700',
     marginBottom: 8,
@@ -541,7 +540,7 @@ const styles = StyleSheet.create({
   },
 
   emptySubtitle: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
@@ -552,14 +551,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(41, 121, 255, 0.08)',
+    backgroundColor: tints.infoSubtle,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    borderBottomColor: tints.whiteBorder,
   },
 
   updatingText: {
-    color: '#2979FF',
+    color: colors.info[500],
     fontSize: 12,
     marginLeft: 8,
     fontWeight: '600',
@@ -570,15 +569,15 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
     padding: 14,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000',
+    borderColor: tints.whiteBorder,
+    shadowColor: darkColors.background,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -589,12 +588,12 @@ const styles = StyleSheet.create({
   },
 
   primaryCard: {
-    borderColor: 'rgba(229, 57, 53, 0.25)',
-    backgroundColor: 'rgba(229, 57, 53, 0.06)',
+    borderColor: tints.dangerMedium,
+    backgroundColor: tints.dangerSubtle,
   },
 
   priorityIndicator: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: tints.whiteBorder,
     borderRadius: 10,
     width: 48,
     height: 48,
@@ -604,18 +603,18 @@ const styles = StyleSheet.create({
   },
 
   primaryPriority: {
-    backgroundColor: 'rgba(229, 57, 53, 0.2)',
+    backgroundColor: tints.dangerMedium,
   },
 
   priorityNum: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
 
   priorityLabel: {
     fontSize: 9,
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     textTransform: 'uppercase',
     marginTop: 1,
     fontWeight: '600',
@@ -628,18 +627,18 @@ const styles = StyleSheet.create({
   contactName: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
 
   contactMeta: {
     fontSize: 13,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginTop: 4,
   },
 
   contactEmail: {
     fontSize: 12,
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     marginTop: 2,
   },
 
@@ -650,9 +649,9 @@ const styles = StyleSheet.create({
   },
 
   cardDeleteBtn: {
-    backgroundColor: 'rgba(255, 82, 82, 0.1)',
+    backgroundColor: tints.dangerErrorBg,
     borderWidth: 1,
-    borderColor: 'rgba(255, 82, 82, 0.25)',
+    borderColor: tints.dangerErrorBorder,
     width: 34,
     height: 34,
     borderRadius: 8,
@@ -671,7 +670,7 @@ const styles = StyleSheet.create({
   },
 
   arrowBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: tints.whiteBorder,
     width: 32,
     height: 32,
     borderRadius: 8,
@@ -685,17 +684,17 @@ const styles = StyleSheet.create({
   },
 
   arrowText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 12,
   },
 
   addBtn: {
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     margin: 16,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: {
       width: 0,
       height: 6,
@@ -706,22 +705,22 @@ const styles = StyleSheet.create({
   },
 
   addBtnText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 15,
     fontWeight: '700',
   },
 
   limitBanner: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     margin: 16,
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
 
   limitBannerText: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 12,
     textAlign: 'center',
     lineHeight: 18,

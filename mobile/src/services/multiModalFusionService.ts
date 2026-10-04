@@ -58,12 +58,10 @@ export class MultiModalFusionService {
   static recordSoundEvent(confidence: number, topClass: string): void {
     const now = Date.now();
     if (now - this.lastConfirmedTriggerTime < this.COOLDOWN_PERIOD_MS) {
-      console.log('⏸️ [MultiModalFusion] Acoustic crash event ignored due to 30-second post-trigger cooldown lockout.');
       return;
     }
 
     this.lastSoundEvent = { confidence, topClass, timestamp: now };
-    console.log(`🔊 [MultiModalFusion] Recorded Acoustic Signature: "${topClass}" (${(confidence * 100).toFixed(1)}%). Checking for motion coincidence...`);
 
     this.evaluateCoincidence();
   }
@@ -82,13 +80,11 @@ export class MultiModalFusionService {
 
     const now = Date.now();
     if (now - this.lastConfirmedTriggerTime < this.COOLDOWN_PERIOD_MS) {
-      console.log('⏸️ [MultiModalFusion] Motion crash event ignored due to 30-second post-trigger cooldown lockout.');
       return;
     }
 
     this.lastMotionEvent = { severity, accelG, gyroDegPerSec, timestamp: now };
     const mlInfo = mlSeverity ? ` | ML Model: ${mlSeverity.toUpperCase()} (${((mlConfidence || 0) * 100).toFixed(1)}%)` : '';
-    console.log(`🚗 [MultiModalFusion] Recorded Motion Signature: ${severity.toUpperCase()} (${accelG.toFixed(2)}g / ${gyroDegPerSec.toFixed(1)}°/s)${mlInfo}. Checking for acoustic coincidence...`);
 
     this.evaluateCoincidence();
   }
@@ -101,11 +97,9 @@ export class MultiModalFusionService {
 
     if (!this.lastSoundEvent || !this.lastMotionEvent) {
       if (this.lastSoundEvent && now - this.lastSoundEvent.timestamp > this.COINCIDENCE_WINDOW_MS) {
-        console.log('⏱️ [MultiModalFusion] Acoustic window expired without motion sensor coincidence. Sound alone ignored.');
         this.lastSoundEvent = null;
       }
       if (this.lastMotionEvent && now - this.lastMotionEvent.timestamp > this.COINCIDENCE_WINDOW_MS) {
-        console.log('⏱️ [MultiModalFusion] Motion window expired without acoustic crash coincidence. Motion alone ignored.');
         this.lastMotionEvent = null;
       }
       return;
@@ -115,7 +109,6 @@ export class MultiModalFusionService {
     const timeDeltaMs = Math.abs(this.lastSoundEvent.timestamp - this.lastMotionEvent.timestamp);
 
     if (timeDeltaMs <= this.COINCIDENCE_WINDOW_MS) {
-      console.log(`🚨 [MultiModalFusion] COINCIDENCE CONFIRMED! Acoustic & Motion co-occurred within ${(timeDeltaMs / 1000).toFixed(2)}s window.`);
 
       // Determine combined severity
       const combinedSeverity: 'Severe' | 'Moderate' =

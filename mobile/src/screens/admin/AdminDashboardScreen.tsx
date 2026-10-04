@@ -1,5 +1,7 @@
-import React, { useEffect, useCallback, useRef } from 'react';
+import { colors, darkColors, tints } from '../../theme/tokens';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
 import {
+  AccessibilityInfo,
   View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
   RefreshControl, Linking, Animated,
 } from 'react-native';
@@ -11,7 +13,7 @@ import {
 } from '../../store/slices/adminSlice';
 
 const SEVERITY_COLORS: Record<string, string> = {
-  NONE: '#6B6B80', MINOR: '#FFD600', MODERATE: '#FF9100', SEVERE: '#FF1744',
+  NONE: darkColors.textTertiary, MINOR: colors.warning[400], MODERATE: colors.warning[500], SEVERE: colors.danger[500],
 };
 
 export default function AdminDashboardScreen({ navigation }: any) {
@@ -23,12 +25,27 @@ export default function AdminDashboardScreen({ navigation }: any) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
 
+  // Batch 7 Phase 4: Respect Reduce Motion accessibility setting
+  const [reduceMotion, setReduceMotion] = useState(false);
+
   useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    // Skip decorative entrance animation when Reduce Motion is enabled
+    if (reduceMotion) {
+      fadeAnim.setValue(1);
+      slideAnim.setValue(0);
+      return;
+    }
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
     ]).start();
-  }, [fadeAnim, slideAnim]);
+  }, [fadeAnim, slideAnim, reduceMotion]);
 
   useEffect(() => {
     dispatch(fetchAnalyticsSummary());
@@ -44,14 +61,14 @@ export default function AdminDashboardScreen({ navigation }: any) {
     return (
       <View style={styles.outer}>
         <View style={StyleSheet.absoluteFillObject}>
-          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0A0F' }]} />
+          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: darkColors.background }]} />
           <View style={[StyleSheet.absoluteFillObject, styles.gradTop]} />
           <View style={[StyleSheet.absoluteFillObject, styles.gradBottom]} />
         </View>
         <View style={styles.center}>
           <View style={styles.glassCard}>
-            <ActivityIndicator color="#E53935" size="large" />
-            <Text style={styles.loadingText}>Loading dashboard...</Text>
+            <ActivityIndicator color={colors.danger[500]} size="large" />
+            <Text style={styles.loadingText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Loading dashboard...</Text>
           </View>
         </View>
       </View>
@@ -62,14 +79,14 @@ export default function AdminDashboardScreen({ navigation }: any) {
     return (
       <View style={styles.outer}>
         <View style={StyleSheet.absoluteFillObject}>
-          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0A0F' }]} />
+          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: darkColors.background }]} />
           <View style={[StyleSheet.absoluteFillObject, styles.gradTop]} />
         </View>
         <View style={styles.center}>
           <View style={styles.glassCard}>
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.retryBtn} onPress={() => onRefresh()}>
-              <Text style={styles.retryBtnText}>Retry</Text>
+            <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{error}</Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={() => onRefresh()} accessibilityRole="button">
+              <Text style={styles.retryBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Retry</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -80,7 +97,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
   return (
     <View style={styles.outer}>
       <View style={StyleSheet.absoluteFillObject}>
-        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0A0F' }]} />
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: darkColors.background }]} />
         <View style={[StyleSheet.absoluteFillObject, styles.gradTop]} />
         <View style={[StyleSheet.absoluteFillObject, styles.gradBottom]} />
       </View>
@@ -89,53 +106,53 @@ export default function AdminDashboardScreen({ navigation }: any) {
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#E53935']} tintColor="#E53935" />}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[colors.danger[500]]} tintColor={colors.danger[500]} />}
         >
           <TouchableOpacity
             style={styles.manageSosBtn}
-            onPress={() => navigation.navigate('AdminEmergencyNumbers')}
+            onPress={() => navigation.navigate('AdminEmergencyNumbers')} accessibilityRole="button"
           >
-            <Text style={styles.manageSosBtnText}>📞 Manage SOS Emergency Numbers</Text>
+            <Text style={styles.manageSosBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Manage SOS Emergency Numbers</Text>
           </TouchableOpacity>
 
-          <Text style={styles.sectionTitle}>Overview</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Overview</Text>
           <View style={styles.cardsRow}>
-            <View style={[styles.card, { borderLeftColor: '#E53935' }]}>
-              <Text style={styles.cardValue}>{summary?.totalIncidents ?? 0}</Text>
-              <Text style={styles.cardLabel}>Total</Text>
+            <View style={[styles.card, { borderLeftColor: colors.danger[500] }]}>
+              <Text style={styles.cardValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{summary?.totalIncidents ?? 0}</Text>
+              <Text style={styles.cardLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Total</Text>
             </View>
-            <View style={[styles.card, { borderLeftColor: '#FF9100' }]}>
-              <Text style={styles.cardValue}>{summary?.activeIncidents ?? 0}</Text>
-              <Text style={styles.cardLabel}>Active</Text>
+            <View style={[styles.card, { borderLeftColor: colors.warning[500] }]}>
+              <Text style={styles.cardValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{summary?.activeIncidents ?? 0}</Text>
+              <Text style={styles.cardLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Active</Text>
             </View>
-            <View style={[styles.card, { borderLeftColor: '#00E676' }]}>
-              <Text style={styles.cardValue}>{summary?.resolvedIncidents ?? 0}</Text>
-              <Text style={styles.cardLabel}>Resolved</Text>
+            <View style={[styles.card, { borderLeftColor: colors.success[500] }]}>
+              <Text style={styles.cardValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{summary?.resolvedIncidents ?? 0}</Text>
+              <Text style={styles.cardLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Resolved</Text>
             </View>
-            <View style={[styles.card, { borderLeftColor: '#6B6B80' }]}>
-              <Text style={styles.cardValue}>{summary?.falseAlarms ?? 0}</Text>
-              <Text style={styles.cardLabel}>False Alarms</Text>
+            <View style={[styles.card, { borderLeftColor: darkColors.textTertiary }]}>
+              <Text style={styles.cardValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{summary?.falseAlarms ?? 0}</Text>
+              <Text style={styles.cardLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>False Alarms</Text>
             </View>
           </View>
 
-          <Text style={styles.sectionTitle}>Severity Breakdown</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Severity Breakdown</Text>
           <View style={styles.panel}>
             {['NONE', 'MINOR', 'MODERATE', 'SEVERE'].map((sev) => {
               const pct = summary?.severityPercentages?.[sev as keyof typeof summary.severityPercentages] ?? 0;
               const count = summary?.severityBreakdown?.[sev as keyof typeof summary.severityBreakdown] ?? 0;
               return (
                 <View key={sev} style={styles.barRow}>
-                  <Text style={[styles.barLabel, { color: SEVERITY_COLORS[sev] }]}>{sev}</Text>
+                  <Text style={[styles.barLabel, { color: SEVERITY_COLORS[sev] }]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{sev}</Text>
                   <View style={styles.barTrack}>
                     <View style={[styles.barFill, { width: `${pct}%`, backgroundColor: SEVERITY_COLORS[sev] }]} />
                   </View>
-                  <Text style={styles.barCount}>{count} ({pct}%)</Text>
+                  <Text style={styles.barCount} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{count} ({pct}%)</Text>
                 </View>
               );
             })}
           </View>
 
-          <Text style={styles.sectionTitle}>Incident Trends (Last 30 Days)</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Incident Trends (Last 30 Days)</Text>
           <View style={styles.panel}>
             <View style={styles.chartRow}>
               {trends.map((t, i) => {
@@ -146,7 +163,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
                       <View
                         style={[
                           styles.chartBar,
-                          { height: `${Math.max(heightPct, t.count > 0 ? 8 : 2)}%`, backgroundColor: t.count > 0 ? '#E53935' : 'rgba(255, 255, 255, 0.04)' },
+                          { height: `${Math.max(heightPct, t.count > 0 ? 8 : 2)}%`, backgroundColor: t.count > 0 ? colors.danger[500] : tints.whiteSubtle },
                         ]}
                       />
                     </View>
@@ -155,58 +172,57 @@ export default function AdminDashboardScreen({ navigation }: any) {
               })}
             </View>
             <View style={styles.chartLegend}>
-              <Text style={styles.chartLegendText}>
+              <Text style={styles.chartLegendText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 {trends[0]?.date.slice(5)} → {trends[trends.length - 1]?.date.slice(5)}
               </Text>
-              <Text style={styles.chartLegendText}>Peak: {maxTrend}/day</Text>
+              <Text style={styles.chartLegendText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Peak: {maxTrend}/day</Text>
             </View>
           </View>
 
-          <Text style={styles.sectionTitle}>Top Incident Hotspots</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Top Incident Hotspots</Text>
           {hotspots.length === 0 ? (
             <View style={styles.panel}>
-              <Text style={styles.emptyText}>No geotagged incidents yet.</Text>
+              <Text style={styles.emptyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>No geotagged incidents yet.</Text>
             </View>
           ) : (
             hotspots.map((h, i) => (
               <View key={i} style={styles.hotspotCard}>
                 <View style={styles.hotspotHeader}>
-                  <Text style={styles.hotspotRank}>#{i + 1}</Text>
-                  <Text style={styles.hotspotCount}>{h.incidentCount} incidents</Text>
+                  <Text style={styles.hotspotRank} allowFontScaling={true} maxFontSizeMultiplier={1.5}>#{i + 1}</Text>
+                  <Text style={styles.hotspotCount} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{h.incidentCount} incidents</Text>
                 </View>
-                <Text style={styles.hotspotCoords}>
-                  📍 {h.latitude.toFixed(4)}, {h.longitude.toFixed(4)}
+                <Text style={styles.hotspotCoords} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{h.latitude.toFixed(4)}, {h.longitude.toFixed(4)}
                 </Text>
                 {h.sampleAddresses.length > 0 && (
-                  <Text style={styles.hotspotAddr} numberOfLines={2}>
+                  <Text style={styles.hotspotAddr} numberOfLines={2} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                     {h.sampleAddresses.join(' • ')}
                   </Text>
                 )}
                 <TouchableOpacity
                   style={styles.mapsBtn}
-                  onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${h.latitude},${h.longitude}`)}
+                  onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${h.latitude},${h.longitude}`)} accessibilityRole="button"
                 >
-                  <Text style={styles.mapsBtnText}>Open in Google Maps</Text>
+                  <Text style={styles.mapsBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Open in Google Maps</Text>
                 </TouchableOpacity>
               </View>
             ))
           )}
 
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Recent Activity</Text>
           <View style={styles.panel}>
             {summary?.recentIncidents.length === 0 ? (
-              <Text style={styles.emptyText}>No recent incidents.</Text>
+              <Text style={styles.emptyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>No recent incidents.</Text>
             ) : (
               summary?.recentIncidents.map((inc) => (
                 <View key={inc.id} style={styles.recentRow}>
-                  <View style={[styles.recentBadge, { backgroundColor: SEVERITY_COLORS[inc.severity] || '#6B6B80' }]}>
-                    <Text style={styles.recentBadgeText}>{inc.severity}</Text>
+                  <View style={[styles.recentBadge, { backgroundColor: SEVERITY_COLORS[inc.severity] || darkColors.textTertiary }]}>
+                    <Text style={styles.recentBadgeText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{inc.severity}</Text>
                   </View>
                   <View style={styles.recentInfo}>
-                    <Text style={styles.recentDate}>{new Date(inc.occurredAt).toLocaleString()}</Text>
-                    {inc.address ? <Text style={styles.recentAddr} numberOfLines={1}>{inc.address}</Text> : null}
+                    <Text style={styles.recentDate} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{new Date(inc.occurredAt).toLocaleString()}</Text>
+                    {inc.address ? <Text style={styles.recentAddr} numberOfLines={1} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{inc.address}</Text> : null}
                   </View>
-                  <Text style={styles.recentStatus}>{inc.status.replace('_', ' ')}</Text>
+                  <Text style={styles.recentStatus} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{inc.status.replace('_', ' ')}</Text>
                 </View>
               ))
             )}
@@ -218,85 +234,85 @@ export default function AdminDashboardScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  outer: { flex: 1, backgroundColor: '#0A0A0F' },
-  gradTop: { top: 0, height: 300, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
-  gradBottom: { bottom: 0, height: 400, backgroundColor: 'rgba(41, 121, 255, 0.06)' },
+  outer: { flex: 1, backgroundColor: darkColors.background },
+  gradTop: { top: 0, height: 300, backgroundColor: tints.dangerSubtle },
+  gradBottom: { bottom: 0, height: 400, backgroundColor: tints.infoSubtle },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   glassCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 20, padding: 32, alignItems: 'center',
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 6,
+    backgroundColor: tints.glassCard, borderRadius: 20, padding: 32, alignItems: 'center',
+    borderWidth: 1, borderColor: tints.whiteBorder,
+    shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 6,
   },
-  loadingText: { color: '#A0A0B8', marginTop: 12 },
-  errorText: { color: '#FF8A80', fontSize: 14, textAlign: 'center', marginBottom: 16 },
+  loadingText: { color: darkColors.textSecondary, marginTop: 12 },
+  errorText: { color: colors.danger[300], fontSize: 14, textAlign: 'center', marginBottom: 16 },
   retryBtn: {
-    backgroundColor: '#E53935', paddingVertical: 10, paddingHorizontal: 24, borderRadius: 12,
-    shadowColor: '#E53935', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 3,
+    backgroundColor: colors.danger[500], paddingVertical: 10, paddingHorizontal: 24, borderRadius: 12,
+    shadowColor: colors.danger[500], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 3,
   },
-  retryBtnText: { color: '#FFFFFF', fontWeight: 'bold' },
-  sectionTitle: { color: '#E53935', fontSize: 14, fontWeight: 'bold', marginTop: 20, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
+  retryBtnText: { color: darkColors.text, fontWeight: 'bold' },
+  sectionTitle: { color: colors.danger[500], fontSize: 14, fontWeight: 'bold', marginTop: 20, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
   cardsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   card: {
-    flex: 1, minWidth: '47%', backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 16, padding: 14,
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)', borderLeftWidth: 4,
-    shadowColor: '#000000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
+    flex: 1, minWidth: '47%', backgroundColor: tints.glassCard, borderRadius: 16, padding: 14,
+    borderWidth: 1, borderColor: tints.whiteBorder, borderLeftWidth: 4,
+    shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
   },
-  cardValue: { color: '#FFFFFF', fontSize: 24, fontWeight: 'bold' },
-  cardLabel: { color: '#A0A0B8', fontSize: 11, marginTop: 4, textTransform: 'uppercase' },
+  cardValue: { color: darkColors.text, fontSize: 24, fontWeight: 'bold' },
+  cardLabel: { color: darkColors.textSecondary, fontSize: 11, marginTop: 4, textTransform: 'uppercase' },
   panel: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 16, padding: 14,
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
+    backgroundColor: tints.glassCard, borderRadius: 16, padding: 14,
+    borderWidth: 1, borderColor: tints.whiteBorder,
+    shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
   },
   barRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   barLabel: { width: 70, fontSize: 11, fontWeight: 'bold' },
-  barTrack: { flex: 1, height: 12, backgroundColor: 'rgba(10, 10, 15, 0.6)', borderRadius: 6, marginRight: 8, overflow: 'hidden' },
+  barTrack: { flex: 1, height: 12, backgroundColor: tints.overlayStrong, borderRadius: 6, marginRight: 8, overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: 6 },
-  barCount: { width: 70, fontSize: 11, color: '#A0A0B8', textAlign: 'right' },
+  barCount: { width: 70, fontSize: 11, color: darkColors.textSecondary, textAlign: 'right' },
   chartRow: { flexDirection: 'row', alignItems: 'flex-end', height: 100, gap: 2 },
   chartBarWrap: { flex: 1, height: '100%' },
   chartBarTrack: { flex: 1, justifyContent: 'flex-end', height: '100%' },
   chartBar: { width: '100%', minHeight: 2, borderRadius: 2 },
   chartLegend: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
-  chartLegendText: { color: '#6B6B80', fontSize: 10 },
+  chartLegendText: { color: darkColors.textTertiary, fontSize: 10 },
   hotspotCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)', borderRadius: 16, padding: 14, marginBottom: 10,
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
+    backgroundColor: tints.glassCard, borderRadius: 16, padding: 14, marginBottom: 10,
+    borderWidth: 1, borderColor: tints.whiteBorder,
+    shadowColor: colors.neutral[950], shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
   },
   hotspotHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  hotspotRank: { color: '#E53935', fontSize: 18, fontWeight: 'bold' },
-  hotspotCount: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
-  hotspotCoords: { color: '#A0A0B8', fontSize: 12, marginBottom: 4 },
-  hotspotAddr: { color: '#6B6B80', fontSize: 11, marginBottom: 8 },
+  hotspotRank: { color: colors.danger[500], fontSize: 18, fontWeight: 'bold' },
+  hotspotCount: { color: darkColors.text, fontSize: 13, fontWeight: '600' },
+  hotspotCoords: { color: darkColors.textSecondary, fontSize: 12, marginBottom: 4 },
+  hotspotAddr: { color: darkColors.textTertiary, fontSize: 11, marginBottom: 8 },
   mapsBtn: {
     alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 12,
-    backgroundColor: 'rgba(41, 121, 255, 0.12)', borderRadius: 10, borderWidth: 1, borderColor: 'rgba(41, 121, 255, 0.3)',
+    backgroundColor: tints.infoSubtle, borderRadius: 10, borderWidth: 1, borderColor: tints.infoMedium,
   },
-  mapsBtnText: { color: '#2979FF', fontSize: 12, fontWeight: '600' },
-  recentRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255, 255, 255, 0.04)' },
+  mapsBtnText: { color: colors.info[500], fontSize: 12, fontWeight: '600' },
+  recentRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: tints.whiteSubtle },
   recentBadge: { paddingVertical: 3, paddingHorizontal: 8, borderRadius: 6, marginRight: 10 },
-  recentBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: 'bold' },
+  recentBadgeText: { color: darkColors.text, fontSize: 10, fontWeight: 'bold' },
   recentInfo: { flex: 1 },
-  recentDate: { color: '#A0A0B8', fontSize: 12 },
-  recentAddr: { color: '#6B6B80', fontSize: 11, marginTop: 2 },
-  recentStatus: { color: '#6B6B80', fontSize: 11, textTransform: 'capitalize' },
-  emptyText: { color: '#6B6B80', fontSize: 13, textAlign: 'center', paddingVertical: 12 },
+  recentDate: { color: darkColors.textSecondary, fontSize: 12 },
+  recentAddr: { color: darkColors.textTertiary, fontSize: 11, marginTop: 2 },
+  recentStatus: { color: darkColors.textTertiary, fontSize: 11, textTransform: 'capitalize' },
+  emptyText: { color: darkColors.textTertiary, fontSize: 13, textAlign: 'center', paddingVertical: 12 },
   manageSosBtn: {
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 12,
     marginBottom: 16,
     alignItems: 'center',
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 3,
   },
   manageSosBtnText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontWeight: 'bold',
     fontSize: 15,
   },

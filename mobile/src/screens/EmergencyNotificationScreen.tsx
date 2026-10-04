@@ -1,5 +1,7 @@
+import { API_URL } from '../api/axios';
 import React, { useEffect, useState, useRef } from 'react';
 import {
+  AccessibilityInfo,
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
   ScrollView, Linking, Alert, Platform, Animated,
 } from 'react-native';
@@ -11,6 +13,9 @@ import {
 } from '../store/slices/emergencySlice';
 import { connectSocket, disconnectSocket, emitLocationUpdate } from '../services/socketService';
 import { Ionicons } from '@expo/vector-icons';
+import { useToast } from '../components/ui/Toast';
+import { ConfirmDialog } from '../components/ui';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -22,30 +27,52 @@ const CHANNEL_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  SENT: '#00E676',
-  DELIVERED: '#00E676',
-  ACKNOWLEDGED: '#2979FF',
-  PENDING: '#FFD600',
-  FAILED: '#FF1744',
+  SENT: colors.success[500],
+  DELIVERED: colors.success[500],
+  ACKNOWLEDGED: colors.info[500],
+  PENDING: colors.warning[400],
+  FAILED: colors.danger[500],
 };
 
 export default function EmergencyNotificationScreen({ navigation }: { navigation: any }) {
+  const toast = useToast();
   const dispatch = useDispatch<any>();
   const emergency = useSelector((state: RootState) => state.emergency);
   const [pollTimer, setPollTimer] = useState<ReturnType<typeof setInterval> | null>(null);
   const [gpsStatus, setGpsStatus] = useState<'idle' | 'connecting' | 'active' | 'error'>('idle');
+
+  // Phase 8: ConfirmDialog state for destructive emergency actions (replaces Promise-based Alert.alert)
+  const [triggerDialogVisible, setTriggerDialogVisible] = useState(false);
+  const [cancelDialogVisible, setCancelDialogVisible] = useState(false);
+  // Guard against duplicate emergency trigger (prevents multiple backend dispatches)
+  const hasTriggeredRef = useRef(false);
 
   const subscriptionRef = useRef<Location.LocationSubscription | null>(null);
   const trackingSessionIdRef = useRef<string | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
 
+  // Batch 7 Phase 4: Respect Reduce Motion accessibility setting
+  const [reduceMotion, setReduceMotion] = useState(false);
+
   useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    // Skip decorative entrance animation when Reduce Motion is enabled
+    if (reduceMotion) {
+      fadeAnim.setValue(1);
+      slideAnim.setValue(0);
+      return;
+    }
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
     ]).start();
-  }, [fadeAnim, slideAnim]);
+  }, [fadeAnim, slideAnim, reduceMotion]);
 
   // Start GPS tracking for the emergency location session
   async function startEmergencyLocationTracking(locationSessionId: string) {
@@ -77,7 +104,6 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
       );
 
       setGpsStatus('active');
-      console.log('[Emergency] GPS tracking started for location session:', locationSessionId);
     } catch (err) {
       console.error('[Emergency] Failed to start GPS tracking:', err);
       setGpsStatus('error');
@@ -142,30 +168,14 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
 
   function getAcknowledgeLink() {
     if (!emergency.acknowledgeUrl) return '';
-    const baseUrl = Platform.OS === 'web'
-      ? 'http://localhost:3000'
-      : (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000');
+    const baseUrl = API_URL; // Use centralized API_URL from axios.ts // was: Platform.OS === 'web'
     return `${baseUrl}${emergency.acknowledgeUrl}`;
   }
 
-  async function handleTrigger() {
-    const confirmed = Platform.OS === 'web'
-      ? window.confirm(
-          'TRIGGER EMERGENCY ALERT?\n\nThis will immediately notify your emergency contacts with your live location. Only use in real emergencies.\n\nClick OK to trigger, or Cancel to abort.'
-        )
-      : await new Promise<boolean>((resolve) => {
-          Alert.alert(
-            'Trigger Emergency Alert?',
-            'This will immediately notify your emergency contacts with your live location. Only use in real emergencies.',
-            [
-              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-              { text: 'Trigger Alert', style: 'destructive', onPress: () => resolve(true) },
-            ]
-          );
-        });
-
-    if (!confirmed) return;
-
+  async function performEmergencyTrigger() {
+    // Guard: prevent duplicate trigger (each trigger sends WhatsApp + Email + Push to ALL contacts)
+    if (hasTriggeredRef.current) return;
+    hasTriggeredRef.current = true;
     const payload: any = { message: 'Emergency alert triggered from mobile app' };
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -178,12 +188,36 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
       console.warn('Could not get location for emergency trigger:', err);
     }
 
-    console.log('[Emergency] Triggering alert with payload:', payload);
     const result = await dispatch(triggerEmergency(payload));
     if (result.error) {
-      Alert.alert('Failed', result.payload || 'Could not trigger alert');
+      toast.error(result.payload || 'Could not trigger alert');
     } else {
-      console.log('[Emergency] Trigger successful:', result.payload);
+    }
+  }
+
+  async function handleTrigger() {
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        'TRIGGER EMERGENCY ALERT?\n\nThis will immediately notify your emergency contacts with your live location. Only use in real emergencies.\n\nClick OK to trigger, or Cancel to abort.'
+      );
+      if (!confirmed) return;
+      await performEmergencyTrigger();
+    } else {
+      // Phase 8: replaced destructive Alert.alert with ConfirmDialog primitive
+      setTriggerDialogVisible(true);
+    }
+  }
+
+  async function handleConfirmTrigger() {
+    setTriggerDialogVisible(false);
+    await performEmergencyTrigger();
+  }
+
+  async function performEmergencyCancel(sessionId: string) {
+    const result = await dispatch(cancelEmergency(sessionId));
+    if (result.error) {
+      toast.error(result.payload || 'Could not cancel alert');
+    } else {
     }
   }
 
@@ -191,29 +225,23 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
     const sessionId = emergency.sessionId;
     if (!sessionId) return;
 
-    const confirmed = Platform.OS === 'web'
-      ? window.confirm(
-          'CANCEL EMERGENCY ALERT?\n\nThis will stop the escalation and mark the alert as cancelled. Your contacts will see "alert cancelled — they are safe".\n\nClick OK to cancel, or Cancel to keep the alert active.'
-        )
-      : await new Promise<boolean>((resolve) => {
-          Alert.alert(
-            'Cancel Emergency Alert?',
-            'This will stop the escalation and mark the alert as cancelled. Your contacts will see "alert cancelled".',
-            [
-              { text: 'Keep Alert Active', style: 'cancel', onPress: () => resolve(false) },
-              { text: 'Cancel Alert', style: 'destructive', onPress: () => resolve(true) },
-            ]
-          );
-        });
-
-    if (!confirmed) return;
-
-    const result = await dispatch(cancelEmergency(sessionId));
-    if (result.error) {
-      Alert.alert('Failed', result.payload || 'Could not cancel alert');
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        'CANCEL EMERGENCY ALERT?\n\nThis will stop the escalation and mark the alert as cancelled. Your contacts will see "alert cancelled — they are safe".\n\nClick OK to cancel, or Cancel to keep the alert active.'
+      );
+      if (!confirmed) return;
+      await performEmergencyCancel(sessionId);
     } else {
-      console.log('[Emergency] Cancel successful');
+      // Phase 8: replaced destructive Alert.alert with ConfirmDialog primitive
+      setCancelDialogVisible(true);
     }
+  }
+
+  async function handleConfirmCancel() {
+    setCancelDialogVisible(false);
+    const sessionId = emergency.sessionId;
+    if (!sessionId) return;
+    await performEmergencyCancel(sessionId);
   }
 
   async function copyAcknowledgeLink() {
@@ -255,7 +283,7 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
     <View style={styles.container}>
       {/* Background gradient layers */}
       <View style={StyleSheet.absoluteFillObject}>
-        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0A0F' }]} />
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: darkColors.background }]} />
         <View style={[StyleSheet.absoluteFillObject, styles.gradTop]} />
         <View style={[StyleSheet.absoluteFillObject, styles.gradBottom]} />
       </View>
@@ -269,8 +297,8 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
       >
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
           <View style={styles.glassCard}>
-            <Text style={styles.headerTitle}>Emergency Alert</Text>
-            <Text style={styles.headerSubtitle}>
+            <Text style={styles.headerTitle} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Emergency Alert</Text>
+            <Text style={styles.headerSubtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               Triggers multi-channel alerts (push, SMS, email, phone call) to your emergency contacts.
               Escalates every 30 seconds until someone acknowledges.
             </Text>
@@ -278,8 +306,8 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
 
           {emergency.error && (
             <View style={styles.errorBox}>
-              <Ionicons name="alert-circle-outline" size={18} color="#FF5252" style={{ marginRight: 8 }} />
-              <Text style={styles.errorText}>{emergency.error}</Text>
+              <Ionicons name="alert-circle-outline" size={18} color={colors.danger[400]} style={{ marginRight: 8 }} />
+              <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{emergency.error}</Text>
             </View>
           )}
 
@@ -287,15 +315,15 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
             <TouchableOpacity
               style={[styles.triggerBtn, emergency.isTriggering && { opacity: 0.6 }]}
               onPress={handleTrigger}
-              disabled={emergency.isTriggering}
+              disabled={emergency.isTriggering} accessibilityRole="button"
             >
               {emergency.isTriggering ? (
-                <ActivityIndicator color="#FFFFFF" size="large" />
+                <ActivityIndicator color={darkColors.text} size="large" />
               ) : (
                 <>
-                  <Ionicons name="alert-circle" size={36} color="#FFFFFF" style={{ marginBottom: 4 }} />
-                  <Text style={styles.triggerBtnText}>TRIGGER EMERGENCY ALERT</Text>
-                  <Text style={styles.triggerBtnSubtext}>Tap to notify all contacts</Text>
+                  <Ionicons name="alert-circle" size={36} color={darkColors.text} style={{ marginBottom: 4 }} />
+                  <Text style={styles.triggerBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>TRIGGER EMERGENCY ALERT</Text>
+                  <Text style={styles.triggerBtnSubtext} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Tap to notify all contacts</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -305,34 +333,34 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
             <View style={styles.activeCard}>
               <View style={styles.activeHeader}>
                 <View style={styles.pulseDot} />
-                <Text style={styles.activeTitle}>ALERT ACTIVE</Text>
+                <Text style={styles.activeTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>ALERT ACTIVE</Text>
               </View>
-              <Text style={styles.activeSince}>
+              <Text style={styles.activeSince} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 Triggered: {new Date(emergency.triggeredAt || '').toLocaleString()}
               </Text>
               {emergency.nextEscalationAt && (
-                <Text style={styles.nextEscalation}>
+                <Text style={styles.nextEscalation} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                   Next escalation: {new Date(emergency.nextEscalationAt).toLocaleTimeString()}
                 </Text>
               )}
-              <Text style={styles.currentPriority}>
+              <Text style={styles.currentPriority} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 Currently notifying: Priority {emergency.currentPriority}
               </Text>
               {gpsStatusText ? (
-                <Text style={styles.gpsStatus}>{gpsStatusText}</Text>
+                <Text style={styles.gpsStatus} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{gpsStatusText}</Text>
               ) : null}
 
               <View style={styles.actionsRow}>
-                <TouchableOpacity style={styles.linkBtn} onPress={copyAcknowledgeLink}>
+                <TouchableOpacity style={styles.linkBtn} onPress={copyAcknowledgeLink} accessibilityRole="button">
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Ionicons name="copy-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-                    <Text style={styles.linkBtnText}>Copy Link</Text>
+                    <Ionicons name="copy-outline" size={16} color={darkColors.text} style={{ marginRight: 6 }} />
+                    <Text style={styles.linkBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Copy Link</Text>
                   </View>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.linkBtn} onPress={openAcknowledgePage}>
+                <TouchableOpacity style={styles.linkBtn} onPress={openAcknowledgePage} accessibilityRole="button">
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Ionicons name="globe-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-                    <Text style={styles.linkBtnText}>Open Page</Text>
+                    <Ionicons name="globe-outline" size={16} color={darkColors.text} style={{ marginRight: 6 }} />
+                    <Text style={styles.linkBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Open Page</Text>
                   </View>
                 </TouchableOpacity>
               </View>
@@ -340,12 +368,12 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
               <TouchableOpacity
                 style={[styles.cancelBtn, emergency.isCancelling && { opacity: 0.5 }]}
                 onPress={handleCancel}
-                disabled={emergency.isCancelling}
+                disabled={emergency.isCancelling} accessibilityRole="button"
               >
                 {emergency.isCancelling ? (
-                  <ActivityIndicator color="#FFFFFF" />
+                  <ActivityIndicator color={darkColors.text} />
                 ) : (
-                  <Text style={styles.cancelBtnText}>Cancel Alert (False Alarm)</Text>
+                  <Text style={styles.cancelBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Cancel Alert (False Alarm)</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -353,40 +381,40 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
 
           {emergency.status === 'ACKNOWLEDGED' && (
             <View style={styles.acknowledgedCard}>
-              <Ionicons name="checkmark-circle-outline" size={40} color="#00E676" style={{ marginBottom: 8 }} />
-              <Text style={styles.acknowledgedTitle}>Alert Acknowledged</Text>
-              <Text style={styles.acknowledgedText}>
+              <Ionicons name="checkmark-circle-outline" size={40} color={colors.success[400]} style={{ marginBottom: 8 }} />
+              <Text style={styles.acknowledgedTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Alert Acknowledged</Text>
+              <Text style={styles.acknowledgedText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 Your emergency contact has acknowledged the alert. Escalation has stopped.
                 Your live location is still being shared.
               </Text>
               <TouchableOpacity
                 style={styles.resetBtn}
-                onPress={() => dispatch(clearEmergency())}
+                onPress={() => dispatch(clearEmergency())} accessibilityRole="button"
               >
-                <Text style={styles.resetBtnText}>Dismiss</Text>
+                <Text style={styles.resetBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Dismiss</Text>
               </TouchableOpacity>
             </View>
           )}
 
           {emergency.status === 'CANCELLED' && (
             <View style={styles.cancelledCard}>
-              <Ionicons name="checkmark-circle-outline" size={40} color="#00E676" style={{ marginBottom: 8 }} />
-              <Text style={styles.cancelledTitle}>Alert Cancelled</Text>
-              <Text style={styles.cancelledText}>
+              <Ionicons name="checkmark-circle-outline" size={40} color={colors.success[400]} style={{ marginBottom: 8 }} />
+              <Text style={styles.cancelledTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Alert Cancelled</Text>
+              <Text style={styles.cancelledText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 The emergency alert has been cancelled. Your contacts have been notified.
               </Text>
               <TouchableOpacity
                 style={styles.resetBtn}
-                onPress={() => dispatch(clearEmergency())}
+                onPress={() => dispatch(clearEmergency())} accessibilityRole="button"
               >
-                <Text style={styles.resetBtnText}>Dismiss</Text>
+                <Text style={styles.resetBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Dismiss</Text>
               </TouchableOpacity>
             </View>
           )}
 
           {priorityKeys.length > 0 && (
             <View style={styles.progressCard}>
-              <Text style={styles.progressTitle}>Escalation Progress</Text>
+              <Text style={styles.progressTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Escalation Progress</Text>
               {priorityKeys.map((priority) => {
                 const attempts = attemptsByPriority[priority];
                 const firstAttempt = attempts[0];
@@ -397,19 +425,19 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
                     style={[styles.priorityBlock, isCurrent && styles.priorityBlockCurrent]}
                   >
                     <View style={styles.priorityHeader}>
-                      <Text style={styles.priorityLabel}>Priority {priority}</Text>
-                      <Text style={styles.priorityName}>{firstAttempt.contactName}</Text>
-                      {isCurrent && <Text style={styles.currentBadge}>● CURRENT</Text>}
+                      <Text style={styles.priorityLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Priority {priority}</Text>
+                      <Text style={styles.priorityName} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{firstAttempt.contactName}</Text>
+                      {isCurrent && <Text style={styles.currentBadge} allowFontScaling={true} maxFontSizeMultiplier={1.5}>● CURRENT</Text>}
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                      <Ionicons name="call-outline" size={14} color="#A0A0B8" style={{ marginRight: 4 }} />
-                      <Text style={styles.priorityPhone}>{firstAttempt.contactPhone}</Text>
+                      <Ionicons name="call-outline" size={14} color={darkColors.textSecondary} style={{ marginRight: 4 }} />
+                      <Text style={styles.priorityPhone} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{firstAttempt.contactPhone}</Text>
                     </View>
                     <View style={styles.channelsRow}>
                       {attempts.map((a: any, i: number) => (
                         <View key={i} style={styles.channelChip}>
-                          <Ionicons name={CHANNEL_ICONS[a.channel] || "mail-outline"} size={14} color="#A0A0B8" style={{ marginRight: 4 }} />
-                          <Text style={[styles.channelStatus, { color: STATUS_COLORS[a.status] || '#6B6B80' }]}>
+                          <Ionicons name={CHANNEL_ICONS[a.channel] || "mail-outline"} size={14} color={darkColors.textSecondary} style={{ marginRight: 4 }} />
+                          <Text style={[styles.channelStatus, { color: STATUS_COLORS[a.status] || darkColors.textTertiary }]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                             {a.status}
                           </Text>
                         </View>
@@ -423,221 +451,245 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
 
           {!emergency.active && emergency.status !== 'ACKNOWLEDGED' && emergency.status !== 'CANCELLED' && (
             <View style={styles.infoCard}>
-              <Text style={styles.infoTitle}>How escalation works</Text>
-              <Text style={styles.infoText}>• Priority 1 contact notified immediately via all channels</Text>
-              <Text style={styles.infoText}>• If no acknowledgement in 30s, escalates to Priority 2</Text>
-              <Text style={styles.infoText}>• Continues every 30s until someone acknowledges</Text>
-              <Text style={styles.infoText}>• Live location is shared automatically via tracking link</Text>
-              <Text style={styles.infoText}>• Contact opens link → sees your location + can acknowledge</Text>
-              <Text style={styles.infoText}>• You can cancel anytime if it was a false alarm</Text>
-              <Text style={styles.infoText}>• Auto-expires after 30 minutes of no acknowledgement</Text>
+              <Text style={styles.infoTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>How escalation works</Text>
+              <Text style={styles.infoText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>• Priority 1 contact notified immediately via all channels</Text>
+              <Text style={styles.infoText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>• If no acknowledgement in 30s, escalates to Priority 2</Text>
+              <Text style={styles.infoText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>• Continues every 30s until someone acknowledges</Text>
+              <Text style={styles.infoText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>• Live location is shared automatically via tracking link</Text>
+              <Text style={styles.infoText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>• Contact opens link → sees your location + can acknowledge</Text>
+              <Text style={styles.infoText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>• You can cancel anytime if it was a false alarm</Text>
+              <Text style={styles.infoText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>• Auto-expires after 30 minutes of no acknowledgement</Text>
             </View>
           )}
         </ScrollView>
       </Animated.View>
+
+      {/* Phase 8: ConfirmDialog replaces destructive Alert.alert (trigger) */}
+      <ConfirmDialog
+        visible={triggerDialogVisible}
+        title="Trigger Emergency Alert?"
+        description="This will immediately notify your emergency contacts with your live location. Only use in real emergencies."
+        confirmLabel="Trigger Alert"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmTrigger}
+        onCancel={() => setTriggerDialogVisible(false)}
+      />
+
+      {/* Phase 8: ConfirmDialog replaces destructive Alert.alert (cancel) */}
+      <ConfirmDialog
+        visible={cancelDialogVisible}
+        title="Cancel Emergency Alert?"
+        description={'This will stop the escalation and mark the alert as cancelled. Your contacts will see "alert cancelled".'}
+        confirmLabel="Cancel Alert"
+        cancelLabel="Keep Alert Active"
+        variant="danger"
+        onConfirm={handleConfirmCancel}
+        onCancel={() => setCancelDialogVisible(false)}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0A0F' },
-gradTop: { top: 0, height: 300, backgroundColor: 'rgba(229, 57, 53, 0.08)' },
-  gradBottom: { bottom: 0, height: 400, backgroundColor: 'rgba(41, 121, 255, 0.06)' },
+  container: { flex: 1, backgroundColor: darkColors.background },
+gradTop: { top: 0, height: 300, backgroundColor: tints.dangerSubtle },
+  gradBottom: { bottom: 0, height: 400, backgroundColor: tints.infoSubtle },
   glassCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 20,
     padding: 20,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000000',
+    borderColor: tints.whiteBorder,
+    shadowColor: colors.neutral[950],
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 16,
     elevation: 6,
   },
-  headerTitle: { color: '#FFFFFF', fontSize: 22, fontWeight: 'bold', marginBottom: 8 },
-  headerSubtitle: { color: '#A0A0B8', fontSize: 13, lineHeight: 18 },
+  headerTitle: { color: darkColors.text, fontSize: 22, fontWeight: 'bold', marginBottom: 8 },
+  headerSubtitle: { color: darkColors.textSecondary, fontSize: 13, lineHeight: 18 },
   errorBox: {
-    backgroundColor: 'rgba(255, 23, 68, 0.12)',
+    backgroundColor: tints.dangerErrorBg,
     padding: 12,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.3)',
+    borderColor: tints.dangerErrorBorder,
     marginBottom: 16,
   },
-  errorText: { color: '#FF8A80', fontSize: 13, textAlign: 'center' },
+  errorText: { color: colors.danger[300], fontSize: 13, textAlign: 'center' },
   triggerBtn: {
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     borderRadius: 20,
     paddingVertical: 36,
     alignItems: 'center',
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: 'rgba(255, 82, 82, 0.5)',
-    shadowColor: '#E53935',
+    borderColor: tints.dangerErrorBorder,
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.5,
     shadowRadius: 16,
     elevation: 10,
   },
   triggerBtnIcon: { fontSize: 48, marginBottom: 8 },
-  triggerBtnText: { color: '#FFFFFF', fontSize: 18, fontWeight: 'bold', letterSpacing: 0.5 },
-  triggerBtnSubtext: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 4 },
+  triggerBtnText: { color: darkColors.text, fontSize: 18, fontWeight: 'bold', letterSpacing: 0.5 },
+  triggerBtnSubtext: { color: tints.whiteBorderStrong, fontSize: 12, marginTop: 4 },
   activeCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 20,
     padding: 20,
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: 'rgba(229, 57, 53, 0.5)',
-    shadowColor: '#E53935',
+    borderColor: tints.dangerMedium,
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 12,
     elevation: 6,
   },
   activeHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  pulseDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#00E676', marginRight: 8, shadowColor: '#00E676', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 6, elevation: 4 },
-  activeTitle: { color: '#00E676', fontSize: 16, fontWeight: 'bold', letterSpacing: 1 },
-  activeSince: { color: '#A0A0B8', fontSize: 12, marginBottom: 4 },
-  nextEscalation: { color: '#FFD600', fontSize: 12, marginBottom: 4 },
-  currentPriority: { color: '#FFFFFF', fontSize: 14, fontWeight: '600', marginBottom: 4 },
-  gpsStatus: { color: '#A0A0B8', fontSize: 12, marginBottom: 16 },
+  pulseDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.success[500], marginRight: 8, shadowColor: colors.success[500], shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 6, elevation: 4 },
+  activeTitle: { color: colors.success[500], fontSize: 16, fontWeight: 'bold', letterSpacing: 1 },
+  activeSince: { color: darkColors.textSecondary, fontSize: 12, marginBottom: 4 },
+  nextEscalation: { color: colors.warning[400], fontSize: 12, marginBottom: 4 },
+  currentPriority: { color: darkColors.text, fontSize: 14, fontWeight: '600', marginBottom: 4 },
+  gpsStatus: { color: darkColors.textSecondary, fontSize: 12, marginBottom: 16 },
   actionsRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   linkBtn: {
     flex: 1,
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     paddingVertical: 12,
     borderRadius: 14,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000000',
+    borderColor: tints.whiteBorder,
+    shadowColor: colors.neutral[950],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 3,
   },
-  linkBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
+  linkBtnText: { color: darkColors.text, fontSize: 13, fontWeight: '600' },
   cancelBtn: {
-    backgroundColor: 'rgba(255, 23, 68, 0.12)',
+    backgroundColor: tints.dangerErrorBg,
     paddingVertical: 14,
     borderRadius: 14,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.3)',
+    borderColor: tints.dangerErrorBorder,
   },
-  cancelBtnText: { color: '#FF8A80', fontSize: 14, fontWeight: 'bold' },
+  cancelBtnText: { color: colors.danger[300], fontSize: 14, fontWeight: 'bold' },
   acknowledgedCard: {
-    backgroundColor: 'rgba(0, 230, 118, 0.08)',
+    backgroundColor: tints.successSubtle,
     borderRadius: 20,
     padding: 24,
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: 'rgba(0, 230, 118, 0.4)',
+    borderColor: tints.successMedium,
     alignItems: 'center',
-    shadowColor: '#00E676',
+    shadowColor: colors.success[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 6,
   },
-  acknowledgedIcon: { fontSize: 48, color: '#00E676', marginBottom: 8 },
-  acknowledgedTitle: { color: '#00E676', fontSize: 20, fontWeight: 'bold', marginBottom: 8 },
-  acknowledgedText: { color: '#A0A0B8', fontSize: 13, textAlign: 'center', marginBottom: 16, lineHeight: 18 },
+  acknowledgedIcon: { fontSize: 48, color: colors.success[500], marginBottom: 8 },
+  acknowledgedTitle: { color: colors.success[500], fontSize: 20, fontWeight: 'bold', marginBottom: 8 },
+  acknowledgedText: { color: darkColors.textSecondary, fontSize: 13, textAlign: 'center', marginBottom: 16, lineHeight: 18 },
   cancelledCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 20,
     padding: 24,
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: 'rgba(107, 107, 128, 0.4)',
+    borderColor: tints.whiteBorder,
     alignItems: 'center',
-    shadowColor: '#000000',
+    shadowColor: colors.neutral[950],
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 16,
     elevation: 6,
   },
-  cancelledIcon: { fontSize: 48, color: '#6B6B80', marginBottom: 8 },
-  cancelledTitle: { color: '#FFFFFF', fontSize: 20, fontWeight: 'bold', marginBottom: 8 },
-  cancelledText: { color: '#A0A0B8', fontSize: 13, textAlign: 'center', marginBottom: 16, lineHeight: 18 },
+  cancelledIcon: { fontSize: 48, color: darkColors.textTertiary, marginBottom: 8 },
+  cancelledTitle: { color: darkColors.text, fontSize: 20, fontWeight: 'bold', marginBottom: 8 },
+  cancelledText: { color: darkColors.textSecondary, fontSize: 13, textAlign: 'center', marginBottom: 16, lineHeight: 18 },
   resetBtn: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     paddingVertical: 10,
     paddingHorizontal: 24,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000000',
+    borderColor: tints.whiteBorder,
+    shadowColor: colors.neutral[950],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 3,
   },
-  resetBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
+  resetBtnText: { color: darkColors.text, fontSize: 14, fontWeight: '600' },
   progressCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 20,
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000000',
+    borderColor: tints.whiteBorder,
+    shadowColor: colors.neutral[950],
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 16,
     elevation: 6,
   },
-  progressTitle: { color: '#E53935', fontSize: 13, fontWeight: 'bold', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
+  progressTitle: { color: colors.danger[500], fontSize: 13, fontWeight: 'bold', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
   priorityBlock: {
-    backgroundColor: 'rgba(10, 10, 15, 0.6)',
+    backgroundColor: tints.overlayStrong,
     borderRadius: 14,
     padding: 12,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.04)',
+    borderColor: tints.whiteSubtle,
   },
   priorityBlockCurrent: {
-    borderColor: 'rgba(229, 57, 53, 0.5)',
+    borderColor: tints.dangerMedium,
     borderWidth: 2,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
   },
   priorityHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  priorityLabel: { color: '#A0A0B8', fontSize: 11, fontWeight: 'bold', marginRight: 8 },
-  priorityName: { color: '#FFFFFF', fontSize: 14, fontWeight: '600', flex: 1 },
-  currentBadge: { color: '#E53935', fontSize: 10, fontWeight: 'bold' },
-  priorityPhone: { color: '#A0A0B8', fontSize: 12, marginBottom: 8 },
+  priorityLabel: { color: darkColors.textSecondary, fontSize: 11, fontWeight: 'bold', marginRight: 8 },
+  priorityName: { color: darkColors.text, fontSize: 14, fontWeight: '600', flex: 1 },
+  currentBadge: { color: colors.danger[500], fontSize: 10, fontWeight: 'bold' },
+  priorityPhone: { color: darkColors.textSecondary, fontSize: 12, marginBottom: 8 },
   channelsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   channelChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
   channelIcon: { fontSize: 12, marginRight: 4 },
   channelStatus: { fontSize: 10, fontWeight: 'bold' },
   infoCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000000',
+    borderColor: tints.whiteBorder,
+    shadowColor: colors.neutral[950],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
   },
-  infoTitle: { color: '#E53935', fontSize: 12, fontWeight: 'bold', marginBottom: 8, textTransform: 'uppercase' },
-  infoText: { color: '#A0A0B8', fontSize: 12, lineHeight: 18 },
+  infoTitle: { color: colors.danger[500], fontSize: 12, fontWeight: 'bold', marginBottom: 8, textTransform: 'uppercase' },
+  infoText: { color: darkColors.textSecondary, fontSize: 12, lineHeight: 18 },
 });
