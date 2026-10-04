@@ -30,6 +30,7 @@ import { sendBulkBackgroundSMS } from '../utils/directSms';
 import { MultiModalFusionService } from '../services/multiModalFusionService';
 import { colors, darkColors, tints } from '../theme/tokens';
 import { Ionicons } from '@expo/vector-icons';
+import { makeDirectPhoneCall } from '../utils/directCall';
 
 const COUNTDOWN_SECONDS = 10;
 
@@ -324,13 +325,22 @@ export default function CountdownScreen({ navigation, route }: any) {
     // Previously, this ALWAYS sent device-side SMS to ALL contacts — even when
     // the backend had already successfully sent RoboSMS via the API. This caused
     // each contact to receive DUPLICATE SMS (one from backend, one from device).
-    let autoSmsSent = false;
-    const backendSmsFailed = !backendSucceeded ||
-      (backendSucceeded && dispatchStatus.sms !== 'sent');
+let autoSmsSent = false;
+const backendSmsFailed = !backendSucceeded ||
+  (backendSucceeded && dispatchStatus.sms !== 'sent');
 
-    if (dispatchContacts.length > 0 && backendSmsFailed) {
-      const smsMessage = `ResQDrive ALERT: ${user?.fullName || 'Unknown'} may have been in a ${severity} accident. Location: https://www.google.com/maps?q=${realLat},${realLng}`;
+if (dispatchContacts.length > 0 && backendSmsFailed) {
+  const backendBase = (api.defaults.baseURL || 'http://192.168.18.186:3000')
+    .replace(/\/api\/?$/, '')
+    .replace(/\/$/, '');
 
+  const fullAckUrl = acknowledgeUrl
+    ? (acknowledgeUrl.startsWith('http') ? acknowledgeUrl : `${backendBase}${acknowledgeUrl}`)
+    : null;
+
+  const ackLine = fullAckUrl ? `\nTrack/Ack: ${fullAckUrl}` : '';
+
+  const smsMessage = `[ResQDrive ALERT] ${user?.fullName || 'Driver'} may have had a ${severity} accident.\nLocation: https://maps.google.com/?q=${realLat},${realLng}${ackLine}\nPlease respond immediately.`;
       // Try background auto-SMS first (react-native-direct-sms)
       try {
         const smsResult = await sendBulkBackgroundSMS(dispatchContacts, smsMessage);
@@ -361,6 +371,19 @@ export default function CountdownScreen({ navigation, route }: any) {
       }
     }
 
+    // ═══ STEP 4.5: Direct Phone Call from driver device to primary emergency contact ═══
+    if (dispatchContacts.length > 0 && dispatchContacts[0]?.phoneNumber) {
+      const primaryTarget = dispatchContacts[0];
+      console.log(`[Countdown] Auto-calling primary emergency contact in 1000ms: ${primaryTarget.name} (${primaryTarget.phoneNumber})`);
+      setTimeout(() => {
+        try {
+          makeDirectPhoneCall(primaryTarget.phoneNumber);
+        } catch (callErr) {
+          console.log('[Countdown] Direct phone call error:', callErr);
+        }
+      }, 1000);
+    }
+
     // ═══ STEP 5: Local push notification on device ═══
     try {
       await Notifications.scheduleNotificationAsync({
@@ -383,6 +406,7 @@ export default function CountdownScreen({ navigation, route }: any) {
         severity: severity.toLowerCase(),
         incidentId: incident?.id || null,
         sessionId: emergencyNotificationResult?.sessionId || null,
+        initialContactIndex: 1,
       });
     }, 3000);
   }, [contacts, user, severity, latitude, longitude, navigation, dispatch, createIncident, triggerEmergency, dispatchAlert]);

@@ -93,9 +93,10 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
   }, [regionalData]);
 
   // Auto-escalation state & cycling
+  const initialIndex = typeof route?.params?.initialContactIndex === 'number' ? route.params.initialContactIndex : 0;
   const [escalationTimeLeft, setEscalationTimeLeft] = useState<number>(60);
   const [pendingCallTarget, setPendingCallTarget] = useState<{ name: string; phone: string } | null>(null);
-  const [currentContactIndex, setCurrentContactIndex] = useState<number>(0);
+  const [currentContactIndex, setCurrentContactIndex] = useState<number>(initialIndex);
   const [hasCycledThroughAll, setHasCycledThroughAll] = useState<boolean>(false);
   const [isEscalationActive, setIsEscalationActive] = useState<boolean>(
     !!incidentId && (severity === 'moderate' || severity === 'severe')
@@ -122,18 +123,33 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
 
   // Keep target contact updated as personalContacts load
   useEffect(() => {
-    if (personalContacts.length > 0) {
-      const sorted = [...personalContacts].sort((a: any, b: any) => (a.priorityOrder ?? 999) - (b.priorityOrder ?? 999));
-      if (currentContactIndex === 0) {
-        setPendingCallTarget({ name: sorted[0].name, phone: sorted[0].phoneNumber });
-      }
-    } else if (personalContacts.length === 0 && regionalNumbers.length > 0 && !pendingCallTarget) {
+  if (!pendingCallTarget) {
+    const sorted = [...personalContacts].sort(
+      (a: any, b: any) => (a.priorityOrder ?? 999) - (b.priorityOrder ?? 999)
+    );
+
+    if (sorted.length > 0 && initialIndex < sorted.length) {
       setPendingCallTarget({
-        name: regionalNumbers[0]?.serviceName || 'Rescue 1122',
-        phone: regionalNumbers[0]?.phoneNumber || '1122',
+        name: sorted[initialIndex].name,
+        phone: sorted[initialIndex].phoneNumber,
+      });
+    } else if (regionalNumbers.length > 0) {
+      const regional = regionalNumbers.find(
+        (r: any) => r.phoneNumber?.length >= 5
+      ) || regionalNumbers[0];
+
+      setPendingCallTarget({
+        name: regional?.serviceName || 'Rescue 1122 HQ (Auto-Dial)',
+        phone: regional?.phoneNumber || '0519290002',
+      });
+    } else {
+      setPendingCallTarget({
+        name: 'Rescue 1122 HQ (Auto-Dial)',
+        phone: '0519290002',
       });
     }
-  }, [personalContacts, regionalNumbers, currentContactIndex]);
+  }
+}, [personalContacts, regionalNumbers, initialIndex, pendingCallTarget]);
 
   // Animations
   const headerOpacity = useRef(new Animated.Value(1)).current;
@@ -238,38 +254,31 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
     return () => { cancelled = true; };
   }, []);
 
-  const escalationStartTimeRef = useRef<number>(0);
+const escalationStartTimeRef = useRef<number>(0);
 
-  // CRITICAL FIX: Use a ref to always call the LATEST triggerAutoEscalationCall.
-  // Without this, the useEffect at line 240 captures a stale closure from the
-  // first render — personalContacts would be empty (not yet loaded from API),
-  // causing the auto-call to skip personal contacts and jump straight to
-  // the regional emergency number.
-  const triggerAutoEscalationRef = useRef<() => Promise<void>>(async () => {});
+// CRITICAL FIX: Use a ref to always call the LATEST triggerAutoEscalationCall.
+const triggerAutoEscalationRef = useRef<() => Promise<void>>(async () => {});
 
-  useEffect(() => {
-    if (!isEscalationActive) return;
+useEffect(() => {
+  if (!isEscalationActive) return;
 
-    const startTime = Date.now();
-    const intervalId = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - startTime) / 1000);
-      const remaining = 60 - elapsed;
+  const startTime = Date.now();
 
-      if (remaining <= 0) {
-        clearInterval(intervalId);
-        setEscalationTimeLeft(0);
-        // CRITICAL FIX: Actually fire the auto-escalation call when timer hits 0.
-        // Previously this function was defined but never invoked — the auto-call
-        // to emergency contacts (and regional fallback) never actually happened.
-        triggerAutoEscalationRef.current();
-      } else {
-        setEscalationTimeLeft(remaining);
-      }
-    }, 1000);
+  const intervalId = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const remaining = 60 - elapsed;
 
-    return () => clearInterval(intervalId);
-  }, [isEscalationActive]);
+    if (remaining <= 0) {
+      clearInterval(intervalId);
+      setEscalationTimeLeft(0);
+      triggerAutoEscalationRef.current();
+    } else {
+      setEscalationTimeLeft(remaining);
+    }
+  }, 1000);
 
+  return () => clearInterval(intervalId);
+}, [isEscalationActive]);
   const triggerAutoEscalationCall = async () => {
     setIsEscalationActive(false);
 
@@ -327,6 +336,7 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
         // Next is another personal contact
         const nextContact = sortedContacts[nextIndex];
         setPendingCallTarget({ name: nextContact.name, phone: nextContact.phoneNumber });
+
         escalationStartTimeRef.current = 0;
         setEscalationTimeLeft(60);
         setIsEscalationActive(true);
@@ -343,12 +353,11 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
     }
   };
 
-  // Keep the ref updated with the latest closure on every render
-  // (so the timer useEffect always calls the freshest version)
-  useEffect(() => {
-    triggerAutoEscalationRef.current = triggerAutoEscalationCall;
-  });
-
+// Keep the ref updated with the latest closure on every render
+// (so the timer useEffect always calls the freshest version)
+useEffect(() => {
+  triggerAutoEscalationRef.current = triggerAutoEscalationCall;
+});
   const handleCallNumber = async (number: string, name: string) => {
     // Stop local countdown if active
     if (isEscalationActive) {
