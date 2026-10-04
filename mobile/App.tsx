@@ -14,6 +14,7 @@ import Navigation from './src/navigation';
 import NotificationBanner from './src/components/NotificationBanner';
 import OfflineBanner from './src/components/OfflineBanner';
 import { DrivingNotificationService } from './src/services/drivingNotificationService';
+import { FCMService } from './src/services/fcmService';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { ThemeProvider } from './src/theme/ThemeProvider';
 import { useTheme } from './src/theme/useTheme';
@@ -42,6 +43,29 @@ if (Platform.OS === 'android') {
     enableVibrate: true,
     showBadge: true,
   });
+}
+
+// Global push notifications & FCM lifecycle listener
+function FCMNotificationTracker() {
+  const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
+
+  useEffect(() => {
+    // 1. Setup foreground push listeners
+    const unsubscribe = FCMService.setupFCMListeners();
+
+    // 2. Request permission and register token with backend when user is logged in
+    if (isAuthenticated) {
+      FCMService.registerDeviceWithBackend().catch(() => {});
+    }
+
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
+  }, [isAuthenticated]);
+
+  return null;
 }
 
 // Root-level component that manages persistent Driving Mode notification across all screens
@@ -89,6 +113,7 @@ export default function App() {
               <SafeAreaProvider>
                 <SafeAppContainer>
                   <OfflineBanner />
+                  <FCMNotificationTracker />
                   <DrivingModeNotificationTracker />
                   <Navigation />
                   <NotificationBanner />

@@ -144,7 +144,9 @@ export class NotificationsService implements OnModuleInit {
     ]);
 
     return {
+      data: logs,
       logs,
+      total,
       pagination: {
         total,
         page,

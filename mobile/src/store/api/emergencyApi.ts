@@ -51,6 +51,7 @@ export const emergencyApi = createApi({
     // ─── Mutations ─────────────────────────────────────────────────────────
     triggerEmergency: builder.mutation<EmergencyTriggerResponse, {
       incidentId?: string;
+      severity?: string;
       message: string;
       latitude: number;
       longitude: number;

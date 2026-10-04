@@ -440,6 +440,7 @@ export class AlertDispatchService {
           payload.userName,
           payload.severity,
           mapsLink,
+          payload.acknowledgeUrl,
         ),
       ),
     );

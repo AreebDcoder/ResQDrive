@@ -124,13 +124,30 @@ export class FCMService {
     }
 
     try {
+      const Notifications = require('expo-notifications');
       const unsubscribeMessage = messaging().onMessage(async (remoteMessage: any) => {
+        console.log('[FCM] Foreground Message received:', remoteMessage);
 
         if (onNotificationReceived) {
           onNotificationReceived(remoteMessage);
         }
 
-        if (remoteMessage.notification) {
+        const title = remoteMessage.notification?.title || remoteMessage.data?.title || '🚨 ResQDrive Alert';
+        const body = remoteMessage.notification?.body || remoteMessage.data?.body || 'Emergency notification received.';
+        const data = remoteMessage.data || {};
+
+        try {
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title,
+              body,
+              data,
+              sound: true,
+            },
+            trigger: (Platform.OS === 'android' ? { channelId: 'emergency-alerts' } : null) as any,
+          });
+        } catch (e) {
+          console.log('[FCM] Foreground notification display error:', e);
         }
       });
 
@@ -149,7 +166,6 @@ export class FCMService {
         unsubscribeTokenRefresh();
       };
     } catch (error) {
-      // Batch 10: Removed console.warn — listeners setup is best-effort
       return () => {};
     }
   }

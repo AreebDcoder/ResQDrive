@@ -22,21 +22,22 @@ function sanitizeForSms(text: string): string {
 }
 
 /**
- * Splits a long text into chunks of <= maxChunkSize at newline or whitespace boundaries.
+ * Splits long text into clean, contextual chunks of <= maxChunkSize.
  */
-function splitIntoSmsChunks(text: string, maxChunkSize: number = 140): string[] {
+function splitIntoSmsChunks(text: string, maxChunkSize: number = 160): string[] {
   const clean = sanitizeForSms(text);
   if (clean.length <= maxChunkSize) {
     return [clean];
   }
 
+  const lines = clean.split('\n').map(l => l.trim()).filter(l => l.length > 0);
   const chunks: string[] = [];
-  const lines = clean.split('\n').filter(l => l.trim().length > 0);
   let currentChunk = '';
 
   for (const line of lines) {
-    if ((currentChunk + (currentChunk ? '\n' : '') + line).length <= maxChunkSize) {
-      currentChunk += (currentChunk ? '\n' : '') + line;
+    const candidate = currentChunk ? `${currentChunk}\n${line}` : line;
+    if (candidate.length <= maxChunkSize) {
+      currentChunk = candidate;
     } else {
       if (currentChunk) {
         chunks.push(currentChunk);
@@ -45,7 +46,7 @@ function splitIntoSmsChunks(text: string, maxChunkSize: number = 140): string[] 
       if (line.length <= maxChunkSize) {
         currentChunk = line;
       } else {
-        // Line is longer than maxChunkSize, slice it
+        // Line itself exceeds maxChunkSize, split into segments
         let remaining = line;
         while (remaining.length > maxChunkSize) {
           chunks.push(remaining.substring(0, maxChunkSize));
@@ -111,10 +112,13 @@ export async function sendDirectBackgroundSMS(
             );
 
             if (i < chunks.length - 1) {
-              // 350ms delay between parts to let baseband modem serialize SMS frames
-              await new Promise((r) => setTimeout(r, 350));
+              // 800ms delay between parts so cellular modem serializes both SMS packets cleanly
+              await new Promise((r) => setTimeout(r, 800));
             }
           }
+
+          // 1200ms settling time to ensure radio buffer clears before potential phone call
+          await new Promise((r) => setTimeout(r, 1200));
 
           return true;
         } else {

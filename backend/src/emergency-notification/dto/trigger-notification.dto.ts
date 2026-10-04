@@ -30,4 +30,9 @@ export class TriggerNotificationDto {
   @IsOptional()
   @IsString()
   address?: string;
+
+  @ApiPropertyOptional({ description: 'Severity level (e.g. SEVERE, MODERATE, MINOR)' })
+  @IsOptional()
+  @IsString()
+  severity?: string;
 }

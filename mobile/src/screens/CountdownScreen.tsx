@@ -9,6 +9,7 @@ import {
   Animated,
   Vibration,
   BackHandler,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
@@ -262,6 +263,7 @@ export default function CountdownScreen({ navigation, route }: any) {
       // Batch 11: RTK Query mutation. Invalidates 'Emergency' tag.
       const response = await triggerEmergency({
         incidentId: incident?.id,
+        severity,
         message: `Accident detected (${severity})`,
         latitude: realLat,
         longitude: realLng,
@@ -338,9 +340,9 @@ if (dispatchContacts.length > 0 && backendSmsFailed) {
     ? (acknowledgeUrl.startsWith('http') ? acknowledgeUrl : `${backendBase}${acknowledgeUrl}`)
     : null;
 
-  const ackLine = fullAckUrl ? `\nTrack/Ack: ${fullAckUrl}` : '';
+  const ackLine = fullAckUrl ? `\nTrack & Acknowledge: ${fullAckUrl}` : '';
 
-  const smsMessage = `[ResQDrive ALERT] ${user?.fullName || 'Driver'} may have had a ${severity} accident.\nLocation: https://maps.google.com/?q=${realLat},${realLng}${ackLine}\nPlease respond immediately.`;
+  const smsMessage = `[ResQDrive ALERT] ${user?.fullName || 'Driver'} accident (${severity}).\nLocation: https://maps.google.com/?q=${realLat},${realLng}${ackLine}`;
       // Try background auto-SMS first (react-native-direct-sms)
       try {
         const smsResult = await sendBulkBackgroundSMS(dispatchContacts, smsMessage);
@@ -372,28 +374,26 @@ if (dispatchContacts.length > 0 && backendSmsFailed) {
     }
 
     // ═══ STEP 4.5: Direct Phone Call from driver device to primary emergency contact ═══
+    // We execute the call AFTER background SMS has fully resolved and settled over the cellular radio
     if (dispatchContacts.length > 0 && dispatchContacts[0]?.phoneNumber) {
       const primaryTarget = dispatchContacts[0];
-      console.log(`[Countdown] Auto-calling primary emergency contact in 1000ms: ${primaryTarget.name} (${primaryTarget.phoneNumber})`);
-      setTimeout(() => {
-        try {
-          makeDirectPhoneCall(primaryTarget.phoneNumber);
-        } catch (callErr) {
-          console.log('[Countdown] Direct phone call error:', callErr);
-        }
-      }, 1000);
+      try {
+        await makeDirectPhoneCall(primaryTarget.phoneNumber);
+      } catch (callErr) {
+        console.log('[Countdown] Direct phone call error:', callErr);
+      }
     }
 
     // ═══ STEP 5: Local push notification on device ═══
     try {
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: 'ResQDrive Emergency Alert',
+          title: '🚨 ResQDrive Emergency Alert',
           body: `Emergency alert dispatched! Live GPS tracking active. Acknowledgement link sent to contacts.`,
           sound: true,
           data: { mapsLink, severity },
         },
-        trigger: null,
+        trigger: (Platform.OS === 'android' ? { channelId: 'emergency-alerts' } : null) as any,
       });
     } catch (e) {
     }

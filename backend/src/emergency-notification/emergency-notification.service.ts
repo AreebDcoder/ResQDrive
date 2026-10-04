@@ -15,7 +15,6 @@ const SESSION_EXPIRY_MS = 30 * 60 * 1000;
 
 import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService } from '../email/email.service';
-import { WhatsAppService } from '../alert-dispatch/whatsapp.service';
 
 // ─── RoboCall.pk & RoboSMS.pk ─────────────────────────────────────────────
 // All calls/sms are placed server-side via simple HTTPS GET requests.
@@ -56,7 +55,6 @@ export class EmergencyNotificationService {
     private locationSharingService: LocationSharingService,
     private notificationsService: NotificationsService,
     private emailService: EmailService,
-    private whatsappService: WhatsAppService,
   ) {}
 
   private cleanLocationAddress(text?: string): string {
@@ -734,13 +732,22 @@ export class EmergencyNotificationService {
     // ─── EMAIL via existing EmailService ──────────────────────────────────
     if (contact.email) {
       try {
+        let severity = dto.severity || 'MODERATE';
+        if (!dto.severity && dto.message) {
+          const match = dto.message.match(/\((SEVERE|MODERATE|MINOR)\)/i);
+          if (match) {
+            severity = match[1].toUpperCase();
+          }
+        }
+
         await this.emailService.sendEmergencyAlertEmail(
           contact.email,
-          contact.name,
-          user.fullName || 'Unknown Driver',
-          `${mapsLink} (Near: ${locationDescription})`,
+          user.fullName || 'Driver',
+          severity,
+          mapsLink,
+          ackLink,
         );
-        this.logger.log(`[EMAIL] Sent to ${contact.name} (${contact.email})`);
+        this.logger.log(`[EMAIL] Sent to ${contact.name} (${contact.email}) with severity ${severity}`);
 
         await this.prisma.notificationAttempt.create({
           data: {
@@ -784,39 +791,6 @@ export class EmergencyNotificationService {
       });
     } catch (err: any) {
       this.logger.warn(`[PUSH] Push notification failed: ${err.message}`);
-    }
-
-    // ─── WHATSAPP via WhatsAppService (Text + Location Pin + Voice Note) ──
-    if (this.whatsappService && this.whatsappService.isReady() && contact.phoneNumber) {
-      try {
-        await Promise.allSettled([
-          this.whatsappService.sendEmergencyAlert(
-            contact.phoneNumber,
-            user.fullName || 'Driver',
-            'Moderate',
-            lat,
-            lng,
-            ackLink,
-          ),
-          this.whatsappService.sendLocationPin(
-            contact.phoneNumber,
-            lat,
-            lng,
-            'Accident Location',
-          ),
-          this.whatsappService.sendVoiceAlert(
-            contact.phoneNumber,
-            user.fullName || 'Driver',
-            'Moderate',
-            lat,
-            lng,
-            locationDescription,
-          ),
-        ]);
-        this.logger.log(`[WHATSAPP] WhatsApp alert, pin & voice sent to ${contact.name} (${contact.phoneNumber})`);
-      } catch (err: any) {
-        this.logger.warn(`[WHATSAPP] Failed for ${contact.name}: ${err.message}`);
-      }
     }
   }
 }

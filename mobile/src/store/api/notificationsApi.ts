@@ -35,8 +35,17 @@ export const notificationsApi = createApi({
   tagTypes: ['NotificationList', 'Preferences'],
   endpoints: (builder) => ({
     // ─── Queries ──────────────────────────────────────────────────────────
-    getNotificationHistory: builder.query<{ data: NotificationLog[]; total: number }, { page?: number; limit?: number }>({
+    getNotificationHistory: builder.query<{ data: NotificationLog[]; logs: NotificationLog[]; total: number }, { page?: number; limit?: number }>({
       query: ({ page = 1, limit = 20 }) => ({ url: '/notifications/history', params: { page, limit } }),
+      transformResponse: (response: any) => {
+        const rawLogs: NotificationLog[] = response?.logs || response?.data || [];
+        const totalCount = response?.pagination?.total ?? response?.total ?? rawLogs.length;
+        return {
+          data: rawLogs,
+          logs: rawLogs,
+          total: totalCount,
+        };
+      },
       providesTags: [{ type: 'NotificationList' as const }],
     }),
 
