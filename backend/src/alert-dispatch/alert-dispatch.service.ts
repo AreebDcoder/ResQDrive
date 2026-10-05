@@ -379,7 +379,19 @@ export class AlertDispatchService {
     }
 
     const cleanName = (payload.userName || 'Driver').replace(/[^\x20-\x7E]/g, '').trim();
-    const messageBody = `ResQDrive ALERT: ${cleanName} crash near Map: ${mapsLink}`.slice(0, 160);
+    let cleanLoc = ((payload as any).address || '').replace(/[^\x20-\x7E]/g, '').replace(/,\s*,+/g, ', ').replace(/^[\s,]+|[\s,]+$/g, '').trim();
+    if (!cleanLoc || cleanLoc.length < 3 || /^[,\.\s]*$/.test(cleanLoc)) {
+      cleanLoc = `${payload.latitude.toFixed(4)}, ${payload.longitude.toFixed(4)}`;
+    }
+
+    const prefix = `ResQDrive ALERT: ${cleanName} crash near `;
+    const suffix = ` Map: ${mapsLink}`;
+    const maxLocLen = Math.max(10, 160 - (prefix.length + suffix.length));
+    const truncatedLoc = cleanLoc.length > maxLocLen ? cleanLoc.substring(0, maxLocLen - 3) + '...' : cleanLoc;
+    let messageBody = `${prefix}${truncatedLoc}.${suffix}`;
+    if (messageBody.length > 160) {
+      messageBody = messageBody.substring(0, 160);
+    }
 
     // Send SMS to all contacts in parallel
     const results = await Promise.allSettled(

@@ -28,6 +28,68 @@ export class WorkshopsService {
     this.geoapifyKey = this.configService.get<string>('GEOAPIFY_API_KEY') || '';
   }
 
+  private async geocodeWorkshopAddress(address: string): Promise<{ lat: number; lng: number } | null> {
+    if (!address || address.trim().length < 2) return null;
+
+    const raw = address.trim();
+    // Normalize sectors: g10/4 -> G-10/4, f-10/2 -> F-10/2, i8/1 -> I-8/1
+    const normalized = raw
+      .replace(/\b([a-zA-Z])[\s\-]?(\d{1,2})\/(\d{1,2})\b/g, '$1-$2/$3')
+      .replace(/\b([a-zA-Z])[\s\-]?(\d{1,2})\b/g, '$1-$2');
+
+    // Strip landmarks like "near ...", "opp ...", "behind ..."
+    const strippedLandmark = raw
+      .replace(/\b(near|opp|opposite|behind|beside|front of|close to|adjacent to)\b.*$/i, '')
+      .trim();
+
+    const strippedNormalized = normalized
+      .replace(/\b(near|opp|opposite|behind|beside|front of|close to|adjacent to)\b.*$/i, '')
+      .trim();
+
+    const candidates = Array.from(new Set([
+      raw,
+      `${raw}, Islamabad, Pakistan`,
+      `${raw}, Pakistan`,
+      normalized,
+      `${normalized}, Islamabad, Pakistan`,
+      strippedLandmark,
+      `${strippedLandmark}, Islamabad, Pakistan`,
+      strippedNormalized,
+      `${strippedNormalized}, Islamabad, Pakistan`,
+    ])).filter((q) => q && q.length >= 2);
+
+    for (const query of candidates) {
+      if (this.geoapifyKey) {
+        try {
+          const res = await axios.get('https://api.geoapify.com/v1/geocode/search', {
+            params: { text: query, apiKey: this.geoapifyKey, limit: 1 },
+            timeout: 2500,
+          });
+          const feature = res.data.features?.[0];
+          if (feature?.properties?.lat && feature?.properties?.lon) {
+            return { lat: feature.properties.lat, lng: feature.properties.lon };
+          }
+        } catch (e) {}
+      }
+
+      try {
+        const res = await axios.get('https://nominatim.openstreetmap.org/search', {
+          params: { q: query, format: 'json', limit: 1 },
+          headers: { 'User-Agent': 'ResQDrive-Emergency-Platform/1.0' },
+          timeout: 2500,
+        });
+        if (res.data && res.data[0]) {
+          return {
+            lat: parseFloat(res.data[0].lat),
+            lng: parseFloat(res.data[0].lon),
+          };
+        }
+      } catch (e) {}
+    }
+
+    return null;
+  }
+
   async findNearest(lat: number, lng: number): Promise<WorkshopResult[]> {
     const results: WorkshopResult[] = [];
     const seenCoordinates = new Set<string>();
@@ -50,30 +112,24 @@ export class WorkshopsService {
         let workshopLat = details.workshopLatitude;
         let workshopLng = details.workshopLongitude;
 
-        // If coordinates were not populated yet, attempt fallback geocoding
+        // If coordinates were not populated yet, attempt smart geocoding
         if ((!workshopLat || !workshopLng) && details.workshopAddress) {
-          try {
-            const geoRes = await axios.get('https://nominatim.openstreetmap.org/search', {
-              params: { q: details.workshopAddress, format: 'json', limit: 1 },
-              headers: { 'User-Agent': 'ResQDrive-Emergency-Platform/1.0' },
-              timeout: 2500,
-            });
-            if (geoRes.data && geoRes.data[0]) {
-              workshopLat = parseFloat(geoRes.data[0].lat);
-              workshopLng = parseFloat(geoRes.data[0].lon);
-              // Update in DB asynchronously
-              this.prisma.mechanicDetails.update({
-                where: { userId: mechanic.id },
-                data: { workshopLatitude: workshopLat, workshopLongitude: workshopLng },
-              }).catch(() => {});
-            }
-          } catch (e) {}
+          const coords = await this.geocodeWorkshopAddress(details.workshopAddress);
+          if (coords) {
+            workshopLat = coords.lat;
+            workshopLng = coords.lng;
+            // Update in DB asynchronously
+            this.prisma.mechanicDetails.update({
+              where: { userId: mechanic.id },
+              data: { workshopLatitude: workshopLat, workshopLongitude: workshopLng },
+            }).catch(() => {});
+          }
         }
 
-        // If still no coordinates, default near driver search area with a small offset
+        // If still no coordinates, default to city center of Islamabad (33.6844, 73.0479)
         if (!workshopLat || !workshopLng) {
-          workshopLat = lat + 0.005;
-          workshopLng = lng + 0.005;
+          workshopLat = 33.6844;
+          workshopLng = 73.0479;
         }
 
         const coordKey = `${workshopLat.toFixed(3)},${workshopLng.toFixed(3)}`;

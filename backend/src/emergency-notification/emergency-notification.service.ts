@@ -59,11 +59,25 @@ export class EmergencyNotificationService {
 
   private cleanLocationAddress(text?: string): string {
     if (!text) return '';
-    return text
-      .replace(/[A-Z0-9]{2,8}\+[A-Z0-9]{2,8}[,\s]*/gi, '') // Remove Google Plus Codes (e.g. JV59+82V)
-      .replace(/,\s*,+/g, ', ')
-      .replace(/^[\s,]+|[\s,]+$/g, '')
-      .trim();
+    // 1. Remove Google Plus Codes (e.g. JV59+82V)
+    let cleaned = text.replace(/[A-Z0-9]{2,8}\+[A-Z0-9]{2,8}[,\s]*/gi, '');
+
+    // 2. Split by comma and filter out whitespace tokens, pure postal codes (e.g. 45230), and plus codes
+    const parts = cleaned
+      .split(',')
+      .map((p) => p.trim())
+      .filter((p) => p.length > 0 && !/^\d{4,6}$/.test(p) && !this.isPlusCode(p));
+
+    const uniqueParts: string[] = [];
+    for (const part of parts) {
+      if (!uniqueParts.includes(part)) {
+        uniqueParts.push(part);
+      }
+    }
+
+    const result = uniqueParts.join(', ').replace(/,\s*,+/g, ', ').replace(/^[\s,]+|[\s,]+$/g, '').trim();
+    if (/^[,\.\s]*$/.test(result)) return '';
+    return result;
   }
 
   private isPlusCode(text?: string): boolean {
@@ -76,6 +90,11 @@ export class EmergencyNotificationService {
    * Prioritizes: Road/Landmark + Sector/Neighbourhood + City (e.g. "Street 57, Faisal Town, Islamabad")
    */
   private async reverseGeocodeLocation(lat: number, lng: number, fallbackAddress?: string): Promise<string> {
+    if (fallbackAddress && fallbackAddress.trim().length > 3) {
+      const cleaned = this.cleanLocationAddress(fallbackAddress);
+      if (cleaned && cleaned.length >= 3) return cleaned;
+    }
+
     const geoapifyKey = process.env.GEOAPIFY_API_KEY || '';
     if (geoapifyKey && lat && lng) {
       try {
@@ -96,11 +115,12 @@ export class EmergencyNotificationService {
           if (city && city !== area && !parts.includes(city)) parts.push(city);
 
           if (parts.length > 0) {
-            return this.cleanLocationAddress(parts.join(', '));
+            const result = this.cleanLocationAddress(parts.join(', '));
+            if (result && result.length >= 3) return result;
           }
           if (props.formatted) {
             const cleaned = this.cleanLocationAddress(props.formatted);
-            if (cleaned) return cleaned;
+            if (cleaned && cleaned.length >= 3) return cleaned;
           }
         }
       } catch (err: any) {
@@ -122,23 +142,24 @@ export class EmergencyNotificationService {
         const addr = data.address;
         const parts: string[] = [];
         const road = addr.road || addr.amenity || addr.building || addr.street;
-        const suburb = addr.suburb || addr.neighbourhood || addr.city_district || addr.subdivision;
+        const suburb = addr.suburb || addr.neighbourhood || addr.city_district || addr.subdivision || addr.residential;
         const city = addr.city || addr.town || addr.county || addr.state;
         if (road && !this.isPlusCode(road)) parts.push(road);
         if (suburb && suburb !== road) parts.push(suburb);
         if (city && city !== suburb && !parts.includes(city)) parts.push(city);
-        if (parts.length > 0) return this.cleanLocationAddress(parts.join(', '));
+        if (parts.length > 0) {
+          const result = this.cleanLocationAddress(parts.join(', '));
+          if (result && result.length >= 3) return result;
+        }
+      } else if (data?.display_name) {
+        const cleaned = this.cleanLocationAddress(data.display_name);
+        if (cleaned && cleaned.length >= 3) return cleaned;
       }
     } catch (err: any) {
       this.logger.warn(`Nominatim fallback reverse geocode failed: ${err.message}`);
     }
 
-    if (fallbackAddress && fallbackAddress.trim().length > 3) {
-      const cleaned = this.cleanLocationAddress(fallbackAddress);
-      if (cleaned) return cleaned;
-    }
-
-    return `Near ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    return `Near coordinates ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
   }
 
   // ─── RoboCall.pk: Place automated voice call ────────────────────────────
@@ -153,10 +174,19 @@ export class EmergencyNotificationService {
       .replace(/[^\w\s]/gi, ' ')
       .replace(/\s+/g, ' ')
       .trim();
-    const cleanLocation = (locationText || 'Islamabad Pakistan')
+
+    let cleanLocation = (locationText || '')
+      .replace(/[-_]/g, ' ')
       .replace(/[^\w\s,]/gi, ' ')
+      .replace(/,\s*,+/g, ', ')
+      .replace(/^[\s,]+|[\s,]+$/g, '')
       .replace(/\s+/g, ' ')
       .trim();
+
+    // Ensure cleanLocation contains spoken words for the TTS engine
+    if (!cleanLocation || cleanLocation.length < 3 || /^[,\.\s]*$/.test(cleanLocation)) {
+      cleanLocation = 'Islamabad Pakistan';
+    }
 
     const url = `${ROBOCALL_BASE}/calls?api_key=${encodeURIComponent(this.robocallApiKey)}`
       + `&caller_id=${callerId}`
