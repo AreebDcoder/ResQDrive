@@ -1,27 +1,216 @@
 import axios from 'axios';
-import { Platform } from 'react-native';
+import { Platform, NativeModules } from 'react-native';
 import { store } from '../store/store';
 import { logoutAction, setTokens } from '../store/slices/authSlice';
 import { getItemAsync, setItemAsync, deleteItemAsync } from '../utils/secureStorage';
-
 import Constants from 'expo-constants';
 
-const LOCALHOST_API_URL = 'http://localhost:3000';
+const CUSTOM_SERVER_URL_KEY = 'resqdrive_custom_server_url';
+const DEFAULT_PORT = '3000';
+export const DEFAULT_FALLBACK_IP = '192.168.100.13';
 
-export const getDynamicApiUrl = (): string => {
-  if (Platform.OS === 'web') return LOCALHOST_API_URL;
+let cachedDynamicUrl: string | null = null;
+let customServerOverride: string | null = null;
+let isStorageChecked = false;
 
-  // Infer Metro Host IP dynamically when connected via Expo Go / Dev Client
-  const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest2?.extra?.expoGo?.developer?.tool;
-  if (hostUri) {
-    const hostIp = hostUri.split(':')[0];
-    if (hostIp && hostIp !== 'localhost' && hostIp !== '127.0.0.1') {
-      return `http://${hostIp}:3000`;
+/**
+ * Extracts an IP or hostname from various URL formats.
+ */
+function extractHost(rawUrl?: string | null): string | null {
+  if (!rawUrl || typeof rawUrl !== 'string') return null;
+  
+  // 1. Match http(s)://<host>:<port> or exp://<host>:<port>
+  const protocolMatch = rawUrl.match(/^(?:https?|exp):\/\/([^\/:]+)/i);
+  if (protocolMatch && protocolMatch[1]) {
+    const host = protocolMatch[1].trim();
+    if (host && host !== 'localhost' && host !== '127.0.0.1') {
+      return host;
     }
   }
 
-  return process.env.EXPO_PUBLIC_API_URL || 'http://192.168.100.13:3000';
+  // 2. Match raw host:port string like '192.168.100.13:8081' or '192.168.100.13'
+  const clean = rawUrl.replace(/^[a-z]+:\/\//i, '').split('/')[0];
+  const hostPart = clean.split(':')[0]?.trim();
+  if (hostPart && hostPart !== 'localhost' && hostPart !== '127.0.0.1') {
+    return hostPart;
+  }
+
+  return null;
+}
+
+/**
+ * Auto-detects the developer's laptop/PC LAN IP address across all Expo and React Native runtime sources:
+ * 1. Web browser: window.location.hostname
+ * 2. NativeModules.SourceCode.scriptURL (Metro Bundler URL - changes automatically when Wi-Fi changes!)
+ * 3. Constants.expoConfig.hostUri (Modern Expo SDK host URI)
+ * 4. Constants.expoGoConfig.debuggerHost (Expo Go SDK 49+)
+ * 5. Constants.manifest2.extra.expoGo.debuggerHost
+ * 6. Constants.manifest.debuggerHost (Classic Expo)
+ * 7. Constants.linkingUri / Constants.experienceUrl (Expo deep link URLs)
+ * 8. Android Emulator localhost alias (10.0.2.2)
+ */
+export function detectMetroHostIp(): string | null {
+  if (Platform.OS === 'web') {
+    if (typeof window !== 'undefined' && window.location?.hostname) {
+      const webHost = window.location.hostname;
+      if (webHost && webHost !== 'localhost' && webHost !== '127.0.0.1') {
+        return webHost;
+      }
+    }
+    return 'localhost';
+  }
+
+  // 1. NativeModules.SourceCode.scriptURL (Most reliable runtime indicator of current Metro host)
+  const scriptURL = (NativeModules as any)?.SourceCode?.scriptURL;
+  const scriptHost = extractHost(scriptURL);
+  if (scriptHost) {
+    return scriptHost;
+  }
+
+  // 2. Constants.expoConfig.hostUri
+  const expoConfigHost = extractHost(Constants.expoConfig?.hostUri);
+  if (expoConfigHost) return expoConfigHost;
+
+  // 3. Constants.expoGoConfig.debuggerHost
+  const expoGoHost = extractHost((Constants as any)?.expoGoConfig?.debuggerHost);
+  if (expoGoHost) return expoGoHost;
+
+  // 4. Constants.manifest2.extra.expoGo.debuggerHost
+  const manifest2Host = extractHost((Constants as any)?.manifest2?.extra?.expoGo?.debuggerHost);
+  if (manifest2Host) return manifest2Host;
+
+  // 5. Constants.manifest.debuggerHost
+  const manifestHost = extractHost((Constants as any)?.manifest?.debuggerHost);
+  if (manifestHost) return manifestHost;
+
+  // 6. Linking URI / Experience URL
+  const linkingHost = extractHost(Constants.linkingUri || (Constants as any)?.experienceUrl);
+  if (linkingHost) return linkingHost;
+
+  // 7. Android Emulator fallback
+  if (Platform.OS === 'android' && typeof scriptURL === 'string' && (scriptURL.includes('10.0.2.2') || scriptURL.includes('localhost'))) {
+    return '10.0.2.2';
+  }
+
+  return null;
+}
+
+/**
+ * Synchronous resolver for initial module evaluation.
+ * Prioritizes dynamic Metro host IP over stale fallback constants.
+ */
+export const getDynamicApiUrl = (): string => {
+  if (customServerOverride) return customServerOverride;
+  if (cachedDynamicUrl) return cachedDynamicUrl;
+
+  if (Platform.OS === 'web') {
+    if (typeof window !== 'undefined' && window.location?.hostname) {
+      cachedDynamicUrl = `http://${window.location.hostname}:${DEFAULT_PORT}`;
+      return cachedDynamicUrl;
+    }
+    return `http://localhost:${DEFAULT_PORT}`;
+  }
+
+  const detectedIp = detectMetroHostIp();
+  if (detectedIp) {
+    cachedDynamicUrl = `http://${detectedIp}:${DEFAULT_PORT}`;
+    return cachedDynamicUrl;
+  }
+
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+
+  // Safe LAN IP fallback for physical devices so it never tries unreachable localhost
+  return `http://${DEFAULT_FALLBACK_IP}:${DEFAULT_PORT}`;
 };
+
+/**
+ * Asynchronous resolver that checks SecureStore for any user override before auto-detecting.
+ */
+export const getResolvedApiUrl = async (): Promise<string> => {
+  if (customServerOverride) return customServerOverride;
+
+  if (!isStorageChecked) {
+    isStorageChecked = true;
+    try {
+      const stored = await getItemAsync(CUSTOM_SERVER_URL_KEY);
+      if (stored && stored.trim()) {
+        customServerOverride = stored.trim();
+        return customServerOverride;
+      }
+    } catch {
+      // Ignore storage read error
+    }
+  }
+
+  if (customServerOverride) return customServerOverride;
+
+  return getDynamicApiUrl();
+};
+
+/**
+ * Sets a custom server host or URL override (persisted in SecureStore).
+ * Example: setCustomServerHost('192.168.1.100') or setCustomServerHost('http://192.168.1.100:3000')
+ */
+export async function setCustomServerHost(hostOrUrl: string): Promise<string> {
+  let formatted = hostOrUrl.trim();
+  if (!formatted.startsWith('http://') && !formatted.startsWith('https://')) {
+    formatted = `http://${formatted}`;
+  }
+  if (!formatted.match(/:\d+$/) && !formatted.includes('/', 8)) {
+    formatted = `${formatted}:${DEFAULT_PORT}`;
+  }
+
+  customServerOverride = formatted;
+  cachedDynamicUrl = formatted;
+  api.defaults.baseURL = formatted;
+  await setItemAsync(CUSTOM_SERVER_URL_KEY, formatted);
+  console.log(`[DynamicAPI] Custom Server URL saved: ${formatted}`);
+  return formatted;
+}
+
+/**
+ * Clears custom server override and reverts to dynamic auto-detection.
+ */
+export async function clearCustomServerHost(): Promise<string> {
+  customServerOverride = null;
+  cachedDynamicUrl = null;
+  await deleteItemAsync(CUSTOM_SERVER_URL_KEY);
+  const reDetected = await getResolvedApiUrl();
+  api.defaults.baseURL = reDetected;
+  console.log(`[DynamicAPI] Cleared override. Re-detected Server URL: ${reDetected}`);
+  return reDetected;
+}
+
+/**
+ * Returns the currently active server URL.
+ */
+export function getCurrentServerUrl(): string {
+  return customServerOverride || api.defaults.baseURL || getDynamicApiUrl();
+}
+
+/**
+ * Pings the backend health endpoint to verify connectivity.
+ */
+export async function testServerConnection(targetUrl?: string): Promise<{ ok: boolean; message: string; latencyMs: number }> {
+  const urlToTest = targetUrl || getCurrentServerUrl();
+  const start = Date.now();
+  try {
+    await axios.get(`${urlToTest}/ml/health`, { timeout: 4000 });
+    const latencyMs = Date.now() - start;
+    return { ok: true, message: `Connected (${latencyMs}ms)`, latencyMs };
+  } catch (err: any) {
+    try {
+      await axios.get(`${urlToTest}/alert-dispatch/health`, { timeout: 4000 });
+      const latencyMs = Date.now() - start;
+      return { ok: true, message: `Connected (${latencyMs}ms)`, latencyMs };
+    } catch (err2: any) {
+      const latencyMs = Date.now() - start;
+      return { ok: false, message: err2?.message || 'Connection failed', latencyMs };
+    }
+  }
+}
 
 export const API_URL = getDynamicApiUrl();
 
@@ -35,6 +224,13 @@ const api = axios.create({
 
 api.interceptors.request.use(
   async (config) => {
+    // Dynamically guarantee active server baseURL on every outgoing request
+    const activeUrl = await getResolvedApiUrl();
+    if (activeUrl) {
+      config.baseURL = activeUrl;
+      api.defaults.baseURL = activeUrl;
+    }
+
     const token = store.getState().auth.accessToken;
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -61,13 +257,18 @@ const processQueue = (error: any, token: string | null = null) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    // If request failed with network error, invalidate cached URL so next call re-scans the Metro host
+    if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error') || error.message?.includes('timeout')) {
+      cachedDynamicUrl = null;
+    }
+
     const originalRequest = error.config;
 
-    if (originalRequest.url.includes('/auth/refresh')) {
+    if (originalRequest?.url?.includes('/auth/refresh')) {
       return Promise.reject(error);
     }
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -88,7 +289,8 @@ api.interceptors.response.use(
           throw new Error('No refresh token stored');
         }
 
-        const response = await axios.post(`${API_URL}/auth/refresh`, {}, {
+        const currentUrl = api.defaults.baseURL || getDynamicApiUrl();
+        const response = await axios.post(`${currentUrl}/auth/refresh`, {}, {
           headers: {
             Authorization: `Bearer ${storedRefreshToken}`,
           },

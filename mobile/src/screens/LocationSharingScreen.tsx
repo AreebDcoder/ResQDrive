@@ -11,7 +11,7 @@ import {
 import * as Location from 'expo-location';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
-import api from '../api/axios';
+import api, { getCurrentServerUrl } from '../api/axios';
 import { connectSocket, disconnectSocket, emitLocationUpdate } from '../services/socketService';
 
 const FAST_INTERVAL_MS = 5000;
@@ -163,7 +163,7 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
     if (!session) return '';
     const baseUrl = Platform.OS === 'web'
       ? 'http://localhost:3000'
-      : (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000');
+      : getCurrentServerUrl();
     return `${baseUrl}${session.shareUrl}`;
   }
 

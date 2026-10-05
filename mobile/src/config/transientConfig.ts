@@ -32,4 +32,5 @@ export let IS_DEMO_MODE = ML_CONFIG.SEVERITY_DEMO_MODE;
 
 export function setDemoMode(enabled: boolean) {
   IS_DEMO_MODE = enabled;
+  ML_CONFIG.SEVERITY_DEMO_MODE = enabled;
 }

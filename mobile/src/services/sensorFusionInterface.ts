@@ -4,6 +4,7 @@ export interface SensorReading {
   accelG: number;            // Magnitude of g-forces: sqrt(accelX² + accelY² + accelZ²)
   gyroDegPerSec: number;     // Magnitude of gyroscope rotation: sqrt(gyroX² + gyroY² + gyroZ²)
   gpsSpeedDropKmh: number;   // Speed delta (max speed in last 5 readings - current speed)
+  speedKmh?: number;         // Current vehicle speed in km/h from GPS
   motionSeverity: MotionSeverity; // Classified tiered severity: 'none' | 'minor' | 'moderate' | 'severe'
   jerk?: number;             // Acceleration rate of change da/dt (g/s)
   soundRms?: number;         // Live acoustic RMS energy [0.0, 1.0]

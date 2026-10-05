@@ -11,6 +11,7 @@ import {
 } from '../store/slices/emergencySlice';
 import { connectSocket, disconnectSocket, emitLocationUpdate } from '../services/socketService';
 import { Ionicons } from '@expo/vector-icons';
+import { getCurrentServerUrl } from '../api/axios';
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -144,7 +145,7 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
     if (!emergency.acknowledgeUrl) return '';
     const baseUrl = Platform.OS === 'web'
       ? 'http://localhost:3000'
-      : (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000');
+      : getCurrentServerUrl();
     return `${baseUrl}${emergency.acknowledgeUrl}`;
   }
 

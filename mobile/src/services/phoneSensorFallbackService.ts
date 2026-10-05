@@ -21,6 +21,8 @@ export class PhoneSensorFallbackService implements SensorFusionService {
   private currentGyro = { x: 0, y: 0, z: 0 };
   private speedBuffer: number[] = [];
   private lastSpeedKmh = 0;
+  private lastLocation: { lat: number; lng: number } | null = null;
+  private lastLocationTimestamp = 0;
 
   // Rolling window of raw samples for feature extraction (~5 seconds at 200ms)
   private rawSamplesBuffer: RawSensorSample[] = [];
@@ -71,17 +73,56 @@ export class PhoneSensorFallbackService implements SensorFusionService {
       console.log('PhoneFallback: Requesting foreground location permission...');
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === 'granted') {
+        // Prime initial location & speed immediately
+        Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High })
+          .then(initialLoc => {
+            if (initialLoc?.coords) {
+              const rawSpeed = initialLoc.coords.speed;
+              if (typeof rawSpeed === 'number' && rawSpeed > 0) {
+                this.lastSpeedKmh = rawSpeed * 3.6;
+                this.speedBuffer.push(this.lastSpeedKmh);
+              }
+              this.lastLocation = { lat: initialLoc.coords.latitude, lng: initialLoc.coords.longitude };
+              this.lastLocationTimestamp = initialLoc.timestamp;
+            }
+          })
+          .catch(() => {});
+
         this.locationSubscription = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.High,
-            timeInterval: 1000,
-            distanceInterval: 1,
+            timeInterval: 500, // 500ms for responsive live speed telemetry
+            distanceInterval: 0, // 0m to receive updates even when stationary or moving slowly
           },
           location => {
-            const speedKmh = Math.max(0, (location.coords.speed || 0) * 3.6);
-            this.lastSpeedKmh = speedKmh;
-            
-            this.speedBuffer.push(speedKmh);
+            const rawSpeed = location.coords.speed;
+            let speedKmh = 0;
+            if (typeof rawSpeed === 'number' && rawSpeed >= 0) {
+              speedKmh = rawSpeed * 3.6;
+            } else if (this.lastLocation && this.lastLocationTimestamp > 0) {
+              // Fallback: Haversine distance / delta time if GPS Doppler speed is null/-1
+              const dtSeconds = (location.timestamp - this.lastLocationTimestamp) / 1000.0;
+              if (dtSeconds >= 0.5) {
+                const dLat = (location.coords.latitude - this.lastLocation.lat) * (Math.PI / 180);
+                const dLon = (location.coords.longitude - this.lastLocation.lng) * (Math.PI / 180);
+                const a =
+                  Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(this.lastLocation.lat * (Math.PI / 180)) *
+                  Math.cos(location.coords.latitude * (Math.PI / 180)) *
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                const distMeters = 6371000 * c;
+                if (distMeters > 1.2) {
+                  speedKmh = (distMeters / dtSeconds) * 3.6;
+                }
+              }
+            }
+
+            this.lastLocation = { lat: location.coords.latitude, lng: location.coords.longitude };
+            this.lastLocationTimestamp = location.timestamp;
+            this.lastSpeedKmh = Math.max(0, speedKmh);
+
+            this.speedBuffer.push(this.lastSpeedKmh);
             if (this.speedBuffer.length > 5) {
               this.speedBuffer.shift();
             }
@@ -124,6 +165,11 @@ export class PhoneSensorFallbackService implements SensorFusionService {
       this.locationSubscription.remove();
       this.locationSubscription = null;
     }
+
+    this.lastLocation = null;
+    this.lastLocationTimestamp = 0;
+    this.lastSpeedKmh = 0;
+    this.speedBuffer = [];
   }
 
   private emitSensorEvent() {
@@ -192,6 +238,7 @@ export class PhoneSensorFallbackService implements SensorFusionService {
       accelG,
       gyroDegPerSec,
       gpsSpeedDropKmh,
+      speedKmh: this.lastSpeedKmh,
       motionSeverity,
       jerk,
       soundRms,
