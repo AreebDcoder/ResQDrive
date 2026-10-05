@@ -18,11 +18,17 @@ import {
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useDispatch } from 'react-redux';
 import { contactSchema, ContactInput } from '../schemas/validation';
-import { addContactSuccess, updateContactSuccess, deleteContactSuccess } from '../store/slices/contactsSlice';
-import api from '../api/axios';
+import {
+  useCreateContactMutation,
+  useUpdateContactMutation,
+  useDeleteContactMutation,
+} from '../store/api/contactsApi';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useToast } from '../components/ui/Toast';
+import { ConfirmDialog } from '../components/ui';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 const RELATIONSHIPS = ['Spouse', 'Parent', 'Sibling', 'Friend', 'Other'];
 
@@ -35,12 +41,21 @@ const RELATIONSHIP_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
 };
 
 export default function AddEditContactScreen({ route, navigation }: any) {
-  const dispatch = useDispatch();
+  const toast = useToast();
+  const insets = useSafeAreaInsets();
   const contact = route.params?.contact; // If defined, we are editing
   const isEditing = !!contact;
 
+  // Batch 11: Migrated to RTK Query mutations — auto-invalidates 'ContactList' tag.
+  // No manual dispatch of slice actions needed; tag invalidation triggers refetch
+  // on any screen using useGetContactsQuery (e.g. EmergencyContactsScreen).
+  const [createContact] = useCreateContactMutation();
+  const [updateContact] = useUpdateContactMutation();
+  const [deleteContact] = useDeleteContactMutation();
+
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [removeDialogVisible, setRemoveDialogVisible] = useState(false);
 
   const {
     control,
@@ -65,48 +80,46 @@ export default function AddEditContactScreen({ route, navigation }: any) {
     setErrorMsg(null);
     try {
       if (isEditing) {
-        const response = await api.patch(`/emergency-contacts/${contact.id}`, data);
-        dispatch(updateContactSuccess(response.data));
+        // Batch 11: RTK Query mutation — invalidates 'Contact' + 'ContactList' tags.
+        await updateContact({ id: contact.id, body: data }).unwrap();
       } else {
-        const response = await api.post('/emergency-contacts', data);
-        dispatch(addContactSuccess(response.data));
+        await createContact(data).unwrap();
       }
       navigation.goBack();
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Failed to save emergency contact.');
+      setErrorMsg(err.data?.message || 'Failed to save emergency contact.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDelete = () => {
-    const doDelete = async () => {
-      setIsLoading(true);
-      setErrorMsg(null);
-      try {
-        await api.delete(`/emergency-contacts/${contact.id}`);
-        dispatch(deleteContactSuccess({ id: contact.id }));
-        navigation.goBack();
-      } catch (err: any) {
-        setErrorMsg(err.response?.data?.message || 'Failed to delete contact.');
-        setIsLoading(false);
-      }
-    };
+const doDelete = async () => {
+    setIsLoading(true);
+    setErrorMsg(null);
+    try {
+      // Batch 11: RTK Query mutation — invalidates 'ContactList' tag.
+      await deleteContact(contact.id).unwrap();
+      navigation.goBack();
+    } catch (err: any) {
+      setErrorMsg(err.data?.message || 'Failed to delete contact.');
+      setIsLoading(false);
+    }
+  };
 
+  const handleDelete = () => {
     if (Platform.OS === 'web') {
       if (typeof window !== 'undefined' && window.confirm(`Are you sure you want to remove ${contact.name}?`)) {
         doDelete();
       }
     } else {
-      Alert.alert(
-        'Remove Emergency Contact',
-        `Are you sure you want to remove ${contact.name} from your emergency contacts?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Remove', style: 'destructive', onPress: doDelete },
-        ],
-      );
+      // Phase 8: replaced destructive Alert.alert with ConfirmDialog primitive
+      setRemoveDialogVisible(true);
     }
+  };
+
+  const handleConfirmRemove = () => {
+    setRemoveDialogVisible(false);
+    doDelete();
   };
 
   return (
@@ -114,16 +127,16 @@ export default function AddEditContactScreen({ route, navigation }: any) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
-      <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.scrollContainer, { paddingTop: insets.top + 16 }]} keyboardShouldPersistTaps="handled">
         {/* ── Header ── */}
         <View style={styles.header}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <Ionicons name={isEditing ? 'pencil-outline' : 'person-add-outline'} size={26} color="#E53935" />
-            <Text style={styles.title}>
+            <Ionicons name={isEditing ? 'pencil-outline' : 'person-add-outline'} size={26} color={colors.danger[500]} />
+            <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               {isEditing ? 'Edit Contact' : 'Add Contact'}
             </Text>
           </View>
-          <Text style={styles.subtitle}>
+          <Text style={styles.subtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             {isEditing ? 'Update emergency contact parameters' : 'Register a contact for crash alerts notification'}
           </Text>
         </View>
@@ -131,13 +144,13 @@ export default function AddEditContactScreen({ route, navigation }: any) {
         {/* ── Error ── */}
         {errorMsg && (
           <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle-outline" size={18} color="#FF8A80" style={{ marginRight: 8 }} />
-            <Text style={styles.errorText}>{errorMsg}</Text>
+            <Ionicons name="alert-circle-outline" size={18} color={colors.danger[300]} style={{ marginRight: 8 }} />
+            <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errorMsg}</Text>
           </View>
         )}
 
         <View style={styles.form}>
-          <Text style={styles.label}>Contact Name</Text>
+          <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Contact Name</Text>
           <Controller
             control={control}
             name="name"
@@ -145,16 +158,18 @@ export default function AddEditContactScreen({ route, navigation }: any) {
               <TextInput
                 style={[styles.input, errors.name && styles.inputError]}
                 placeholder="e.g. John Doe"
-                placeholderTextColor="#6B6B80"
+                placeholderTextColor={darkColors.textTertiary}
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
+                allowFontScaling={true}
+                maxFontSizeMultiplier={1.5}
               />
             )}
           />
-          {errors.name && <Text style={styles.errorHelper}>{errors.name.message}</Text>}
+          {errors.name && <Text style={styles.errorHelper} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errors.name.message}</Text>}
 
-          <Text style={styles.label}>Phone Number</Text>
+          <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Phone Number</Text>
           <Controller
             control={control}
             name="phoneNumber"
@@ -162,17 +177,19 @@ export default function AddEditContactScreen({ route, navigation }: any) {
               <TextInput
                 style={[styles.input, errors.phoneNumber && styles.inputError]}
                 placeholder="e.g. +923001234567"
-                placeholderTextColor="#6B6B80"
+                placeholderTextColor={darkColors.textTertiary}
                 keyboardType="phone-pad"
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
+                allowFontScaling={true}
+                maxFontSizeMultiplier={1.5}
               />
             )}
           />
-          {errors.phoneNumber && <Text style={styles.errorHelper}>{errors.phoneNumber.message}</Text>}
+          {errors.phoneNumber && <Text style={styles.errorHelper} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errors.phoneNumber.message}</Text>}
 
-          <Text style={styles.label}>Email Address</Text>
+          <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Email Address</Text>
           <Controller
             control={control}
             name="email"
@@ -180,19 +197,21 @@ export default function AddEditContactScreen({ route, navigation }: any) {
               <TextInput
                 style={[styles.input, errors.email && styles.inputError]}
                 placeholder="e.g. john@example.com"
-                placeholderTextColor="#6B6B80"
+                placeholderTextColor={darkColors.textTertiary}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
+                allowFontScaling={true}
+                maxFontSizeMultiplier={1.5}
               />
             )}
           />
-          {errors.email && <Text style={styles.errorHelper}>{errors.email.message}</Text>}
+          {errors.email && <Text style={styles.errorHelper} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errors.email.message}</Text>}
 
           {/* ── Relationship Tags ── */}
-          <Text style={styles.label}>Relationship</Text>
+          <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Relationship</Text>
           <View style={styles.relationshipTags}>
             {RELATIONSHIPS.map((rel) => (
               <TouchableOpacity
@@ -202,12 +221,12 @@ export default function AddEditContactScreen({ route, navigation }: any) {
                   selectedRelationship === rel && styles.tagSelected,
                 ]}
                 onPress={() => setValue('relationship', rel)}
-                activeOpacity={0.7}
+                activeOpacity={0.7} accessibilityRole="button"
               >
                 <Ionicons
                   name={RELATIONSHIP_ICONS[rel]}
                   size={16}
-                  color={selectedRelationship === rel ? '#FFFFFF' : '#6B6B80'}
+                  color={selectedRelationship === rel ? darkColors.text : darkColors.textTertiary}
                   style={{ marginRight: 6 }}
                 />
                 <Text
@@ -215,7 +234,7 @@ export default function AddEditContactScreen({ route, navigation }: any) {
                     styles.tagText,
                     selectedRelationship === rel && styles.tagTextSelected,
                   ]}
-                >
+                 allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                   {rel}
                 </Text>
               </TouchableOpacity>
@@ -226,12 +245,12 @@ export default function AddEditContactScreen({ route, navigation }: any) {
           <TouchableOpacity
             style={styles.saveBtn}
             onPress={handleSubmit(onSubmit)}
-            disabled={isLoading}
+            disabled={isLoading} accessibilityRole="button"
           >
             {isLoading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={darkColors.text} />
             ) : (
-              <Text style={styles.saveBtnText}>
+              <Text style={styles.saveBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 {isEditing ? 'Save Changes' : 'Add Contact'}
               </Text>
             )}
@@ -242,16 +261,28 @@ export default function AddEditContactScreen({ route, navigation }: any) {
             <TouchableOpacity
               style={styles.deleteBtn}
               onPress={handleDelete}
-              disabled={isLoading}
+              disabled={isLoading} accessibilityRole="button"
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                <Ionicons name="trash-outline" size={18} color="#FF5252" />
-                <Text style={styles.deleteBtnText}>Remove Contact</Text>
+                <Ionicons name="trash-outline" size={18} color={colors.danger[400]} />
+                <Text style={styles.deleteBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Remove Contact</Text>
               </View>
             </TouchableOpacity>
           )}
         </View>
       </ScrollView>
+
+      {/* Phase 8: ConfirmDialog replaces destructive Alert.alert */}
+      <ConfirmDialog
+        visible={removeDialogVisible}
+        title="Remove Emergency Contact"
+        description={contact ? `Are you sure you want to remove ${contact.name} from your emergency contacts?` : undefined}
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmRemove}
+        onCancel={() => setRemoveDialogVisible(false)}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -259,7 +290,7 @@ export default function AddEditContactScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
   },
   scrollContainer: {
     flexGrow: 1,
@@ -273,22 +304,22 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
   subtitle: {
     fontSize: 14,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginTop: 6,
     lineHeight: 20,
   },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 23, 68, 0.12)',
+    backgroundColor: tints.dangerErrorBg,
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.3)',
+    borderColor: tints.dangerErrorBorder,
     marginBottom: 20,
   },
   errorEmoji: {
@@ -296,7 +327,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   errorText: {
-    color: '#FF8A80',
+    color: colors.danger[300],
     fontSize: 14,
     textAlign: 'center',
     flex: 1,
@@ -306,26 +337,26 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginBottom: 8,
     fontWeight: '600',
   },
   input: {
-    backgroundColor: 'rgba(10, 10, 15, 0.6)',
-    color: '#FFFFFF',
+    backgroundColor: tints.overlayStrong,
+    color: darkColors.text,
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderRadius: 10,
     fontSize: 15,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
   inputError: {
-    borderColor: '#E53935',
+    borderColor: colors.danger[500],
   },
   errorHelper: {
-    color: '#FF8A80',
+    color: colors.danger[300],
     fontSize: 12,
     marginTop: -10,
     marginBottom: 16,
@@ -337,9 +368,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   tag: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
@@ -349,49 +380,49 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   tagSelected: {
-    backgroundColor: 'rgba(229, 57, 53, 0.2)',
-    borderColor: 'rgba(229, 57, 53, 0.5)',
+    backgroundColor: tints.dangerMedium,
+    borderColor: tints.dangerMedium,
   },
   tagEmoji: {
     fontSize: 14,
     marginRight: 6,
   },
   tagText: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 14,
     fontWeight: '600',
   },
   tagTextSelected: {
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
   saveBtn: {
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 10,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 5,
   },
   saveBtnText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 16,
     fontWeight: '700',
   },
   deleteBtn: {
-    backgroundColor: 'rgba(255, 23, 68, 0.08)',
+    backgroundColor: tints.dangerErrorBg,
     borderWidth: 1,
-    borderColor: 'rgba(255, 82, 82, 0.3)',
+    borderColor: tints.dangerErrorBorder,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 16,
   },
   deleteBtnText: {
-    color: '#FF5252',
+    color: colors.danger[400],
     fontSize: 14,
     fontWeight: '700',
   },

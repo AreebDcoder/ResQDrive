@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import {
+  AccessibilityInfo,
   ActivityIndicator,
   Alert,
   Animated,
@@ -12,33 +13,43 @@ import {
   StatusBar,
   StyleSheet,
   Text,
-  TextInput,
-  TouchableOpacity,
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useDispatch } from 'react-redux';
 import { loginSchema, LoginInput } from '../schemas/validation';
 import { loginSuccess } from '../store/slices/authSlice';
-import api from '../api/axios';
+import { useLoginMutation, useGoogleAuthMutation } from '../store/api/authApi';
 import { setItemAsync } from '../utils/secureStorage';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useToast } from '../components/ui/Toast';
+import { Button, FormInput } from '../components/ui';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 export default function LoginScreen({ navigation }: { navigation: any }) {
+  const toast = useToast();
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [focusedField, setFocusedField] = useState<string | null>(null);
+
+  // Batch 11: Migrated to RTK Query mutations. Auth state is still managed by
+  // authSlice.loginSuccess (not RTK Query cache) so dispatch(loginSuccess) is preserved.
+  const [login] = useLoginMutation();
+  const [googleAuth] = useGoogleAuthMutation();
 
   // Entrance animations
   const cardY = useRef(new Animated.Value(24)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
   const headerOpacity = useRef(new Animated.Value(0)).current;
   const headerTranslateY = useRef(new Animated.Value(16)).current;
+
+  // Batch 7 Phase 4: Respect Reduce Motion accessibility setting
+  const [reduceMotion, setReduceMotion] = useState(false);
 
   // Google Sign-In config
   useEffect(() => {
@@ -49,6 +60,20 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
   }, []);
 
   useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    // Skip decorative entrance animation when Reduce Motion is enabled
+    if (reduceMotion) {
+      headerTranslateY.setValue(0);
+      headerOpacity.setValue(1);
+      cardY.setValue(0);
+      cardOpacity.setValue(1);
+      return;
+    }
     Animated.sequence([
       Animated.parallel([
         Animated.timing(headerTranslateY, {
@@ -77,7 +102,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
         }),
       ]),
     ]).start();
-  }, []);
+  }, [reduceMotion]);
 
   const {
     control,
@@ -96,18 +121,24 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
     setErrorMsg(null);
     Keyboard.dismiss();
     try {
-      const response = await api.post('/auth/login', data);
-      const { accessToken, refreshToken, user } = response.data;
+      // Batch 11: RTK Query mutation. Returns AuthResponse unwrapped.
+      const authData = await login(data).unwrap();
+      const { accessToken, refreshToken, user } = authData;
 
       await setItemAsync('refreshToken', refreshToken);
-      dispatch(loginSuccess({ accessToken, user }));
+      // Cast to any: authApi.User is missing isActive (present in authSlice.User).
+      dispatch(loginSuccess({ accessToken, user: user as any }));
     } catch (err: any) {
-      const msg = err.response?.data?.message || 'Login failed. Please check your credentials.';
+      const msg = err.data?.message || err.message || 'Login failed. Please check your credentials.';
       if (typeof msg === 'string' && msg.includes('EMAIL_NOT_VERIFIED')) {
         setErrorMsg('Your account is not verified yet. Redirecting to verification...');
         setTimeout(() => {
           navigation.navigate('EmailVerification', { email: data.emailOrPhone });
         }, 1200);
+      } else if (typeof msg === 'string' && msg.includes('WORKSHOP_PENDING_APPROVAL')) {
+        const cleanMessage = msg.replace('WORKSHOP_PENDING_APPROVAL:', '').trim();
+        setErrorMsg(cleanMessage);
+        Alert.alert('Workshop Review in Progress', cleanMessage);
       } else {
         setErrorMsg(msg);
       }
@@ -132,19 +163,21 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
     const idToken = userInfo.data?.idToken;
 
     if (!idToken) {
-      Alert.alert('Error', 'Failed to get Google ID token');
+      toast.error('Failed to get Google ID token');
       return;
     }
  
 
-    const res = await api.post('/auth/google', { idToken });
-    console.log('✅ Backend response:', JSON.stringify(res.data));
+    // Batch 11: RTK Query mutation — POST /auth/google with idToken.
+    // Cast to any: response can include `newUser` flag if user doesn't exist yet,
+    // which isn't part of the typed AuthResponse.
+    const res = await googleAuth({ idToken }).unwrap() as any;
 
-         if (res.data?.accessToken) {
-        const { accessToken, refreshToken, user } = res.data;
+         if (res?.accessToken) {
+        const { accessToken, refreshToken, user } = res;
         await setItemAsync('refreshToken', refreshToken);
-        dispatch(loginSuccess({ accessToken, user }));
-    } else if (res.data?.newUser) {
+        dispatch(loginSuccess({ accessToken, user: user as any }));
+    } else if (res?.newUser) {
       navigation.navigate('Register', {
         googleData: {
           fullName: userInfo.data?.user?.name || '',
@@ -154,7 +187,6 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
       });
     }
   } catch (error: any) {
-    console.log('❌ Google Sign-In error:', error.code, error.message, error.response?.data);
     if (error.code === statusCodes.SIGN_IN_CANCELLED) {
       // User cancelled
     } else {
@@ -166,15 +198,15 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
 };
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessibilityRole="button">
       <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#0A0A0F" />
+        <StatusBar barStyle="light-content" backgroundColor={darkColors.background} />
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardAvoid}
         >
           <ScrollView
-            contentContainerStyle={styles.scrollContainer}
+            contentContainerStyle={[styles.scrollContainer, { paddingTop: insets.top + 16 }]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
@@ -194,14 +226,14 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
               {/* Logo mark */}
               <View style={styles.logoRow}>
                 <View style={styles.logoBadge}>
-                  <Ionicons name="shield-checkmark" size={24} color="#E53935" />
+                  <Ionicons name="shield-checkmark" size={24} color={colors.danger[500]} />
                 </View>
-                <Text style={styles.brandText}>
-                  ResQ<Text style={styles.brandAccent}>Drive</Text>
+                <Text style={styles.brandText} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+                  ResQ<Text style={styles.brandAccent} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Drive</Text>
                 </Text>
               </View>
-              <Text style={styles.title}>Welcome Back</Text>
-              <Text style={styles.subtitle}>Log in to your ResQDrive account</Text>
+              <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Welcome Back</Text>
+              <Text style={styles.subtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Log in to your ResQDrive account</Text>
             </Animated.View>
 
             {/* Glass Card */}
@@ -217,142 +249,82 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
               {/* Error */}
               {errorMsg && (
                 <View style={styles.errorContainer}>
-                  <Ionicons name="alert-circle-outline" size={18} color="#FF5252" style={{ marginRight: 6 }} />
-                  <Text style={styles.errorText}>{errorMsg}</Text>
+                  <Ionicons name="alert-circle-outline" size={18} color={colors.danger[400]} style={{ marginRight: 6 }} />
+                  <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errorMsg}</Text>
                 </View>
               )}
 
-              <Text style={styles.label}>Email or Phone Number</Text>
-              <Controller
-                control={control}
+              <FormInput
                 name="emailOrPhone"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <View
-                    style={[
-                      styles.inputWrapper,
-                      focusedField === 'email' && styles.inputFocused,
-                      errors.emailOrPhone && styles.inputError,
-                    ]}
-                  >
-                    <Ionicons name="mail-outline" size={18} color="#6B6B80" style={{ marginRight: 10 }} />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Enter email or phone number"
-                      placeholderTextColor="#6B6B80"
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      onBlur={() => { onBlur(); setFocusedField(null); }}
-                      onChangeText={onChange}
-                      onFocus={() => setFocusedField('email')}
-                      value={value}
-                    />
-                  </View>
-                )}
-              />
-              {errors.emailOrPhone && (
-                <Text style={styles.errorHelper}>{errors.emailOrPhone.message}</Text>
-              )}
-
-              <Text style={styles.label}>Password</Text>
-              <Controller
                 control={control}
-                name="password"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <View
-                    style={[
-                      styles.inputWrapper,
-                      focusedField === 'password' && styles.inputFocused,
-                      errors.password && styles.inputError,
-                    ]}
-                  >
-                    <Ionicons name="lock-closed-outline" size={18} color="#6B6B80" style={{ marginRight: 10 }} />
-                    <TextInput
-                      style={[styles.input, { flex: 1 }]}
-                      placeholder="Enter your password"
-                      placeholderTextColor="#6B6B80"
-                      secureTextEntry={!showPassword}
-                      autoCapitalize="none"
-                      onBlur={() => { onBlur(); setFocusedField(null); }}
-                      onChangeText={onChange}
-                      onFocus={() => setFocusedField('password')}
-                      value={value}
-                    />
-                    <TouchableOpacity
-                      style={styles.eyeBtn}
-                      onPress={() => setShowPassword(!showPassword)}
-                    >
-                      <Ionicons
-                        name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                        size={20}
-                        color="#888899"
-                      />
-                    </TouchableOpacity>
-                  </View>
-                )}
+                label="Email or Phone Number"
+                placeholder="Enter email or phone number"
+                leftIcon="mail-outline"
+                keyboardType="email-address"
+                autoCapitalize="none"
               />
-              {errors.password && (
-                <Text style={styles.errorHelper}>{errors.password.message}</Text>
-              )}
 
-              <TouchableOpacity
-                style={styles.forgotBtn}
-                onPress={() => navigation.navigate('ForgotPassword')}
-              >
-                <Text style={styles.forgotText}>Forgot Password? →</Text>
-              </TouchableOpacity>
+              <FormInput
+                name="password"
+                control={control}
+                label="Password"
+                placeholder="Enter your password"
+                leftIcon="lock-closed-outline"
+                secureTextEntry
+                autoCapitalize="none"
+              />
 
-              {/* CTA Button with layered gradient effect */}
-              <TouchableOpacity
-                style={[styles.loginBtn, isLoading && styles.loginBtnDisabled]}
+              <View style={styles.forgotBtnRow}>
+                <Button
+                  label="Forgot Password?"
+                  variant="ghost"
+                  size="sm"
+                  onPress={() => navigation.navigate('ForgotPassword')}
+                />
+              </View>
+
+              {/* CTA Button — using ui/Button primitive */}
+              <Button
+                label="Log In"
+                variant="danger"
+                size="lg"
                 onPress={handleSubmit(onSubmit)}
-                disabled={isLoading}
-                activeOpacity={0.85}
-              >
-                <View style={styles.loginBtnGradient} />
-                {isLoading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.loginBtnText}>Log In</Text>
-                )}
-              </TouchableOpacity>
+                loading={isLoading}
+                fullWidth
+                accessibilityHint="Submit login form"
+              />
             </Animated.View>
 
             {/* Divider */}
             <View style={styles.dividerRow}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or continue with</Text>
+              <Text style={styles.dividerText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>or continue with</Text>
               <View style={styles.dividerLine} />
             </View>
 
-            {/* Social buttons */}
+            {/* Social buttons — Google Sign-In via ui/Button primitive */}
             <View style={styles.socialRow}>
-              <TouchableOpacity
-                style={[styles.socialBtn, isGoogleLoading && styles.socialBtnDisabled]}
+              <Button
+                label={isGoogleLoading ? 'Signing in...' : 'Continue with Google'}
+                variant="secondary"
+                size="md"
                 onPress={onGoogleSignIn}
-                disabled={isGoogleLoading}
-                activeOpacity={0.7}
-              >
-                {isGoogleLoading ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.socialIcon}>G</Text>
-                )}
-                <Text style={styles.socialLabel}>
-                  {isGoogleLoading ? 'Signing in...' : 'Google'}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.socialBtn} activeOpacity={0.7}>
-                <Text style={styles.socialIcon}>🍎</Text>
-                <Text style={styles.socialLabel}>Apple</Text>
-              </TouchableOpacity>
+                loading={isGoogleLoading}
+                fullWidth
+                icon="logo-google"
+                accessibilityHint="Sign in with Google account"
+              />
             </View>
 
             {/* Footer */}
             <View style={styles.footer}>
-              <Text style={styles.footerText}>Don't have an account? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-                <Text style={styles.signupText}>Sign Up</Text>
-              </TouchableOpacity>
+              <Text style={styles.footerText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Don't have an account? </Text>
+              <Button
+                label="Sign Up"
+                variant="ghost"
+                size="sm"
+                onPress={() => navigation.navigate('Register')}
+              />
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -364,7 +336,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
   },
   keyboardAvoid: {
     flex: 1,
@@ -382,7 +354,7 @@ const styles = StyleSheet.create({
     width: 280,
     height: 280,
     borderRadius: 140,
-    backgroundColor: 'rgba(229, 57, 53, 0.07)',
+    backgroundColor: tints.overlayBrand,
   },
   header: {
     marginBottom: 32,
@@ -396,13 +368,13 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: 'rgba(229, 57, 53, 0.15)',
+    backgroundColor: tints.dangerLight,
     borderWidth: 1.5,
-    borderColor: 'rgba(229, 57, 53, 0.4)',
+    borderColor: tints.dangerMedium,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
@@ -414,30 +386,30 @@ const styles = StyleSheet.create({
   brandText: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: darkColors.text,
     letterSpacing: 0.5,
   },
   brandAccent: {
-    color: '#E53935',
+    color: colors.danger[500],
   },
   title: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: darkColors.text,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
   },
   formCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 20,
     padding: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     marginBottom: 24,
-    shadowColor: '#000000',
+    shadowColor: colors.neutral[950],
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
@@ -446,11 +418,11 @@ const styles = StyleSheet.create({
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 23, 68, 0.1)',
+    backgroundColor: tints.dangerErrorBg,
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.3)',
+    borderColor: tints.dangerErrorBorder,
     marginBottom: 20,
   },
   errorIcon: {
@@ -458,13 +430,13 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   errorText: {
-    color: '#FF5252',
+    color: colors.danger[400],
     fontSize: 13,
     flex: 1,
   },
   label: {
     fontSize: 13,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginBottom: 8,
     fontWeight: '600',
     letterSpacing: 0.3,
@@ -472,20 +444,20 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: tints.whiteSubtle,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: tints.whiteBorderStrong,
     borderRadius: 12,
     paddingHorizontal: 16,
     height: 54,
     marginBottom: 8,
   },
   inputFocused: {
-    borderColor: '#E53935',
-    backgroundColor: 'rgba(229, 57, 53, 0.05)',
+    borderColor: colors.danger[500],
+    backgroundColor: tints.dangerSubtle,
   },
   inputError: {
-    borderColor: '#FF1744',
+    borderColor: colors.danger[500],
     borderWidth: 1.5,
   },
   inputIcon: {
@@ -493,12 +465,12 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   input: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 15,
     padding: 0,
   },
   errorHelper: {
-    color: '#FF5252',
+    color: colors.danger[400],
     fontSize: 12,
     marginTop: -4,
     marginBottom: 12,
@@ -511,12 +483,13 @@ const styles = StyleSheet.create({
   eyeBtnText: {
     fontSize: 18,
   },
-  forgotBtn: {
+  forgotBtnRow: {
     alignSelf: 'flex-end',
     marginBottom: 20,
+    marginTop: -4,
   },
   forgotText: {
-    color: '#2979FF',
+    color: colors.info[500],
     fontSize: 13,
     fontWeight: '600',
   },
@@ -526,7 +499,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 12,
@@ -534,13 +507,13 @@ const styles = StyleSheet.create({
   },
   loginBtnGradient: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
   },
   loginBtnDisabled: {
     opacity: 0.55,
   },
   loginBtnText: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.5,
@@ -554,10 +527,10 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: tints.whiteBorderStrong,
   },
   dividerText: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 12,
     paddingHorizontal: 16,
   },
@@ -573,9 +546,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     height: 50,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: tints.whiteSubtle,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: tints.whiteBorderStrong,
     gap: 8,
   },
   socialBtnDisabled: {
@@ -583,11 +556,11 @@ const styles = StyleSheet.create({
   },
   socialIcon: {
     fontSize: 18,
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontWeight: '700',
   },
   socialLabel: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -596,11 +569,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   footerText: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 14,
   },
   signupText: {
-    color: '#2979FF',
+    color: colors.info[500],
     fontSize: 14,
     fontWeight: '700',
   },

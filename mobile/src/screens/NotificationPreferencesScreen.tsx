@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -7,16 +7,16 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState } from '../store/store';
+import { useAppDispatch } from '../store/hooks';
 import {
-  fetchPreferencesStart,
-  fetchPreferencesSuccess,
-  fetchPreferencesFailure,
-  updatePreferenceOptimistic,
-} from '../store/slices/notificationsSlice';
-import api from '../api/axios';
+  useGetPreferencesQuery,
+  useUpdatePreferencesMutation,
+  notificationsApi,
+} from '../store/api/notificationsApi';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useToast } from '../components/ui/Toast';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 const CATEGORIES: Array<{
   key: string;
@@ -51,40 +51,36 @@ const CATEGORIES: Array<{
 ];
 
 export default function NotificationPreferencesScreen() {
-  const dispatch = useDispatch();
-  const { preferences, isLoading, error } = useSelector((state: RootState) => state.notifications);
+  const toast = useToast();
+  const dispatch = useAppDispatch();
+  const insets = useSafeAreaInsets();
+  // Batch 11: Migrated to RTK Query — auto-fetches on mount, invalidates cache on mutation.
+  const { data: preferences, isLoading, error } = useGetPreferencesQuery();
+  const [updatePreference] = useUpdatePreferencesMutation();
   const [isUpdating, setIsUpdating] = useState(false);
-
-  const fetchPrefs = async () => {
-    dispatch(fetchPreferencesStart());
-    try {
-      const response = await api.get('/notifications/preferences');
-      dispatch(fetchPreferencesSuccess(response.data));
-    } catch (err: any) {
-      dispatch(
-        fetchPreferencesFailure(err.response?.data?.message || 'Failed to fetch preferences.')
-      );
-    }
-  };
-
-  useEffect(() => {
-    fetchPrefs();
-  }, []);
 
   const handleToggle = async (key: string, currentValue: boolean) => {
     const newValue = !currentValue;
 
-    // 1. Optimistic UI update in Redux store
-    dispatch(updatePreferenceOptimistic({ [key]: newValue }));
+    // 1. Optimistic UI update — patch RTK Query cache directly so the
+    //    toggle reflects immediately while the request is in flight.
+    const patchAction = dispatch(
+      notificationsApi.util.updateQueryData('getPreferences', undefined, (draft: any) => {
+        if (draft) {
+          draft[key] = newValue;
+        }
+      })
+    );
     setIsUpdating(true);
 
     try {
-      // 2. Persist update on backend
-      await api.patch('/notifications/preferences', { [key]: newValue });
+      // 2. Persist update on backend via RTK Query mutation —
+      //    invalidates 'Preferences' tag and triggers a refetch.
+      await updatePreference({ [key]: newValue }).unwrap();
     } catch (err) {
-      alert('Failed to update preference. Reverting...');
-      // 3. Revert on failure
-      dispatch(updatePreferenceOptimistic({ [key]: currentValue }));
+      toast.error('Failed to update preference. Reverting...');
+      // 3. Revert on failure — undo the optimistic cache patch.
+      patchAction.undo();
     } finally {
       setIsUpdating(false);
     }
@@ -93,20 +89,20 @@ export default function NotificationPreferencesScreen() {
   if (isLoading && !preferences) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#E53935" />
+        <ActivityIndicator size="large" color={colors.danger[500]} />
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 16 }]}>
       {/* ── Header ── */}
       <View style={styles.header}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <Ionicons name="settings-outline" size={26} color="#E53935" />
-          <Text style={styles.title}>Notification Preferences</Text>
+          <Ionicons name="settings-outline" size={26} color={colors.danger[500]} />
+          <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>Notification Preferences</Text>
         </View>
-        <Text style={styles.subtitle}>
+        <Text style={styles.subtitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
           Configure which categories of push notifications you want to receive on your device
         </Text>
       </View>
@@ -114,16 +110,16 @@ export default function NotificationPreferencesScreen() {
       {/* ── Updating indicator ── */}
       {isUpdating && (
         <View style={styles.updatingBanner}>
-          <ActivityIndicator size="small" color="#2979FF" />
-          <Text style={styles.updatingText}> Syncing...</Text>
+          <ActivityIndicator size="small" color={colors.info[500]} />
+          <Text style={styles.updatingText} allowFontScaling={true} maxFontSizeMultiplier={1.5}> Syncing...</Text>
         </View>
       )}
 
-      {error && (
+      {error ? (
         <View style={styles.errorBanner}>
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{error ? String((error as any)?.data?.message || (error as any)?.error || error) : ''}</Text>
         </View>
-      )}
+      ) : null}
 
       {preferences && (
         <View style={styles.list}>
@@ -136,18 +132,18 @@ export default function NotificationPreferencesScreen() {
                 isEnabled && styles.preferenceRowActive,
               ]}>
                 <View style={styles.textContainer}>
-                  <Ionicons name={category.icon} size={22} color="#E53935" style={{ marginRight: 12 }} />
+                  <Ionicons name={category.icon} size={22} color={colors.danger[500]} style={{ marginRight: 12 }} />
                   <View style={styles.textInner}>
-                    <Text style={styles.preferenceTitle}>{category.title}</Text>
-                    <Text style={styles.preferenceDesc}>{category.description}</Text>
+                    <Text style={styles.preferenceTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{category.title}</Text>
+                    <Text style={styles.preferenceDesc} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{category.description}</Text>
                   </View>
                 </View>
                 <Switch
                   value={isEnabled}
                   onValueChange={() => handleToggle(category.key, isEnabled)}
                   disabled={isUpdating}
-                  trackColor={{ false: 'rgba(255, 255, 255, 0.08)', true: '#E53935' }}
-                  thumbColor={isEnabled ? '#FFFFFF' : '#6B6B80'}
+                  trackColor={{ false: tints.whiteBorderStrong, true: colors.danger[500] }}
+                  thumbColor={isEnabled ? darkColors.text : darkColors.textTertiary}
                 />
               </View>
             );
@@ -161,14 +157,14 @@ export default function NotificationPreferencesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
   },
   scrollContent: {
     padding: 20,
   },
   centerContainer: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -178,11 +174,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
   subtitle: {
     fontSize: 14,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginTop: 6,
     lineHeight: 20,
   },
@@ -190,27 +186,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(41, 121, 255, 0.08)',
+    backgroundColor: tints.infoSubtle,
     paddingVertical: 8,
     borderRadius: 10,
     marginBottom: 16,
   },
   updatingText: {
-    color: '#2979FF',
+    color: colors.info[500],
     fontSize: 13,
     fontWeight: '600',
     marginLeft: 6,
   },
   errorBanner: {
-    backgroundColor: 'rgba(255, 23, 68, 0.12)',
+    backgroundColor: tints.dangerErrorBg,
     padding: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.3)',
+    borderColor: tints.dangerErrorBorder,
     marginVertical: 14,
   },
   errorText: {
-    color: '#FF8A80',
+    color: colors.danger[300],
     fontSize: 14,
     textAlign: 'center',
   },
@@ -221,16 +217,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(28, 28, 46, 0.4)',
+    backgroundColor: tints.glassCard,
     borderRadius: 14,
     padding: 16,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
   preferenceRowActive: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: tints.glassCard,
+    borderColor: tints.whiteBorderStrong,
   },
   textContainer: {
     flex: 0.8,
@@ -248,11 +244,11 @@ const styles = StyleSheet.create({
   preferenceTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
   preferenceDesc: {
     fontSize: 12,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginTop: 4,
     lineHeight: 16,
   },

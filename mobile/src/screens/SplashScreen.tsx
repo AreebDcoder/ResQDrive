@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  AccessibilityInfo,
   ActivityIndicator,
   Animated,
   Easing,
@@ -13,6 +14,7 @@ import { useDispatch } from 'react-redux';
 import { loginSuccess, logoutAction, setLoading } from '../store/slices/authSlice';
 import api from '../api/axios';
 import { getItemAsync, setItemAsync, deleteItemAsync } from '../utils/secureStorage';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 
 function AnimatedDot({ index }: { index: number }) {
@@ -58,8 +60,30 @@ export default function SplashScreen() {
   const ringScale = useRef(new Animated.Value(0.7)).current;
   const ringOpacity = useRef(new Animated.Value(0.6)).current;
 
+  // Batch 7 Phase 4: Respect Reduce Motion accessibility setting
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
+
   // Entrance animation sequence
   useEffect(() => {
+    // Skip decorative entrance animation when Reduce Motion is enabled.
+    // The ring pulse loop and AnimatedDot loaders below are functional indicators
+    // and remain running per a11y guidance.
+    if (reduceMotion) {
+      ringScale.setValue(1.0);
+      ringOpacity.setValue(0.8);
+      logoScale.setValue(1);
+      logoOpacity.setValue(1);
+      titleTranslateY.setValue(0);
+      titleOpacity.setValue(1);
+      subtitleOpacity.setValue(1);
+      return;
+    }
     Animated.sequence([
       // Ring pulses in
       Animated.parallel([
@@ -110,7 +134,7 @@ export default function SplashScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [reduceMotion]);
   // Ring pulse loop — starts AFTER entrance animation completes
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -188,7 +212,7 @@ export default function SplashScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0A0A0F" />
+      <StatusBar barStyle="light-content" backgroundColor={darkColors.background} />
 
       {/* Background ambient glow */}
       <View style={styles.bgGlow1} />
@@ -232,8 +256,8 @@ export default function SplashScreen() {
           },
         ]}
       >
-        <Text style={styles.title}>
-          ResQ<Text style={styles.highlight}>Drive</Text>
+        <Text style={styles.title} accessibilityRole="header" allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+          ResQ<Text style={styles.highlight} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Drive</Text>
         </Text>
       </Animated.View>
 
@@ -255,7 +279,7 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -266,7 +290,7 @@ const styles = StyleSheet.create({
     right: '12%',
     height: 280,
     borderRadius: 140,
-    backgroundColor: 'rgba(229, 57, 53, 0.08)',
+    backgroundColor: tints.dangerSubtle,
   },
   bgGlow2: {
     position: 'absolute',
@@ -275,7 +299,7 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: 'rgba(41, 121, 255, 0.05)',
+    backgroundColor: tints.infoSubtle,
   },
   pulseRing: {
     position: 'absolute',
@@ -283,19 +307,19 @@ const styles = StyleSheet.create({
     height: 140,
     borderRadius: 70,
     borderWidth: 2,
-    borderColor: '#E53935',
+    borderColor: colors.danger[500],
   },
   logoBox: {
     width: 96,
     height: 96,
     borderRadius: 28,
-    backgroundColor: 'rgba(229, 57, 53, 0.12)',
+    backgroundColor: tints.dangerLight,
     borderWidth: 1.5,
-    borderColor: 'rgba(229, 57, 53, 0.35)',
+    borderColor: tints.dangerMedium,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 28,
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
     shadowRadius: 20,
@@ -305,7 +329,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 18,
-    backgroundColor: 'rgba(229, 57, 53, 0.18)',
+    backgroundColor: tints.dangerLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -318,15 +342,15 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 40,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: darkColors.text,
     letterSpacing: 1.5,
   },
   highlight: {
-    color: '#E53935',
+    color: colors.danger[500],
   },
   subtitle: {
     fontSize: 14,
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginTop: 6,
     textAlign: 'center',
     paddingHorizontal: 40,
@@ -342,7 +366,7 @@ const styles = StyleSheet.create({
     width: 9,
     height: 9,
     borderRadius: 5,
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
   },
     logoImage: {
     width: 60,

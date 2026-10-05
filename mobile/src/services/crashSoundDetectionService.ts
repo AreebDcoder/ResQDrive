@@ -44,7 +44,6 @@ try {
   }
 } catch (e) {
   isNativeSupported = false;
-  console.log('Running in Mock Audio Classification mode (Native TFLite/Audio recording not supported).');
 }
 
 export interface AudioTelemetryData {
@@ -112,7 +111,6 @@ export class CrashSoundDetectionService {
 
     if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.mediaDevices) {
       try {
-        console.log('Starting Web Audio API live microphone monitoring...');
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         this.webMediaStream = stream;
 
@@ -132,7 +130,6 @@ export class CrashSoundDetectionService {
 
         source.connect(scriptNode);
         scriptNode.connect(this.webAudioContext.destination);
-        console.log('Live Web Microphone stream initialized successfully.');
         return;
       } catch (err) {
         console.error('Failed to access web microphone stream:', err);
@@ -152,24 +149,17 @@ export class CrashSoundDetectionService {
             },
           );
           if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-            console.log('Microphone permission denied. Falling back to mock monitoring.');
             this.startMockMonitoring();
             return;
           }
         }
 
-        console.log('Starting native transient-triggered YAMNet crash sound monitoring...');
         
         if (!this.model) {
-          console.log('Loading YAMNet TFLite model...');
           const asset = Asset.fromModule(require('../../assets/yamnet.tflite'));
           await asset.downloadAsync();
           if (asset.localUri) {
-            console.log('Resolved model local path:', asset.localUri);
             this.model = await loadTensorflowModel({ url: asset.localUri }, []);
-            console.log('YAMNet loaded successfully!');
-            console.log('YAMNet inputs:', JSON.stringify(this.model.inputs));
-            console.log('YAMNet outputs:', JSON.stringify(this.model.outputs));
           } else {
             throw new Error('Could not resolve local URI for YAMNet tflite model');
           }
@@ -225,16 +215,13 @@ export class CrashSoundDetectionService {
     if (isNativeSupported && LiveAudioStream) {
       try {
         LiveAudioStream.stop();
-        console.log('Native crash sound monitoring stopped.');
       } catch (e) {
-        console.log('Failed to stop native audio stream:', e);
       }
     }
 
     if (this.mockIntervalId) {
       clearInterval(this.mockIntervalId);
       this.mockIntervalId = null;
-      console.log('Mock crash sound monitoring stopped.');
     }
   }
 
@@ -242,7 +229,6 @@ export class CrashSoundDetectionService {
    * Fallback simulator loop running every 100ms for telemetry preview in Expo Go.
    */
   private static startMockMonitoring() {
-    console.log('Starting Mock transient-triggered audio monitoring loop...');
     
     this.mockIntervalId = setInterval(() => {
       if (!this.isMonitoring) return;
@@ -270,7 +256,6 @@ export class CrashSoundDetectionService {
    */
   static simulateManualCrash(topClass: CrashRelevantClassName = 'Crash', confidence = 0.85) {
     const isExceeded = confidence > CRASH_CONFIDENCE_THRESHOLD;
-    console.log(`[Transient Event Manual Trigger] Crash sound: ${topClass} (${confidence})`);
 
     // Notify live visual flash
     if (this.onTelemetryCallback) {
@@ -371,7 +356,6 @@ export class CrashSoundDetectionService {
 
       if (centeredWindow) {
         try {
-          console.log(`[Transient Detected!] RMS: ${chunkRms.toFixed(3)} (Ratio: ${transientRatio.toFixed(1)}x, DemoMode: ${IS_DEMO_MODE}). Running YAMNet classification...`);
           
           let maxConfidence = 0;
           let topClassName: CrashRelevantClassName = 'Vehicle';
@@ -381,7 +365,6 @@ export class CrashSoundDetectionService {
             maxConfidence = 0.65 + Math.random() * 0.3;
             const classes: CrashRelevantClassName[] = ['Crash', 'Skidding', 'Shatter', 'Glass', 'Explosion'];
             topClassName = classes[Math.floor(Math.random() * classes.length)];
-            console.log(`[Web/Mock YAMNet Fallback] Simulated Class: ${topClassName}, Confidence: ${maxConfidence.toFixed(2)}`);
             if (this.onCrashCallback) {
               this.onCrashCallback(maxConfidence, topClassName);
             }
@@ -467,12 +450,6 @@ export class CrashSoundDetectionService {
               // Context: Vehicle acoustic presence (Class 294)
               const vehicleScore = scoresArray[VEHICLE_CLASS_INDEX] || 0;
 
-              console.log(
-                `[Native YAMNet Inference] Source Analysis: isCompressed=${audioSource.isCompressedPlayback}, isDirectMicArtifact=${audioSource.isDirectMicArtifact} (ZCR=${audioSource.zcr.toFixed(3)}, HighFreq=${audioSource.highFreqRatio.toFixed(3)}, DC=${audioSource.dcRatio.toFixed(3)}, Crest=${audioSource.crestFactor.toFixed(1)})`
-              );
-              console.log(
-                `[Native YAMNet Inference] Scores: CoreCrash=${coreCrashClassName} (${(maxCoreScore * 100).toFixed(1)}%), Vehicle=${(vehicleScore * 100).toFixed(1)}%, Burst=${secondaryClassName} (${(maxSecondaryScore * 100).toFixed(1)}%), Speech=${(maxSpeechScore * 100).toFixed(1)}%`
-              );
 
               let isExceeded = false;
               let maxConfidence = 0;
@@ -493,27 +470,18 @@ export class CrashSoundDetectionService {
               if (isPureSpeech) {
                 // UNCOMPRESSED DIRECT HUMAN VOICE / SPEECH:
                 // User is talking or vocalizing near the microphone without any vehicle sound.
-                console.log(
-                  `[Native YAMNet Inference] Pure human speech/voice detected (${(maxSpeechScore * 100).toFixed(1)}%). Suppressing false crash alarm.`
-                );
                 isExceeded = false;
                 maxConfidence = maxCoreScore;
                 topClassName = coreCrashClassName;
               } else if (audioSource.isDirectMicArtifact) {
                 // UNCOMPRESSED DIRECT MIC BLOWING AIR / BREATH:
                 // Low-frequency airflow on mic membrane.
-                console.log(
-                  `[Native YAMNet Inference] Direct mic air blow / breath detected! Utilizing ACTUAL raw percentage (${(maxCoreScore * 100).toFixed(1)}%) without compensation.`
-                );
                 isExceeded = maxCoreScore >= CRASH_CONFIDENCE_THRESHOLD;
                 maxConfidence = maxCoreScore;
                 topClassName = coreCrashClassName;
               } else if (isIsolatedBurst) {
                 // ISOLATED EXPLOSION / BOOM:
                 // Low-frequency thump (vocal plosive "P", mic handling bump, or table tap).
-                console.log(
-                  `[Native YAMNet Inference] Isolated burst detected (${secondaryClassName}: ${(maxSecondaryScore * 100).toFixed(1)}%) without vehicle crash harmonics. No compensation applied.`
-                );
                 isExceeded = maxSecondaryScore >= 0.70;
                 maxConfidence = maxSecondaryScore;
                 topClassName = secondaryClassName;
@@ -573,9 +541,6 @@ export class CrashSoundDetectionService {
                 }
               }
 
-              console.log(
-                `[Native YAMNet Inference] Direct Class: ${topClassName} (${(maxCoreScore * 100).toFixed(1)}%), Effective Score: ${(maxConfidence * 100).toFixed(1)}% (CompressedMode: ${audioSource.isCompressedPlayback}) -> Trigger: ${isExceeded}`
-              );
 
               if (isExceeded && this.onCrashCallback) {
                 this.onCrashCallback(maxConfidence, topClassName);
@@ -584,7 +549,6 @@ export class CrashSoundDetectionService {
               this.logTelemetryWindow(maxConfidence, topClassName, isExceeded, true);
               return;
             } else {
-              console.log('[Native YAMNet Inference] Error: Received empty output buffers.');
             }
           }
         } catch (err) {
@@ -613,7 +577,6 @@ export class CrashSoundDetectionService {
         triggeredByTransient,
       });
     } catch (error: any) {
-      console.log('Failed to log transient window telemetry to backend:', error.message);
     }
   }
 }

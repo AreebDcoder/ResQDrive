@@ -1,0 +1,121 @@
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Platform, StatusBar } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import api from '../../api/axios';
+import type { AppNavigation } from '../../navigation/types';
+import { colors, darkColors, tints } from '../../theme/tokens';
+
+// Local styles — will be replaced with theme tokens in Batch 6
+const adminStyles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: darkColors.background, padding: 24 },
+  customHeader: {
+    flexDirection: 'row',
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 12 : 44,
+    height: Platform.OS === 'android' ? 56 + (StatusBar.currentHeight || 0) + 12 : 56 + 44,
+    backgroundColor: tints.glassCardStrong,
+    alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16,
+    borderBottomWidth: 1, borderBottomColor: tints.whiteBorder,
+  },
+  customHeaderTitle: { fontSize: 18, fontWeight: 'bold', color: darkColors.text },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: colors.danger[500], marginBottom: 12 },
+  scrollList: { flex: 1, marginBottom: 20 },
+  approvalCard: { backgroundColor: tints.glassCard, borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: tints.whiteBorder },
+  cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  mechanicName: { fontSize: 16, fontWeight: 'bold', color: darkColors.text },
+  specializationBadge: { backgroundColor: tints.dangerLight, color: colors.danger[300], fontSize: 11, fontWeight: 'bold', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: tints.dangerMedium },
+  cardInfo: { fontSize: 13, color: darkColors.textSecondary, marginBottom: 4 },
+  approveBtn: { backgroundColor: colors.success[500], paddingVertical: 10, borderRadius: 14, alignItems: 'center', marginTop: 12 },
+  approveBtnText: { color: darkColors.background, fontSize: 14, fontWeight: 'bold' },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, marginVertical: 40 },
+  emptyText: { color: darkColors.textSecondary, fontSize: 15, textAlign: 'center' },
+  errorText: { color: colors.danger[300], fontSize: 14, textAlign: 'center', marginVertical: 20 },
+  navBtn: { backgroundColor: colors.danger[500], paddingVertical: 16, borderRadius: 14, alignItems: 'center', marginTop: 10 },
+  navBtnText: { color: darkColors.text, fontSize: 16, fontWeight: 'bold' },
+});
+
+export default function AdminHome({ navigation }: { navigation: AppNavigation }) {
+  const [pendingMechanics, setPendingMechanics] = React.useState<any[]>([]);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [message, setMessage] = React.useState<string | null>(null);
+
+  const fetchPendingMechanics = React.useCallback(async () => {
+    setIsLoading(true);
+    setMessage(null);
+    try {
+      const response = await api.get('/admin/users?role=MECHANIC');
+      const unverified = response.data.users.filter(
+        (u: any) => u.mechanicDetails && u.mechanicDetails.isWorkshopVerified === false
+      );
+      setPendingMechanics(unverified);
+    } catch {
+      setMessage('Failed to load pending approvals list.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    fetchPendingMechanics();
+  }, [fetchPendingMechanics]);
+
+  const handleApprove = async (userId: string) => {
+    try {
+      await api.patch(`/admin/users/${userId}/verify-workshop`, { isWorkshopVerified: true });
+      setPendingMechanics((prev) => prev.filter((m) => m.id !== userId));
+    } catch {
+      // TODO: Batch 6 — replace with Toast
+      console.warn('Failed to approve workshop');
+    }
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: darkColors.surface }}>
+      <View style={adminStyles.customHeader}>
+        <View style={{ width: 28 }} />
+        <Text style={adminStyles.customHeaderTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Admin Controls</Text>
+        <View style={{ width: 28 }} />
+      </View>
+      <View style={adminStyles.container}>
+        <Text style={adminStyles.sectionTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Pending Workshop Approvals ({pendingMechanics.length})</Text>
+
+        {isLoading ? (
+          <ActivityIndicator color={colors.danger[600]} size="large" style={{ marginTop: 20 }} />
+        ) : message ? (
+          <Text style={adminStyles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{message}</Text>
+        ) : pendingMechanics.length === 0 ? (
+          <View style={adminStyles.emptyContainer}>
+            <Text style={adminStyles.emptyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>All workshops are currently verified!</Text>
+          </View>
+        ) : (
+          <ScrollView style={adminStyles.scrollList}>
+            {pendingMechanics.map((mechanic) => (
+              <View key={mechanic.id} style={adminStyles.approvalCard}>
+                <View style={adminStyles.cardRow}>
+                  <Text style={adminStyles.mechanicName} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{mechanic.fullName}</Text>
+                  <Text style={adminStyles.specializationBadge} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{mechanic.mechanicDetails?.specialization}</Text>
+                </View>
+                <Text style={adminStyles.cardInfo} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Email: {mechanic.email}</Text>
+                <Text style={adminStyles.cardInfo} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Phone: {mechanic.phoneNumber}</Text>
+                <Text style={adminStyles.cardInfo} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Workshop: <Text style={{ fontWeight: 'bold', color: darkColors.text }} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{mechanic.mechanicDetails?.workshopName}</Text></Text>
+                <Text style={adminStyles.cardInfo} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Address: {mechanic.mechanicDetails?.workshopAddress}</Text>
+                <TouchableOpacity style={adminStyles.approveBtn} onPress={() => handleApprove(mechanic.id)} accessibilityRole="button" accessibilityLabel={`Approve workshop for ${mechanic.fullName}`}>
+                  <Text style={adminStyles.approveBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Approve & Verify Workshop</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+        )}
+
+        <TouchableOpacity style={adminStyles.navBtn} onPress={() => navigation.navigate('AdminDashboard')} accessibilityRole="button" accessibilityLabel="Analytics Dashboard">
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <Ionicons name="analytics-outline" size={18} color={darkColors.text} />
+            <Text style={adminStyles.navBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Analytics Dashboard</Text>
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity style={adminStyles.navBtn} onPress={() => navigation.navigate('Profile')} accessibilityRole="button" accessibilityLabel="Go to My Profile">
+          <Text style={adminStyles.navBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Go to My Profile</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}

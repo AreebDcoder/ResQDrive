@@ -14,13 +14,15 @@ import {
   ActivityIndicator,
   FlatList,
   Dimensions,
-  Alert,
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import api, { API_URL } from '../api/axios';
+import { useToast } from '../components/ui/Toast';
+import { ConfirmDialog } from '../components/ui';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 interface VehicleItem {
   id: string;
@@ -58,6 +60,7 @@ const PART_TAGS = [
 ];
 
 function DamageAssessmentScreen({ route, navigation, isInline }: any) {
+  const toast = useToast();
   const incidentId = route?.params?.incidentId;
   const vehicles = useSelector((state: RootState) => state.vehicles.list) as VehicleItem[];
 
@@ -85,6 +88,12 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyPage, setHistoryPage] = useState(1);
   const [historyHasMore, setHistoryHasMore] = useState(true);
+
+  // Phase 8: ConfirmDialog state for destructive deletes
+  const [deleteAssessmentDialogVisible, setDeleteAssessmentDialogVisible] = useState(false);
+  const [pendingDeleteAssessmentId, setPendingDeleteAssessmentId] = useState<string | null>(null);
+  const [deleteCostReportDialogVisible, setDeleteCostReportDialogVisible] = useState(false);
+  const [pendingDeleteCostReportId, setPendingDeleteCostReportId] = useState<string | null>(null);
 
   // Initialize selected vehicle to primary or first available
   useEffect(() => {
@@ -185,7 +194,6 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
         setCurrentSessionAssessmentIds((prev) => [...prev, response.data.id]);
       }
     } catch (err: any) {
-      console.log('Damage Assessment Error:', err);
       const status = err.response?.status;
       const serverMsg = err.response?.data?.message || err.response?.data?.detail;
 
@@ -241,59 +249,55 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
   };
 
   const handleDeleteAssessment = (id: string) => {
-    Alert.alert(
-      'Confirm Delete',
-      'Are you sure you want to delete this damage assessment log entry?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await api.delete(`/damage-assessment/${id}`);
-              setHistory((prev) => prev.filter((item) => item.id !== id));
-            } catch (err) {
-              Alert.alert('Error', 'Failed to delete assessment log.');
-            }
-          },
-        },
-      ]
-    );
+    // Phase 8: replaced destructive Alert.alert with ConfirmDialog primitive
+    setPendingDeleteAssessmentId(id);
+    setDeleteAssessmentDialogVisible(true);
+  };
+
+  const handleConfirmDeleteAssessment = async () => {
+    setDeleteAssessmentDialogVisible(false);
+    if (!pendingDeleteAssessmentId) return;
+    try {
+      const id = pendingDeleteAssessmentId;
+      await api.delete(`/damage-assessment/${id}`);
+      setHistory((prev) => prev.filter((item) => item.id !== id));
+    } catch (err) {
+      toast.error('Failed to delete assessment log.');
+    } finally {
+      setPendingDeleteAssessmentId(null);
+    }
   };
 
   const handleDeleteCostReport = (id: string) => {
-    Alert.alert(
-      'Confirm Delete',
-      'Are you sure you want to delete this repair cost estimation report?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await api.delete(`/repair-cost/report/${id}`);
-              setCostHistory((prev) => prev.filter((item) => item.id !== id));
-            } catch (err) {
-              Alert.alert('Error', 'Failed to delete repair cost report.');
-            }
-          },
-        },
-      ]
-    );
+    // Phase 8: replaced destructive Alert.alert with ConfirmDialog primitive
+    setPendingDeleteCostReportId(id);
+    setDeleteCostReportDialogVisible(true);
+  };
+
+  const handleConfirmDeleteCostReport = async () => {
+    setDeleteCostReportDialogVisible(false);
+    if (!pendingDeleteCostReportId) return;
+    try {
+      const id = pendingDeleteCostReportId;
+      await api.delete(`/repair-cost/report/${id}`);
+      setCostHistory((prev) => prev.filter((item) => item.id !== id));
+    } catch (err) {
+      toast.error('Failed to delete repair cost report.');
+    } finally {
+      setPendingDeleteCostReportId(null);
+    }
   };
 
   const getSeverityColor = (severity: 'minor' | 'moderate' | 'severe') => {
     switch (severity) {
       case 'minor':
-        return '#00E676';
+        return colors.success[500];
       case 'moderate':
-        return '#FF9100';
+        return colors.warning[500];
       case 'severe':
-        return '#FF1744';
+        return colors.danger[500];
       default:
-        return '#6B6B80';
+        return darkColors.textTertiary;
     }
   };
 
@@ -310,23 +314,23 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
         <Image source={{ uri: fullPhotoUrl }} style={styles.historyThumb} />
         <View style={styles.historyCardInfo}>
           <View style={styles.historyCardHeader}>
-            <Text style={styles.historyTypeTitle}>{item.predictedDamageType.toUpperCase().replace('_', ' ')}</Text>
+            <Text style={styles.historyTypeTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.predictedDamageType.toUpperCase().replace('_', ' ')}</Text>
             <View style={[styles.severityBadge, { backgroundColor: getSeverityColor(item.derivedSeverity) }]}>
-              <Text style={styles.severityBadgeText}>{item.derivedSeverity.toUpperCase()}</Text>
+              <Text style={styles.severityBadgeText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.derivedSeverity.toUpperCase()}</Text>
             </View>
           </View>
-          <Text style={styles.historyConfText}>Part Tag: {item.partTag ? item.partTag.toUpperCase().replace('_', ' ') : 'OTHER'}</Text>
-          <Text style={styles.historyConfText}>Confidence: {Math.round(item.confidenceScore * 100)}%</Text>
+          <Text style={styles.historyConfText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Part Tag: {item.partTag ? item.partTag.toUpperCase().replace('_', ' ') : 'OTHER'}</Text>
+          <Text style={styles.historyConfText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Confidence: {Math.round(item.confidenceScore * 100)}%</Text>
           {item.inferenceTimeMs !== undefined && (
-            <Text style={styles.historyConfText}>Latency: {item.inferenceTimeMs}ms</Text>
+            <Text style={styles.historyConfText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Latency: {item.inferenceTimeMs}ms</Text>
           )}
-          <Text style={styles.historyDateText}>{formattedDate}</Text>
+          <Text style={styles.historyDateText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{formattedDate}</Text>
         </View>
         <TouchableOpacity
           style={styles.deleteCardBtn}
-          onPress={() => handleDeleteAssessment(item.id)}
-        >
-          <Ionicons name="trash-outline" size={20} color="#FF5252" />
+          onPress={() => handleDeleteAssessment(item.id)} accessibilityRole="button"
+         accessibilityLabel="Delete" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Ionicons name="trash-outline" size={20} color={colors.danger[400]} />
         </TouchableOpacity>
       </View>
     );
@@ -349,27 +353,27 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
           style={{ flex: 1, flexDirection: 'row' }}
           onPress={() => {
             navigation.navigate('RepairCost', { reportId: item.id });
-          }}
+          }} accessibilityRole="button"
         >
           <View style={styles.costHistoryThumbContainer}>
-            <Ionicons name="receipt-outline" size={24} color="#E53935" />
+            <Ionicons name="receipt-outline" size={24} color={colors.danger[500]} />
           </View>
           <View style={styles.historyCardInfo}>
             <View style={styles.historyCardHeader}>
-              <Text style={styles.historyTypeTitle}>{carText}</Text>
+              <Text style={styles.historyTypeTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{carText}</Text>
             </View>
-            <Text style={styles.historyCostText}>
+            <Text style={styles.historyCostText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               PKR {item.totalMinCostPkr.toLocaleString()} - {item.totalMaxCostPkr.toLocaleString()}
             </Text>
-            <Text style={styles.historyConfText}>{item.lineItems?.length || 0} items assessed</Text>
-            <Text style={styles.historyDateText}>{formattedDate}</Text>
+            <Text style={styles.historyConfText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.lineItems?.length || 0} items assessed</Text>
+            <Text style={styles.historyDateText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{formattedDate}</Text>
           </View>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.deleteCardBtn}
-          onPress={() => handleDeleteCostReport(item.id)}
-        >
-          <Ionicons name="trash-outline" size={20} color="#FF5252" />
+          onPress={() => handleDeleteCostReport(item.id)} accessibilityRole="button"
+         accessibilityLabel="Delete" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Ionicons name="trash-outline" size={20} color={colors.danger[400]} />
         </TouchableOpacity>
       </View>
     );
@@ -382,9 +386,9 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
       return (
         <ScrollView style={styles.tabContent} contentContainerStyle={{ paddingBottom: 40 }}>
           <View style={styles.carRejectionCard}>
-            <Ionicons name="car-outline" size={48} color="#FF5252" style={{ marginBottom: 12, alignSelf: 'center' }} />
-            <Text style={styles.carRejectionTitle}>Vehicle Verification Failed</Text>
-            <Text style={styles.carRejectionMessage}>{errorMsg}</Text>
+            <Ionicons name="car-outline" size={48} color={colors.danger[400]} style={{ marginBottom: 12, alignSelf: 'center' }} />
+            <Text style={styles.carRejectionTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Vehicle Verification Failed</Text>
+            <Text style={styles.carRejectionMessage} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errorMsg}</Text>
 
             <TouchableOpacity
               style={styles.actionBtnPrimary}
@@ -393,10 +397,10 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
                 setIsCarRejection(false);
                 setSelectedImage(null);
                 setImageFile(null);
-              }}
+              }} accessibilityRole="button"
             >
-              <Ionicons name="camera-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
-              <Text style={styles.actionBtnText}>Retake Photo</Text>
+              <Ionicons name="camera-outline" size={20} color={darkColors.text} style={{ marginRight: 8 }} />
+              <Text style={styles.actionBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Retake Photo</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -412,15 +416,15 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
         <ScrollView style={styles.tabContent} contentContainerStyle={{ paddingBottom: 40 }}>
           <View style={styles.card}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-              <Ionicons name="analytics-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
-              <Text style={styles.cardHeaderTitle}>ASSESSMENT RESULTS</Text>
+              <Ionicons name="analytics-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
+              <Text style={styles.cardHeaderTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>ASSESSMENT RESULTS</Text>
             </View>
 
             {/* Low-Confidence Warning Banner */}
             {isLowConfidence && (
               <View style={styles.lowConfidenceBanner}>
-                <Ionicons name="warning" size={22} color="#FFD600" style={{ marginRight: 10 }} />
-                <Text style={styles.lowConfidenceText}>
+                <Ionicons name="warning" size={22} color={colors.warning[300]} style={{ marginRight: 10 }} />
+                <Text style={styles.lowConfidenceText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                   Low confidence result — consider retaking the photo with better lighting or a closer, clearer angle of the damage.
                 </Text>
               </View>
@@ -430,26 +434,26 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
 
             <View style={styles.resultsContainer}>
               <View style={styles.resultField}>
-                <Text style={styles.resultLabel}>Damage Type</Text>
-                <Text style={styles.resultValue}>{prediction.predictedDamageType.toUpperCase().replace('_', ' ')}</Text>
+                <Text style={styles.resultLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Damage Type</Text>
+                <Text style={styles.resultValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{prediction.predictedDamageType.toUpperCase().replace('_', ' ')}</Text>
               </View>
 
               <View style={styles.resultField}>
-                <Text style={styles.resultLabel}>Confidence Level</Text>
-                <Text style={styles.resultValue}>{Math.round(prediction.confidenceScore * 100)}%</Text>
+                <Text style={styles.resultLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Confidence Level</Text>
+                <Text style={styles.resultValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{Math.round(prediction.confidenceScore * 100)}%</Text>
               </View>
 
               <View style={styles.resultField}>
-                <Text style={styles.resultLabel}>Derived Severity</Text>
+                <Text style={styles.resultLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Derived Severity</Text>
                 <View style={[styles.severityBadgeLarge, { backgroundColor: getSeverityColor(prediction.derivedSeverity) }]}>
-                  <Text style={styles.severityBadgeText}>{prediction.derivedSeverity.toUpperCase()}</Text>
+                  <Text style={styles.severityBadgeText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{prediction.derivedSeverity.toUpperCase()}</Text>
                 </View>
               </View>
 
               {prediction.inferenceTimeMs && (
                 <View style={styles.resultField}>
-                  <Text style={styles.resultLabel}>Inference Latency</Text>
-                  <Text style={styles.resultValue}>{prediction.inferenceTimeMs} ms</Text>
+                  <Text style={styles.resultLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Inference Latency</Text>
+                  <Text style={styles.resultValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{prediction.inferenceTimeMs} ms</Text>
                 </View>
               )}
             </View>
@@ -463,10 +467,10 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
                   setImageFile(null);
                   setSelectedPartTag(null);
                   setIsCarRejection(false);
-                }}
+                }} accessibilityRole="button"
               >
-                <Ionicons name="add-circle-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
-                <Text style={styles.actionBtnText}>Add Another Damaged Area</Text>
+                <Ionicons name="add-circle-outline" size={20} color={darkColors.text} style={{ marginRight: 8 }} />
+                <Text style={styles.actionBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Add Another Damaged Area</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -477,10 +481,10 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
                     generate: true,
                     assessmentIds: currentSessionAssessmentIds,
                   });
-                }}
+                }} accessibilityRole="button"
               >
-                <Ionicons name="cash-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
-                <Text style={styles.actionBtnText}>Finish & View Repair Cost</Text>
+                <Ionicons name="cash-outline" size={20} color={darkColors.text} style={{ marginRight: 8 }} />
+                <Text style={styles.actionBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Finish & View Repair Cost</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -494,17 +498,17 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
         {/* ── Photo Selection Card ── */}
         <View style={styles.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-            <Ionicons name="camera-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
-            <Text style={styles.cardHeaderTitle}>Upload Damage Image</Text>
+            <Ionicons name="camera-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
+            <Text style={styles.cardHeaderTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Upload Damage Image</Text>
           </View>
-          <Text style={styles.cardDescription}>
+          <Text style={styles.cardDescription} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             Select the vehicle part tag, then capture/choose a photo of the damage.
           </Text>
 
           {/* Part Tag selector */}
           <View style={styles.dropdownContainer}>
-            <Text style={styles.dropdownLabel}>
-              Select Damaged Part <Text style={{ color: '#FF1744' }}>* (Required)</Text>
+            <Text style={styles.dropdownLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+              Select Damaged Part <Text style={{ color: colors.danger[500] }} allowFontScaling={true} maxFontSizeMultiplier={1.5}>* (Required)</Text>
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.vehicleScroll}>
               {PART_TAGS.map((pt) => (
@@ -514,9 +518,9 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
                     styles.vehicleChip,
                     selectedPartTag === pt.tag && styles.vehicleChipActive,
                   ]}
-                  onPress={() => setSelectedPartTag(pt.tag)}
+                  onPress={() => setSelectedPartTag(pt.tag)} accessibilityRole="button"
                 >
-                  <Text style={[styles.vehicleChipText, selectedPartTag === pt.tag && styles.vehicleChipTextActive]}>
+                  <Text style={[styles.vehicleChipText, selectedPartTag === pt.tag && styles.vehicleChipTextActive]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                     {pt.label}
                   </Text>
                 </TouchableOpacity>
@@ -528,15 +532,15 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
             <Image source={{ uri: selectedImage }} style={styles.previewImage} />
           ) : (
             <View style={styles.placeholderContainer}>
-              <Ionicons name="image-outline" size={42} color="#6B6B80" style={{ marginBottom: 8 }} />
-              <Text style={styles.placeholderText}>No image selected</Text>
+              <Ionicons name="image-outline" size={42} color={darkColors.textTertiary} style={{ marginBottom: 8 }} />
+              <Text style={styles.placeholderText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>No image selected</Text>
             </View>
           )}
 
           {/* Vehicle Dropdown (Optional: only show if user has > 1 vehicles) */}
           {vehicles && vehicles.length > 1 && (
             <View style={styles.dropdownContainer}>
-              <Text style={styles.dropdownLabel}>Select Affected Vehicle</Text>
+              <Text style={styles.dropdownLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Select Affected Vehicle</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.vehicleScroll}>
                 {vehicles.map((v) => (
                   <TouchableOpacity
@@ -545,9 +549,9 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
                       styles.vehicleChip,
                       selectedVehicleId === v.id && styles.vehicleChipActive,
                     ]}
-                    onPress={() => setSelectedVehicleId(v.id)}
+                    onPress={() => setSelectedVehicleId(v.id)} accessibilityRole="button"
                   >
-                    <Text style={[styles.vehicleChipText, selectedVehicleId === v.id && styles.vehicleChipTextActive]}>
+                    <Text style={[styles.vehicleChipText, selectedVehicleId === v.id && styles.vehicleChipTextActive]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                       {v.make} {v.model}
                     </Text>
                   </TouchableOpacity>
@@ -557,22 +561,22 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
           )}
 
           <View style={styles.pickerRow}>
-            <TouchableOpacity style={styles.pickerBtn} onPress={() => handlePickImage(true)}>
-              <Ionicons name="camera-outline" size={20} color="#FFFFFF" style={{ marginRight: 6 }} />
-              <Text style={styles.pickerBtnText}>Camera</Text>
+            <TouchableOpacity style={styles.pickerBtn} onPress={() => handlePickImage(true)} accessibilityRole="button">
+              <Ionicons name="camera-outline" size={20} color={darkColors.text} style={{ marginRight: 6 }} />
+              <Text style={styles.pickerBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Camera</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.pickerBtn} onPress={() => handlePickImage(false)}>
-              <Ionicons name="images-outline" size={20} color="#FFFFFF" style={{ marginRight: 6 }} />
-              <Text style={styles.pickerBtnText}>Gallery</Text>
+            <TouchableOpacity style={styles.pickerBtn} onPress={() => handlePickImage(false)} accessibilityRole="button">
+              <Ionicons name="images-outline" size={20} color={darkColors.text} style={{ marginRight: 6 }} />
+              <Text style={styles.pickerBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Gallery</Text>
             </TouchableOpacity>
           </View>
 
           {/* User Photo Capture Guidance Tip */}
           <View style={styles.photoTipCard}>
-            <Ionicons name="information-circle-outline" size={18} color="#FF9100" style={{ marginRight: 8, marginTop: 2 }} />
-            <Text style={styles.photoTipText}>
-              <Text style={{ fontWeight: '700' }}>Tip:</Text> Include some recognizable part of the car (wheel, mirror, body shape) in frame, not just an extreme close-up of the damage.
+            <Ionicons name="information-circle-outline" size={18} color={colors.warning[500]} style={{ marginRight: 8, marginTop: 2 }} />
+            <Text style={styles.photoTipText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+              <Text style={{ fontWeight: '700' }} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Tip:</Text> Include some recognizable part of the car (wheel, mirror, body shape) in frame, not just an extreme close-up of the damage.
             </Text>
           </View>
 
@@ -580,20 +584,20 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
             <TouchableOpacity
               style={[
                 styles.actionBtnPrimary,
-                !selectedPartTag && { opacity: 0.45, backgroundColor: 'rgba(229, 57, 53, 0.4)' },
+                !selectedPartTag && { opacity: 0.45, backgroundColor: tints.dangerMedium },
               ]}
               onPress={handleAnalyze}
-              disabled={!selectedPartTag || isAnalyzing}
+              disabled={!selectedPartTag || isAnalyzing} accessibilityRole="button"
             >
-              <Ionicons name="hardware-chip-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
-              <Text style={styles.actionBtnText}>
+              <Ionicons name="hardware-chip-outline" size={20} color={darkColors.text} style={{ marginRight: 8 }} />
+              <Text style={styles.actionBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 {!selectedPartTag ? 'Select Damaged Part Above First' : 'Analyze Damage'}
               </Text>
             </TouchableOpacity>
           )}
         </View>
 
-        <Text style={styles.scopeNoticeText}>
+        <Text style={styles.scopeNoticeText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
           Note: Damage area localization has been evaluated and deferred to future releases due to insufficient COCO dataset limits.
         </Text>
       </ScrollView>
@@ -606,30 +610,30 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
       <View style={styles.segmentedHeader}>
         <TouchableOpacity
           style={[styles.segmentBtn, activeSegment === 'new' && styles.segmentBtnActive]}
-          onPress={() => setActiveSegment('new')}
+          onPress={() => setActiveSegment('new')} accessibilityRole="button"
         >
-          <Ionicons name="camera-outline" size={16} color={activeSegment === 'new' ? '#E53935' : '#888'} style={{ marginRight: 6 }} />
-          <Text style={[styles.segmentBtnText, activeSegment === 'new' && styles.segmentBtnTextActive]}>
+          <Ionicons name="camera-outline" size={16} color={activeSegment === 'new' ? colors.danger[500] : darkColors.textTertiary} style={{ marginRight: 6 }} />
+          <Text style={[styles.segmentBtnText, activeSegment === 'new' && styles.segmentBtnTextActive]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             New
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.segmentBtn, activeSegment === 'history' && styles.segmentBtnActive]}
-          onPress={() => setActiveSegment('history')}
+          onPress={() => setActiveSegment('history')} accessibilityRole="button"
         >
-          <Ionicons name="time-outline" size={16} color={activeSegment === 'history' ? '#E53935' : '#888'} style={{ marginRight: 6 }} />
-          <Text style={[styles.segmentBtnText, activeSegment === 'history' && styles.segmentBtnTextActive]}>
+          <Ionicons name="time-outline" size={16} color={activeSegment === 'history' ? colors.danger[500] : darkColors.textTertiary} style={{ marginRight: 6 }} />
+          <Text style={[styles.segmentBtnText, activeSegment === 'history' && styles.segmentBtnTextActive]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             History
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.segmentBtn, activeSegment === 'cost_history' && styles.segmentBtnActive]}
-          onPress={() => setActiveSegment('cost_history')}
+          onPress={() => setActiveSegment('cost_history')} accessibilityRole="button"
         >
-          <Ionicons name="receipt-outline" size={16} color={activeSegment === 'cost_history' ? '#E53935' : '#888'} style={{ marginRight: 6 }} />
-          <Text style={[styles.segmentBtnText, activeSegment === 'cost_history' && styles.segmentBtnTextActive]}>
+          <Ionicons name="receipt-outline" size={16} color={activeSegment === 'cost_history' ? colors.danger[500] : darkColors.textTertiary} style={{ marginRight: 6 }} />
+          <Text style={[styles.segmentBtnText, activeSegment === 'cost_history' && styles.segmentBtnTextActive]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             Costs
           </Text>
         </TouchableOpacity>
@@ -638,16 +642,16 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
       {/* ── Error Banner ── */}
       {errorMsg && (
         <View style={styles.errorBanner}>
-          <Ionicons name="alert-circle-outline" size={18} color="#FF5252" style={{ marginRight: 8 }} />
-          <Text style={styles.errorText} numberOfLines={3}>{errorMsg}</Text>
+          <Ionicons name="alert-circle-outline" size={18} color={colors.danger[400]} style={{ marginRight: 8 }} />
+          <Text style={styles.errorText} numberOfLines={3} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errorMsg}</Text>
         </View>
       )}
 
       {/* ── Loading Overlay ── */}
       {isAnalyzing && (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#E53935" />
-          <Text style={styles.loadingText}>{analysisStage}</Text>
+          <ActivityIndicator size="large" color={colors.danger[500]} />
+          <Text style={styles.loadingText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{analysisStage}</Text>
         </View>
       )}
 
@@ -670,14 +674,14 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
           onEndReachedThreshold={0.3}
           ListFooterComponent={
             historyLoading ? (
-              <ActivityIndicator size="small" color="#E53935" style={{ marginVertical: 16 }} />
+              <ActivityIndicator size="small" color={colors.danger[500]} style={{ marginVertical: 16 }} />
             ) : null
           }
           ListEmptyComponent={
             !historyLoading ? (
               <View style={styles.emptyContainer}>
-                <Ionicons name="folder-open-outline" size={44} color="#6B6B80" style={{ marginBottom: 12 }} />
-                <Text style={styles.emptyText}>No damage logs recorded yet.</Text>
+                <Ionicons name="folder-open-outline" size={44} color={darkColors.textTertiary} style={{ marginBottom: 12 }} />
+                <Text style={styles.emptyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>No damage logs recorded yet.</Text>
               </View>
             ) : null
           }
@@ -695,90 +699,114 @@ function DamageAssessmentScreen({ route, navigation, isInline }: any) {
           ListEmptyComponent={
             !costHistoryLoading ? (
               <View style={styles.emptyContainer}>
-                <Ionicons name="receipt-outline" size={44} color="#6B6B80" style={{ marginBottom: 12 }} />
-                <Text style={styles.emptyText}>No repair cost reports saved yet.</Text>
+                <Ionicons name="receipt-outline" size={44} color={darkColors.textTertiary} style={{ marginBottom: 12 }} />
+                <Text style={styles.emptyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>No repair cost reports saved yet.</Text>
               </View>
             ) : null
           }
         />
       )}
+
+      {/* Phase 8: ConfirmDialog replaces destructive Alert.alert (assessment log) */}
+      <ConfirmDialog
+        visible={deleteAssessmentDialogVisible}
+        title="Confirm Delete"
+        description="Are you sure you want to delete this damage assessment log entry?"
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmDeleteAssessment}
+        onCancel={() => { setDeleteAssessmentDialogVisible(false); setPendingDeleteAssessmentId(null); }}
+      />
+
+      {/* Phase 8: ConfirmDialog replaces destructive Alert.alert (cost report) */}
+      <ConfirmDialog
+        visible={deleteCostReportDialogVisible}
+        title="Confirm Delete"
+        description="Are you sure you want to delete this repair cost estimation report?"
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmDeleteCostReport}
+        onCancel={() => { setDeleteCostReportDialogVisible(false); setPendingDeleteCostReportId(null); }}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0A0F' },
+  container: { flex: 1, backgroundColor: darkColors.background },
   segmentedHeader: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(28, 28, 46, 0.4)',
+    backgroundColor: tints.glassCard,
     marginHorizontal: 16,
     marginTop: 12,
     borderRadius: 12,
     padding: 4,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
   segmentBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
   segmentBtnActive: {
-    backgroundColor: '#E53935',
-    shadowColor: '#E53935',
+    backgroundColor: colors.danger[500],
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
-  segmentBtnText: { color: '#6B6B80', fontSize: 13, fontWeight: '600' },
-  segmentBtnTextActive: { color: '#FFFFFF' },
+  segmentBtnText: { color: darkColors.textTertiary, fontSize: 13, fontWeight: '600' },
+  segmentBtnTextActive: { color: darkColors.text },
   tabContent: { flex: 1, paddingTop: 16, paddingHorizontal: 16 },
   card: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000',
+    borderColor: tints.whiteBorder,
+    shadowColor: darkColors.background,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2,
     shadowRadius: 12,
     elevation: 3,
     marginBottom: 16,
   },
-  cardHeaderTitle: { fontSize: 16, fontWeight: '700', color: '#FFFFFF', marginBottom: 8 },
-  cardDescription: { fontSize: 13, color: '#A0A0B8', lineHeight: 18, marginBottom: 16 },
+  cardHeaderTitle: { fontSize: 16, fontWeight: '700', color: darkColors.text, marginBottom: 8 },
+  cardDescription: { fontSize: 13, color: darkColors.textSecondary, lineHeight: 18, marginBottom: 16 },
   placeholderContainer: {
     height: 180,
-    backgroundColor: 'rgba(10, 10, 15, 0.5)',
+    backgroundColor: tints.overlayLight,
     borderRadius: 12,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: tints.whiteBorderStrong,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
   },
   placeholderEmoji: { fontSize: 40, marginBottom: 8 },
-  placeholderText: { color: '#6B6B80', fontSize: 14 },
-  previewImage: { width: '100%', height: 200, borderRadius: 12, marginBottom: 16, backgroundColor: 'rgba(10, 10, 15, 0.5)' },
+  placeholderText: { color: darkColors.textTertiary, fontSize: 14 },
+  previewImage: { width: '100%', height: 200, borderRadius: 12, marginBottom: 16, backgroundColor: tints.overlayLight },
   pickerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
   pickerBtn: {
     flex: 0.48,
     flexDirection: 'row',
     height: 48,
-    backgroundColor: 'rgba(41, 121, 255, 0.1)',
+    backgroundColor: tints.infoSubtle,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(41, 121, 255, 0.25)',
+    borderColor: tints.infoMedium,
   },
-  pickerBtnText: { color: '#FFFFFF', marginLeft: 8, fontSize: 14, fontWeight: '700' },
+  pickerBtnText: { color: darkColors.text, marginLeft: 8, fontSize: 14, fontWeight: '700' },
   actionBtnPrimary: {
     height: 48,
-    backgroundColor: '#E53935',
+    backgroundColor: colors.danger[500],
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#E53935',
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -786,36 +814,36 @@ const styles = StyleSheet.create({
   },
   actionBtnSecondary: {
     height: 48,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: tints.whiteSubtle,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  actionBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  actionBtnText: { color: darkColors.text, fontSize: 14, fontWeight: '700' },
   dropdownContainer: { marginBottom: 16 },
-  dropdownLabel: { color: '#A0A0B8', fontSize: 12, marginBottom: 8, fontWeight: '600' },
+  dropdownLabel: { color: darkColors.textSecondary, fontSize: 12, marginBottom: 8, fontWeight: '600' },
   vehicleScroll: { flexDirection: 'row' },
   vehicleChip: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: tints.whiteSubtle,
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 16,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
-  vehicleChipActive: { backgroundColor: '#E53935', borderColor: '#E53935' },
-  vehicleChipText: { color: '#6B6B80', fontSize: 13 },
-  vehicleChipTextActive: { color: '#FFFFFF', fontWeight: '600' },
+  vehicleChipActive: { backgroundColor: colors.danger[500], borderColor: colors.danger[500] },
+  vehicleChipText: { color: darkColors.textTertiary, fontSize: 13 },
+  vehicleChipTextActive: { color: darkColors.text, fontWeight: '600' },
   resultImage: { width: '100%', height: 220, borderRadius: 12, marginBottom: 16 },
   resultsContainer: {
-    backgroundColor: 'rgba(10, 10, 15, 0.5)',
+    backgroundColor: tints.overlayLight,
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     marginBottom: 16,
   },
   resultField: {
@@ -824,14 +852,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.04)',
+    borderBottomColor: tints.whiteSubtle,
   },
-  resultLabel: { color: '#A0A0B8', fontSize: 14 },
-  resultValue: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  resultLabel: { color: darkColors.textSecondary, fontSize: 14 },
+  resultValue: { color: darkColors.text, fontSize: 15, fontWeight: '700' },
   severityBadgeLarge: { paddingVertical: 4, paddingHorizontal: 12, borderRadius: 12 },
-  severityBadgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
+  severityBadgeText: { color: darkColors.text, fontSize: 11, fontWeight: '700' },
   scopeNoticeText: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 11,
     lineHeight: 16,
     textAlign: 'center',
@@ -841,78 +869,78 @@ const styles = StyleSheet.create({
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 23, 68, 0.12)',
+    backgroundColor: tints.dangerErrorBg,
     marginHorizontal: 16,
     marginTop: 12,
     padding: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.3)',
+    borderColor: tints.dangerErrorBorder,
   },
   errorEmoji: { fontSize: 16, marginRight: 8 },
-  errorText: { color: '#FF8A80', fontSize: 13, flex: 1 },
+  errorText: { color: colors.danger[300], fontSize: 13, flex: 1 },
   loadingContainer: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(10, 10, 15, 0.92)',
+    backgroundColor: tints.overlayStrong,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
   },
-  loadingText: { color: '#A0A0B8', marginTop: 16, fontSize: 14 },
+  loadingText: { color: darkColors.textSecondary, marginTop: 16, fontSize: 14 },
   historyListContent: { padding: 16 },
   historyCard: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 14,
     padding: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
-  historyThumb: { width: 80, height: 80, borderRadius: 10, backgroundColor: 'rgba(10, 10, 15, 0.5)' },
+  historyThumb: { width: 80, height: 80, borderRadius: 10, backgroundColor: tints.overlayLight },
   historyCardInfo: { flex: 1, marginLeft: 12, justifyContent: 'center' },
   historyCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  historyTypeTitle: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  historyTypeTitle: { color: darkColors.text, fontSize: 14, fontWeight: '700' },
   severityBadge: { paddingVertical: 2, paddingHorizontal: 8, borderRadius: 8 },
-  historyConfText: { color: '#A0A0B8', fontSize: 12, marginTop: 2 },
-  historyDateText: { color: '#6B6B80', fontSize: 11, marginTop: 4 },
+  historyConfText: { color: darkColors.textSecondary, fontSize: 12, marginTop: 2 },
+  historyDateText: { color: darkColors.textTertiary, fontSize: 11, marginTop: 4 },
   emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
   emptyEmoji: { fontSize: 48, marginBottom: 12 },
-  emptyText: { color: '#6B6B80', marginTop: 0, fontSize: 14 },
+  emptyText: { color: darkColors.textTertiary, marginTop: 0, fontSize: 14 },
   deleteCardBtn: { padding: 8, justifyContent: 'center', alignItems: 'center' },
   costHistoryThumbContainer: {
     width: 80,
     height: 80,
     borderRadius: 10,
-    backgroundColor: 'rgba(229, 57, 53, 0.1)',
+    backgroundColor: tints.dangerLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  historyCostText: { color: '#E53935', fontSize: 14, fontWeight: '700', marginTop: 2 },
+  historyCostText: { color: colors.danger[500], fontSize: 14, fontWeight: '700', marginTop: 2 },
   lowConfidenceBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 214, 0, 0.12)',
+    backgroundColor: tints.warningSubtle,
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 214, 0, 0.4)',
+    borderColor: tints.warningMedium,
     marginBottom: 16,
   },
   lowConfidenceText: {
-    color: '#FFD600',
+    color: colors.warning[400],
     fontSize: 13,
     flex: 1,
     lineHeight: 18,
     fontWeight: '600',
   },
   carRejectionCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 20,
     padding: 24,
     marginVertical: 16,
     borderWidth: 2,
-    borderColor: 'rgba(255, 23, 68, 0.4)',
+    borderColor: tints.dangerErrorBorder,
     alignItems: 'center',
   },
   carRejectionIcon: {
@@ -920,28 +948,28 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   carRejectionTitle: {
-    color: '#FF1744',
+    color: colors.danger[500],
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 8,
   },
   carRejectionMessage: {
-    color: '#D0D0E0',
+    color: darkColors.textSecondary,
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 19,
     marginBottom: 20,
   },
   photoTipCard: {
-    backgroundColor: 'rgba(41, 121, 255, 0.1)',
+    backgroundColor: tints.infoSubtle,
     borderRadius: 12,
     padding: 12,
     marginVertical: 10,
     borderWidth: 1,
-    borderColor: 'rgba(41, 121, 255, 0.25)',
+    borderColor: tints.infoMedium,
   },
   photoTipText: {
-    color: '#82B1FF',
+    color: colors.info[300],
     fontSize: 12,
     lineHeight: 17,
   },

@@ -20,8 +20,9 @@ import { Ionicons } from '@expo/vector-icons';
 import api, { API_URL } from '../api/axios';
 import { documentDirectory, writeAsStringAsync } from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-
-
+import { useToast } from '../components/ui/Toast';
+import { ConfirmDialog } from '../components/ui';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 
 interface LineItem {
@@ -53,6 +54,7 @@ interface CostReport {
 }
 
 export default function RepairCostScreen({ route, navigation }: any) {
+  const toast = useToast();
   const incidentId = route?.params?.incidentId;
   const reportId = route?.params?.reportId;
   const assessmentIds = route?.params?.assessmentIds;
@@ -68,6 +70,10 @@ export default function RepairCostScreen({ route, navigation }: any) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [hasGenerated, setHasGenerated] = useState(false);
+
+  // Phase 8: ConfirmDialog state for destructive delete
+  const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     const hasParams = Boolean(incidentId || (assessmentIds && assessmentIds.length > 0));
@@ -95,7 +101,6 @@ export default function RepairCostScreen({ route, navigation }: any) {
       setReport(response.data);
       setActiveSegment('details');
     } catch (err: any) {
-      console.log('Error generating estimate:', err);
       const serverMsg = err.response?.data?.message;
       setErrorMsg(serverMsg || 'Failed to generate repair cost estimate. Please check connections.');
     } finally {
@@ -177,28 +182,26 @@ const handleShareReport = async () => {
   };
 
   const handleDeleteReport = (id: string) => {
-    Alert.alert(
-      'Confirm Delete',
-      'Are you sure you want to delete this repair cost estimation report?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await api.delete(`/repair-cost/report/${id}`);
-              setHistory((prev) => prev.filter((item) => item.id !== id));
-              if (report?.id === id) {
-                setReport(null);
-              }
-            } catch (err) {
-              Alert.alert('Error', 'Failed to delete report.');
-            }
-          },
-        },
-      ]
-    );
+    // Phase 8: replaced destructive Alert.alert with ConfirmDialog primitive
+    setPendingDeleteId(id);
+    setDeleteDialogVisible(true);
+  };
+
+  const handleConfirmDeleteReport = async () => {
+    setDeleteDialogVisible(false);
+    if (!pendingDeleteId) return;
+    try {
+      const id = pendingDeleteId;
+      await api.delete(`/repair-cost/report/${id}`);
+      setHistory((prev) => prev.filter((item) => item.id !== id));
+      if (report?.id === id) {
+        setReport(null);
+      }
+    } catch (err) {
+      toast.error('Failed to delete report.');
+    } finally {
+      setPendingDeleteId(null);
+    }
   };
 
   const renderHistoryCard = ({ item }: { item: CostReport }) => {
@@ -219,40 +222,40 @@ const handleShareReport = async () => {
           onPress={() => {
             loadReport(item.id);
           }}
-          activeOpacity={0.7}
+          activeOpacity={0.7} accessibilityRole="button"
         >
           <View style={styles.historyCardHeader}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Ionicons name="car-sport-outline" size={18} color="#E53935" style={{ marginRight: 6 }} />
-              <Text style={styles.historyCarName}>{carText}</Text>
+              <Ionicons name="car-sport-outline" size={18} color={colors.danger[500]} style={{ marginRight: 6 }} />
+              <Text style={styles.historyCarName} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{carText}</Text>
             </View>
-            <Text style={styles.historyDateText}>{formattedDate}</Text>
+            <Text style={styles.historyDateText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{formattedDate}</Text>
           </View>
 
           <View style={styles.historyCostBlock}>
-            <Text style={styles.historyCostLabel}>ESTIMATED RANGE</Text>
-            <Text style={styles.historyCostText}>
+            <Text style={styles.historyCostLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>ESTIMATED RANGE</Text>
+            <Text style={styles.historyCostText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               PKR {item.totalMinCostPkr.toLocaleString()} – {item.totalMaxCostPkr.toLocaleString()}
             </Text>
           </View>
 
           <View style={styles.historyFooter}>
             <View style={styles.partCountBadge}>
-              <Ionicons name="construct-outline" size={13} color="#82B1FF" style={{ marginRight: 4 }} />
-              <Text style={styles.partCountText}>{item.lineItems.length} Part{item.lineItems.length > 1 ? 's' : ''} Assessed</Text>
+              <Ionicons name="construct-outline" size={13} color={colors.info[300]} style={{ marginRight: 4 }} />
+              <Text style={styles.partCountText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{item.lineItems.length} Part{item.lineItems.length > 1 ? 's' : ''} Assessed</Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={styles.viewDetailsText}>View Report</Text>
-              <Ionicons name="chevron-forward" size={16} color="#E53935" />
+              <Text style={styles.viewDetailsText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>View Report</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.danger[500]} />
             </View>
           </View>
         </TouchableOpacity>
 
         <TouchableOpacity 
           style={styles.deleteReportIconBtn} 
-          onPress={() => handleDeleteReport(item.id)}
-        >
-          <Ionicons name="trash-outline" size={18} color="#FF5252" />
+          onPress={() => handleDeleteReport(item.id)} accessibilityRole="button"
+         accessibilityLabel="Delete" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Ionicons name="trash-outline" size={18} color={colors.danger[400]} />
         </TouchableOpacity>
       </View>
     );
@@ -262,8 +265,8 @@ const handleShareReport = async () => {
     if (isLoading) {
       return (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#E53935" />
-          <Text style={styles.loadingText}>Generating auto repair estimates...</Text>
+          <ActivityIndicator size="large" color={colors.danger[500]} />
+          <Text style={styles.loadingText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Generating auto repair estimates...</Text>
         </View>
       );
     }
@@ -271,8 +274,8 @@ const handleShareReport = async () => {
     if (!report) {
       return (
         <View style={styles.centerContainer}>
-          <Ionicons name="receipt-outline" size={48} color="#6B6B80" style={{ marginBottom: 12 }} />
-          <Text style={styles.emptyText}>No cost report loaded. Check history to open past estimates.</Text>
+          <Ionicons name="receipt-outline" size={48} color={darkColors.textTertiary} style={{ marginBottom: 12 }} />
+          <Text style={styles.emptyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>No cost report loaded. Check history to open past estimates.</Text>
         </View>
       );
     }
@@ -303,16 +306,16 @@ const handleShareReport = async () => {
         {/* ── Total Estimate Card ── */}
         <View style={styles.totalCard}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-            <Ionicons name="cash-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
-            <Text style={styles.totalLabel}>TOTAL ESTIMATED COST RANGE</Text>
+            <Ionicons name="cash-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
+            <Text style={styles.totalLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>TOTAL ESTIMATED COST RANGE</Text>
           </View>
-          <Text style={styles.totalValue}>
+          <Text style={styles.totalValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             PKR {report.totalMinCostPkr.toLocaleString()} - {report.totalMaxCostPkr.toLocaleString()}
           </Text>
           {report.vehicle && (
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
-              <Ionicons name="car-outline" size={16} color="#A0A0B0" style={{ marginRight: 6 }} />
-              <Text style={styles.vehicleSubText}>
+              <Ionicons name="car-outline" size={16} color={darkColors.textSecondary} style={{ marginRight: 6 }} />
+              <Text style={styles.vehicleSubText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                 {report.vehicle.year} {report.vehicle.make} {report.vehicle.model} ({report.vehicle.licensePlate.toUpperCase()})
               </Text>
             </View>
@@ -322,8 +325,8 @@ const handleShareReport = async () => {
         {/* ── Warning banner for Fallback estimates ── */}
         {hasFallbackItems && (
           <View style={styles.warningBanner}>
-            <Ionicons name="information-circle-outline" size={20} color="#FF9100" style={{ marginRight: 8 }} />
-            <Text style={styles.warningText}>
+            <Ionicons name="information-circle-outline" size={20} color={colors.warning[500]} style={{ marginRight: 8 }} />
+            <Text style={styles.warningText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               Note: Certain parts are priced using static default averages because live marketplace listings and market fallback were unreachable.
             </Text>
           </View>
@@ -331,48 +334,48 @@ const handleShareReport = async () => {
 
         {/* ── Line Items ── */}
         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 24, marginBottom: 12 }}>
-          <Ionicons name="construct-outline" size={20} color="#E53935" style={{ marginRight: 8 }} />
-          <Text style={styles.sectionHeaderTitle}>DAMAGED PARTS BREAKDOWN</Text>
+          <Ionicons name="construct-outline" size={20} color={colors.danger[500]} style={{ marginRight: 8 }} />
+          <Text style={styles.sectionHeaderTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>DAMAGED PARTS BREAKDOWN</Text>
         </View>
         {report.lineItems.map((item, index) => (
           <View key={index} style={styles.lineItemCard}>
             <View style={styles.itemHeader}>
-              <Text style={styles.itemPartName}>{getPartName(item.partTag)}</Text>
+              <Text style={styles.itemPartName} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{getPartName(item.partTag)}</Text>
               <View style={[
                 styles.badge, 
-                { backgroundColor: item.action === 'repair' ? 'rgba(0, 230, 118, 0.12)' : 'rgba(255, 23, 68, 0.12)' }
+                { backgroundColor: item.action === 'repair' ? 'tints.successSubtle' : tints.dangerErrorBg }
               ]}>
                 <Text style={[
                   styles.badgeText, 
-                  { color: item.action === 'repair' ? '#00E676' : '#FF1744' }
-                ]}>
+                  { color: item.action === 'repair' ? colors.success[500] : colors.danger[500] }
+                ]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                   {item.action.toUpperCase()}
                 </Text>
               </View>
             </View>
 
-            <Text style={styles.itemSubText}>Damage: {item.damageType.toUpperCase().replace('_', ' ')}</Text>
+            <Text style={styles.itemSubText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Damage: {item.damageType.toUpperCase().replace('_', ' ')}</Text>
 
             <View style={styles.costDetailsBox}>
               <View style={styles.costRow}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="build-outline" size={15} color="#A0A0B0" style={{ marginRight: 6 }} />
-                  <Text style={styles.costLabel}>Workshop Labor Cost</Text>
+                  <Ionicons name="build-outline" size={15} color={darkColors.textSecondary} style={{ marginRight: 6 }} />
+                  <Text style={styles.costLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Workshop Labor Cost</Text>
                 </View>
-                <Text style={styles.costVal}>PKR {item.laborCost.min.toLocaleString()} - {item.laborCost.max.toLocaleString()}</Text>
+                <Text style={styles.costVal} allowFontScaling={true} maxFontSizeMultiplier={1.5}>PKR {item.laborCost.min.toLocaleString()} - {item.laborCost.max.toLocaleString()}</Text>
               </View>
 
               <View style={styles.costRow}>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Ionicons name="cube-outline" size={15} color="#A0A0B0" style={{ marginRight: 6 }} />
-                    <Text style={styles.costLabel}>Spare Parts Price</Text>
+                    <Ionicons name="cube-outline" size={15} color={darkColors.textSecondary} style={{ marginRight: 6 }} />
+                    <Text style={styles.costLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Spare Parts Price</Text>
                   </View>
-                  <Text style={styles.partsSourceSubtext}>
+                  <Text style={styles.partsSourceSubtext} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                     {item.action === 'repair' ? 'Repaired (No replacement part purchased)' : getPartsSourceLabel(item.partsSource)}
                   </Text>
                 </View>
-                <Text style={styles.costVal}>
+                <Text style={styles.costVal} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
                   {item.action === 'repair'
                     ? 'PKR 0'
                     : `PKR ${item.partsCost.min.toLocaleString()} - ${item.partsCost.max.toLocaleString()}`}
@@ -380,8 +383,8 @@ const handleShareReport = async () => {
               </View>
 
               <View style={[styles.costRow, styles.totalRow]}>
-                <Text style={styles.totalRowLabel}>Estimated Total</Text>
-                <Text style={styles.totalRowVal}>PKR {item.lineTotal.min.toLocaleString()} - {item.lineTotal.max.toLocaleString()}</Text>
+                <Text style={styles.totalRowLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Estimated Total</Text>
+                <Text style={styles.totalRowVal} allowFontScaling={true} maxFontSizeMultiplier={1.5}>PKR {item.lineTotal.min.toLocaleString()} - {item.lineTotal.max.toLocaleString()}</Text>
               </View>
             </View>
           </View>
@@ -391,14 +394,14 @@ const handleShareReport = async () => {
         <TouchableOpacity 
           style={styles.shareBtn} 
           onPress={handleShareReport}
-          disabled={isSharing}
+          disabled={isSharing} accessibilityRole="button"
         >
           {isSharing ? (
-            <ActivityIndicator size="small" color="#ffffff" />
+            <ActivityIndicator size="small" color={darkColors.text} />
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Ionicons name="share-social-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
-              <Text style={styles.shareBtnText}>Share Breakdown Report (PDF)</Text>
+              <Ionicons name="share-social-outline" size={20} color={darkColors.text} style={{ marginRight: 8 }} />
+              <Text style={styles.shareBtnText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Share Breakdown Report (PDF)</Text>
             </View>
           )}
         </TouchableOpacity>
@@ -408,7 +411,7 @@ const handleShareReport = async () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor="#0A0A0F" />
+      <StatusBar barStyle="light-content" backgroundColor={darkColors.background} />
       {/* ── Header bar ── */}
       <View style={styles.headerBar}>
         <TouchableOpacity 
@@ -420,11 +423,11 @@ const handleShareReport = async () => {
             }
           }}
           style={styles.backBtn}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button"
+         accessibilityLabel="Back">
+          <Ionicons name="arrow-back" size={24} color={darkColors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerBarTitle}>Repair Estimation</Text>
+        <Text style={styles.headerBarTitle} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Repair Estimation</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -432,20 +435,20 @@ const handleShareReport = async () => {
       <View style={styles.segmentedHeader}>
         <TouchableOpacity
           style={[styles.segmentBtn, activeSegment === 'details' && styles.segmentBtnActive]}
-          onPress={() => setActiveSegment('details')}
+          onPress={() => setActiveSegment('details')} accessibilityRole="button"
         >
-          <Ionicons name="document-text-outline" size={16} color={activeSegment === 'details' ? '#E53935' : '#888'} style={{ marginRight: 6 }} />
-          <Text style={[styles.segmentBtnText, activeSegment === 'details' && styles.segmentBtnTextActive]}>
+          <Ionicons name="document-text-outline" size={16} color={activeSegment === 'details' ? colors.danger[500] : darkColors.textTertiary} style={{ marginRight: 6 }} />
+          <Text style={[styles.segmentBtnText, activeSegment === 'details' && styles.segmentBtnTextActive]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             Estimate Report
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.segmentBtn, activeSegment === 'history' && styles.segmentBtnActive]}
-          onPress={() => setActiveSegment('history')}
+          onPress={() => setActiveSegment('history')} accessibilityRole="button"
         >
-          <Ionicons name="folder-open-outline" size={16} color={activeSegment === 'history' ? '#E53935' : '#888'} style={{ marginRight: 6 }} />
-          <Text style={[styles.segmentBtnText, activeSegment === 'history' && styles.segmentBtnTextActive]}>
+          <Ionicons name="folder-open-outline" size={16} color={activeSegment === 'history' ? colors.danger[500] : darkColors.textTertiary} style={{ marginRight: 6 }} />
+          <Text style={[styles.segmentBtnText, activeSegment === 'history' && styles.segmentBtnTextActive]} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             Reports History
           </Text>
         </TouchableOpacity>
@@ -454,8 +457,8 @@ const handleShareReport = async () => {
       {/* ── Error display ── */}
       {errorMsg && (
         <View style={styles.errorBanner}>
-          <Ionicons name="warning-outline" size={20} color="#FF5252" style={{ marginRight: 8 }} />
-          <Text style={styles.errorText}>{errorMsg}</Text>
+          <Ionicons name="warning-outline" size={20} color={colors.danger[400]} style={{ marginRight: 8 }} />
+          <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{errorMsg}</Text>
         </View>
       )}
 
@@ -473,13 +476,25 @@ const handleShareReport = async () => {
           ListEmptyComponent={
             !historyLoading ? (
               <View style={styles.centerContainer}>
-                <Ionicons name="folder-open-outline" size={48} color="#6B6B80" style={{ marginBottom: 12 }} />
-                <Text style={styles.emptyText}>No repair estimates generated yet.</Text>
+                <Ionicons name="folder-open-outline" size={48} color={darkColors.textTertiary} style={{ marginBottom: 12 }} />
+                <Text style={styles.emptyText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>No repair estimates generated yet.</Text>
               </View>
             ) : null
           }
         />
       )}
+
+      {/* Phase 8: ConfirmDialog replaces destructive Alert.alert */}
+      <ConfirmDialog
+        visible={deleteDialogVisible}
+        title="Confirm Delete"
+        description="Are you sure you want to delete this repair cost estimation report?"
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmDeleteReport}
+        onCancel={() => { setDeleteDialogVisible(false); setPendingDeleteId(null); }}
+      />
     </SafeAreaView>
   );
 }
@@ -487,7 +502,7 @@ const handleShareReport = async () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: darkColors.background,
   },
   headerBar: {
     flexDirection: 'row',
@@ -495,27 +510,27 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    borderBottomColor: tints.whiteBorder,
   },
   backBtn: {
     padding: 4,
   },
   headerBarTitle: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 18,
     fontWeight: '700',
   },
   segmentedHeader: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(28, 28, 46, 0.4)',
+    backgroundColor: tints.glassCard,
     marginHorizontal: 16,
     marginTop: 12,
     borderRadius: 12,
     padding: 4,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
   segmentBtn: {
     flex: 1,
@@ -524,20 +539,20 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   segmentBtnActive: {
-    backgroundColor: '#E53935',
-    shadowColor: '#E53935',
+    backgroundColor: colors.danger[500],
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
   segmentBtnText: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 14,
     fontWeight: '600',
   },
   segmentBtnTextActive: {
-    color: '#FFFFFF',
+    color: darkColors.text,
   },
   tabContent: {
     flex: 1,
@@ -551,7 +566,7 @@ const styles = StyleSheet.create({
     paddingTop: 100,
   },
   loadingText: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     marginTop: 16,
     fontSize: 14,
   },
@@ -560,20 +575,20 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   emptyText: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     marginTop: 0,
     fontSize: 14,
     textAlign: 'center',
     paddingHorizontal: 20,
   },
   totalCard: {
-    backgroundColor: 'rgba(229, 57, 53, 0.15)',
+    backgroundColor: tints.dangerLight,
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(229, 57, 53, 0.3)',
-    shadowColor: '#E53935',
+    borderColor: tints.dangerMedium,
+    shadowColor: colors.danger[500],
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
@@ -581,31 +596,31 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   totalLabel: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1.5,
     marginBottom: 8,
   },
   totalValue: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 22,
     fontWeight: '700',
   },
   vehicleSubText: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 12,
     marginTop: 12,
   },
   warningBanner: {
-    backgroundColor: 'rgba(255, 167, 38, 0.1)',
+    backgroundColor: tints.warningSubtle,
     borderRadius: 10,
     padding: 12,
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 167, 38, 0.2)',
+    borderColor: tints.warningMedium,
   },
   warningEmoji: {
     fontSize: 16,
@@ -613,13 +628,13 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   warningText: {
-    color: '#FFA726',
+    color: colors.warning[400],
     fontSize: 12,
     flex: 1,
     lineHeight: 16,
   },
   sectionHeaderTitle: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 1,
@@ -627,13 +642,13 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   lineItemCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: darkColors.background,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
@@ -646,7 +661,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   itemPartName: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 15,
     fontWeight: '700',
   },
@@ -660,16 +675,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   itemSubText: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 12,
     marginBottom: 12,
   },
   costDetailsBox: {
-    backgroundColor: 'rgba(10, 10, 15, 0.5)',
+    backgroundColor: tints.overlayLight,
     borderRadius: 10,
     padding: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.04)',
+    borderColor: tints.whiteSubtle,
   },
   costRow: {
     flexDirection: 'row',
@@ -677,32 +692,32 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   costLabel: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 12,
   },
   costVal: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 12,
   },
   totalRow: {
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+    borderTopColor: tints.whiteBorder,
     marginTop: 6,
     paddingTop: 8,
   },
   totalRowLabel: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 13,
     fontWeight: '700',
   },
   totalRowVal: {
-    color: '#E53935',
+    color: colors.danger[500],
     fontSize: 14,
     fontWeight: '700',
   },
   shareBtn: {
-    backgroundColor: 'rgba(0, 230, 118, 0.12)',
-    borderColor: 'rgba(0, 230, 118, 0.3)',
+    backgroundColor: tints.successSubtle,
+    borderColor: tints.successMedium,
     borderWidth: 1,
     height: 52,
     borderRadius: 12,
@@ -712,27 +727,27 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   shareBtnText: {
-    color: '#00E676',
+    color: colors.success[500],
     fontSize: 15,
     fontWeight: '700',
   },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 23, 68, 0.12)',
+    backgroundColor: tints.dangerErrorBg,
     marginHorizontal: 16,
     marginTop: 12,
     padding: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.3)',
+    borderColor: tints.dangerErrorBorder,
   },
   errorEmoji: {
     fontSize: 16,
     marginRight: 8,
   },
   errorText: {
-    color: '#FF8A80',
+    color: colors.danger[300],
     fontSize: 13,
     flex: 1,
   },
@@ -746,12 +761,12 @@ const styles = StyleSheet.create({
   },
   historyCardMain: {
     flex: 1,
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
     padding: 16,
-    shadowColor: '#000',
+    shadowColor: darkColors.background,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
@@ -764,25 +779,25 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   historyCarName: {
-    color: '#FFFFFF',
+    color: darkColors.text,
     fontSize: 14,
     fontWeight: '700',
   },
   historyDateText: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 11,
   },
   historyCostBlock: {
     marginVertical: 4,
   },
   historyCostLabel: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 10,
     fontWeight: '600',
     letterSpacing: 1,
   },
   historyCostText: {
-    color: '#E53935',
+    color: colors.danger[500],
     fontSize: 16,
     fontWeight: '700',
     marginTop: 2,
@@ -794,23 +809,23 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.04)',
+    borderTopColor: tints.whiteSubtle,
   },
   partCountBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(41, 121, 255, 0.1)',
+    backgroundColor: tints.infoSubtle,
     paddingVertical: 3,
     paddingHorizontal: 8,
     borderRadius: 8,
   },
   partCountText: {
-    color: '#82B1FF',
+    color: colors.info[300],
     fontSize: 11,
     fontWeight: '600',
   },
   viewDetailsText: {
-    color: '#E53935',
+    color: colors.danger[500],
     fontSize: 12,
     fontWeight: '700',
     marginRight: 2,
@@ -818,37 +833,37 @@ const styles = StyleSheet.create({
   deleteReportIconBtn: {
     padding: 12,
     marginLeft: 8,
-    backgroundColor: 'rgba(255, 23, 68, 0.08)',
+    backgroundColor: tints.dangerErrorBg,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.2)',
+    borderColor: tints.dangerErrorBorder,
   },
   vehicleInfoChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: tints.whiteSubtle,
     paddingVertical: 4,
     paddingHorizontal: 12,
     borderRadius: 12,
     marginTop: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
   emptySubText: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 12,
     textAlign: 'center',
     marginTop: 6,
     paddingHorizontal: 30,
   },
   partsSourceSubtext: {
-    color: '#82B1FF',
+    color: colors.info[300],
     fontSize: 11,
     marginTop: 2,
     fontWeight: '500',
   },
   historyItemsText: {
-    color: '#A0A0B8',
+    color: darkColors.textSecondary,
     fontSize: 12,
   },
 });

@@ -20,7 +20,6 @@ export async function makeDirectPhoneCall(phoneNumber: string): Promise<boolean>
   const cleanNumber = phoneNumber.replace(/[^0-9+]/g, '');
 
   if (!isAutoDialable(cleanNumber)) {
-    console.log(`[DirectCall] Number ${cleanNumber} is too short for auto-dial (4-digit shortcode). Opening dialer.`);
     Linking.openURL(`tel:${cleanNumber}`);
     return false;
   }
@@ -38,11 +37,9 @@ export async function makeDirectPhoneCall(phoneNumber: string): Promise<boolean>
       );
 
       if (granted === PermissionsAndroid.RESULTS.GRANTED && RNImmediatePhoneCall?.immediatePhoneCall) {
-        console.log(`[DirectCall] Auto-dialing: ${cleanNumber} (no dialer popup)`);
         RNImmediatePhoneCall.immediatePhoneCall(cleanNumber);
         return true;
       } else {
-        console.log('[DirectCall] CALL_PHONE denied or module not available. Falling back to dialer.');
         Linking.openURL(`tel:${cleanNumber}`);
         return false;
       }

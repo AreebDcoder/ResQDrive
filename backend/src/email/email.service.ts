@@ -94,20 +94,54 @@ export class EmailService {
    * actually delivered), so callers like AlertDispatchService correctly
    * treat this channel as failed rather than falsely succeeded.
    */
+  /**
+   * Sends an emergency alert email immediately, or queues it for retry
+   * if SMTP is unavailable. Throws if the email was only queued (not
+   * actually delivered), so callers like AlertDispatchService correctly
+   * treat this channel as failed rather than falsely succeeded.
+   */
   async sendEmergencyAlertEmail(
     email: string,
     userName: string,
     severity: string,
     mapsLink: string,
+    acknowledgeUrl?: string,
   ): Promise<void> {
+    const backendBase = (process.env.BACKEND_URL || 'https://resqdrive.live').replace(/\/$/, '');
+    const fullAckLink = acknowledgeUrl
+      ? (acknowledgeUrl.startsWith('http') ? acknowledgeUrl : `${backendBase}${acknowledgeUrl}`)
+      : null;
+
+    const acknowledgeButtonHtml = fullAckLink
+      ? `<div style="margin: 12px 0;">
+          <a href="${fullAckLink}" style="background-color: #d32f2f; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 15px; box-shadow: 0 2px 4px rgba(211,47,47,0.3);">🛡️ Track & Acknowledge Alert</a>
+        </div>`
+      : '';
+
     const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #d32f2f; border-radius: 8px;">
-        <h2 style="color: #d32f2f;">🚨 ResQDrive Emergency Alert</h2>
-        <p><strong>${userName}</strong> may have been involved in a <strong>${severity}</strong> accident.</p>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${mapsLink}" style="background-color: #d32f2f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">View Live Location</a>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 2px solid #d32f2f; border-radius: 10px; background-color: #ffffff;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h2 style="color: #d32f2f; margin: 0 0 8px 0;">🚨 ResQDrive Emergency Alert</h2>
+          <p style="color: #666666; font-size: 14px; margin: 0;">Automated Crash Detection & Dispatch</p>
         </div>
-        <p>Please respond immediately or contact emergency services.</p>
+
+        <div style="background-color: #fff5f5; border-left: 4px solid #d32f2f; padding: 14px; margin-bottom: 20px; border-radius: 4px;">
+          <p style="margin: 0; font-size: 16px; color: #111111;">
+            <strong>${userName}</strong> may have been involved in a <strong style="color: #d32f2f; text-transform: uppercase;">${severity}</strong> accident.
+          </p>
+        </div>
+
+        <div style="text-align: center; margin: 24px 0;">
+          ${acknowledgeButtonHtml}
+          <div style="margin: 10px 0;">
+            <a href="${mapsLink}" style="background-color: #333333; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 14px;">📍 View Google Maps Location</a>
+          </div>
+        </div>
+
+        <hr style="border: none; border-top: 1px solid #eeeeee; margin: 24px 0;" />
+        <p style="font-size: 13px; color: #777777; text-align: center; margin: 0;">
+          Please respond immediately or contact emergency rescue services (Rescue 1122).
+        </p>
       </div>
     `;
 

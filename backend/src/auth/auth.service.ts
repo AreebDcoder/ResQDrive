@@ -21,44 +21,65 @@ export class AuthService {
   ) {}
 
   private async geocodeWorkshopAddress(address: string): Promise<{ lat: number; lng: number } | null> {
+    if (!address || address.trim().length < 2) return null;
+
+    const raw = address.trim();
+    // Normalize sectors: g10/4 -> G-10/4, f-10/2 -> F-10/2, i8/1 -> I-8/1
+    const normalized = raw
+      .replace(/\b([a-zA-Z])[\s\-]?(\d{1,2})\/(\d{1,2})\b/g, '$1-$2/$3')
+      .replace(/\b([a-zA-Z])[\s\-]?(\d{1,2})\b/g, '$1-$2');
+
+    // Strip landmarks like "near ...", "opp ...", "behind ..."
+    const strippedLandmark = raw
+      .replace(/\b(near|opp|opposite|behind|beside|front of|close to|adjacent to)\b.*$/i, '')
+      .trim();
+
+    const strippedNormalized = normalized
+      .replace(/\b(near|opp|opposite|behind|beside|front of|close to|adjacent to)\b.*$/i, '')
+      .trim();
+
+    const candidates = Array.from(new Set([
+      raw,
+      `${raw}, Islamabad, Pakistan`,
+      `${raw}, Pakistan`,
+      normalized,
+      `${normalized}, Islamabad, Pakistan`,
+      strippedLandmark,
+      `${strippedLandmark}, Islamabad, Pakistan`,
+      strippedNormalized,
+      `${strippedNormalized}, Islamabad, Pakistan`,
+    ])).filter((q) => q && q.length >= 2);
+
     const geoapifyKey = this.configService.get<string>('GEOAPIFY_API_KEY');
-    if (geoapifyKey && address && address.trim().length > 2) {
+
+    for (const query of candidates) {
+      if (geoapifyKey) {
+        try {
+          const res = await axios.get('https://api.geoapify.com/v1/geocode/search', {
+            params: { text: query, apiKey: geoapifyKey, limit: 1 },
+            timeout: 2500,
+          });
+          const feature = res.data.features?.[0];
+          if (feature?.properties?.lat && feature?.properties?.lon) {
+            return { lat: feature.properties.lat, lng: feature.properties.lon };
+          }
+        } catch (e) {}
+      }
+
       try {
-        const res = await axios.get('https://api.geoapify.com/v1/geocode/search', {
-          params: {
-            text: address,
-            apiKey: geoapifyKey,
-            limit: 1,
-          },
-          timeout: 4000,
+        const res = await axios.get('https://nominatim.openstreetmap.org/search', {
+          params: { q: query, format: 'json', limit: 1 },
+          headers: { 'User-Agent': 'ResQDrive-Emergency-Platform/1.0' },
+          timeout: 2500,
         });
-        const feature = res.data.features?.[0];
-        if (feature?.properties?.lat && feature?.properties?.lon) {
+        if (res.data && res.data[0]) {
           return {
-            lat: feature.properties.lat,
-            lng: feature.properties.lon,
+            lat: parseFloat(res.data[0].lat),
+            lng: parseFloat(res.data[0].lon),
           };
         }
       } catch (e) {}
     }
-
-    try {
-      const res = await axios.get('https://nominatim.openstreetmap.org/search', {
-        params: {
-          q: address,
-          format: 'json',
-          limit: 1,
-        },
-        headers: { 'User-Agent': 'ResQDrive-Emergency-Platform/1.0' },
-        timeout: 3000,
-      });
-      if (res.data && res.data[0]) {
-        return {
-          lat: parseFloat(res.data[0].lat),
-          lng: parseFloat(res.data[0].lon),
-        };
-      }
-    } catch (e) {}
 
     return null;
   }
@@ -281,6 +302,13 @@ export class AuthService {
       throw new UnauthorizedException('EMAIL_NOT_VERIFIED: Please verify your email with the 6-digit code sent to your inbox.');
     }
 
+    // Strict Lockout: Unverified mechanic workshops cannot log in until approved by Admin
+    if (user.role === UserRole.MECHANIC && !user.mechanicDetails?.isWorkshopVerified) {
+      throw new UnauthorizedException(
+        'WORKSHOP_PENDING_APPROVAL: Your workshop application is currently under review by our admin team. You will be able to log in once an admin approves your workshop.',
+      );
+    }
+
     // If password is empty string, skip bcrypt check (Google auth bypass)
     if (password && password !== '') {
       const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
@@ -343,9 +371,17 @@ export class AuthService {
       },
     };
   }
-    async loginWithGoogle(user: any) {
+
+  async loginWithGoogle(user: any) {
     if (!user.isActive) {
       throw new UnauthorizedException('Account is deactivated. Contact support.');
+    }
+
+    // Strict Lockout: Unverified mechanic workshops cannot log in until approved by Admin
+    if (user.role === UserRole.MECHANIC && !user.mechanicDetails?.isWorkshopVerified) {
+      throw new UnauthorizedException(
+        'WORKSHOP_PENDING_APPROVAL: Your workshop application is currently under review by our admin team. You will be able to log in once an admin approves your workshop.',
+      );
     }
 
     const accessToken = this.jwtService.sign(
@@ -576,12 +612,6 @@ export class AuthService {
           where: { id: resetToken.id },
           data: { used: true },
         });
-        if (resetToken.user.role === UserRole.MECHANIC) {
-          await tx.mechanicDetails.updateMany({
-            where: { userId: resetToken.userId },
-            data: { isWorkshopVerified: true },
-          });
-        }
       });
       return { message: 'Email address successfully verified! You can now log in.' };
     }
@@ -592,18 +622,10 @@ export class AuthService {
         secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
       });
 
-      const user = await this.prisma.user.update({
+      await this.prisma.user.update({
         where: { id: payload.sub },
         data: { isVerified: true },
-        include: { mechanicDetails: true },
       });
-
-      if (user.role === UserRole.MECHANIC) {
-        await this.prisma.mechanicDetails.updateMany({
-          where: { userId: user.id },
-          data: { isWorkshopVerified: true },
-        });
-      }
 
       return { message: 'Email address successfully verified! You can now log in.' };
     } catch (error) {

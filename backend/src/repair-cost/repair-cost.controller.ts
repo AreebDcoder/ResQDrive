@@ -32,29 +32,29 @@ export class RepairCostController {
   @Get('report/:id')
   @ApiOperation({ summary: 'Retrieve a previously generated cost report details' })
   async getReport(
-    @CurrentUser() user: { id: string },
+    @CurrentUser() user: { id: string; role?: string },
     @Param('id') id: string,
   ) {
-    return this.repairCostService.getReport(user.id, id);
+    return this.repairCostService.getReport(user.id, id, user.role);
   }
 
   @Delete('report/:id')
   @ApiOperation({ summary: 'Delete a previously generated cost report' })
   async deleteReport(
-    @CurrentUser() user: { id: string },
+    @CurrentUser() user: { id: string; role?: string },
     @Param('id') id: string,
   ) {
-    return this.repairCostService.deleteReport(user.id, id);
+    return this.repairCostService.deleteReport(user.id, id, user.role);
   }
 
   @Get('report/:id/pdf')
   @ApiOperation({ summary: 'Download the breakdown report as a PDF document' })
   async downloadPdf(
-    @CurrentUser() user: { id: string },
+    @CurrentUser() user: { id: string; role?: string },
     @Param('id') id: string,
     @Res() res: Response,
   ) {
-    const report = await this.repairCostService.getReport(user.id, id);
+    const report = await this.repairCostService.getReport(user.id, id, user.role);
 
     const doc = new PDFDocument({ margin: 50 });
     
@@ -91,7 +91,9 @@ export class RepairCostController {
     doc.y = 115;
     doc.rect(330, 115, 220, 60).fillAndStroke('#fbe9e7', '#ffccbc');
     doc.fillColor('#d32f2f').fontSize(10).font('Helvetica-Bold').text('TOTAL ESTIMATED COST RANGE', 340, 125);
-    doc.fontSize(16).text(`PKR ${report.totalMinCostPkr.toLocaleString()} - ${report.totalMaxCostPkr.toLocaleString()}`, 340, 142);
+    const minTotal = report.totalMinCostPkr != null ? report.totalMinCostPkr.toLocaleString() : '0';
+    const maxTotal = report.totalMaxCostPkr != null ? report.totalMaxCostPkr.toLocaleString() : '0';
+    doc.fontSize(16).text(`PKR ${minTotal} - ${maxTotal}`, 340, 142);
 
     doc.y = 200;
     doc.moveTo(50, 200).lineTo(550, 200).strokeColor('#e0e0e0').stroke();
@@ -115,18 +117,29 @@ export class RepairCostController {
     doc.y = tableTop + 25;
     doc.font('Helvetica').fillColor('#444444').fontSize(9);
 
-    for (const item of report.lineItems as any[]) {
+    const rawLineItems = report.lineItems;
+    const lineItemsArray: any[] = Array.isArray(rawLineItems)
+      ? rawLineItems
+      : (typeof rawLineItems === 'string' ? JSON.parse(rawLineItems || '[]') : []);
+
+    for (const item of lineItemsArray) {
       const currentY = doc.y;
-      doc.text(item.partTag.toUpperCase().replace('_', ' '), 50, currentY);
-      doc.text(item.action.toUpperCase(), 170, currentY);
-      doc.text(`${item.laborCost.min.toLocaleString()} - ${item.laborCost.max.toLocaleString()}`, 260, currentY);
+      doc.text((item.partTag || '').toUpperCase().replace(/_/g, ' '), 50, currentY);
+      doc.text((item.action || '').toUpperCase(), 170, currentY);
+      const laborMin = item.laborCost?.min != null ? item.laborCost.min.toLocaleString() : '0';
+      const laborMax = item.laborCost?.max != null ? item.laborCost.max.toLocaleString() : '0';
+      doc.text(`${laborMin} - ${laborMax}`, 260, currentY);
       
+      const partsMin = item.partsCost?.min != null ? item.partsCost.min.toLocaleString() : '0';
+      const partsMax = item.partsCost?.max != null ? item.partsCost.max.toLocaleString() : '0';
       const partsText = item.partsSource === 'fallback_default'
-        ? `${item.partsCost.min.toLocaleString()} - ${item.partsCost.max.toLocaleString()}*`
-        : `${item.partsCost.min.toLocaleString()} - ${item.partsCost.max.toLocaleString()}`;
+        ? `${partsMin} - ${partsMax}*`
+        : `${partsMin} - ${partsMax}`;
       
       doc.text(partsText, 360, currentY);
-      doc.text(`${item.lineTotal.min.toLocaleString()} - ${item.lineTotal.max.toLocaleString()}`, 460, currentY);
+      const lineMin = item.lineTotal?.min != null ? item.lineTotal.min.toLocaleString() : '0';
+      const lineMax = item.lineTotal?.max != null ? item.lineTotal.max.toLocaleString() : '0';
+      doc.text(`${lineMin} - ${lineMax}`, 460, currentY);
 
       doc.moveTo(50, currentY + 15).lineTo(550, currentY + 15).strokeColor('#f0f0f0').stroke();
       doc.y = currentY + 20;
@@ -139,7 +152,7 @@ export class RepairCostController {
     doc.text('Disclaimer: This is an automated estimation. Parts pricing matches generic dynamic values and labor costs match regional workshop averages. Actual costs at verified repair workshops may vary.', { width: 500 });
     
     // Check if fallback pricing indicator exists
-    const hasFallback = (report.lineItems as any[]).some(item => item.partsSource === 'fallback_default');
+    const hasFallback = lineItemsArray.some(item => item.partsSource === 'fallback_default');
     if (hasFallback) {
       doc.moveDown(0.5);
       doc.text('* Parts marked with an asterisk match standard fallback estimates due to API connectivity timeouts.', { width: 500 });

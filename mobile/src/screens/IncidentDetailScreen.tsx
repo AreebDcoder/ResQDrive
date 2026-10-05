@@ -1,45 +1,49 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
-  Alert, Linking, StatusBar,
+  View, Text, StyleSheet, ScrollView, ActivityIndicator,
+  Linking, StatusBar,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import { fetchIncident, deleteIncident } from '../store/slices/incidentsSlice';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useToast } from '../components/ui/Toast';
+import { Button, ConfirmDialog } from '../components/ui';
+import { colors, darkColors, tints } from '../theme/tokens';
 
 const SEVERITY_COLORS: Record<string, string> = {
-  NONE: '#6B6B80', MINOR: '#FFD600', MODERATE: '#FF9100', SEVERE: '#FF1744',
+  NONE: darkColors.textTertiary, MINOR: colors.warning[400], MODERATE: colors.warning[500], SEVERE: colors.danger[500],
 };
 const STATUS_COLORS: Record<string, string> = {
-  ACTIVE: '#FF1744', RESOLVED: '#00E676', FALSE_ALARM: '#6B6B80', ARCHIVED: '#4A4A5A',
+  ACTIVE: colors.danger[500], RESOLVED: colors.success[500], FALSE_ALARM: darkColors.textTertiary, ARCHIVED: darkColors.textTertiary,
 };
 
 export default function IncidentDetailScreen({ route, navigation }: { route: any; navigation: any }) {
+  const toast = useToast();
   const { id } = route.params;
   const dispatch = useDispatch<any>();
+  const insets = useSafeAreaInsets();
   const { current, isLoading, isSubmitting } = useSelector((state: RootState) => state.incidents);
+  const [removeDialogVisible, setRemoveDialogVisible] = useState(false);
 
   useEffect(() => {
     dispatch(fetchIncident(id));
   }, [dispatch, id]);
 
   const handleDelete = () => {
-    Alert.alert('Delete Incident', 'Are you sure you want to delete this incident record?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await dispatch(deleteIncident(id)).unwrap();
-            navigation.goBack();
-          } catch (err: any) {
-            Alert.alert('Error', err.message || 'Failed to delete incident');
-          }
-        },
-      },
-    ]);
+    // Phase 8: replaced destructive Alert.alert with ConfirmDialog primitive
+    setRemoveDialogVisible(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    setRemoveDialogVisible(false);
+    try {
+      await dispatch(deleteIncident(id)).unwrap();
+      navigation.goBack();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete incident');
+    }
   };
 
   const openInMaps = () => {
@@ -56,7 +60,7 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#E53935" />
+        <ActivityIndicator size="large" color={colors.danger[500]} />
       </View>
     );
   }
@@ -64,25 +68,25 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
   if (!current) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>Incident record not found.</Text>
+        <Text style={styles.errorText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Incident record not found.</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingBottom: 60 }}>
+    <ScrollView style={[styles.container, { paddingTop: insets.top + 16 }]} contentContainerStyle={{ padding: 20, paddingBottom: 60 }}>
       {/* Top Banner */}
       <View style={styles.heroCard}>
-        <Text style={styles.heroId}>Incident #{current.id.slice(0, 8)}</Text>
+        <Text style={styles.heroId} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Incident #{current.id.slice(0, 8)}</Text>
         <View style={styles.badgesRow}>
-          <View style={[styles.badge, { backgroundColor: SEVERITY_COLORS[current.severity] || '#6B6B80' }]}>
-            <View style={[styles.badgeDot, { backgroundColor: '#FFFFFF' }]} />
-            <Text style={styles.badgeText}>{current.severity}</Text>
+          <View style={[styles.badge, { backgroundColor: SEVERITY_COLORS[current.severity] || darkColors.textTertiary }]}>
+            <View style={[styles.badgeDot, { backgroundColor: darkColors.text }]} />
+            <Text style={styles.badgeText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{current.severity}</Text>
           </View>
-          <View style={[styles.badge, { backgroundColor: STATUS_COLORS[current.status] || '#4A4A5A' }]}>
-            <Text style={styles.badgeText}>{current.status.replace('_', ' ')}</Text>
+          <View style={[styles.badge, { backgroundColor: STATUS_COLORS[current.status] || darkColors.textTertiary }]}>
+            <Text style={styles.badgeText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{current.status.replace('_', ' ')}</Text>
           </View>
-          <Text style={styles.typeText}>
+          <Text style={styles.typeText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             {current.type === 'AUTO' ? 'Auto-detected' : 'Manually logged'}
           </Text>
         </View>
@@ -91,25 +95,31 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
       {/* Occurred At */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Ionicons name="time-outline" size={18} color="#E53935" style={{ marginRight: 8 }} />
-          <Text style={styles.label}>Occurred At</Text>
+          <Ionicons name="time-outline" size={18} color={colors.danger[500]} style={{ marginRight: 8 }} />
+          <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Occurred At</Text>
         </View>
-        <Text style={styles.value}>{fmtDate(current.occurredAt)}</Text>
+        <Text style={styles.value} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{fmtDate(current.occurredAt)}</Text>
       </View>
 
       {/* Address */}
       {current.address ? (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="location-outline" size={18} color="#E53935" style={{ marginRight: 8 }} />
-            <Text style={styles.label}>Address</Text>
+            <Ionicons name="location-outline" size={18} color={colors.danger[500]} style={{ marginRight: 8 }} />
+            <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Address</Text>
           </View>
-          <Text style={styles.value}>{current.address}</Text>
+          <Text style={styles.value} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{current.address}</Text>
           {current.latitude && current.longitude ? (
-            <TouchableOpacity style={styles.mapsBtn} onPress={openInMaps} activeOpacity={0.7}>
-              <Ionicons name="map-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-              <Text style={styles.mapsBtnText}>Open in Google Maps</Text>
-            </TouchableOpacity>
+            <View style={styles.mapsBtnWrap}>
+              <Button
+                label="Open in Google Maps"
+                variant="secondary"
+                size="sm"
+                onPress={openInMaps}
+                icon="map-outline"
+                accessibilityHint="Open incident location in Google Maps"
+              />
+            </View>
           ) : null}
         </View>
       ) : null}
@@ -118,10 +128,10 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
       {current.latitude != null && current.longitude != null ? (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="globe-outline" size={18} color="#E53935" style={{ marginRight: 8 }} />
-            <Text style={styles.label}>Coordinates</Text>
+            <Ionicons name="globe-outline" size={18} color={colors.danger[500]} style={{ marginRight: 8 }} />
+            <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Coordinates</Text>
           </View>
-          <Text style={styles.value}>{current.latitude.toFixed(6)}, {current.longitude.toFixed(6)}</Text>
+          <Text style={styles.value} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{current.latitude.toFixed(6)}, {current.longitude.toFixed(6)}</Text>
         </View>
       ) : null}
 
@@ -129,10 +139,10 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
       {current.description ? (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="document-text-outline" size={18} color="#E53935" style={{ marginRight: 8 }} />
-            <Text style={styles.label}>Description</Text>
+            <Ionicons name="document-text-outline" size={18} color={colors.danger[500]} style={{ marginRight: 8 }} />
+            <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Description</Text>
           </View>
-          <Text style={styles.value}>{current.description}</Text>
+          <Text style={styles.value} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{current.description}</Text>
         </View>
       ) : null}
 
@@ -140,11 +150,11 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
       {current.sensorSnapshot ? (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="hardware-chip-outline" size={18} color="#E53935" style={{ marginRight: 8 }} />
-            <Text style={styles.label}>Sensor Snapshot</Text>
+            <Ionicons name="hardware-chip-outline" size={18} color={colors.danger[500]} style={{ marginRight: 8 }} />
+            <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Sensor Snapshot</Text>
           </View>
           <View style={styles.jsonBox}>
-            <Text style={styles.jsonText}>{JSON.stringify(current.sensorSnapshot, null, 2)}</Text>
+            <Text style={styles.jsonText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{JSON.stringify(current.sensorSnapshot, null, 2)}</Text>
           </View>
         </View>
       ) : null}
@@ -153,11 +163,11 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
       {current.alertDispatchStatus ? (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="alert-circle-outline" size={18} color="#E53935" style={{ marginRight: 8 }} />
-            <Text style={styles.label}>Alert Dispatch Status</Text>
+            <Ionicons name="alert-circle-outline" size={18} color={colors.danger[500]} style={{ marginRight: 8 }} />
+            <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Alert Dispatch Status</Text>
           </View>
           <View style={styles.jsonBox}>
-            <Text style={styles.jsonText}>{JSON.stringify(current.alertDispatchStatus, null, 2)}</Text>
+            <Text style={styles.jsonText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{JSON.stringify(current.alertDispatchStatus, null, 2)}</Text>
           </View>
         </View>
       ) : null}
@@ -166,11 +176,11 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
       {current.damageAssessmentResult ? (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="search-outline" size={18} color="#E53935" style={{ marginRight: 8 }} />
-            <Text style={styles.label}>Damage Assessment</Text>
+            <Ionicons name="search-outline" size={18} color={colors.danger[500]} style={{ marginRight: 8 }} />
+            <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Damage Assessment</Text>
           </View>
           <View style={styles.jsonBox}>
-            <Text style={styles.jsonText}>{JSON.stringify(current.damageAssessmentResult, null, 2)}</Text>
+            <Text style={styles.jsonText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{JSON.stringify(current.damageAssessmentResult, null, 2)}</Text>
           </View>
         </View>
       ) : null}
@@ -178,79 +188,89 @@ export default function IncidentDetailScreen({ route, navigation }: { route: any
       {/* Timestamps */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Ionicons name="calendar-outline" size={18} color="#E53935" style={{ marginRight: 8 }} />
-          <Text style={styles.label}>Record Timeline</Text>
+          <Ionicons name="calendar-outline" size={18} color={colors.danger[500]} style={{ marginRight: 8 }} />
+          <Text style={styles.label} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Record Timeline</Text>
         </View>
         <View style={styles.timelineRow}>
-          <Text style={styles.timelineLabel}>Created</Text>
-          <Text style={styles.timelineValue}>{fmtDate(current.createdAt)}</Text>
+          <Text style={styles.timelineLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Created</Text>
+          <Text style={styles.timelineValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{fmtDate(current.createdAt)}</Text>
         </View>
         <View style={styles.timelineDivider} />
         <View style={styles.timelineRow}>
-          <Text style={styles.timelineLabel}>Updated</Text>
-          <Text style={styles.timelineValue}>{fmtDate(current.updatedAt)}</Text>
+          <Text style={styles.timelineLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Updated</Text>
+          <Text style={styles.timelineValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>{fmtDate(current.updatedAt)}</Text>
         </View>
       </View>
 
       {/* Actions */}
       <View style={styles.actionsRow}>
-        <TouchableOpacity
-          style={styles.editBtn}
+        <Button
+          label="Edit"
+          variant="secondary"
+          size="md"
           onPress={() => navigation.navigate('CreateIncident', { mode: 'edit', id: current.id })}
           disabled={isSubmitting}
-          activeOpacity={0.7}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            <Ionicons name="pencil-outline" size={18} color="#FFFFFF" />
-            <Text style={styles.actionBtnText}>Edit</Text>
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.deleteBtn}
+          icon="pencil-outline"
+          accessibilityHint="Edit this incident record"
+          style={styles.actionBtn}
+        />
+        <Button
+          label="Delete"
+          variant="danger"
+          size="md"
           onPress={handleDelete}
           disabled={isSubmitting}
-          activeOpacity={0.7}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            <Ionicons name="trash-outline" size={18} color="#FF5252" />
-            <Text style={styles.actionBtnText}>Delete</Text>
-          </View>
-        </TouchableOpacity>
+          icon="trash-outline"
+          accessibilityHint="Delete this incident record"
+          style={styles.actionBtn}
+        />
       </View>
+
+      {/* Phase 8: ConfirmDialog replaces destructive Alert.alert */}
+      <ConfirmDialog
+        visible={removeDialogVisible}
+        title="Delete Incident"
+        description="Are you sure you want to delete this incident record?"
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setRemoveDialogVisible(false)}
+      />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0A0F', paddingHorizontal: 20, paddingTop: 16 },
-  center: { flex: 1, backgroundColor: '#0A0A0F', justifyContent: 'center', alignItems: 'center' },
-  errorText: { color: '#FF5252', fontSize: 16, textAlign: 'center' },
+  container: { flex: 1, backgroundColor: darkColors.background, paddingHorizontal: 20, paddingTop: 16 },
+  center: { flex: 1, backgroundColor: darkColors.background, justifyContent: 'center', alignItems: 'center' },
+  errorText: { color: colors.danger[400], fontSize: 16, textAlign: 'center' },
   heroCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 16,
     padding: 18,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000000',
+    borderColor: tints.whiteBorder,
+    shadowColor: colors.neutral[950],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 4,
   },
-  heroId: { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 12 },
+  heroId: { fontSize: 16, fontWeight: 'bold', color: darkColors.text, marginBottom: 12 },
   loadingRing: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: 'rgba(229, 57, 53, 0.08)',
+    backgroundColor: tints.dangerSubtle,
     borderWidth: 2,
-    borderColor: 'rgba(229, 57, 53, 0.25)',
+    borderColor: tints.dangerMedium,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
   },
-  loadingLabel: { color: '#A0A0B8', fontSize: 14 },
+  loadingLabel: { color: darkColors.textSecondary, fontSize: 14 },
   bgGlow: {
     position: 'absolute',
     top: -60,
@@ -258,16 +278,16 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 110,
-    backgroundColor: 'rgba(229, 57, 53, 0.06)',
+    backgroundColor: tints.dangerSubtle,
   },
   badgesCard: {
-    backgroundColor: 'rgba(28, 28, 46, 0.6)',
+    backgroundColor: tints.glassCard,
     borderRadius: 16,
     padding: 18,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000000',
+    borderColor: tints.whiteBorder,
+    shadowColor: colors.neutral[950],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
@@ -283,55 +303,49 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   badgeDot: { width: 6, height: 6, borderRadius: 3 },
-  badgeText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', letterSpacing: 0.5 },
-  typeText: { color: '#6B6B80', fontSize: 12, marginLeft: 'auto' },
+  badgeText: { color: darkColors.text, fontSize: 12, fontWeight: '700', letterSpacing: 0.5 },
+  typeText: { color: darkColors.textTertiary, fontSize: 12, marginLeft: 'auto' },
   section: {
-    backgroundColor: 'rgba(28, 28, 46, 0.4)',
+    backgroundColor: tints.glassCard,
     borderRadius: 16,
     padding: 18,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.04)',
+    borderColor: tints.whiteSubtle,
   },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   sectionIcon: { fontSize: 14 },
   label: {
-    color: '#6B6B80',
+    color: darkColors.textTertiary,
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
-  value: { color: '#FFFFFF', fontSize: 15, lineHeight: 22 },
+  value: { color: darkColors.text, fontSize: 15, lineHeight: 22 },
   timelineRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6 },
-  timelineLabel: { color: '#6B6B80', fontSize: 13 },
-  timelineValue: { color: '#A0A0B8', fontSize: 13 },
-  timelineDivider: { height: 1, backgroundColor: 'rgba(255, 255, 255, 0.04)' },
+  timelineLabel: { color: darkColors.textTertiary, fontSize: 13 },
+  timelineValue: { color: darkColors.textSecondary, fontSize: 13 },
+  timelineDivider: { height: 1, backgroundColor: tints.whiteSubtle },
   jsonBox: {
-    backgroundColor: 'rgba(10, 10, 15, 0.8)',
+    backgroundColor: tints.overlayStrong,
     borderRadius: 12,
     padding: 16,
     marginTop: 6,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tints.whiteBorder,
   },
-  jsonText: { color: '#69F0AE', fontSize: 11, fontFamily: 'monospace', lineHeight: 16 },
-  mapsBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  jsonText: { color: colors.success[300], fontSize: 11, fontFamily: 'monospace', lineHeight: 16 },
+  mapsBtnWrap: {
     marginTop: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    backgroundColor: 'rgba(41, 121, 255, 0.1)',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(41, 121, 255, 0.2)',
     alignSelf: 'flex-start',
   },
   mapsBtnIcon: { fontSize: 16 },
-  mapsBtnText: { color: '#2979FF', fontSize: 13, fontWeight: '700' },
+  mapsBtnText: { color: colors.info[500], fontSize: 13, fontWeight: '700' },
   actionsRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  actionBtn: {
+    flex: 1,
+  },
   editBtn: {
     flex: 1,
     flexDirection: 'row',
@@ -340,9 +354,9 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 16,
     borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: tints.whiteSubtle,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: tints.whiteBorderStrong,
   },
   editBtnIcon: { fontSize: 16 },
   deleteBtn: {
@@ -353,10 +367,10 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 16,
     borderRadius: 14,
-    backgroundColor: 'rgba(255, 23, 68, 0.1)',
+    backgroundColor: tints.dangerErrorBg,
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.3)',
+    borderColor: tints.dangerErrorBorder,
   },
   deleteBtnIcon: { fontSize: 16 },
-  actionBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  actionBtnText: { color: darkColors.text, fontSize: 14, fontWeight: '700' },
 });

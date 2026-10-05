@@ -4,16 +4,21 @@ import 'react-native-gesture-handler';
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Provider, useSelector } from 'react-redux';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Notifications from 'expo-notifications';
-import { Platform, PermissionsAndroid } from 'react-native';
+import { Platform, PermissionsAndroid, View } from 'react-native';
 
 import { store, RootState } from './src/store/store';
 import Navigation from './src/navigation';
 import NotificationBanner from './src/components/NotificationBanner';
+import OfflineBanner from './src/components/OfflineBanner';
 import { DrivingNotificationService } from './src/services/drivingNotificationService';
-
+import { FCMService } from './src/services/fcmService';
+import { ErrorBoundary } from './src/components/ErrorBoundary';
+import { ThemeProvider } from './src/theme/ThemeProvider';
+import { useTheme } from './src/theme/useTheme';
+import { ToastProvider } from './src/components/ui/Toast';
 
 // Configure how notifications appear when the app is in the foreground
 Notifications.setNotificationHandler({
@@ -29,7 +34,7 @@ Notifications.setNotificationHandler({
 // Create Android notification channel (required for Android 8+)
 if (Platform.OS === 'android') {
   Notifications.setNotificationChannelAsync('emergency-alerts', {
-    name: '🚨 Emergency Alerts',
+    name: 'Emergency Alerts',
     importance: Notifications.AndroidImportance.MAX,
     vibrationPattern: [0, 250, 250, 250],
     lightColor: '#FF0000',
@@ -38,6 +43,29 @@ if (Platform.OS === 'android') {
     enableVibrate: true,
     showBadge: true,
   });
+}
+
+// Global push notifications & FCM lifecycle listener
+function FCMNotificationTracker() {
+  const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
+
+  useEffect(() => {
+    // 1. Setup foreground push listeners
+    const unsubscribe = FCMService.setupFCMListeners();
+
+    // 2. Request permission and register token with backend when user is logged in
+    if (isAuthenticated) {
+      FCMService.registerDeviceWithBackend().catch(() => {});
+    }
+
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
+  }, [isAuthenticated]);
+
+  return null;
 }
 
 // Root-level component that manages persistent Driving Mode notification across all screens
@@ -57,19 +85,45 @@ function DrivingModeNotificationTracker() {
   return null;
 }
 
+// StatusBar that respects theme
+function ThemedStatusBar() {
+  const { theme } = useTheme();
+  return <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />;
+}
+
+// Global container that prevents Android navigation buttons (◁ ○ □) from overlapping app controls
+function SafeAppContainer({ children }: { children: React.ReactNode }) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={{ flex: 1, paddingBottom: insets.bottom, backgroundColor: '#0A0A0F' }}>
+      {children}
+    </View>
+  );
+}
+
 const GHRootView = GestureHandlerRootView as any;
 
 export default function App() {
   return (
     <GHRootView style={{ flex: 1 }}>
-      <Provider store={store}>
-        <SafeAreaProvider>
-          <DrivingModeNotificationTracker />
-          <Navigation />
-          <NotificationBanner />
-          <StatusBar style="light" />
-        </SafeAreaProvider>
-      </Provider>
+      <ErrorBoundary>
+        <Provider store={store}>
+          <ThemeProvider>
+            <ToastProvider>
+              <SafeAreaProvider>
+                <SafeAppContainer>
+                  <OfflineBanner />
+                  <FCMNotificationTracker />
+                  <DrivingModeNotificationTracker />
+                  <Navigation />
+                  <NotificationBanner />
+                  <ThemedStatusBar />
+                </SafeAppContainer>
+              </SafeAreaProvider>
+            </ToastProvider>
+          </ThemeProvider>
+        </Provider>
+      </ErrorBoundary>
     </GHRootView>
   );
 }

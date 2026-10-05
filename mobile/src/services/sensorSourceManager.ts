@@ -8,7 +8,6 @@ let BleManagerClass: any = null;
 try {
   BleManagerClass = require('react-native-ble-plx').BleManager;
 } catch (e) {
-  console.log('react-native-ble-plx is not natively available.');
 }
 
 export class SensorSourceManager implements SensorFusionService {
@@ -39,7 +38,6 @@ export class SensorSourceManager implements SensorFusionService {
       const { connectionStatus, activeSource } = store.getState().sensor;
 
       if (activeSource === 'ble' && connectionStatus === 'unavailable') {
-        console.log('SensorManager: BLE unavailable. Falling back to Phone sensors...');
         this.switchToPhone();
       }
     });
@@ -83,7 +81,6 @@ export class SensorSourceManager implements SensorFusionService {
       this.currentActiveService.stop();
     }
 
-    console.log('SensorManager: Activating BLE Hardware sensor service...');
     store.dispatch(setActiveSource('ble'));
     
     this.currentActiveService = bleSensorFusionService;
@@ -103,7 +100,6 @@ export class SensorSourceManager implements SensorFusionService {
       this.currentActiveService.stop();
     }
 
-    console.log('SensorManager: Activating Phone Fallback sensor service...');
     store.dispatch(setActiveSource('phone'));
     store.dispatch(setConnectionStatus('unavailable')); // Set status to show phone fallback indicator
 
@@ -113,14 +109,12 @@ export class SensorSourceManager implements SensorFusionService {
     this.callbacks.forEach(cb => phoneSensorFallbackService.onSensorEvent(cb));
 
     phoneSensorFallbackService.start();
-    console.log('SensorManager: Operating on Phone Fallback. Background auto-scan disabled.');
   }
 
   /**
    * Manual force reconnect trigger for development/diagnostics screen
    */
   forceReconnect() {
-    console.log('SensorManager: Manual force reconnect triggered.');
     this.switchToBle();
   }
 

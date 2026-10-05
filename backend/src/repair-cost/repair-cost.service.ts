@@ -236,7 +236,7 @@ export class RepairCostService {
     return report;
   }
 
-  async getReport(userId: string, id: string) {
+  async getReport(userId: string, id: string, userRole?: string) {
     const report = await this.prisma.repairCostReport.findUnique({
       where: { id },
       include: { vehicle: true },
@@ -246,7 +246,7 @@ export class RepairCostService {
       throw new NotFoundException('Repair cost report not found.');
     }
 
-    if (report.userId !== userId) {
+    if (userRole !== 'ADMIN' && report.userId !== userId) {
       throw new ForbiddenException('Forbidden access to this repair cost report.');
     }
 
@@ -261,7 +261,7 @@ export class RepairCostService {
     });
   }
 
-  async deleteReport(userId: string, id: string) {
+  async deleteReport(userId: string, id: string, userRole?: string) {
     const report = await this.prisma.repairCostReport.findUnique({
       where: { id },
     });
@@ -270,7 +270,7 @@ export class RepairCostService {
       throw new NotFoundException('Repair cost report not found.');
     }
 
-    if (report.userId !== userId) {
+    if (userRole !== 'ADMIN' && report.userId !== userId) {
       throw new ForbiddenException('Forbidden access to this repair cost report.');
     }
 
