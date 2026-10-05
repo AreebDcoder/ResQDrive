@@ -232,6 +232,7 @@ constructor() {
         accelG,
         gyroDegPerSec,
         gpsSpeedDropKmh,
+        speedKmh: activeSpeed,
         motionSeverity,
         timestamp: Date.now(), // Wall clock timestamp from phone
       };

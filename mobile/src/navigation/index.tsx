@@ -50,7 +50,7 @@ export default function Navigation() {
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
 
   useEffect(() => {
-    AsyncStorage.getItem('hasSeenOnboarding').then((val) => {
+    AsyncStorage.getItem('hasSeenOnboarding').then((val: string | null) => {
       setHasSeenOnboarding(val === 'true');
     }).catch(() => setHasSeenOnboarding(true));
   }, []);

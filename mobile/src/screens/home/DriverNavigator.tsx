@@ -11,7 +11,12 @@ import {
   Animated,
   Dimensions,
   TouchableWithoutFeedback,
+  Switch,
 } from 'react-native';
+import { ML_CONFIG } from '../../config/mlConfig';
+import { IS_DEMO_MODE, setDemoMode } from '../../config/transientConfig';
+import { ImpactFeatureExtractor } from '../../services/impactFeatureExtractor';
+import { MlInferenceService } from '../../services/mlInferenceService';
 import { useSelector, useDispatch } from 'react-redux';
 import { useAppDispatch } from '../../store/hooks';
 import { RootState } from '../../store/store';
@@ -66,6 +71,14 @@ const LiveTelemetryWidget = React.memo(function LiveTelemetryWidget({ drivingMod
             </Text>
           </View>
           <View style={styles.telemetryRow}>
+            <Text style={styles.telemetryLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Vehicle Speed:</Text>
+            <Text style={styles.telemetryValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+              {latestReading && typeof latestReading.speedKmh === 'number'
+                ? `${latestReading.speedKmh.toFixed(1)} km/h`
+                : '0.0 km/h'}
+            </Text>
+          </View>
+          <View style={styles.telemetryRow}>
             <Text style={styles.telemetryLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>G-Force:</Text>
             <Text style={styles.telemetryValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               {latestReading ? `${latestReading.accelG.toFixed(3)} G` : '1.000 G'}
@@ -104,6 +117,59 @@ function DriverDashboard({ navigation, onOpenDrawer }: { navigation: AppNavigati
   const activeVehicle = vehicles.find((v) => v.isPrimary);
   const primaryContact = contacts.find((c) => c.priorityOrder === 1);
 
+  const [demoModeEnabled, setDemoModeEnabled] = useState(IS_DEMO_MODE);
+
+  const handleToggleDemoMode = (val: boolean) => {
+    hapticLight();
+    setDemoModeEnabled(val);
+    setDemoMode(val);
+  };
+
+  const isEvaluatingModel1Ref = useRef(false);
+  const lastModel1EvalTimeRef = useRef(0);
+
+  const evaluateModel1Accident = React.useCallback(async (triggerReason: string) => {
+    if (ML_CONFIG.SEVERITY_DEMO_MODE) return;
+
+    const now = Date.now();
+    if (isEvaluatingModel1Ref.current || (now - lastModel1EvalTimeRef.current < 500)) {
+      return;
+    }
+
+    isEvaluatingModel1Ref.current = true;
+    lastModel1EvalTimeRef.current = now;
+
+    try {
+      const window = sensorSourceManager.getSensorWindow();
+      if (!window?.samples || window.samples.length === 0) {
+        return;
+      }
+
+      const adFeatures = ImpactFeatureExtractor.extractAccidentDetectionFeatures(window);
+      console.log(`🤖 [Model 1 Trigger (${triggerReason})] Evaluating VZCrash features: a_peak=${adFeatures.accel_peak}g, delta_v=${adFeatures.speed_drop}km/h, jerk_peak=${adFeatures.jerk_peak}g/s`);
+
+      const adRes = await MlInferenceService.detectAccident(adFeatures);
+      if (adRes) {
+        console.log(`🤖 [Model 1 Result] Prediction: ${adRes.prediction.toUpperCase()} (crash prob: ${(adRes.probabilities?.crash * 100 || 0).toFixed(1)}%)`);
+
+        if (adRes.prediction === 'crash') {
+          MultiModalFusionService.recordModel1CrashEvent(
+            adRes.prediction,
+            adRes.probabilities,
+            adFeatures.accel_peak,
+            adFeatures.speed_drop
+          );
+        } else {
+          console.log(`ℹ️ [Model 1 Result] Classified as "${adRes.prediction}". Not a vehicular crash.`);
+        }
+      }
+    } catch (err) {
+      console.warn('[Model 1] Error during evaluation:', err);
+    } finally {
+      isEvaluatingModel1Ref.current = false;
+    }
+  }, []);
+
   useEffect(() => {
     // Batch 11: Vehicles, contacts, and preferences are now fetched by RTK Query hooks above.
     // Only FCM device registration + listener setup remain in this effect.
@@ -117,15 +183,39 @@ function DriverDashboard({ navigation, onOpenDrawer }: { navigation: AppNavigati
       const loc = await getSafeDeviceLocation();
       const lat = loc?.latitude ?? FALLBACK_LAT;
       const lng = loc?.longitude ?? FALLBACK_LNG;
+
+      // Extract sensor window and severity features for Model 2
+      const window = sensorSourceManager.getSensorWindow();
+      const audioConf = trigger.soundEvent ? trigger.soundEvent.confidence : 0.0;
+      const severityFeatures = ImpactFeatureExtractor.extractSeverityFeatures(window, audioConf);
+
+      let finalSeverity: 'Severe' | 'Moderate' | 'Minor' = trigger.combinedSeverity;
+      try {
+        const sevRes = await MlInferenceService.assessSeverity(severityFeatures);
+        if (sevRes?.severity) {
+          finalSeverity = sevRes.severity;
+          console.log(`🤖 [Model 2 Result] Evaluated Severity: ${finalSeverity.toUpperCase()}`);
+        }
+      } catch (sevErr) {
+        console.warn('[Model 2 VZCrash] Severity assessment error:', sevErr);
+      }
+
+      const countdownSeconds = finalSeverity === 'Severe' ? 10 : 20;
+
       navigation.navigate('Countdown', {
-        latitude: lat, longitude: lng,
-        severity: trigger.combinedSeverity,
-        countdownSeconds: trigger.combinedSeverity === 'Severe' ? 10 : 20,
+        latitude: lat,
+        longitude: lng,
+        severity: finalSeverity,
+        countdownSeconds,
+        severityFeatures,
       });
     });
 
     CrashSoundDetectionService.subscribeToCrashEvents((confidence, topClass) => {
       MultiModalFusionService.recordSoundEvent(confidence, topClass);
+      if (!ML_CONFIG.SEVERITY_DEMO_MODE) {
+        evaluateModel1Accident('acoustic_trigger');
+      }
     });
 
     if (preferences?.drivingModeEnabled) {
@@ -134,17 +224,30 @@ function DriverDashboard({ navigation, onOpenDrawer }: { navigation: AppNavigati
       CrashSoundDetectionService.stopMonitoring();
     }
     return () => { CrashSoundDetectionService.stopMonitoring(); };
-  }, [preferences?.drivingModeEnabled]);
+  }, [preferences?.drivingModeEnabled, evaluateModel1Accident]);
 
   useEffect(() => {
     if (preferences?.drivingModeEnabled) {
       sensorSourceManager.onSensorEvent((reading) => {
         const severity = reading.motionSeverity || classifyMotionSeverity(reading.accelG, reading.gyroDegPerSec);
-        if (severity === 'severe' || severity === 'moderate') {
-          MultiModalFusionService.recordMotionEvent(
-            severity, reading.accelG, reading.gyroDegPerSec,
-            reading.mlClassifiedSeverity, reading.mlConfidence
-          );
+
+        if (ML_CONFIG.SEVERITY_DEMO_MODE) {
+          if (severity === 'severe' || severity === 'moderate') {
+            MultiModalFusionService.recordMotionEvent(
+              severity,
+              reading.accelG,
+              reading.gyroDegPerSec,
+              reading.mlClassifiedSeverity,
+              reading.mlConfidence
+            );
+          }
+        } else {
+          const isImpactMotion = severity === 'severe' || severity === 'moderate' || reading.accelG >= 1.5;
+          const isSoundWaiting = MultiModalFusionService.isSoundWindowActive();
+
+          if (isImpactMotion || isSoundWaiting) {
+            evaluateModel1Accident(isImpactMotion ? 'motion_impact' : 'pending_sound_window');
+          }
         }
       });
       sensorSourceManager.start();
@@ -152,7 +255,7 @@ function DriverDashboard({ navigation, onOpenDrawer }: { navigation: AppNavigati
       sensorSourceManager.stop();
     }
     return () => { sensorSourceManager.stop(); };
-  }, [preferences?.drivingModeEnabled]);
+  }, [preferences?.drivingModeEnabled, evaluateModel1Accident]);
 
   const handleQuickCall = () => {
   hapticLight();
@@ -208,6 +311,45 @@ function DriverDashboard({ navigation, onOpenDrawer }: { navigation: AppNavigati
         <Text style={styles.bleBadgeText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
           {connectionStatus === 'connected' ? 'BLE Sensor Connected' : connectionStatus === 'connecting' ? 'Connecting...' : 'BLE Disconnected'}
         </Text>
+      </View>
+
+      {/* FYP Evaluation / Demo Mode Toggle Card */}
+      <View style={[
+        styles.dashboardCard,
+        {
+          borderLeftWidth: 4,
+          borderLeftColor: demoModeEnabled ? colors.danger[500] : colors.success[500],
+          backgroundColor: demoModeEnabled ? 'rgba(229, 57, 53, 0.10)' : 'rgba(0, 230, 118, 0.08)',
+          borderColor: demoModeEnabled ? 'rgba(229, 57, 53, 0.3)' : 'rgba(0, 230, 118, 0.2)',
+          marginBottom: spacing.md,
+        }
+      ]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: spacing.sm }}>
+            <Ionicons
+              name={demoModeEnabled ? "flask" : "shield-checkmark"}
+              size={24}
+              color={demoModeEnabled ? colors.danger[500] : colors.success[500]}
+              style={{ marginRight: spacing.sm }}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: demoModeEnabled ? colors.danger[500] : colors.success[500] }}>
+                {demoModeEnabled ? 'FYP Evaluation / Demo Mode' : 'Real-World Road Mode'}
+              </Text>
+              <Text style={{ fontSize: 11, color: darkColors.textSecondary, marginTop: 2 }}>
+                {demoModeEnabled
+                  ? 'Active: Shaking phone & playing crash sound triggers demo countdown'
+                  : 'Active: Production safety with strict false-alarm filtering on roads'}
+              </Text>
+            </View>
+          </View>
+          <Switch
+            value={demoModeEnabled}
+            onValueChange={handleToggleDemoMode}
+            trackColor={{ false: '#2C2C3E', true: 'rgba(229, 57, 53, 0.45)' }}
+            thumbColor={demoModeEnabled ? colors.danger[500] : '#A0A0B8'}
+          />
+        </View>
       </View>
 
       {/* Paired Vehicle Widget */}
@@ -407,6 +549,10 @@ function SlideDrawer({
                 <Ionicons name="bluetooth-outline" size={22} color={colors.warning[500]} style={{ marginRight: spacing.md }} />
                 <Text style={styles.drawerItemText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>BLE Diagnostics</Text>
               </TouchableOpacity>
+              <TouchableOpacity style={styles.drawerItem} onPress={() => handleNav('SeverityDemo')} accessibilityRole="button">
+                <Ionicons name="speedometer-outline" size={22} color={colors.warning[500]} style={{ marginRight: spacing.md }} />
+                <Text style={styles.drawerItemText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>FYP Severity Demo</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={styles.drawerItem} onPress={() => handleNav('VoiceCommandDemo')} accessibilityRole="button">
                 <Ionicons name="volume-high-outline" size={22} color={colors.warning[500]} style={{ marginRight: spacing.md }} />
                 <Text style={styles.drawerItemText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Voice Commands</Text>
@@ -453,7 +599,7 @@ export default function DriverNavigator({ navigation }: { navigation: AppNavigat
         <Tab.Screen
           name="HomeTab"
           options={{
-            tabBarIcon: ({ color, size }) => <Ionicons name="home" size={size} color={color} />,
+            tabBarIcon: ({ color, size }: { color: string; size: number }) => <Ionicons name="home" size={size} color={color} />,
             tabBarLabel: 'Home',
           }}
         >
@@ -462,7 +608,7 @@ export default function DriverNavigator({ navigation }: { navigation: AppNavigat
         <Tab.Screen
           name="AlertsTab"
           options={{
-            tabBarIcon: ({ color, size }) => <Ionicons name="warning" size={size} color={color} />,
+            tabBarIcon: ({ color, size }: { color: string; size: number }) => <Ionicons name="warning" size={size} color={color} />,
             tabBarLabel: 'Alerts',
           }}
         >
@@ -471,7 +617,7 @@ export default function DriverNavigator({ navigation }: { navigation: AppNavigat
         <Tab.Screen
           name="DamageTab"
           options={{
-            tabBarIcon: ({ color, size }) => <Ionicons name="construct" size={size} color={color} />,
+            tabBarIcon: ({ color, size }: { color: string; size: number }) => <Ionicons name="construct" size={size} color={color} />,
             tabBarLabel: 'Damage',
           }}
         >
@@ -480,7 +626,7 @@ export default function DriverNavigator({ navigation }: { navigation: AppNavigat
         <Tab.Screen
           name="HospitalsTab"
           options={{
-            tabBarIcon: ({ color, size }) => <Ionicons name="medical" size={size} color={color} />,
+            tabBarIcon: ({ color, size }: { color: string; size: number }) => <Ionicons name="medical" size={size} color={color} />,
             tabBarLabel: 'Hospitals',
           }}
         >
@@ -489,7 +635,7 @@ export default function DriverNavigator({ navigation }: { navigation: AppNavigat
         <Tab.Screen
           name="WorkshopsTab"
           options={{
-            tabBarIcon: ({ color, size }) => <Ionicons name="build" size={size} color={color} />,
+            tabBarIcon: ({ color, size }: { color: string; size: number }) => <Ionicons name="build" size={size} color={color} />,
             tabBarLabel: 'Workshops',
           }}
         >

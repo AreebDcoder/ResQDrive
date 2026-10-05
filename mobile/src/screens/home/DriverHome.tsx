@@ -9,6 +9,10 @@ import { getSafeDeviceLocation } from '../../utils/location';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { logoutAction, setTokens } from '../../store/slices/authSlice';
 import { classifyMotionSeverity } from '../../config/motionSeverityConfig';
+import { ML_CONFIG } from '../../config/mlConfig';
+import { IS_DEMO_MODE, setDemoMode } from '../../config/transientConfig';
+import { ImpactFeatureExtractor } from '../../services/impactFeatureExtractor';
+import { MlInferenceService } from '../../services/mlInferenceService';
 import { MultiModalFusionService } from '../../services/multiModalFusionService';
 import DevModeBanner from '../../components/DevModeBanner';
 import { makeDirectPhoneCall } from '../../utils/directCall';
@@ -42,6 +46,14 @@ const LiveTelemetryWidget = React.memo(function LiveTelemetryWidget({ drivingMod
             <Text style={styles.telemetryLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Source:</Text>
             <Text style={styles.telemetryValueBold} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
               {activeSource === 'ble' ? 'BLE Hardware' : 'Phone Sensors'}
+            </Text>
+          </View>
+          <View style={styles.telemetryRow}>
+            <Text style={styles.telemetryLabel} allowFontScaling={true} maxFontSizeMultiplier={1.5}>Vehicle Speed:</Text>
+            <Text style={styles.telemetryValue} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
+              {latestReading && typeof latestReading.speedKmh === 'number'
+                ? `${latestReading.speedKmh.toFixed(1)} km/h`
+                : '0.0 km/h'}
             </Text>
           </View>
           <View style={styles.telemetryRow}>
@@ -79,6 +91,57 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
   const { preferences } = useSelector((state: RootState) => state.notifications);
   const connectionStatus = useSelector((state: RootState) => state.sensor.connectionStatus);
   const [isUpdatingPref, setIsUpdatingPref] = React.useState(false);
+  const [demoModeEnabled, setDemoModeEnabled] = React.useState(IS_DEMO_MODE);
+
+  const handleToggleDemoMode = (val: boolean) => {
+    setDemoModeEnabled(val);
+    setDemoMode(val);
+  };
+
+  const isEvaluatingModel1Ref = React.useRef(false);
+  const lastModel1EvalTimeRef = React.useRef(0);
+
+  const evaluateModel1Accident = React.useCallback(async (triggerReason: string) => {
+    if (ML_CONFIG.SEVERITY_DEMO_MODE) return;
+
+    const now = Date.now();
+    if (isEvaluatingModel1Ref.current || (now - lastModel1EvalTimeRef.current < 500)) {
+      return; // Debounce rapid invocations within 500ms
+    }
+
+    isEvaluatingModel1Ref.current = true;
+    lastModel1EvalTimeRef.current = now;
+
+    try {
+      const window = sensorSourceManager.getSensorWindow();
+      if (!window?.samples || window.samples.length === 0) {
+        return;
+      }
+
+      const adFeatures = ImpactFeatureExtractor.extractAccidentDetectionFeatures(window);
+      console.log(`🤖 [Model 1 Trigger (${triggerReason})] Evaluating VZCrash features: a_peak=${adFeatures.accel_peak}g, delta_v=${adFeatures.speed_drop}km/h, jerk_peak=${adFeatures.jerk_peak}g/s`);
+
+      const adRes = await MlInferenceService.detectAccident(adFeatures);
+      if (adRes) {
+        console.log(`🤖 [Model 1 Result] Prediction: ${adRes.prediction.toUpperCase()} (crash prob: ${(adRes.probabilities?.crash * 100 || 0).toFixed(1)}%)`);
+
+        if (adRes.prediction === 'crash') {
+          MultiModalFusionService.recordModel1CrashEvent(
+            adRes.prediction,
+            adRes.probabilities,
+            adFeatures.accel_peak,
+            adFeatures.speed_drop
+          );
+        } else {
+          console.log(`ℹ️ [Model 1 Result] Classified as "${adRes.prediction}". Not a vehicular crash.`);
+        }
+      }
+    } catch (err) {
+      console.warn('[Model 1] Error during evaluation:', err);
+    } finally {
+      isEvaluatingModel1Ref.current = false;
+    }
+  }, []);
 
   // Background fetch vehicles and contacts on Dashboard mount
   React.useEffect(() => {
@@ -114,22 +177,50 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
 
   React.useEffect(() => {
     MultiModalFusionService.subscribeToConfirmedAccidents(async (trigger) => {
-
       const loc = await getSafeDeviceLocation();
       const lat = loc?.latitude ?? FALLBACK_LAT;
       const lng = loc?.longitude ?? FALLBACK_LNG;
 
+      // Extract sensor window and severity features for Model 2
+      const window = sensorSourceManager.getSensorWindow();
+      const audioConf = trigger.soundEvent ? trigger.soundEvent.confidence : 0.0;
+      const severityFeatures = ImpactFeatureExtractor.extractSeverityFeatures(window, audioConf);
+      console.log(`📊 [Model 2 Input] 19th Feature audio_detected = ${severityFeatures.audio_detected} (${Boolean(severityFeatures.audio_detected)})`);
+
+      // Evaluate Model 2 (Severity Assessor) for authoritative Minor / Moderate / Severe classification
+      let finalSeverity: 'Severe' | 'Moderate' | 'Minor' = trigger.combinedSeverity;
+      try {
+        console.log('🤖 [Model 2 VZCrash] Evaluating accident severity (19 features)...');
+        const sevRes = await MlInferenceService.assessSeverity(severityFeatures);
+        if (sevRes?.severity) {
+          finalSeverity = sevRes.severity;
+          console.log(`🤖 [Model 2 Result] Evaluated Severity: ${finalSeverity.toUpperCase()} | Probabilities:`, sevRes.probabilities);
+        }
+      } catch (sevErr) {
+        console.warn('[Model 2 VZCrash] Severity assessment error, falling back to trigger severity:', sevErr);
+      }
+
+      const countdownSeconds = finalSeverity === 'Severe' ? 10 : 20;
+
+      console.log(`📍 Got precise location: Lat ${lat}, Lng ${lng}. Launching Countdown (${finalSeverity}, ${countdownSeconds}s)`);
       navigation.navigate('Countdown', {
         latitude: lat,
         longitude: lng,
-        severity: trigger.combinedSeverity,
-        countdownSeconds: trigger.combinedSeverity === 'Severe' ? 10 : 20,
+        severity: finalSeverity,
+        countdownSeconds,
+        severityFeatures,
       });
     });
 
     // 2. Feed YAMNet acoustic crash events into MultiModalFusionService
     CrashSoundDetectionService.subscribeToCrashEvents((confidence, topClass) => {
       MultiModalFusionService.recordSoundEvent(confidence, topClass);
+
+      // In Real Mode, if Model 1 hasn't confirmed yet, immediately evaluate recent sensor telemetry
+      // in case mechanical impact occurred milliseconds before acoustic detection
+      if (!ML_CONFIG.SEVERITY_DEMO_MODE) {
+        evaluateModel1Accident('acoustic_trigger');
+      }
     });
 
     if (preferences?.drivingModeEnabled) {
@@ -141,26 +232,39 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
     return () => {
       CrashSoundDetectionService.stopMonitoring();
     };
-  }, [preferences?.drivingModeEnabled]);
+  }, [preferences?.drivingModeEnabled, evaluateModel1Accident]);
 
   React.useEffect(() => {
     if (preferences?.drivingModeEnabled) {
-
       // 3. Feed Accelerometer/Gyroscope motion events into MultiModalFusionService
       sensorSourceManager.onSensorEvent((reading) => {
         const severity = reading.motionSeverity || classifyMotionSeverity(reading.accelG, reading.gyroDegPerSec);
 
-        if (severity === 'severe' || severity === 'moderate') {
-          const mlLog = reading.mlClassifiedSeverity ? ` | ML Prediction: ${reading.mlClassifiedSeverity.toUpperCase()} (${((reading.mlConfidence || 0) * 100).toFixed(1)}%)` : '';
-          MultiModalFusionService.recordMotionEvent(
-            severity,
-            reading.accelG,
-            reading.gyroDegPerSec,
-            reading.mlClassifiedSeverity,
-            reading.mlConfidence
-          );
-        } else if (severity === 'minor') {
-          const mlLog = reading.mlClassifiedSeverity ? ` | ML Prediction: ${reading.mlClassifiedSeverity.toUpperCase()} (${((reading.mlConfidence || 0) * 100).toFixed(1)}%)` : '';
+        if (ML_CONFIG.SEVERITY_DEMO_MODE) {
+          // Demo Mode (FYP Presentation): Hand-shake feeds physical severity directly into fusion
+          if (severity === 'severe' || severity === 'moderate') {
+            const mlLog = reading.mlClassifiedSeverity ? ` | ML Prediction: ${reading.mlClassifiedSeverity.toUpperCase()} (${((reading.mlConfidence || 0) * 100).toFixed(1)}%)` : '';
+            console.log(`🚗 [Motion Demo] ${severity.toUpperCase()} impact signature detected (${reading.accelG.toFixed(2)}g / ${reading.gyroDegPerSec.toFixed(1)}°/s)${mlLog}. Feeding into MultiModalFusionService...`);
+            MultiModalFusionService.recordMotionEvent(
+              severity,
+              reading.accelG,
+              reading.gyroDegPerSec,
+              reading.mlClassifiedSeverity,
+              reading.mlConfidence
+            );
+          } else if (severity === 'minor') {
+            const mlLog = reading.mlClassifiedSeverity ? ` | ML Prediction: ${reading.mlClassifiedSeverity.toUpperCase()} (${((reading.mlConfidence || 0) * 100).toFixed(1)}%)` : '';
+          }
+        } else {
+          // Real-World Road Mode (Production ML Model 1 & Physics Fusion):
+          // Run VZCrash Random Forest inference whenever significant kinetic disruption occurs
+          // OR if acoustic window is currently waiting for kinetic confirmation!
+          const isImpactMotion = severity === 'severe' || severity === 'moderate' || reading.accelG >= 1.5;
+          const isSoundWaiting = MultiModalFusionService.isSoundWindowActive();
+
+          if (isImpactMotion || isSoundWaiting) {
+            evaluateModel1Accident(isImpactMotion ? 'motion_impact' : 'pending_sound_window');
+          }
         }
       });
 
@@ -172,7 +276,7 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
     return () => {
       sensorSourceManager.stop();
     };
-  }, [preferences?.drivingModeEnabled]);
+  }, [preferences?.drivingModeEnabled, evaluateModel1Accident]);
 
   const handleQuickCall = () => {
     if (primaryContact) {
@@ -292,6 +396,45 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
         return (
           <ScrollView style={styles.scrollContainer} contentContainerStyle={{ paddingBottom: 40 }}>
           {__DEV__ && <DevModeBanner />}
+            {/* FYP Evaluation / Demo Mode Toggle Card */}
+            <View style={[
+              styles.dashboardCard,
+              {
+                borderLeftWidth: 4,
+                borderLeftColor: demoModeEnabled ? colors.danger[500] : colors.success[500],
+                backgroundColor: demoModeEnabled ? 'rgba(229, 57, 53, 0.10)' : 'rgba(0, 230, 118, 0.08)',
+                borderColor: demoModeEnabled ? 'rgba(229, 57, 53, 0.3)' : 'rgba(0, 230, 118, 0.2)',
+                marginBottom: 12,
+              }
+            ]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
+                  <Ionicons
+                    name={demoModeEnabled ? "flask" : "shield-checkmark"}
+                    size={24}
+                    color={demoModeEnabled ? "#FF5252" : "#00E676"}
+                    style={{ marginRight: 10 }}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: demoModeEnabled ? '#FF5252' : '#00E676' }}>
+                      {demoModeEnabled ? 'FYP Evaluation / Demo Mode' : 'Real-World Road Mode'}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#A0A0B8', marginTop: 2 }}>
+                      {demoModeEnabled
+                        ? 'Active: Shaking phone & playing crash sound triggers demo countdown'
+                        : 'Active: Production safety with strict false-alarm filtering on roads'}
+                    </Text>
+                  </View>
+                </View>
+                <Switch
+                  value={demoModeEnabled}
+                  onValueChange={handleToggleDemoMode}
+                  trackColor={{ false: '#2C2C3E', true: 'rgba(229, 57, 53, 0.45)' }}
+                  thumbColor={demoModeEnabled ? colors.danger[500] : '#A0A0B8'}
+                />
+              </View>
+            </View>
+
             {/* Paired Vehicle Widget */}
             <View style={styles.dashboardCard}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
@@ -563,6 +706,22 @@ export default function DriverHome({ navigation }: { navigation: AppNavigation }
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Ionicons name="bluetooth-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
                     <Text style={styles.menuItemText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>BLE Sensor Diagnostics</Text>
+                  </View>
+                  <Text style={styles.menuItemArrow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
+                </TouchableOpacity>
+              )}
+
+              {__DEV__ && (
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    setIsDrawerOpen(false);
+                    navigation.navigate('SeverityDemo');
+                  }} accessibilityRole="button"
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name="speedometer-outline" size={20} color={colors.danger[500]} style={{ marginRight: 12 }} />
+                    <Text style={styles.menuItemText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>FYP Severity Demo</Text>
                   </View>
                   <Text style={styles.menuItemArrow} allowFontScaling={true} maxFontSizeMultiplier={1.5}>›</Text>
                 </TouchableOpacity>

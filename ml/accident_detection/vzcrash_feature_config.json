@@ -1,0 +1,26 @@
+{
+    "features": [
+        "accel_peak",
+        "accel_mean",
+        "accel_std",
+        "accel_rms",
+        "jerk_peak",
+        "jerk_mean",
+        "jerk_std",
+        "gyro_peak",
+        "gyro_mean",
+        "gyro_std",
+        "gyro_rms",
+        "speed_initial",
+        "speed_final",
+        "speed_max",
+        "speed_min",
+        "speed_drop",
+        "speed_range"
+    ],
+    "labels": {
+        "0": "crash",
+        "1": "near_miss",
+        "2": "normal_driving"
+    }
+}

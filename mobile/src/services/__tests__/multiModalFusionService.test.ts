@@ -44,8 +44,8 @@ describe('MultiModalFusionService (10-Second Coincidence Window)', () => {
 
     expect(callback).toHaveBeenCalledTimes(1);
     const trigger: ConfirmedAccidentTrigger = callback.mock.calls[0][0];
-    expect(trigger.soundEvent.topClass).toBe('Crash');
-    expect(trigger.motionEvent.severity).toBe('moderate');
+    expect(trigger.soundEvent?.topClass).toBe('Crash');
+    expect(trigger.motionEvent?.severity).toBe('moderate');
   });
 
   it('should TRIGGER callback when motion event is followed by sound event within 10 seconds', () => {

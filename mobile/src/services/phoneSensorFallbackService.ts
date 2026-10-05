@@ -6,6 +6,7 @@ import { SensorReading, SensorFusionService } from './sensorFusionInterface';
 import { classifyMotionSeverity } from '../config/motionSeverityConfig';
 import { classifyCrashSeverityMl } from './crashSeverityMlService';
 import { CrashSoundDetectionService } from './crashSoundDetectionService';
+import { RawSensorSample } from './impactFeatureExtractor';
 
 export class PhoneSensorFallbackService implements SensorFusionService {
   private callbacks: ((reading: SensorReading) => void)[] = [];
@@ -20,6 +21,12 @@ export class PhoneSensorFallbackService implements SensorFusionService {
   private currentGyro = { x: 0, y: 0, z: 0 };
   private speedBuffer: number[] = [];
   private lastSpeedKmh = 0;
+  private lastLocation: { lat: number; lng: number } | null = null;
+  private lastLocationTimestamp = 0;
+
+  // Rolling window of raw samples for feature extraction (~5 seconds at 200ms)
+  private rawSamplesBuffer: RawSensorSample[] = [];
+  private static readonly MAX_BUFFER_SAMPLES = 25;
 
   // Software Gyroscope & Jerk Tracking State
   private isGyroHardwareAvailable = false;
@@ -62,17 +69,56 @@ export class PhoneSensorFallbackService implements SensorFusionService {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === 'granted') {
+        // Prime initial location & speed immediately
+        Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High })
+          .then(initialLoc => {
+            if (initialLoc?.coords) {
+              const rawSpeed = initialLoc.coords.speed;
+              if (typeof rawSpeed === 'number' && rawSpeed > 0) {
+                this.lastSpeedKmh = rawSpeed * 3.6;
+                this.speedBuffer.push(this.lastSpeedKmh);
+              }
+              this.lastLocation = { lat: initialLoc.coords.latitude, lng: initialLoc.coords.longitude };
+              this.lastLocationTimestamp = initialLoc.timestamp;
+            }
+          })
+          .catch(() => {});
+
         this.locationSubscription = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.High,
-            timeInterval: 1000,
-            distanceInterval: 1,
+            timeInterval: 500, // 500ms for responsive live speed telemetry
+            distanceInterval: 0, // 0m to receive updates even when stationary or moving slowly
           },
           location => {
-            const speedKmh = Math.max(0, (location.coords.speed || 0) * 3.6);
-            this.lastSpeedKmh = speedKmh;
-            
-            this.speedBuffer.push(speedKmh);
+            const rawSpeed = location.coords.speed;
+            let speedKmh = 0;
+            if (typeof rawSpeed === 'number' && rawSpeed >= 0) {
+              speedKmh = rawSpeed * 3.6;
+            } else if (this.lastLocation && this.lastLocationTimestamp > 0) {
+              // Fallback: Haversine distance / delta time if GPS Doppler speed is null/-1
+              const dtSeconds = (location.timestamp - this.lastLocationTimestamp) / 1000.0;
+              if (dtSeconds >= 0.5) {
+                const dLat = (location.coords.latitude - this.lastLocation.lat) * (Math.PI / 180);
+                const dLon = (location.coords.longitude - this.lastLocation.lng) * (Math.PI / 180);
+                const a =
+                  Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(this.lastLocation.lat * (Math.PI / 180)) *
+                  Math.cos(location.coords.latitude * (Math.PI / 180)) *
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                const distMeters = 6371000 * c;
+                if (distMeters > 1.2) {
+                  speedKmh = (distMeters / dtSeconds) * 3.6;
+                }
+              }
+            }
+
+            this.lastLocation = { lat: location.coords.latitude, lng: location.coords.longitude };
+            this.lastLocationTimestamp = location.timestamp;
+            this.lastSpeedKmh = Math.max(0, speedKmh);
+
+            this.speedBuffer.push(this.lastSpeedKmh);
             if (this.speedBuffer.length > 5) {
               this.speedBuffer.shift();
             }
@@ -114,6 +160,11 @@ export class PhoneSensorFallbackService implements SensorFusionService {
       this.locationSubscription.remove();
       this.locationSubscription = null;
     }
+
+    this.lastLocation = null;
+    this.lastLocationTimestamp = 0;
+    this.lastSpeedKmh = 0;
+    this.speedBuffer = [];
   }
 
   private emitSensorEvent() {
@@ -182,18 +233,58 @@ export class PhoneSensorFallbackService implements SensorFusionService {
       accelG,
       gyroDegPerSec,
       gpsSpeedDropKmh,
+      speedKmh: this.lastSpeedKmh,
       motionSeverity,
       jerk,
       soundRms,
       durationMs,
       mlClassifiedSeverity: mlResult.topClass,
       mlConfidence: mlResult.confidence,
-      timestamp: Date.now(),
+      timestamp: now,
     };
+
+    // Push raw sample into rolling window buffer
+    this.rawSamplesBuffer.push({
+      ax,
+      ay,
+      az,
+      gx: this.currentGyro.x,
+      gy: this.currentGyro.y,
+      gz: this.currentGyro.z,
+      timestamp: now,
+    });
+    if (this.rawSamplesBuffer.length > PhoneSensorFallbackService.MAX_BUFFER_SAMPLES) {
+      this.rawSamplesBuffer.shift();
+    }
 
     // Update Redux state and notify callbacks
     store.dispatch(updateLatestReading(reading));
     this.callbacks.forEach(cb => cb(reading));
+  }
+
+  /**
+   * Retrieves a snapshot of recent raw sensor samples and speed points for ML feature extraction.
+   * Default count is 10 samples (~2 seconds of telemetry).
+   */
+  getSensorWindow(sampleCount: number = 10): { samples: RawSensorSample[]; speeds: number[] } {
+    const samples = this.rawSamplesBuffer.slice(-sampleCount);
+    const speeds = [...this.speedBuffer];
+    return { samples, speeds };
+  }
+
+  /**
+   * Resets the raw sensor sample and speed buffer for a clean start (e.g. before demo).
+   */
+  resetSensorBuffer(): void {
+    this.rawSamplesBuffer = [];
+    this.speedBuffer = [];
+  }
+
+  /**
+   * Returns the most recent GPS speed in km/h.
+   */
+  getLastSpeedKmh(): number {
+    return this.lastSpeedKmh;
   }
 }
 
