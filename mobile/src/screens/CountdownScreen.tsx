@@ -25,6 +25,7 @@ import * as Notifications from 'expo-notifications';
 import { dispatchEmergencyAlert } from '../utils/emergencyFallback';
 import * as Sms from 'expo-sms';
 import * as Location from 'expo-location';
+import { getAddressFromCoords } from '../utils/location';
 import { VoiceCommandService } from '../services/voiceCommandService';
 import { CrashSoundDetectionService } from '../services/crashSoundDetectionService';
 import { sendBulkBackgroundSMS } from '../utils/directSms';
@@ -229,12 +230,32 @@ export default function CountdownScreen({ navigation, route }: any) {
     // Reverse geocode address from coordinates
     let address: string | undefined;
     try {
+      const nativeAddr = await getAddressFromCoords(realLat, realLng);
+      if (nativeAddr && nativeAddr.trim().length > 3) {
+        address = nativeAddr.trim();
+      } else {
       const geoRes = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${realLat}&lon=${realLng}`,
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${realLat}&lon=${realLng}&accept-language=en`,
         { headers: { 'User-Agent': 'ResQDrive/1.0' } }
       );
-      const geoData = await geoRes.json();
-      address = geoData?.display_name;
+        const geoData = await geoRes.json();
+        if (geoData?.address) {
+          const addr = geoData.address;
+          const parts = [
+            addr.road || addr.amenity || addr.street,
+            addr.suburb || addr.neighbourhood || addr.city_district || addr.residential,
+            addr.city || addr.town || addr.state,
+          ].filter(Boolean);
+          address = parts.join(', ');
+        } else if (geoData?.display_name) {
+          address = geoData.display_name
+            .split(',')
+            .map((s: string) => s.trim())
+            .filter((s: string) => s.length > 0 && !/^\d{4,6}$/.test(s) && !/^[A-Z0-9]{2,8}\+[A-Z0-9]{2,8}/i.test(s))
+            .slice(0, 3)
+            .join(', ');
+        }
+      }
     } catch (err) {
     }
 
@@ -268,7 +289,7 @@ export default function CountdownScreen({ navigation, route }: any) {
         message: `Accident detected (${severity})`,
         latitude: realLat,
         longitude: realLng,
-        address: incident?.address,
+        address: address || incident?.address,
       }).unwrap();
       emergencyNotificationResult = response;
       acknowledgeUrl = response?.acknowledgeUrl;
@@ -291,7 +312,7 @@ export default function CountdownScreen({ navigation, route }: any) {
         acknowledgeUrl,
         latitude: realLat,
         longitude: realLng,
-        address: resolvedAddress || incident?.address,
+        address: address || incident?.address,
         severity,
         contacts: dispatchContacts,
       }).unwrap();
@@ -307,7 +328,9 @@ export default function CountdownScreen({ navigation, route }: any) {
 
       if (anySent) {
         backendSucceeded = true;
-        smsSentViaBackend = respChannels.sms.status === 'SENT';
+        // True only if SMS was actually sent AND RoboSMS is configured (not in dev mode).
+        // This is the signal the SIM-SMS fallback uses to decide whether to fire.
+        smsSentViaBackend = respChannels.sms.status === 'SENT' && !respChannels.sms.devMode;
         setDispatchStatus(prev => ({
           ...prev,
           backend: 'sent',
@@ -328,16 +351,16 @@ export default function CountdownScreen({ navigation, route }: any) {
     }
 
     // ═══ STEP 4: Direct background SMS (device-side fallback) ═══
-    // FIX: Only send device-side SMS if the backend SMS channel FAILED.
-    // Previously, this ALWAYS sent device-side SMS to ALL contacts — even when
-    // the backend had already successfully sent RoboSMS via the API. This caused
-    // each contact to receive DUPLICATE SMS (one from backend, one from device).
     let autoSmsSent = false;
     // FIX: Only send SIM SMS if the BACKEND IS COMPLETELY UNREACHABLE.
     // If triggerEmergency (Step 2) succeeded, the backend already sent RoboSMS
     // via dispatchToContact() to each contact during escalation.
     // The mobile SIM SMS is ONLY a fallback for when there's no internet/API.
-    const backendSmsFailed = !backendReachable;
+    // SIM SMS fires when: no internet OR Robo SMS failed.
+    // smsSentViaBackend is set in STEP 3 from /alert-dispatch response
+    // (true only if sms.status === 'SENT' AND sms.devMode === false).
+    // If /alert-dispatch itself fails (no internet), smsSentViaBackend stays false.
+    const backendSmsFailed = !smsSentViaBackend;
 
     if (dispatchContacts.length > 0 && backendSmsFailed) {
       const backendBase = (api.defaults.baseURL || '').replace(/\/api\/?$/, '').replace(/\/$/, '');
@@ -346,12 +369,14 @@ export default function CountdownScreen({ navigation, route }: any) {
         ? (acknowledgeUrl.startsWith('http') ? acknowledgeUrl : `${backendBase}${acknowledgeUrl}`)
         : null;
 
-      const ackLine = fullAckUrl ? `\nTrack & Acknowledge: ${fullAckUrl}` : '';
+      const cleanLoc = (address || incident?.address || `${realLat.toFixed(4)}, ${realLng.toFixed(4)}`)
+        .replace(/[A-Z0-9]{2,8}\+[A-Z0-9]{2,8}[,\s]*/gi, '')
+        .replace(/,\s*,+/g, ', ')
+        .replace(/^[\s,]+|[\s,]+$/g, '')
+        .trim();
 
-      const rawAddress = address || resolvedAddress || incident?.address || '';
-      // Strip non-ASCII (Urdu) chars and clean up comma-separated address for SMS readability
-      const locationName = rawAddress.replace(/[^\x20-\x7E]/g, '').replace(/,+/g, ', ').replace(/,\s*$/, '').trim() || `Coordinates: ${realLat.toFixed(4)}, ${realLng.toFixed(4)}`;
-      const smsMessage = `[ResQDrive ALERT] ${user?.fullName || 'Driver'} accident (${severity}).\nLocation: ${locationName}\nMap: https://maps.google.com/?q=${realLat},${realLng}${ackLine}`;
+      const ackLine = fullAckUrl ? `\nTrack: ${fullAckUrl}` : '';
+      const smsMessage = `[ResQDrive ALERT] ${user?.fullName || 'Driver'} accident (${severity}).\nLoc: ${cleanLoc}\nMap: https://maps.google.com/?q=${realLat.toFixed(4)},${realLng.toFixed(4)}${ackLine}`;
       // Try background auto-SMS first (react-native-direct-sms)
       try {
         const smsResult = await sendBulkBackgroundSMS(dispatchContacts, smsMessage);
