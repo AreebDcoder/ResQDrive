@@ -98,8 +98,13 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
   const [pendingCallTarget, setPendingCallTarget] = useState<{ name: string; phone: string } | null>(null);
   const [currentContactIndex, setCurrentContactIndex] = useState<number>(initialIndex);
   const [hasCycledThroughAll, setHasCycledThroughAll] = useState<boolean>(false);
+  // FIX: Only start the 60s SIM auto-call countdown if RoboCall FAILED.
+  // If RoboCall succeeded, the backend's escalation scheduler handles calling
+  // each contact via RoboCall (45s interval). The SOS screen just shows the list
+  // of numbers — user can manually call if needed.
+  const robocallSucceeded = route?.params?.robocallSucceeded === true;
   const [isEscalationActive, setIsEscalationActive] = useState<boolean>(
-    !!incidentId && (severity === 'moderate' || severity === 'severe')
+    !robocallSucceeded && !!incidentId && (severity === 'moderate' || severity === 'severe')
   );
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -434,6 +439,15 @@ useEffect(() => {
           <Ionicons name="warning" size={24} color={colors.warning[500]} style={{ marginRight: 8 }} />
           <Text style={styles.countdownText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             Auto-dialing {pendingCallTarget?.name || 'rescue'} in {escalationTimeLeft}s if no response...
+          </Text>
+        </View>
+      )}
+            {/* RoboCall Status Indicator (shown when RoboCall is handling escalation) */}
+      {!isEscalationActive && incidentId && (
+        <View style={[styles.countdownBanner, { backgroundColor: 'rgba(76, 175, 80, 0.15)', borderColor: 'rgba(76, 175, 80, 0.3)' }]}>
+          <Ionicons name="call" size={24} color="#4caf50" style={{ marginRight: 8 }} />
+          <Text style={[styles.countdownText, { color: '#4caf50' }]}>
+            RoboCall placed to {pendingCallTarget?.name || 'emergency contact'}. Waiting for acknowledgement...
           </Text>
         </View>
       )}

@@ -444,7 +444,13 @@ export default function CountdownScreen({ navigation, route }: any) {
         severity: severity.toLowerCase(),
         incidentId: incident?.id || null,
         sessionId: emergencyNotificationResult?.sessionId || null,
-        initialContactIndex: backendReachable ? 0 : 1,
+        // If RoboCall worked, Basit was already called → skip to Kami (index 1)
+        // If RoboCall failed, STEP 4.5 already called Basit via SIM → skip to Kami (index 1)
+        initialContactIndex: 1,
+        // NEW: tell SOS screen whether RoboCall succeeded
+        // If true → SOS screen disables its 60s SIM auto-call countdown (backend handles escalation via RoboCall)
+        // If false → SOS screen starts its 60s SIM auto-call countdown
+        robocallSucceeded: backendReachable,
       });
     }, 3000);
   }, [contacts, user, severity, latitude, longitude, navigation, dispatch, createIncident, triggerEmergency, dispatchAlert]);
