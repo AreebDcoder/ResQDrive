@@ -259,7 +259,7 @@ export default function CountdownScreen({ navigation, route }: any) {
     // ═══ STEP 2: Trigger Module 6.8 (RoboCall voice call + RoboSMS) ═══
     let acknowledgeUrl: string | undefined;
     let emergencyNotificationResult: any = null;
-    let roboCallSucceeded = false;
+    let backendReachable = false;
     try {
       // Batch 11: RTK Query mutation. Invalidates 'Emergency' tag.
       const response = await triggerEmergency({
@@ -272,10 +272,10 @@ export default function CountdownScreen({ navigation, route }: any) {
       }).unwrap();
       emergencyNotificationResult = response;
       acknowledgeUrl = response?.acknowledgeUrl;
-      roboCallSucceeded = true;
+      backendReachable = true;
       setDispatchStatus(prev => ({ ...prev, module68: 'triggered' }));
     } catch (err: any) {
-      roboCallSucceeded = false;
+      backendReachable = false;
       setDispatchStatus(prev => ({ ...prev, module68: 'failed' }));
     }
 
@@ -333,7 +333,11 @@ export default function CountdownScreen({ navigation, route }: any) {
     // the backend had already successfully sent RoboSMS via the API. This caused
     // each contact to receive DUPLICATE SMS (one from backend, one from device).
     let autoSmsSent = false;
-    const backendSmsFailed = !backendSucceeded || (backendSucceeded && !smsSentViaBackend);
+    // FIX: Only send SIM SMS if the BACKEND IS COMPLETELY UNREACHABLE.
+    // If triggerEmergency (Step 2) succeeded, the backend already sent RoboSMS
+    // via dispatchToContact() to each contact during escalation.
+    // The mobile SIM SMS is ONLY a fallback for when there's no internet/API.
+    const backendSmsFailed = !backendReachable;
 
     if (dispatchContacts.length > 0 && backendSmsFailed) {
       const backendBase = (api.defaults.baseURL || '').replace(/\/api\/?$/, '').replace(/\/$/, '');
@@ -344,7 +348,9 @@ export default function CountdownScreen({ navigation, route }: any) {
 
       const ackLine = fullAckUrl ? `\nTrack & Acknowledge: ${fullAckUrl}` : '';
 
-      const locationName = address || resolvedAddress || incident?.address || `Coordinates: ${realLat.toFixed(4)}, ${realLng.toFixed(4)}`;
+      const rawAddress = address || resolvedAddress || incident?.address || '';
+      // Strip non-ASCII (Urdu) chars and clean up comma-separated address for SMS readability
+      const locationName = rawAddress.replace(/[^\x20-\x7E]/g, '').replace(/,+/g, ', ').replace(/,\s*$/, '').trim() || `Coordinates: ${realLat.toFixed(4)}, ${realLng.toFixed(4)}`;
       const smsMessage = `[ResQDrive ALERT] ${user?.fullName || 'Driver'} accident (${severity}).\nLocation: ${locationName}\nMap: https://maps.google.com/?q=${realLat},${realLng}${ackLine}`;
       // Try background auto-SMS first (react-native-direct-sms)
       try {
@@ -378,7 +384,7 @@ export default function CountdownScreen({ navigation, route }: any) {
 
     // ═══ STEP 4.5: Direct Phone Call — only if RoboCall FAILED ═══
     if (dispatchContacts.length > 0 && dispatchContacts[0]?.phoneNumber) {
-      if (!roboCallSucceeded) {
+      if (!backendReachable) {
         // RoboCall failed — call primary contact instantly from mobile SIM
         const primaryTarget = dispatchContacts[0];
         try {
@@ -413,7 +419,7 @@ export default function CountdownScreen({ navigation, route }: any) {
         severity: severity.toLowerCase(),
         incidentId: incident?.id || null,
         sessionId: emergencyNotificationResult?.sessionId || null,
-        initialContactIndex: roboCallSucceeded ? 0 : 1,
+        initialContactIndex: backendReachable ? 0 : 1,
       });
     }, 3000);
   }, [contacts, user, severity, latitude, longitude, navigation, dispatch, createIncident, triggerEmergency, dispatchAlert]);

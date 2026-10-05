@@ -111,7 +111,7 @@ export class EmergencyNotificationService {
     // Fallback to OpenStreetMap Nominatim
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=en`,
         {
           headers: { 'User-Agent': 'ResQDrive-Emergency-Platform/1.0' },
           signal: AbortSignal.timeout(3000),
@@ -627,8 +627,13 @@ export class EmergencyNotificationService {
     const ackLink = shareToken ? `${backendBase}/acknowledge.html?session=${shareToken}` : `https://www.google.com/maps?q=${lat},${lng}`;
     const mapsLink = `https://www.google.com/maps?q=${lat},${lng}`;
 
-    // ─── PHONE CALL via RoboCall.pk (priority 1 only) ─────────────────────
-    if (contact.priorityOrder === 1) {
+    // ─── PHONE CALL via RoboCall.pk (ALL contacts, not just priority 1) ───
+    // FIX: Previously only priority 1 got a RoboCall. Now ALL contacts receive
+    // a voice call during their escalation cycle. Priority 1 gets called first,
+    // then after 60s timeout the scheduler escalates to priority 2, who also
+    // gets a RoboCall, and so on until all contacts are exhausted or someone
+    // acknowledges.
+    if (true) {
       try {
         const result = await this.placeRoboCall(
           contact.phoneNumber,

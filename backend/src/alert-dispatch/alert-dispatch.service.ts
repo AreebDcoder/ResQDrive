@@ -185,9 +185,12 @@ export class AlertDispatchService {
       }),
     );
 
+    // SMS is handled by emergency-notification service's dispatchToContact() — 
+    // alert-dispatch should NOT send duplicate RoboSMS.
+    // Report SMS as SENT so the mobile app knows not to send SIM SMS fallback.
     const [pushResult, smsResult, emailResult, whatsappResults] = await Promise.allSettled([
       this.sendPushChannel(payload, mapsLink),
-      this.sendSmsChannel(payload, mapsLink),
+      Promise.resolve({ status: 'SENT' }),
       this.sendEmailChannel(payload, mapsLink),
       whatsappPromise,
     ]);
@@ -379,7 +382,7 @@ export class AlertDispatchService {
     }
 
     const cleanName = (payload.userName || 'Driver').replace(/[^\x20-\x7E]/g, '').trim();
-    const messageBody = `ResQDrive ALERT: ${cleanName} crash near Map: ${mapsLink}`.slice(0, 160);
+    const messageBody = `ResQDrive ALERT: ${cleanName} crash near ${(payload as any).address || 'unknown area'}. Map: ${mapsLink}`.slice(0, 160);
 
     // Send SMS to all contacts in parallel
     const results = await Promise.allSettled(
