@@ -24,6 +24,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, FormInput } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
+import { getSafeDeviceLocation, getAddressFromCoords } from '../utils/location';
 
 export default function RegisterScreen({ route, navigation }: { route: any; navigation: any }) {
   const dispatch = useDispatch();
@@ -33,10 +34,36 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'DRIVER' | 'MECHANIC'>('DRIVER');
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationSuccess, setLocationSuccess] = useState(false);
 
   // Batch 11: Migrated to RTK Query mutations. Auth state stays in authSlice.
   const [register] = useRegisterMutation();
   const [googleRegister] = useGoogleRegisterMutation();
+
+  const handleUseCurrentLocation = async () => {
+    setIsLocating(true);
+    setErrorMsg(null);
+    try {
+      const loc = await getSafeDeviceLocation();
+      if (loc && loc.latitude && loc.longitude) {
+        setValue('workshopLatitude', loc.latitude);
+        setValue('workshopLongitude', loc.longitude);
+        const address = await getAddressFromCoords(loc.latitude, loc.longitude);
+        if (address) {
+          setValue('workshopAddress', address);
+        }
+        setLocationSuccess(true);
+        setTimeout(() => setLocationSuccess(false), 4000);
+      } else {
+        setErrorMsg('Could not retrieve device GPS location. Please ensure location services are enabled.');
+      }
+    } catch (err: any) {
+      setErrorMsg('Failed to detect GPS location. You can type the address manually.');
+    } finally {
+      setIsLocating(false);
+    }
+  };
 
   // Entrance animations
   const headerOpacity = useRef(new Animated.Value(0)).current;
@@ -137,19 +164,45 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
     try {
       if (isGoogleUser) {
         const { password, confirmPassword, ...registerPayload } = data;
+        const cleanedPayload: any = { ...registerPayload };
+        if (selectedRole === 'MECHANIC') {
+          delete cleanedPayload.cnicNumber;
+          delete cleanedPayload.drivingLicenseNumber;
+        } else if (selectedRole === 'DRIVER') {
+          delete cleanedPayload.workshopName;
+          delete cleanedPayload.workshopAddress;
+          delete cleanedPayload.specialization;
+          delete cleanedPayload.workshopLatitude;
+          delete cleanedPayload.workshopLongitude;
+        }
         // Batch 11: RTK Query mutation — POST /auth/google/register.
-        const response = await googleRegister({ ...registerPayload, profilePictureUrl: googleData?.profilePictureUrl }).unwrap();
+        const response = await googleRegister({ ...cleanedPayload, profilePictureUrl: googleData?.profilePictureUrl }).unwrap();
         const { accessToken, refreshToken, user } = response;
         await setItemAsync('refreshToken', refreshToken);
         dispatch(loginSuccess({ accessToken, user }));
       } else {
         const { confirmPassword, ...registerPayload } = data;
+        const cleanedPayload: any = { ...registerPayload };
+        if (selectedRole === 'MECHANIC') {
+          delete cleanedPayload.cnicNumber;
+          delete cleanedPayload.drivingLicenseNumber;
+        } else if (selectedRole === 'DRIVER') {
+          delete cleanedPayload.workshopName;
+          delete cleanedPayload.workshopAddress;
+          delete cleanedPayload.specialization;
+          delete cleanedPayload.workshopLatitude;
+          delete cleanedPayload.workshopLongitude;
+        }
         // Batch 11: RTK Query mutation — POST /auth/register.
-        await register(registerPayload).unwrap();
+        await register(cleanedPayload).unwrap();
         navigation.navigate('EmailVerification', { email: data.email });
       }
     } catch (err: any) {
-      setErrorMsg(err.data?.message || 'Registration failed. Please check details.');
+      const rawMsg = err.data?.message || err.message;
+      const displayMsg = Array.isArray(rawMsg)
+        ? rawMsg.join('. ')
+        : (typeof rawMsg === 'string' ? rawMsg : 'Registration failed. Please check details.');
+      setErrorMsg(displayMsg);
     } finally {
       setIsLoading(false);
     }
@@ -300,6 +353,25 @@ export default function RegisterScreen({ route, navigation }: { route: any; navi
                       label="Workshop Address"
                       placeholder="Plot 45, Industrial Zone"
                     />
+
+                    <View style={styles.gpsBtnRow}>
+                      <TouchableOpacity
+                        style={[styles.gpsButton, locationSuccess && styles.gpsButtonSuccess]}
+                        onPress={handleUseCurrentLocation}
+                        disabled={isLocating}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons
+                          name={locationSuccess ? 'checkmark-circle' : 'location-sharp'}
+                          size={16}
+                          color={locationSuccess ? colors.success[400] : colors.danger[400]}
+                          style={{ marginRight: 6 }}
+                        />
+                        <Text style={[styles.gpsButtonText, locationSuccess && styles.gpsButtonTextSuccess]}>
+                          {isLocating ? 'Detecting GPS...' : locationSuccess ? 'GPS Coordinates Locked ✓' : '📍 Use Current Workshop GPS'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
 
                     <FormInput
                       name="specialization"
@@ -588,5 +660,32 @@ const styles = StyleSheet.create({
     color: colors.info[500],
     fontSize: 14,
     fontWeight: '700',
+  },
+  gpsBtnRow: {
+    marginTop: -8,
+    marginBottom: 16,
+    alignItems: 'flex-start',
+  },
+  gpsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  gpsButtonSuccess: {
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderColor: 'rgba(16, 185, 129, 0.4)',
+  },
+  gpsButtonText: {
+    color: colors.danger[400],
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  gpsButtonTextSuccess: {
+    color: colors.success[400],
   },
 });

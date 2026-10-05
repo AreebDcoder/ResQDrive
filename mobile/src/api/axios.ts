@@ -72,7 +72,19 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (originalRequest.url.includes('/auth/refresh')) {
+    // Public auth endpoints should never trigger token refresh
+    const url = originalRequest?.url || '';
+    const isPublicAuthRoute =
+      url.includes('/auth/login') ||
+      url.includes('/auth/register') ||
+      url.includes('/auth/google') ||
+      url.includes('/auth/refresh') ||
+      url.includes('/auth/verify-email') ||
+      url.includes('/auth/resend-verification') ||
+      url.includes('/auth/forgot-password') ||
+      url.includes('/auth/reset-password');
+
+    if (isPublicAuthRoute) {
       return Promise.reject(error);
     }
 

@@ -43,6 +43,14 @@ export class UpdateProfileDto {
   @IsString()
   specialization?: string;
 
+  @ApiProperty({ required: false, example: 33.6844 })
+  @IsOptional()
+  workshopLatitude?: number;
+
+  @ApiProperty({ required: false, example: 73.0479 })
+  @IsOptional()
+  workshopLongitude?: number;
+
   @ApiProperty({ required: false, example: 'ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]' })
   @IsOptional()
   @IsString()

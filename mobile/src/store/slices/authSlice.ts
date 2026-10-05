@@ -18,6 +18,8 @@ interface User {
     workshopAddress: string;
     specialization: string;
     isWorkshopVerified: boolean;
+    latitude?: number;
+    longitude?: number;
   };
 }
 

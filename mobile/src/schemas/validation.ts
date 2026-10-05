@@ -28,6 +28,8 @@ export const registerSchema = z
     workshopName: z.string().optional(),
     workshopAddress: z.string().optional(),
     specialization: z.string().optional(),
+    workshopLatitude: z.number().optional(),
+    workshopLongitude: z.number().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Passwords do not match',
@@ -123,6 +125,8 @@ export const updateProfileSchema = z.object({
   workshopName: z.string().optional(),
   workshopAddress: z.string().optional(),
   specialization: z.string().optional(),
+  workshopLatitude: z.number().optional(),
+  workshopLongitude: z.number().optional(),
 });
 
 export const changePasswordSchema = z
