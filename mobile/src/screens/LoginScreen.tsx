@@ -129,13 +129,16 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
       // Cast to any: authApi.User is missing isActive (present in authSlice.User).
       dispatch(loginSuccess({ accessToken, user: user as any }));
     } catch (err: any) {
-      const msg = err.data?.message || err.message || 'Login failed. Please check your credentials.';
-      if (typeof msg === 'string' && msg.includes('EMAIL_NOT_VERIFIED')) {
+      const rawMsg = err.data?.message || err.message;
+      const msg = Array.isArray(rawMsg)
+        ? rawMsg.join('. ')
+        : (typeof rawMsg === 'string' ? rawMsg : 'Login failed. Please check your credentials.');
+      if (msg.includes('EMAIL_NOT_VERIFIED')) {
         setErrorMsg('Your account is not verified yet. Redirecting to verification...');
         setTimeout(() => {
           navigation.navigate('EmailVerification', { email: data.emailOrPhone });
         }, 1200);
-      } else if (typeof msg === 'string' && msg.includes('WORKSHOP_PENDING_APPROVAL')) {
+      } else if (msg.includes('WORKSHOP_PENDING_APPROVAL')) {
         const cleanMessage = msg.replace('WORKSHOP_PENDING_APPROVAL:', '').trim();
         setErrorMsg(cleanMessage);
         Alert.alert('Workshop Review in Progress', cleanMessage);

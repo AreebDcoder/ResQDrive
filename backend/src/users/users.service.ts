@@ -76,12 +76,16 @@ export class UsersService {
             workshopName: details.workshopName,
             workshopAddress: details.workshopAddress,
             specialization: details.specialization,
+            workshopLatitude: details.workshopLatitude !== undefined ? details.workshopLatitude : undefined,
+            workshopLongitude: details.workshopLongitude !== undefined ? details.workshopLongitude : undefined,
           },
           create: {
             userId,
             workshopName: details.workshopName,
             workshopAddress: details.workshopAddress,
             specialization: details.specialization,
+            workshopLatitude: details.workshopLatitude,
+            workshopLongitude: details.workshopLongitude,
           },
         });
       }
