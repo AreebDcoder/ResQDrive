@@ -305,8 +305,8 @@ export default function CountdownScreen({ navigation, route }: any) {
       // Batch 11: RTK Query mutation. Invalidates 'Emergency' tag.
       const response = await triggerEmergency({
         incidentId: incident?.id,
-        severity,
-        message: `Accident detected (${severity})`,
+        severity: evaluatedSeverity,
+        message: `Accident detected (${evaluatedSeverity})`,
         latitude: realLat,
         longitude: realLng,
         address: address || incident?.address,
