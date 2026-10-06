@@ -42,8 +42,9 @@ export type AppStackParamList = {
   VoiceCommandDemo: undefined;
   DamageAssessment: undefined;
   RepairCost: undefined;
-  Countdown: { latitude?: number; longitude?: number; severity?: string; countdownSeconds?: number };
+  Countdown: { latitude?: number; longitude?: number; severity?: string; countdownSeconds?: number; severityFeatures?: any };
   BleSensorDemo: undefined;
+  SeverityDemo: undefined;
 };
 
 export type RootStackParamList = AuthStackParamList & AppStackParamList;

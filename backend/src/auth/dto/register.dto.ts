@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
-import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, Matches, MinLength } from 'class-validator';
+import { IsEmail, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, Matches, MinLength } from 'class-validator';
 
 export class RegisterDto {
   @ApiProperty({ example: 'John Doe' })
@@ -57,9 +57,11 @@ export class RegisterDto {
 
   @ApiProperty({ required: false, example: 33.6844 })
   @IsOptional()
+  @IsNumber()
   workshopLatitude?: number;
 
   @ApiProperty({ required: false, example: 73.0479 })
   @IsOptional()
+  @IsNumber()
   workshopLongitude?: number;
 }

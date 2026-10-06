@@ -459,10 +459,13 @@ export class CrashSoundDetectionService {
               const hasCoreCrashSound = maxCoreScore >= 0.003; // Any crash harmonic detected (>= 1 quantum of 1/256)
 
               // Pure speech suppression: only suppress if speech is active and there is NO vehicle crash context
-              const isPureSpeech = maxSpeechScore >= 0.15 && !hasVehicleContext && maxCoreScore < 0.05;
+              // In demo mode or compressed speaker playback with crash/burst harmonics, do not suppress crash sounds
+              const isPureSpeech = !IS_DEMO_MODE && maxSpeechScore >= 0.15 && !hasVehicleContext && maxCoreScore < 0.05 && (!audioSource.isCompressedPlayback || maxSecondaryScore < 0.10);
 
               // Isolated burst: Explosion/Boom without vehicle presence or core crash harmonics
-              const isIsolatedBurst = !hasVehicleContext && maxCoreScore < 0.05 && maxSecondaryScore >= 0.15;
+              // ONLY applies to direct uncompressed mic noise (table tap / microphone thump).
+              // Does NOT suppress compressed speaker playback (e.g. YouTube demo videos) or demo mode.
+              const isIsolatedBurst = !audioSource.isCompressedPlayback && !IS_DEMO_MODE && !hasVehicleContext && maxCoreScore < 0.05 && maxSecondaryScore >= 0.15;
 
               if (isPureSpeech) {
                 // UNCOMPRESSED DIRECT HUMAN VOICE / SPEECH:

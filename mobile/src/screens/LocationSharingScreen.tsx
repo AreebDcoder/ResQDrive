@@ -12,7 +12,7 @@ import {
 import * as Location from 'expo-location';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
-import api from '../api/axios';
+import api, { getCurrentServerUrl } from '../api/axios';
 import { connectSocket, disconnectSocket, emitLocationUpdate } from '../services/socketService';
 import { useToast } from '../components/ui/Toast';
 import { colors, darkColors, tints } from '../theme/tokens';
@@ -168,7 +168,9 @@ export default function LocationSharingScreen({ navigation }: { navigation: any 
 
   function getShareLink() {
     if (!session) return '';
-    const baseUrl = API_URL; // Use centralized API_URL from axios.ts // was: Platform.OS === 'web'
+    const baseUrl = Platform.OS === 'web'
+      ? 'http://localhost:3000'
+      : getCurrentServerUrl();
     return `${baseUrl}${session.shareUrl}`;
   }
 

@@ -13,6 +13,7 @@ import {
 } from '../store/slices/emergencySlice';
 import { connectSocket, disconnectSocket, emitLocationUpdate } from '../services/socketService';
 import { Ionicons } from '@expo/vector-icons';
+import { getCurrentServerUrl } from '../api/axios';
 import { useToast } from '../components/ui/Toast';
 import { ConfirmDialog } from '../components/ui';
 import { colors, darkColors, tints } from '../theme/tokens';
@@ -168,7 +169,9 @@ export default function EmergencyNotificationScreen({ navigation }: { navigation
 
   function getAcknowledgeLink() {
     if (!emergency.acknowledgeUrl) return '';
-    const baseUrl = API_URL; // Use centralized API_URL from axios.ts // was: Platform.OS === 'web'
+    const baseUrl = Platform.OS === 'web'
+      ? 'http://localhost:3000'
+      : getCurrentServerUrl();
     return `${baseUrl}${emergency.acknowledgeUrl}`;
   }
 

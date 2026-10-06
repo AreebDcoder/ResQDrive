@@ -31,6 +31,7 @@ import DamageAssessmentScreen from '../screens/DamageAssessmentScreen';
 import RepairCostScreen from '../screens/RepairCostScreen';
 import CountdownScreen from '../screens/CountdownScreen';
 import BleSensorDemoScreen from '../screens/BleSensorDemoScreen';
+import SeverityDemoScreen from '../screens/SeverityDemoScreen';
 
 // Home screens (role-aware)
 import DriverNavigator from '../screens/home/DriverNavigator';
@@ -99,6 +100,7 @@ export default function AppStack({ role }: { role: string }) {
       <Stack.Screen name="RepairCost" component={RepairCostScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Countdown" component={CountdownScreen} options={{ headerShown: false, gestureEnabled: false, presentation: 'modal' }} />
       <Stack.Screen name="BleSensorDemo" component={BleSensorDemoScreen} options={{ title: 'BLE Sensor Diagnostics' }} />
+      <Stack.Screen name="SeverityDemo" component={SeverityDemoScreen} options={{ title: 'FYP Severity Demo' }} />
     </Stack.Navigator>
   );
 }

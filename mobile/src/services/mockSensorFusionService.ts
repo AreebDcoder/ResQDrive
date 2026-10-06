@@ -23,6 +23,7 @@ export class MockSensorFusionService implements SensorFusionService {
         accelG,
         gyroDegPerSec,
         gpsSpeedDropKmh,
+        speedKmh: 0.0,
         motionSeverity,
         timestamp: Date.now(),
       };
@@ -51,6 +52,7 @@ export class MockSensorFusionService implements SensorFusionService {
       accelG,
       gyroDegPerSec,
       gpsSpeedDropKmh,
+      speedKmh: 45.0,
       motionSeverity,
       timestamp: Date.now(),
     };

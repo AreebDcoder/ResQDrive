@@ -27,6 +27,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, FormInput, Input } from '../components/ui';
 import { useTheme } from '../theme/useTheme';
 import { colors, darkColors, tints } from '../theme/tokens';
+import { getSafeDeviceLocation, getAddressFromCoords } from '../utils/location';
 
 export default function ProfileScreen() {
   const dispatch = useDispatch();
@@ -44,11 +45,14 @@ export default function ProfileScreen() {
   const [pwMessage, setPwMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isPwLoading, setIsPwLoading] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const [gpsSuccess, setGpsSuccess] = useState(false);
 
   // Profile Form
   const {
     control: profileControl,
     handleSubmit: handleProfileSubmit,
+    setValue: setProfileValue,
     reset: resetProfileForm,
     formState: { errors: profileErrors },
   } = useForm<UpdateProfileInput>({
@@ -61,8 +65,34 @@ export default function ProfileScreen() {
       workshopName: user?.mechanicDetails?.workshopName || '',
       workshopAddress: user?.mechanicDetails?.workshopAddress || '',
       specialization: user?.mechanicDetails?.specialization || '',
+      workshopLatitude: user?.mechanicDetails?.latitude,
+      workshopLongitude: user?.mechanicDetails?.longitude,
     },
   });
+
+  const handleUseCurrentLocation = async () => {
+    setIsLocating(true);
+    setProfileMessage(null);
+    try {
+      const loc = await getSafeDeviceLocation();
+      if (loc && loc.latitude && loc.longitude) {
+        setProfileValue('workshopLatitude', loc.latitude);
+        setProfileValue('workshopLongitude', loc.longitude);
+        const address = await getAddressFromCoords(loc.latitude, loc.longitude);
+        if (address) {
+          setProfileValue('workshopAddress', address);
+        }
+        setGpsSuccess(true);
+        setTimeout(() => setGpsSuccess(false), 4000);
+      } else {
+        setProfileMessage({ type: 'error', text: 'Could not retrieve device GPS location.' });
+      }
+    } catch (err) {
+      setProfileMessage({ type: 'error', text: 'Failed to retrieve GPS location.' });
+    } finally {
+      setIsLocating(false);
+    }
+  };
 
   // Change Password Form
   const {
@@ -272,6 +302,27 @@ export default function ProfileScreen() {
               editable={isEditing}
               placeholder="Plot 45, Industrial Zone"
             />
+
+            {isEditing && (
+              <View style={styles.gpsBtnRow}>
+                <TouchableOpacity
+                  style={[styles.gpsButton, gpsSuccess && styles.gpsButtonSuccess]}
+                  onPress={handleUseCurrentLocation}
+                  disabled={isLocating}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons
+                    name={gpsSuccess ? 'checkmark-circle' : 'location-sharp'}
+                    size={16}
+                    color={gpsSuccess ? colors.success[400] : colors.danger[400]}
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text style={[styles.gpsButtonText, gpsSuccess && styles.gpsButtonTextSuccess]}>
+                    {isLocating ? 'Detecting GPS...' : gpsSuccess ? 'GPS Coordinates Locked ✓' : '📍 Use Current Workshop GPS'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
             <FormInput
               name="specialization"
@@ -691,5 +742,32 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: darkColors.textSecondary,
     marginTop: 2,
+  },
+  gpsBtnRow: {
+    marginTop: -6,
+    marginBottom: 16,
+    alignItems: 'flex-start',
+  },
+  gpsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  gpsButtonSuccess: {
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderColor: 'rgba(16, 185, 129, 0.4)',
+  },
+  gpsButtonText: {
+    color: colors.danger[400],
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  gpsButtonTextSuccess: {
+    color: colors.success[400],
   },
 });

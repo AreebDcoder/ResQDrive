@@ -50,3 +50,6 @@ damage-assessment-service/venv/
 
 # Prevent accidental stray files created by shell redirects (e.g. `git > something`)
 git
+
+# ML training datasets (not needed for runtime model inference)
+ml/training_data/

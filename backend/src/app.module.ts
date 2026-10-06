@@ -22,6 +22,7 @@ import { CrashSoundDetectionModule } from './crash-sound-detection/crash-sound-d
 import { VoiceCommandsModule } from './voice-commands/voice-commands.module';
 import { DamageAssessmentModule } from './damage-assessment/damage-assessment.module';
 import { RepairCostModule } from './repair-cost/repair-cost.module';
+import { MlModule } from './ml/ml.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { RepairCostModule } from './repair-cost/repair-cost.module';
     VoiceCommandsModule,
     DamageAssessmentModule,
     RepairCostModule,
+    MlModule,
   ],
 })
 export class AppModule {}
