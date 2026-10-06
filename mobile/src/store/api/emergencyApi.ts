@@ -16,8 +16,19 @@ import { axiosBaseQuery } from './baseQuery';
 
 export interface EmergencyTriggerResponse {
   sessionId: string;
+  shareToken: string;
   acknowledgeUrl: string;
-  status: string;
+  triggeredAt: string;
+  currentPriority: number;
+  totalContacts: number;
+  contactName: string;
+  contactPhone: string;
+  nextEscalationAt: string;
+  locationSessionId: string | null;
+  // CRITICAL: Whether RoboCall and RoboSMS actually succeeded for the first contact.
+  // The mobile uses these to decide whether to fire SIM call/SMS fallback.
+  roboCallSucceeded?: boolean;
+  roboSmsSucceeded?: boolean;
 }
 
 export interface AlertDispatchResponse {

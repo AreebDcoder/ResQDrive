@@ -281,6 +281,8 @@ export default function CountdownScreen({ navigation, route }: any) {
     let acknowledgeUrl: string | undefined;
     let emergencyNotificationResult: any = null;
     let backendReachable = false;
+    let roboCallSucceeded = false;   // did RoboCall actually place a call to priority 1?
+    let roboSmsSucceeded = false;    // did RoboSMS actually send an SMS to priority 1?
     try {
       // Batch 11: RTK Query mutation. Invalidates 'Emergency' tag.
       const response = await triggerEmergency({
@@ -294,9 +296,21 @@ export default function CountdownScreen({ navigation, route }: any) {
       emergencyNotificationResult = response;
       acknowledgeUrl = response?.acknowledgeUrl;
       backendReachable = true;
+      // CRITICAL: Read the actual RoboCall/RoboSMS success flags from the backend response.
+      // These are the SOLE signals used to decide whether to fire SIM call/SMS fallback.
+      //   roboCallSucceeded=true  → RoboCall placed, skip SIM call to primary
+      //   roboCallSucceeded=false → RoboCall failed/missing creds, call primary from SIM
+      //   roboSmsSucceeded=true   → RoboSMS sent, skip SIM SMS
+      //   roboSmsSucceeded=false  → RoboSMS failed/missing creds, send SIM SMS
+      roboCallSucceeded = response?.roboCallSucceeded === true;
+      roboSmsSucceeded = response?.roboSmsSucceeded === true;
+      console.log(`[Countdown] STEP 2: backendReachable=true, roboCallSucceeded=${roboCallSucceeded}, roboSmsSucceeded=${roboSmsSucceeded}`);
       setDispatchStatus(prev => ({ ...prev, module68: 'triggered' }));
     } catch (err: any) {
+      // Network error / timeout / 4xx / 5xx — backend completely unreachable.
+      // Both RoboCall and RoboSMS effectively failed. Fire SIM fallback for both.
       backendReachable = false;
+      console.log('[Countdown] STEP 2 FAILED (backend unreachable):', err?.response?.data?.message || err?.message);
       setDispatchStatus(prev => ({ ...prev, module68: 'failed' }));
     }
 
@@ -350,17 +364,16 @@ export default function CountdownScreen({ navigation, route }: any) {
       }));
     }
 
-    // ═══ STEP 4: Direct background SMS (device-side fallback) ═══
+    // ═══ STEP 4: Direct background SMS (device-side fallback — ONLY when RoboSMS failed) ═══
+    // CRITICAL: Gate on roboSmsSucceeded (from STEP 2 response), NOT on smsSentViaBackend
+    // or backendReachable. The mobile must send SIM SMS if and only if the backend's
+    // RoboSMS actually failed (missing creds, API error, or backend unreachable).
+    //   - Internet + RoboSMS API OK    → roboSmsSucceeded=true  → SKIP SIM SMS
+    //   - Internet + RoboSMS API fail  → roboSmsSucceeded=false → SEND SIM SMS
+    //   - No internet (trigger failed) → roboSmsSucceeded=false → SEND SIM SMS
     let autoSmsSent = false;
-    // FIX: Only send SIM SMS if the BACKEND IS COMPLETELY UNREACHABLE.
-    // If triggerEmergency (Step 2) succeeded, the backend already sent RoboSMS
-    // via dispatchToContact() to each contact during escalation.
-    // The mobile SIM SMS is ONLY a fallback for when there's no internet/API.
-    // SIM SMS fires when: no internet OR Robo SMS failed.
-    // smsSentViaBackend is set in STEP 3 from /alert-dispatch response
-    // (true only if sms.status === 'SENT' AND sms.devMode === false).
-    // If /alert-dispatch itself fails (no internet), smsSentViaBackend stays false.
-    const backendSmsFailed = !smsSentViaBackend;
+    const backendSmsFailed = !roboSmsSucceeded;
+    console.log(`[Countdown] STEP 4: backendSmsFailed=${backendSmsFailed} (roboSmsSucceeded=${roboSmsSucceeded})`);
 
     if (dispatchContacts.length > 0 && backendSmsFailed) {
       const backendBase = (api.defaults.baseURL || '').replace(/\/api\/?$/, '').replace(/\/$/, '');
@@ -408,18 +421,23 @@ export default function CountdownScreen({ navigation, route }: any) {
     }
 
     // ═══ STEP 4.5: Direct Phone Call — only if RoboCall FAILED ═══
+    // CRITICAL: Gate on roboCallSucceeded (from STEP 2 response), NOT on backendReachable.
+    //   - Internet + RoboCall API OK    → roboCallSucceeded=true  → SKIP SIM call
+    //   - Internet + RoboCall API fail  → roboCallSucceeded=false → CALL primary from SIM
+    //   - No internet (trigger failed)  → roboCallSucceeded=false → CALL primary from SIM
     if (dispatchContacts.length > 0 && dispatchContacts[0]?.phoneNumber) {
-      if (!backendReachable) {
+      if (!roboCallSucceeded) {
         // RoboCall failed — call primary contact instantly from mobile SIM
         const primaryTarget = dispatchContacts[0];
+        console.log(`[Countdown] STEP 4.5: RoboCall failed — calling primary ${primaryTarget.name} from SIM`);
         try {
           await makeDirectPhoneCall(primaryTarget.phoneNumber);
         } catch (callErr) {
           // Call failed — SOS escalation will handle subsequent contacts
         }
+      } else {
+        console.log('[Countdown] STEP 4.5: RoboCall succeeded — skipping SIM call to primary');
       }
-      // If RoboCall succeeded — DON'T call from mobile.
-      // SOS screen auto-escalation handles calling contacts one by one with 60s timeout.
     }
 
     // ═══ STEP 5: Local push notification on device ═══
@@ -444,13 +462,14 @@ export default function CountdownScreen({ navigation, route }: any) {
         severity: severity.toLowerCase(),
         incidentId: incident?.id || null,
         sessionId: emergencyNotificationResult?.sessionId || null,
-        // If RoboCall worked, Basit was already called → skip to Kami (index 1)
-        // If RoboCall failed, STEP 4.5 already called Basit via SIM → skip to Kami (index 1)
+        shareToken: emergencyNotificationResult?.shareToken || null,
+        // If RoboCall worked → skip primary (already called) → start with index 1
+        // If RoboCall failed → STEP 4.5 already called primary from SIM → start with index 1
         initialContactIndex: 1,
-        // NEW: tell SOS screen whether RoboCall succeeded
-        // If true → SOS screen disables its 60s SIM auto-call countdown (backend handles escalation via RoboCall)
-        // If false → SOS screen starts its 60s SIM auto-call countdown
-        robocallSucceeded: backendReachable,
+        // Tell SOS screen whether RoboCall succeeded:
+        //   true  → disable 60s SIM countdown (backend's scheduler handles RoboCall escalation every 45s)
+        //   false → enable 60s SIM countdown (mobile handles escalation via SIM calls)
+        robocallSucceeded: roboCallSucceeded,
       });
     }, 3000);
   }, [contacts, user, severity, latitude, longitude, navigation, dispatch, createIncident, triggerEmergency, dispatchAlert]);

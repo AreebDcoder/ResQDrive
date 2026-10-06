@@ -324,9 +324,9 @@ export class EmergencyNotificationService {
     });
 
     const firstContact = contacts.find((c) => c.priorityOrder === 1) || contacts[0];
-    await this.dispatchToContact(session.id, firstContact, user, dto, session.shareToken);
+    const dispatchResult = await this.dispatchToContact(session.id, firstContact, user, dto, session.shareToken);
 
-    this.logger.log(`Emergency notification triggered for user ${userId}. Session ${session.id}. First contact: ${firstContact.name}`);
+    this.logger.log(`Emergency notification triggered for user ${userId}. Session ${session.id}. First contact: ${firstContact.name}. RoboCall: ${dispatchResult.callSucceeded ? 'OK' : 'FAILED'}, RoboSMS: ${dispatchResult.smsSucceeded ? 'OK' : 'FAILED'}`);
 
     return {
       sessionId: session.id,
@@ -339,6 +339,14 @@ export class EmergencyNotificationService {
       contactPhone: firstContact.phoneNumber,
       nextEscalationAt,
       locationSessionId,
+      // CRITICAL: Tell the mobile whether RoboCall and RoboSMS actually succeeded.
+      // The mobile uses these to decide:
+      //   - roboCallSucceeded=true  → skip SIM call to primary (RoboCall already called)
+      //   - roboCallSucceeded=false → instantly call primary from SIM
+      //   - roboSmsSucceeded=true   → skip SIM SMS (RoboSMS already sent)
+      //   - roboSmsSucceeded=false  → send SIM SMS as fallback
+      roboCallSucceeded: dispatchResult.callSucceeded,
+      roboSmsSucceeded: dispatchResult.smsSucceeded,
     };
   }
 
@@ -649,13 +657,16 @@ export class EmergencyNotificationService {
     user: any,
     dto: TriggerNotificationDto,
     shareToken?: string,
-  ) {
+  ): Promise<{ callSucceeded: boolean; smsSucceeded: boolean }> {
     const lat = dto.latitude || 33.6844;
     const lng = dto.longitude || 73.0479;
     const locationDescription = await this.reverseGeocodeLocation(lat, lng, dto.address);
     const backendBase = (process.env.BACKEND_URL || 'https://resqdrive.live').replace(/\/$/, '');
     const ackLink = shareToken ? `${backendBase}/acknowledge.html?session=${shareToken}` : `https://www.google.com/maps?q=${lat},${lng}`;
     const mapsLink = `https://www.google.com/maps?q=${lat},${lng}`;
+
+    let callSucceeded = false;
+    let smsSucceeded = false;
 
     // ─── PHONE CALL via RoboCall.pk (ALL contacts, not just priority 1) ───
     // FIX: Previously only priority 1 got a RoboCall. Now ALL contacts receive
@@ -671,6 +682,7 @@ export class EmergencyNotificationService {
           locationDescription,
         );
         this.logger.log(`[PHONE_CALL] RoboCall placed to ${contact.name} (${contact.phoneNumber}). CallID: ${result.callId}`);
+        callSucceeded = true;
 
         await this.prisma.notificationAttempt.create({
           data: {
@@ -734,6 +746,7 @@ export class EmergencyNotificationService {
         }
         const smsResult = await this.sendRoboSms(contact.phoneNumber, smsMessage);
         this.logger.log(`[SMS] RoboSMS sent to ${contact.name} (${contact.phoneNumber}). Length: ${smsMessage.length}/160. ID: ${smsResult.messageId}`);
+        smsSucceeded = true;
 
         await this.prisma.notificationAttempt.create({
           data: {
@@ -827,5 +840,7 @@ export class EmergencyNotificationService {
     } catch (err: any) {
       this.logger.warn(`[PUSH] Push notification failed: ${err.message}`);
     }
+
+    return { callSucceeded, smsSucceeded };
   }
 }
