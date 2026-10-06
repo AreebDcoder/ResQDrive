@@ -98,10 +98,19 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
   const [pendingCallTarget, setPendingCallTarget] = useState<{ name: string; phone: string } | null>(null);
   const [currentContactIndex, setCurrentContactIndex] = useState<number>(initialIndex);
   const [hasCycledThroughAll, setHasCycledThroughAll] = useState<boolean>(false);
+  // FIX: Only start the 60s SIM auto-call countdown if RoboCall FAILED.
+  // If RoboCall succeeded, the backend's escalation scheduler handles calling
+  // each contact via RoboCall (45s interval). The SOS screen polls backend status
+  // and auto-calls the regional 11-digit number when the session is EXHAUSTED.
+  const robocallSucceeded = route?.params?.robocallSucceeded === true;
+  const shareToken = route?.params?.shareToken || null;
+  const [sessionStatus, setSessionStatus] = useState<string>('ACTIVE');
+  const [hasCalledRegionalFallback, setHasCalledRegionalFallback] = useState<boolean>(false);
   const [isEscalationActive, setIsEscalationActive] = useState<boolean>(
-    !!incidentId && (severity === 'moderate' || severity === 'severe')
+    !robocallSucceeded && !!incidentId && (severity === 'moderate' || severity === 'severe')
   );
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const pollRef = useRef<NodeJS.Timeout | null>(null);
 
   // Phase 8: ConfirmDialog state for cautionary call confirm
   const [callDialogVisible, setCallDialogVisible] = useState(false);
@@ -120,6 +129,62 @@ export default function SOSScreen({ route, navigation, isInline }: any) {
     };
     fetchFreshContacts();
   }, [dispatch]);
+
+  // ─── Poll backend session status (only when RoboCall succeeded) ────────
+  // When RoboCall is handling escalation, this SOS screen doesn't run its own
+  // 60s SIM countdown. Instead it polls the backend's public session endpoint
+  // every 5s to check the session status:
+  //   ACTIVE      → still calling contacts via RoboCall, keep waiting
+  //   ACKNOWLEDGED → someone responded, stop everything
+  //   EXHAUSTED    → all contacts called, nobody responded → auto-call regional 11-digit from SIM
+  //   CANCELLED/EXPIRED → session ended, stop polling
+  useEffect(() => {
+    if (!robocallSucceeded || !shareToken) return;
+
+    const poll = async () => {
+      try {
+        const res = await api.get(`/emergency-notification/public/${shareToken}`);
+        const status = res.data?.status;
+        if (status && status !== sessionStatus) {
+          setSessionStatus(status);
+          console.log(`[SOS Poll] Session status: ${status}`);
+        }
+      } catch (err) {
+        // Network blip — keep polling
+      }
+    };
+
+    // Poll immediately, then every 5s
+    poll();
+    pollRef.current = setInterval(poll, 5000);
+
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [robocallSucceeded, shareToken, sessionStatus]);
+
+  // ─── Auto-call regional 11-digit when backend session is EXHAUSTED ──────
+  useEffect(() => {
+    if (
+      robocallSucceeded &&
+      sessionStatus === 'EXHAUSTED' &&
+      !hasCalledRegionalFallback &&
+      !isEscalationActive
+    ) {
+      setHasCalledRegionalFallback(true);
+      // Find the regional 11-digit (or 5+ digit) landline number
+      const regional = regionalNumbers.find((r: any) => r.phoneNumber?.length >= 5) || regionalNumbers[0];
+      const phone = regional?.phoneNumber || '0519290002';
+      const name = regional?.serviceName || 'Rescue 1122 HQ';
+      console.log(`[SOS] Session EXHAUSTED — auto-calling regional: ${name} (${phone})`);
+      Alert.alert(
+        `Calling ${name}`,
+        `All emergency contacts were called via RoboCall but nobody acknowledged. Calling regional emergency service from your SIM.`,
+        [{ text: 'OK' }]
+      );
+      makeDirectPhoneCall(phone);
+    }
+  }, [robocallSucceeded, sessionStatus, hasCalledRegionalFallback, isEscalationActive, regionalNumbers]);
 
   // Keep target contact updated as personalContacts load
   useEffect(() => {
@@ -434,6 +499,19 @@ useEffect(() => {
           <Ionicons name="warning" size={24} color={colors.warning[500]} style={{ marginRight: 8 }} />
           <Text style={styles.countdownText} allowFontScaling={true} maxFontSizeMultiplier={1.5}>
             Auto-dialing {pendingCallTarget?.name || 'rescue'} in {escalationTimeLeft}s if no response...
+          </Text>
+        </View>
+      )}
+            {/* RoboCall Status Indicator (shown when RoboCall is handling escalation) */}
+      {!isEscalationActive && incidentId && (
+        <View style={[styles.countdownBanner, { backgroundColor: 'rgba(76, 175, 80, 0.15)', borderColor: 'rgba(76, 175, 80, 0.3)' }]}>
+          <Ionicons name="call" size={24} color="#4caf50" style={{ marginRight: 8 }} />
+          <Text style={[styles.countdownText, { color: '#4caf50' }]}>
+            {sessionStatus === 'EXHAUSTED'
+              ? `All contacts called via RoboCall — calling regional ${regionalNumbers.find((r: any) => r.phoneNumber?.length >= 5)?.serviceName || 'Rescue 1122'}...`
+              : sessionStatus === 'ACKNOWLEDGED'
+              ? 'Emergency acknowledged ✓'
+              : `RoboCall placed to ${pendingCallTarget?.name || 'emergency contact'}. Waiting for acknowledgement...`}
           </Text>
         </View>
       )}

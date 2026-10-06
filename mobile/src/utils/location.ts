@@ -67,7 +67,7 @@ export async function getAddressFromCoords(lat: number, lng: number): Promise<st
   // 1. Try high-precision Nominatim OSM first (returns exact Street/Road + Sector, e.g. "Street 57, Faisal Town Phase 1 - F18")
   try {
     const geoRes = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=en`,
       { headers: { 'User-Agent': 'ResQDrive/1.0' } }
     );
     const geoData = await geoRes.json();

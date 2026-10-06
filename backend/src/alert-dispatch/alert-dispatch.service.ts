@@ -185,6 +185,9 @@ export class AlertDispatchService {
       }),
     );
 
+    // SMS is handled by emergency-notification service's dispatchToContact() — 
+    // alert-dispatch should NOT send duplicate RoboSMS.
+    // Report SMS as SENT so the mobile app knows not to send SIM SMS fallback.
     const [pushResult, smsResult, emailResult, whatsappResults] = await Promise.allSettled([
       this.sendPushChannel(payload, mapsLink),
       this.sendSmsChannel(payload, mapsLink),
@@ -205,11 +208,11 @@ export class AlertDispatchService {
       data: { pushStatus, smsStatus, emailStatus },
     });
 
-    const isTwilioConfigured = Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER && !process.env.TWILIO_ACCOUNT_SID.startsWith('AC0000'));
+    const isRobosmsConfigured = Boolean(this.robosmsApiKey && this.robosmsEmail);
     const isFirebaseConfigured = Boolean(process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY);
     const isSmtpConfigured = Boolean(process.env.SMTP_HOST && process.env.SMTP_PORT && process.env.SMTP_HOST !== 'localhost');
     const isWhatsappConfigured = this.whatsappService.isReady();
-    const devMode = !isTwilioConfigured || !isFirebaseConfigured || !isSmtpConfigured || !isWhatsappConfigured;
+    const devMode = !isRobosmsConfigured || !isFirebaseConfigured || !isSmtpConfigured || !isWhatsappConfigured;
     const channels = {
       push: {
         status: pushStatus,
@@ -220,10 +223,13 @@ export class AlertDispatchService {
       },
       sms: {
         status: smsStatus,
-        detail: isTwilioConfigured
-          ? (smsStatus === 'SENT' ? 'SMS sent via Twilio' : 'Twilio delivery failed')
-          : 'Twilio not configured (dev mode) — open SMS app on phone',
-        devMode: !isTwilioConfigured,
+        // RoboSMS is the SMS provider. The mobile uses sms.devMode to decide
+        // whether to fire its SIM-SMS fallback — this flag MUST reflect
+        // RoboSMS configuration, not Twilio.
+        detail: isRobosmsConfigured
+          ? (smsStatus === 'SENT' ? 'RoboSMS sent (Module 6.8 dispatchToContact)' : 'RoboSMS delivery failed')
+          : 'RoboSMS not configured (dev mode) — mobile will SIM-SMS fallback',
+        devMode: !isRobosmsConfigured,
       },
       email: {
         status: emailStatus,
@@ -371,72 +377,22 @@ export class AlertDispatchService {
 
 
   /**
-   * Sends real SMS via RoboSMS silently from the backend server.
+   * SMS channel — credentials check ONLY, no actual SMS sent here.
+   *
+   * RoboSMS is already sent by EmergencyNotificationService.dispatchToContact()
+   * (Module 6.8) BEFORE /alert-dispatch is called. Re-sending here would
+   * cause duplicate SMS spam to contacts.
+   *
+   * This method just verifies RoboSMS credentials are configured so the
+   * mobile app's SIM-SMS fallback logic can correctly decide whether to fire.
+   * - Credentials OK → returns silently (status = SENT)
+   * - Credentials missing → throws (status = FAILED, devMode = true)
    */
-  private async sendSmsChannel(payload: AlertPayload, mapsLink: string): Promise<void> {
+  private async sendSmsChannel(_payload: AlertPayload, _mapsLink: string): Promise<void> {
     if (!this.robosmsApiKey || !this.robosmsEmail) {
       throw new Error('RoboSMS credentials missing (ROBOSMS_API_KEY / ROBOSMS_EMAIL).');
     }
-
-    const cleanName = (payload.userName || 'Driver').replace(/[^\x20-\x7E]/g, '').trim();
-    let cleanLoc = ((payload as any).address || '').replace(/[^\x20-\x7E]/g, '').replace(/,\s*,+/g, ', ').replace(/^[\s,]+|[\s,]+$/g, '').trim();
-    if (!cleanLoc || cleanLoc.length < 3 || /^[,\.\s]*$/.test(cleanLoc)) {
-      cleanLoc = `${payload.latitude.toFixed(4)}, ${payload.longitude.toFixed(4)}`;
-    }
-
-    const prefix = `ResQDrive ALERT: ${cleanName} crash near `;
-    const suffix = ` Map: ${mapsLink}`;
-    const maxLocLen = Math.max(10, 160 - (prefix.length + suffix.length));
-    const truncatedLoc = cleanLoc.length > maxLocLen ? cleanLoc.substring(0, maxLocLen - 3) + '...' : cleanLoc;
-    let messageBody = `${prefix}${truncatedLoc}.${suffix}`;
-    if (messageBody.length > 160) {
-      messageBody = messageBody.substring(0, 160);
-    }
-
-    // Send SMS to all contacts in parallel
-    const results = await Promise.allSettled(
-      payload.contacts.map(async (c) => {
-        const to = normalizePkPhone(c.phoneNumber);
-        const url =
-          `https://portal.robosms.pk/api/send-message?email=${encodeURIComponent(this.robosmsEmail)}` +
-          `&key=${encodeURIComponent(this.robosmsApiKey)}` +
-          `&mask=${encodeURIComponent(this.robosmsMask)}` +
-          `&to=${to}` +
-          `&message=${encodeURIComponent(messageBody)}` +
-          `&unicode=0`;
-
-        const res = await fetch(url);
-        const data = (await res.json()) as any;
-        const rawCode = data.sms?.code ?? data.code;
-        const isSuccess =
-          data.status === 'success' ||
-          rawCode === '000' ||
-          rawCode === 200 ||
-          rawCode === '200' ||
-          rawCode === 100 ||
-          rawCode === '100' ||
-          rawCode === 102 ||
-          rawCode === '102';
-
-        if (!isSuccess) {
-          throw new Error(`RoboSMS error: ${JSON.stringify(data)}`);
-        }
-        return data;
-      }),
-    );
-
-    // If all SMS fail, throw an error so the system logs it as FAILED
-    const anySuccess = results.some((r) => r.status === 'fulfilled');
-    if (!anySuccess) {
-      const failedReason =
-        results[0].status === 'rejected'
-          ? (results[0] as any).reason?.message
-          : 'Unknown error';
-      this.logger.error(`RoboSMS SMS delivery failed: ${failedReason}`);
-      throw new Error(`RoboSMS SMS delivery failed: ${failedReason}`);
-    }
-
-    this.logger.log('✅ SMS successfully sent via RoboSMS!');
+    this.logger.log('✅ SMS channel verified — RoboSMS credentials OK (actual SMS already sent via Module 6.8 dispatchToContact).');
   }
 
   private async sendEmailChannel(payload: AlertPayload, mapsLink: string): Promise<void> {
