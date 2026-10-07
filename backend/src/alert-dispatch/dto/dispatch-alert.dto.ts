@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsArray, IsInt, IsLatitude, IsLongitude, IsNumber, IsOptional, IsString, IsUUID, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-import { IsArray, IsLatitude, IsLongitude, IsNumber, IsOptional, IsString, IsUUID, ValidateNested } from 'class-validator';
 
 export class DispatchContactDto {
   @IsString()
@@ -12,6 +12,10 @@ export class DispatchContactDto {
   @IsOptional()
   @IsString()
   email?: string;
+
+  @IsOptional()
+  @IsInt()
+  priorityOrder?: number;                    // ← NEW: accept priorityOrder
 }
 
 export class DispatchAlertDto {
@@ -49,16 +53,16 @@ export class DispatchAlertDto {
   @IsString()
   severity: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Reverse-geocoded street address (used in WhatsApp message)' })
   @IsOptional()
   @IsString()
-  address?: string;
+  address?: string;                           // ← NEW: accept address
 
   @ApiPropertyOptional({ type: [DispatchContactDto] })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => DispatchContactDto)
+  @Type(() => DispatchContactDto)             // ← NEW: proper nested transformation
   contacts?: DispatchContactDto[];
 
   @ApiPropertyOptional({ description: 'Acknowledge URL from Module 6.8 (for WhatsApp message)' })

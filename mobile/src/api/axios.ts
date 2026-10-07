@@ -1,6 +1,5 @@
 import axios from 'axios';
 import { Platform, NativeModules } from 'react-native';
-import { store } from '../store/store';
 import { logoutAction, setTokens } from '../store/slices/authSlice';
 import { getItemAsync, setItemAsync, deleteItemAsync } from '../utils/secureStorage';
 import Constants from 'expo-constants';
@@ -240,7 +239,14 @@ api.interceptors.request.use(
       api.defaults.baseURL = activeUrl;
     }
 
-    const token = store.getState().auth.accessToken;
+    // Read stored token directly to avoid circular store import dependency
+    let token: string | null = null;
+    try {
+      token = await getItemAsync('accessToken');
+    } catch {
+      // Fallback
+    }
+
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -319,8 +325,15 @@ api.interceptors.response.use(
 
         const { accessToken, refreshToken } = response.data;
 
+        await setItemAsync('accessToken', accessToken);
         await setItemAsync('refreshToken', refreshToken);
-        store.dispatch(setTokens({ accessToken, refreshToken }));
+
+        try {
+          const { store } = require('../store/store');
+          store.dispatch(setTokens({ accessToken, refreshToken }));
+        } catch {
+          // Store dispatch fallback
+        }
 
         processQueue(null, accessToken);
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
@@ -328,8 +341,14 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
+        await deleteItemAsync('accessToken');
         await deleteItemAsync('refreshToken');
-        store.dispatch(logoutAction());
+        try {
+          const { store } = require('../store/store');
+          store.dispatch(logoutAction());
+        } catch {
+          // Store dispatch fallback
+        }
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

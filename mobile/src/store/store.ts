@@ -41,7 +41,10 @@ export const store = configureStore({
       serializableCheck: {
         ignoredPaths: ['sensor.latestReading'],
       },
-      immutableCheck: true,
+      immutableCheck: {
+        ignoredPaths: ['sensor.latestReading'],
+        warnAfter: 128,
+      },
     }).concat(
       vehiclesApi.middleware,
       contactsApi.middleware,

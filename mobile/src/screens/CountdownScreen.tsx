@@ -156,16 +156,23 @@ export default function CountdownScreen({ navigation, route }: any) {
     [severity, latitude, longitude, createIncident],
   );
 
-  const handleCancel = useCallback(
-    async (method: 'BUTTON' | 'VOICE' = 'BUTTON') => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      setIsCancelled(true);
-      MultiModalFusionService.reset(); // Clear 3-minute cooldown lockout so user can re-test immediately
-      await logIncident('FALSE_ALARM');
-      setTimeout(() => navigation.goBack(), 1200);
-    },
-    [logIncident, navigation],
-  );
+// ✅ AFTER
+const handleCancel = useCallback(
+  async (method: 'BUTTON' | 'VOICE' = 'BUTTON') => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    setIsCancelled(true);
+    MultiModalFusionService.reset();
+    await logIncident('FALSE_ALARM');
+    setTimeout(() => {
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+      } else {
+        navigation.navigate('Home'); // Or your main tab/dashboard screen route name
+      }
+    }, 1200);
+  },
+  [logIncident, navigation],
+);
 
   const handleTimeout = useCallback(async () => {
     // CRITICAL FIX: Guard against duplicate dispatch.
@@ -335,6 +342,7 @@ export default function CountdownScreen({ navigation, route }: any) {
     // ═══ STEP 3: Multi-channel dispatch (WhatsApp Cloud API + Email + Push) ═══
     let backendSucceeded = false;
     let smsSentViaBackend = false;
+    console.log('[Countdown] STEP 3: Calling dispatchAlert (WhatsApp + Push + Email)...');
     try {
       // Batch 11: RTK Query mutation. Invalidates 'Emergency' tag.
       const response = await dispatchAlert({
@@ -345,9 +353,10 @@ export default function CountdownScreen({ navigation, route }: any) {
         latitude: realLat,
         longitude: realLng,
         address: address || incident?.address,
-        severity,
+        severity: evaluatedSeverity,     // ← CHANGED: was `severity` (stale state), now uses ML result
         contacts: dispatchContacts,
       }).unwrap();
+      console.log('[Countdown] STEP 3: dispatchAlert succeeded:', JSON.stringify(response?.channels));  // ← NEW
       setBackendChannels(response?.channels);
       setIsDevMode(response?.devMode ?? true);
       const respChannels = response?.channels;
@@ -376,7 +385,8 @@ export default function CountdownScreen({ navigation, route }: any) {
           ...prev, backend: 'failed', push: 'failed', email: 'failed', sms: 'pending', whatsapp: 'failed',
         }));
       }
-    } catch (err) {
+    } catch (err: any) {
+      console.error('[Countdown] STEP 3: dispatchAlert FAILED:', err?.response?.data || err?.message || err);  // ← NEW
       setDispatchStatus(prev => ({
         ...prev, backend: 'failed', push: 'failed', email: 'failed', sms: 'pending', whatsapp: 'failed',
       }));

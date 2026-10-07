@@ -91,6 +91,7 @@ export class AlertDispatchService {
     };
     devMode: boolean;
   }> {
+    this.logger.log(`dispatchAlert CALLED — userId=${payload.userId}, contacts=${payload.contacts?.length || 0}, lat=${payload.latitude}, lng=${payload.longitude}`);
     const mapsLink = this.buildMapsLink(payload.latitude, payload.longitude);
 
     let contactsToAlert = payload.contacts || [];
